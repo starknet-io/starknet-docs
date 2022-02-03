@@ -10,13 +10,14 @@ const katex = require('rehype-katex');
 const config = {
   title: 'My Site',
   tagline: 'Dinosaurs are cool',
-  url: 'https://your-docusaurus-test-site.com',
+  url: 'https://starknet-docs.github.io',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.ico',
-  organizationName: 'facebook', // Usually your GitHub org/user name.
-  projectName: 'docusaurus', // Usually your repo name.
+  organizationName: 'starkware-libs', // Usually your GitHub org/user name.
+  projectName: 'starknet-docs', // Usually your repo name.
+  deploymentBranch: 'deployed',
 
   stylesheets: [
     {
