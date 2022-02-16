@@ -34,10 +34,10 @@ Given an input $(a,b)\in\mathbb{F}_p^2$, we begin by breaking it into $a_{low}, 
 where the low part consists of the low 248 bits of the element and the high part consists of the high 4 bits of the element. Our Pedersen hash is then defined by:
 
 $$
-h(a,b) = shift\_point + a_{low} \cdot P_0 + a_{high} \cdot P1 + b_{low} \cdot P2  + b_{high} \cdot P3
+h(a,b) = \left[shift\_point + a_{low} \cdot P_0 + a_{high} \cdot P1 + b_{low} \cdot P2  + b_{high} \cdot P3\right]_x
 $$
 
-where the values of the constants $shift\_point, P_0, P_1, P_2, P_3$ can be found [here](https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/crypto/starkware/crypto/signature/fast_pedersen_hash.py).
+where the values of the constants $shift\_point, P_0, P_1, P_2, P_3$ can be found [here](https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/crypto/starkware/crypto/signature/fast_pedersen_hash.py), and $[P]_x$ denotes the $x$ cooredinate of the point $P$.
 
 ### Array hashing
 

@@ -2,6 +2,15 @@ import APITable from '@site/src/components/APITable';
 
 # Commands
 
+:::tip
+
+All the CLI commands require the ```--network``` parameter, which can be either `alpha-goerli` or `alpha-network`.
+You can set the `STARKNET_NETWORK` environment variable, causing subsequent calls to the
+StarkNet CLI to use the specified network, e.g. to interact with testnet you can set:
+
+```export STARKNET_NETWORK=alpha-goerli```
+
+:::
 ### starknet deploy_account
 ```bash title="deploy account"
 starknet deploy_account
@@ -183,3 +192,15 @@ starknet get_transaction_receipt --hash <transaction_hash>
 Returns the [receipt](../Blocks/transaction-life-cycle#transaction-receipt) associated with the transaction, expects the following argument:
 
 * `transaction_hash`* - hash of the requested transaction
+
+:::tip Custom endpoints
+When working with the CLI, it's possible to manually choose the read/write endpoints for the
+interaction with StarkNet, by adding the ````--feeder_gateway_url``` and ```gateway_url``` parameters.
+
+The following are the endpoints for StarkNet testnet and mainnet:
+
+* Testnet feeder gateway URL: https://alpha4.starknet.io/feeder_gateway/
+* Mainnet feeder gateway URL: https://alpha-mainnet.starknet.io/feeder_gateway/
+* Testnet gateway URL: https://alpha4.starknet.io/gateway/
+* Mainnet gateway URL: https://alpha-mainnet.starknet.io/gateway/
+:::

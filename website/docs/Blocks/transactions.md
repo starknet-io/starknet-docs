@@ -71,6 +71,15 @@ Where:
 
 * “invoke” is a constant prefix, encoded in bytes (ASCII), with big-endian.
 * `chain_id` is a constant value specifying the network this transaction is sent to. See below.
-* $$h$ is the [Pedersen](../Hashing/hash-functions#pedersen-hash) hash
+* $$h$$ is the [Pedersen](../Hashing/hash-functions#pedersen-hash) hash
+
+### Signature
+
+While StarkNet does not have a specific signature scheme built into the protocol, the Cairo language in which smart contracts are written does have an efficient implementation for ECDSA signature with respect to a [STARK-friendly curve](../Hashing/hash-functions#stark-curve).
+
+The generator used in the ECDSA algorithm is $G=\left(g_x, g_y\right)$ where:
+
+$g_x=874739451078007766457464989774322083649278607533249481151382481072868806602$
+$g_y=152666792071518830868575557812948353041420400780739481342941381225525861407$
 
 [^1]: Note, this type of transaction may be deprecated as StarkNet matures, effectively incorporating this into an invoke function transaction over an account contract which will implement the deployment as part of its functionality.
