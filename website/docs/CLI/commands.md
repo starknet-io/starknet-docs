@@ -75,7 +75,7 @@ starknet deploy
 
 Deploys a new contract, can take the following arguments:
 
-* `salt` - a seed that is used in the computation of the contract’s address
+* `salt` - a seed that is used in the computation of the contract’s address (if not specified, the sequencer will choose a random string)
 * `contract_definition`* - path to a JSON file containing the contract’s bytecode and abi (can be obtained by executing [starknet-compile](https://www.cairo-lang.org/docs/hello_starknet/intro.html#compile-the-contract))
 * `constructor_inputs`* - the arguments given to the contract’s constructor, represented by a list of space-delimited values
 * `token` - a token allowing contract deployment (can be obtained by applying [here](https://forms.reform.app/starkware/SN-Alpha-Contract-Deployment/l894lu)). Only used in the Alpha stages and will be deprecated in the future

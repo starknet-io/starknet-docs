@@ -1,0 +1,53 @@
+# Contract Storage
+
+## Storage Layout
+
+Contract storage is a persistent storage space where you can read, write, modify, and persist data. The storage is a map with $2^{251}$ slots, where each slot is a felt which is initialized to 0.
+
+## Storage Low Level Functions
+
+The basic function for reading storage returns value stored in key is:
+
+```js
+let (value) = storage_read(key)
+```
+
+The basic function for writing to storage writes value to key is:
+
+```js
+storage_write(key, value)
+```
+
+Both are system calls that can be imported by adding the line:
+
+```js
+from starkware.starknet.common.syscalls import storage_read, storage_write
+```
+
+Another basic function is used for getting the storage address, this function is created by the compiler when defining a storage variable, as explained below.  This function returns the address of the storage variable. Below we discuss how this address is determined from the variable’s name and keys.
+
+## Storage Variables
+
+The most common way for interacting with a contract's storage is through storage variables.
+
+The `@storage_var` decorator declares a variable that will be kept as part of the contract storage. The variable can consist of a single felt, or it can be a mapping from multiple arguments to a tuple of felts or structs. To use this variable, the `var.read(args)`,  `var.write(args, value)` and `var.addr(args)` functions are automatically created by the `@storage_var` decorator, for reading the storge value, writing the storage value and getting the storage address, respectively.
+The StarkNet contract compiler generates the Cairo code that maps the storage variable’s name and argument values to an address – so that it can be part of the generated proof. The address of a storage variable is computed as follows:
+
+* If it is a single value, then the address is `sn_keccak(variable_name)`, where variable_name is the ASCII encoding of the variable’s name.
+* If it is a (nested) mapping, then the address of the value at key `k_1,...,k_n` is
+`h(...h(h(sn_keccak(variable_name),k_1),k_2),...,k_n)` where $h$ is the
+Pedersen hash and the final value is taken $\bmod (2^{251}-256)$
+* If it is a mapping to complex values (e.g., tuples or structs), then this complex value lies in a continuous segment starting from the address calculated in the previous point. Note that 256 field elements is the current limitation on the maximal size of a complex storage value.
+* Note that when calling `var.addr(args)` for a storage variable with complex values, the returned value is the address of the first element in the storage.
+
+Roughly, we can summarize the above as follows:
+
+`storage variable address := pedersen(keccak(variable name), keys)`
+
+In the following example we define a storage variable named `range` that is a mapping from a key to a Tuple of two values.
+
+```js
+@storage_var
+func range(user : felt) -> (res : (felt, felt)):
+end
+```
