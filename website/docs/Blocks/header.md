@@ -26,7 +26,7 @@ The following fields define the block header:
 </APITable>
 
 :::info commitments
-The commitment fields transaction_commitment, event_commitment are the roots of a hieght 64 binary Merkle Patricia tree. The leaf at index $i$ corresponds to the hash of the $i'th$ event/transaction.
+The commitment fields transaction_commitment, event_commitment are the roots of a height 64 binary Merkle Patricia tree. The leaf at index $i$ corresponds to the hash of the $i'th$ event/transaction.
 :::
 
 ## Block hash

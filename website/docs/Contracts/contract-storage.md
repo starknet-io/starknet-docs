@@ -2,7 +2,7 @@
 
 ## Storage Layout
 
-Contract storage is a persistent storage space where you can read, write, modify, and persist data. The storage is a map with $2^{251}$ slots, where each slot is a felt which is initialized to 0.
+The contract's storage is a persistent storage space where you can read, write, modify, and persist data. The storage is a map with $2^{251}$ slots, where each slot is a felt which is initialized to 0.
 
 ## Storage Low Level Functions
 
@@ -30,7 +30,7 @@ Another basic function is used for getting the storage address, this function is
 
 The most common way for interacting with a contract's storage is through storage variables.
 
-The `@storage_var` decorator declares a variable that will be kept as part of the contract storage. The variable can consist of a single felt, or it can be a mapping from multiple arguments to a tuple of felts or structs. To use this variable, the `var.read(args)`,  `var.write(args, value)` and `var.addr(args)` functions are automatically created by the `@storage_var` decorator, for reading the storge value, writing the storage value and getting the storage address, respectively.
+The `@storage_var` decorator declares a variable that will be kept as part of the contract storage. The variable can consist of a single felt, or it can be a mapping from multiple arguments to a tuple of felts or structs. To use this variable, the `var.read(args)`,  `var.write(args, value)` and `var.addr(args)` functions are automatically created by the `@storage_var` decorator, for reading the storage value, writing the storage value and getting the storage address, respectively.
 The StarkNet contract compiler generates the Cairo code that maps the storage variable’s name and argument values to an address – so that it can be part of the generated proof. The address of a storage variable is computed as follows:
 
 * If it is a single value, then the address is `sn_keccak(variable_name)`, where variable_name is the ASCII encoding of the variable’s name.

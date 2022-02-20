@@ -6,7 +6,7 @@ The following are the possible statuses of transaction from the moment it the mo
 
 ### NOT_RECEIVED
 
-Transaction is not yet known to the seuqencer
+Transaction is not yet known to the sequencer
 
 ### RECEIVED
 

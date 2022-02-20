@@ -1,6 +1,6 @@
 # Contract Hash
 
-The contract hash is a hash of its definition. The elements defining a contract are:
+The contract's hash is a hash of its definition. The elements defining a contract are:
 
 * API version (the version under which the contract was deployed)
 * Array of external functions entry points [^1]
@@ -14,6 +14,7 @@ The contract’s hash is the chain hash[^4] of the above, computed as follows:
 * start with $h(0,api\_version)$
 * for every line in the above (excluding the first), compute $h(h(previous\_line), new\_line)$, where the hash of an array is defined [here](../Hashing/hash-functions#array-hashing).
 * let $c$ denote the cumulative hash resulting from applying the above process; the contract’s hash is then $h(c, \textrm{number\_of\_lines})$, where $\text{number\_of\_lines}$ is 7.
+
 For more details, see the [Cairo implementation](https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contracts.cairo#L47).
 
 [^1]: An entry point is a pair `(selector, offset)`, where offset is the offset of the instruction that should be called inside the contract’s bytecode
