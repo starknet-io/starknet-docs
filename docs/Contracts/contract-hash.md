@@ -1,6 +1,6 @@
 # Contract Hash
 
-The contract hash is a hash of its definition. The elements defining a contract are:
+The contract's hash is a hash of its definition. The elements defining a contract are:
 
 - API version (the version under which the contract was deployed)
 - Array of external functions entry points [^1]
