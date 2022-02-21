@@ -2,11 +2,11 @@
 
 The contract address is a unique identifier of the contract on Starknet. It is a chain hash of the following information:
 
-* `prefix` - the ASCII encoding of the constant string “STARKNET_CONTRACT_ADDRESS”
-* `caller_address` - currently always zero
-* `salt` - part of the [deploy transaction](../Blocks/transactions#deploy-transaction)
-* `contract_hash` - see [the docs](./contract-hash)
-* `calldata_hash` - [array hash](../Hashing/hash-functions#array-hashing) of the inputs to the constructor
+- `prefix` - the ASCII encoding of the constant string “STARKNET_CONTRACT_ADDRESS”
+- `caller_address` - currently always zero
+- `salt` - part of the [deploy transaction](../Blocks/transactions#deploy-transaction)
+- `contract_hash` - see [the docs](./contract-hash)
+- `calldata_hash` - [array hash](../Hashing/hash-functions#array-hashing) of the inputs to the constructor
 
 The computation is roughly the following:
 

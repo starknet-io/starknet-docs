@@ -21,8 +21,9 @@ Transaction executed successfully and entered the [pending block](./transaction-
 
 Transaction executed unsuccessfully and thus was skipped (applies both to a pending and an actual created block).
 Possible reasons for transaction rejection:
-* An assertion failed during the execution of the transaction (in StarkNet, unlike in Ethereum, transaction executions do not always succeed).
-* The block may be rejected on L1, thus changing the transaction status to `REJECTED`
+
+- An assertion failed during the execution of the transaction (in StarkNet, unlike in Ethereum, transaction executions do not always succeed).
+- The block may be rejected on L1, thus changing the transaction status to `REJECTED`
 
 ### ACCEPTED_ON_L2
 
@@ -72,13 +73,10 @@ and a consumed L1 message (in case the transaction invokes an L1 handler). The f
   "l2_to_l1_messages": [],
   "events": [
     {
-      "data": [
-        "0",
-        "4321"
-      ],
+      "data": ["0", "4321"],
       "from_address": "0x14acf3b7e92f97adee4d5359a7de3d673582f0ce03d33879cdbdbf03ec7fa5d",
       "keys": [
-     "1744303484486821561902174603220722448499782664094942993128426674277214273437"
+        "1744303484486821561902174603220722448499782664094942993128426674277214273437"
       ]
     }
   ]

@@ -12,12 +12,12 @@ A deploy transaction has the following fields:
 
 <APITable>
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `contract_address_salt` | `Field element` | A random number used to distinguish between different instances of the contract |
-| `contract_code` | `Field element` | A path to the json containing the contract’s definition |
-| `constructor_calldata` |`List<FieldElement>`| The arguments passed to the constructor during deployment |
-| `caller_address`| `Field element` | Who invoked the deployment. Set to 0 (in future: the deploying account contract) |
+| Name                    | Type                 | Description                                                                      |
+| ----------------------- | -------------------- | -------------------------------------------------------------------------------- |
+| `contract_address_salt` | `Field element`      | A random number used to distinguish between different instances of the contract  |
+| `contract_code`         | `Field element`      | A path to the json containing the contract’s definition                          |
+| `constructor_calldata`  | `List<FieldElement>` | The arguments passed to the constructor during deployment                        |
+| `caller_address`        | `Field element`      | Who invoked the deployment. Set to 0 (in future: the deploying account contract) |
 
 </APITable>
 
@@ -35,10 +35,10 @@ $$
 
 Where:
 
-* “deploy” and “constructor” constant’s prefixes, encoded in bytes (ASCII), with big-endian.
-* $h$ is the  [Pedersen](../Hashing/hash-functions#pedersen-hash) hash and $sn\_keccak$ is [StarkNet Keccak](../Hashing/hash-functions#starknet-keccak)
-* `chain_id` is a constant value specifying the network this transaction is sent to. See below.
-* `contract_address` is calculated as described here.
+- “deploy” and “constructor” constant’s prefixes, encoded in bytes (ASCII), with big-endian.
+- $h$ is the [Pedersen](../Hashing/hash-functions#pedersen-hash) hash and $sn\_keccak$ is [StarkNet Keccak](../Hashing/hash-functions#starknet-keccak)
+- `chain_id` is a constant value specifying the network this transaction is sent to. See below.
+- `contract_address` is calculated as described here.
 
 ## Invoke Function
 
@@ -48,12 +48,12 @@ An invoke function transaction has the following fields:
 
 <APITable>
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `contract_address` | `Field element` | The address of the contract invoked by this transaction |
-| `entry_point_selector` | `Field element` | The encoding of the selector for the function invoked (the entry point in the contract) |
-| `calldata` |`List<FieldElement>`| The arguments passed to the invoked function |
-| `signature`| `List<FieldElement>` | Additional information given by the caller, representing the signature of the transaction |
+| Name                   | Type                 | Description                                                                               |
+| ---------------------- | -------------------- | ----------------------------------------------------------------------------------------- |
+| `contract_address`     | `Field element`      | The address of the contract invoked by this transaction                                   |
+| `entry_point_selector` | `Field element`      | The encoding of the selector for the function invoked (the entry point in the contract)   |
+| `calldata`             | `List<FieldElement>` | The arguments passed to the invoked function                                              |
+| `signature`            | `List<FieldElement>` | Additional information given by the caller, representing the signature of the transaction |
 
 </APITable>
 
@@ -69,9 +69,9 @@ $$
 
 Where:
 
-* “invoke” is a constant prefix, encoded in bytes (ASCII), with big-endian.
-* `chain_id` is a constant value specifying the network this transaction is sent to. See below.
-* $$h$$ is the [Pedersen](../Hashing/hash-functions#pedersen-hash) hash
+- “invoke” is a constant prefix, encoded in bytes (ASCII), with big-endian.
+- `chain_id` is a constant value specifying the network this transaction is sent to. See below.
+- $$h$$ is the [Pedersen](../Hashing/hash-functions#pedersen-hash) hash
 
 ### Signature
 

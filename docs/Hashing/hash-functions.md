@@ -6,8 +6,8 @@ All hashes outputs are eventually mapped to elements in $\mathbb{F}_p$ with $p=2
 
 There are two hash functions used throughout StarkNet's specifications:
 
-* $sn\_keccak: \{0,1\}^* \rightarrow \mathbb{F}_p$
-* $pedersen: \mathbb{F}_p\times\mathbb{F}_p\rightarrow\mathbb{F}_p$
+- $sn\_keccak: \{0,1\}^* \rightarrow \mathbb{F}_p$
+- $pedersen: \mathbb{F}_p\times\mathbb{F}_p\rightarrow\mathbb{F}_p$
 
 ## StarkNet Keccak
 
@@ -25,8 +25,9 @@ y^2=x^3+\alpha x +\beta
 $$
 
 where
-* $\alpha=1$
-* $\beta = 3141592653589793238462643383279502884197169399375105820974944592307816406665$
+
+- $\alpha=1$
+- $\beta = 3141592653589793238462643383279502884197169399375105820974944592307816406665$
 
 ### Definition
 

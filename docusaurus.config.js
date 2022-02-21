@@ -24,8 +24,8 @@ const config = {
       href: 'https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css',
       integrity:
         'sha384-Um5gpz1odJg5Z4HAmzPtgZKdTBHZdw8S29IecapCSB31ligYPhHQZMIlWLYQGVoc',
-      crossorigin: 'anonymous',
-    },
+      crossorigin: 'anonymous'
+    }
   ],
   presets: [
     [
@@ -35,21 +35,22 @@ const config = {
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
           // Please change this to your repo.
-          editUrl: 'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          editUrl:
+            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
           remarkPlugins: [math],
-          rehypePlugins: [katex],
+          rehypePlugins: [katex]
         },
         blog: {
           showReadingTime: true,
           // Please change this to your repo.
           editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/'
         },
         theme: {
-          customCss: require.resolve('./src/css/custom.css'),
-        },
-      }),
-    ],
+          customCss: require.resolve('./src/css/custom.css')
+        }
+      })
+    ]
   ],
 
   themeConfig:
@@ -59,22 +60,22 @@ const config = {
         title: 'StarkNet',
         logo: {
           alt: 'My Site Logo',
-          src: 'img/logo.svg',
+          src: 'img/logo.svg'
         },
         items: [
           {
             type: 'doc',
             docId: 'intro',
             position: 'left',
-            label: 'Tutorial',
+            label: 'Tutorial'
           },
           // { to: '/blog', label: 'Blog', position: 'left' },
           {
             href: 'https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet',
             label: 'GitHub',
-            position: 'right',
-          },
-        ],
+            position: 'right'
+          }
+        ]
       },
       footer: {
         style: 'dark',
@@ -84,27 +85,27 @@ const config = {
             items: [
               {
                 label: 'Tutorial',
-                to: '/docs/intro',
-              },
-            ],
+                to: '/docs/intro'
+              }
+            ]
           },
           {
             title: 'Community',
             items: [
               {
                 label: 'StarkNet Shamans',
-                href: 'https://community.starknet.io/',
+                href: 'https://community.starknet.io/'
               },
               {
                 label: 'Discord',
-                href: 'https://discord.gg/uXGqZyT4',
+                href: 'https://discord.gg/uXGqZyT4'
               },
               {
                 label: 'Twitter',
-                href: 'https://twitter.com/StarkWareLtd',
-              },
-            ],
-          },
+                href: 'https://twitter.com/StarkWareLtd'
+              }
+            ]
+          }
           // {
           //   title: 'More',
           //   items: [
@@ -119,14 +120,14 @@ const config = {
           //   ],
           // },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`
       },
       prism: {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
-        additionalLanguages: ['powershell', 'bash', 'python',],
-      },
-    }),
+        additionalLanguages: ['powershell', 'bash', 'python']
+      }
+    })
 };
 
 module.exports = config;
