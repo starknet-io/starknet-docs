@@ -113,7 +113,7 @@ The possible statuses of a transaction are:
 - `ACCEPTED_ON_L2`
 - `ACCEPTED_ON_L1`
 
-Refer to [this](../Blocks/transaction-life-cycle.md) section for more information about the transaction lifecycle.
+Refer to [this](../Blocks/transaction-life-cycle) section for more information about the transaction lifecycle.
 
 ### starknet call
 
