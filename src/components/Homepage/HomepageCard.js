@@ -1,8 +1,8 @@
 import React from 'react';
-import { CardContent, CardMedia, Typography } from '@mui/material';
-import { GlobalStyles } from '@mui/styled-engine';
+import {CardContent, CardMedia, Typography} from '@mui/material';
+import {GlobalStyles} from '@mui/styled-engine';
 
-const HomepageCard = ({ title, text, img }) => {
+const HomepageCard = ({title, text, img}) => {
   console.log('got img: ', img);
   const blue = '#29296E';
   return (
@@ -14,12 +14,12 @@ const HomepageCard = ({ title, text, img }) => {
         image={`./img/${img}`}
       />
       <CardContent>
-        <Typography variant="h5" component="div" sx={{ color: blue }}>
+        <Typography variant="h5" component="div" sx={{color: blue}}>
           {title}
         </Typography>
         <Typography
           variant="body2"
-          sx={{ color: blue, textTransform: 'capitalize' }}
+          sx={{color: blue, textTransform: 'capitalize'}}
         >
           {text}
         </Typography>

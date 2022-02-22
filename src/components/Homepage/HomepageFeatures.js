@@ -1,10 +1,10 @@
 import React from 'react';
 import styles from './HomepageFeatures.module.css';
-import { Button, Grid } from '@mui/material';
-import { GlobalStyles } from '@mui/styled-engine';
+import {Button, Grid} from '@mui/material';
+import {GlobalStyles} from '@mui/styled-engine';
 import HomepageCard from './HomepageCard';
 import homeLinksList from '../../config/home.json';
-import { useHistory } from '@docusaurus/router';
+import {useHistory} from '@docusaurus/router';
 
 export default function HomepageFeatures() {
   const list = homeLinksList;
@@ -12,8 +12,12 @@ export default function HomepageFeatures() {
     <section className={styles.features}>
       <div className="container">
         <div className="row">
-          <Grid container spacing={4} sx={{ justifyContent: 'center', padding: '0 24px' }}>
-            {list.map(({ linkName, ...props }, idx) => {
+          <Grid
+            container
+            spacing={4}
+            sx={{justifyContent: 'center', padding: '0 24px'}}
+          >
+            {list.map(({linkName, ...props}, idx) => {
               const history = useHistory();
 
               return (
