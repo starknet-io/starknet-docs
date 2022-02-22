@@ -27,6 +27,9 @@ const config = {
       crossorigin: 'anonymous'
     }
   ],
+
+  plugins: ['@docusaurus/plugin-ideal-image'],
+
   presets: [
     [
       'classic',
