@@ -38,7 +38,7 @@ export STARKNET_WALLET=starkware.starknet.wallets.open_zeppelin.OpenZeppelinAcco
 :::
 
 :::warning
-Using the builtin wallet providers that are part of the cairo-lang package (starkware.starknet.wallets...) is _not secure_ (for example, the private key may be kept unencrypted and without backup in your home directory). You should only use them if you’re not overly concerned with losing access to your accounts (for example, for testing purposes).
+Using the builtin wallet providers that are part of the cairo-lang package (starkware.starknet.wallets...) is _not secure_ (for example, the private key may be kept not encrypted and without backup in your home directory). You should only use them if you’re not overly concerned with losing access to your accounts (for example, for testing purposes).
 :::
 
 ### starknet invoke
@@ -65,7 +65,7 @@ Sends a transaction to the StarkNet sequencer, can take the following arguments:
 - `nonce` - account nonce, only relevant if the call is going through an account
 
 :::tip
-Today, interaction with StarkNet may be done either via account or by a direct call. The `signature` argument can only be provided in the case of a direct call, since otherwise providing the signature is the responssibility of the account module. To use an account you must specify `wallet_name`, otherwise a direct call will be used (you may also explicitly perform a direct call by adding `--no_wallet` to the command). Note that in the future direct calls will be deprecated and the only way to interact with the system would be through accounts.
+Today, interaction with StarkNet may be done either via account or by a direct call. The `signature` argument can only be provided in the case of a direct call, since otherwise providing the signature is the responsibility of the account module. To use an account you must specify `wallet_name`, otherwise a direct call will be used (you may also explicitly perform a direct call by adding `--no_wallet` to the command). Note that in the future direct calls will be deprecated and the only way to interact with the system would be through accounts.
 :::
 
 ### starknet deploy
