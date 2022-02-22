@@ -28,8 +28,6 @@ const config = {
     }
   ],
 
-  plugins: ['@docusaurus/plugin-ideal-image'],
-
   presets: [
     [
       'classic',
