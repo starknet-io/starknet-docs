@@ -17,7 +17,7 @@ const HomepageCard = ({title, text, img}) => {
         </Typography>
         <Typography
           variant="body2"
-          sx={{color: blue, textTransform: 'capitalize'}}
+          sx={{color: Blue, textTransform: 'capitalize'}}
         >
           {text}
         </Typography>
