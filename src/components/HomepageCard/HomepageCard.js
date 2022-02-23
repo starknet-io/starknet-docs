@@ -1,10 +1,8 @@
 import React from 'react';
 import {CardContent, CardMedia, Typography} from '@mui/material';
+import {Blue} from '../../config/colors';
 
 const HomepageCard = ({title, text, img}) => {
-  console.log('got img: ', img);
-  // const blue = '#29296E';
-  const blue = '#29296E';
   return (
     <>
       <CardMedia
@@ -14,7 +12,7 @@ const HomepageCard = ({title, text, img}) => {
         image={`./img/${img}`}
       />
       <CardContent>
-        <Typography variant="h5" component="div" sx={{color: blue}}>
+        <Typography variant="h5" component="div" sx={{color: Blue}}>
           {title}
         </Typography>
         <Typography
