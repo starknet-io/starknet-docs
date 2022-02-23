@@ -12,12 +12,12 @@ const HomepageCard = ({title, text, img}) => {
         image={`./img/${img}`}
       />
       <CardContent>
-        <Typography variant="h5" component="div" sx={{color: Blue}}>
+        <Typography variant="h5" component="div" sx={{color: Blue['darkest']}}>
           {title}
         </Typography>
         <Typography
           variant="body2"
-          sx={{color: Blue, textTransform: 'capitalize'}}
+          sx={{color: Blue['darkest'], textTransform: 'capitalize'}}
         >
           {text}
         </Typography>
