@@ -1,6 +1,5 @@
 import React from 'react';
 import {CardContent, CardMedia, Typography} from '@mui/material';
-import {Blue} from '../../config/colors';
 
 export const HomepageCard = ({title, text, img}) => {
   return (
@@ -12,12 +11,19 @@ export const HomepageCard = ({title, text, img}) => {
         image={`./img/${img}`}
       />
       <CardContent>
-        <Typography variant="h5" component="div" sx={{color: Blue['darkest']}}>
+        <Typography
+          variant="h5"
+          component="div"
+          sx={{color: 'var(--ifm-color-primary-darkest)'}}
+        >
           {title}
         </Typography>
         <Typography
           variant="body2"
-          sx={{color: Blue['darkest'], textTransform: 'capitalize'}}
+          sx={{
+            color: 'var(--ifm-color-primary-darkest)',
+            textTransform: 'capitalize'
+          }}
         >
           {text}
         </Typography>
@@ -25,5 +31,3 @@ export const HomepageCard = ({title, text, img}) => {
     </>
   );
 };
-
-export default HomepageCard;

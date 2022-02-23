@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './HomepageFeatures.module.css';
 import {Button, Grid} from '@mui/material';
-import HomepageCard from '../HomepageCard/HomepageCard';
+import {HomepageCard} from '../HomepageCard/HomepageCard';
 import list from '../../config/home.json';
 import {useHistory} from '@docusaurus/router';
 
@@ -58,5 +58,3 @@ export const HomepageFeatures = () => {
     </section>
   );
 };
-
-export default HomepageFeatures;
