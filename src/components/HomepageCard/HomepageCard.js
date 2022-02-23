@@ -2,7 +2,7 @@ import React from 'react';
 import {CardContent, CardMedia, Typography} from '@mui/material';
 import {Blue} from '../../config/colors';
 
-const HomepageCard = ({title, text, img}) => {
+export const HomepageCard = ({title, text, img}) => {
   return (
     <>
       <CardMedia

@@ -16,31 +16,32 @@ const overrideLinkStyle = {
   }
 };
 
-const renderCards = () => {
+export const HomepageFeatures = () => {
   const history = useHistory();
-  const handleOnClick = linkName => history.push(linkName);
-  const handleOnKeyDown = (event, linkName) => {
-    if (event.key === 'Enter') {
-      history.push(linkName);
-    }
-  };
-  return list.length
-    ? list.map(({linkName, ...props}, idx) => (
-        <Grid key={idx} item xs={8} md={4}>
-          <Button
-            variant="contained"
-            onClick={() => handleOnClick(linkName)}
-            onKeyDown={e => handleOnKeyDown(e, linkName)}
-            sx={overrideLinkStyle}
-          >
-            <HomepageCard {...props}></HomepageCard>
-          </Button>
-        </Grid>
-      ))
-    : null;
-};
 
-const HomepageFeatures = () => {
+  const renderCards = () => {
+    const handleOnClick = linkName => history.push(linkName);
+    const handleOnKeyDown = (event, linkName) => {
+      if (event.key === 'Enter') {
+        history.push(linkName);
+      }
+    };
+    return list.length
+      ? list.map(({linkName, ...props}, idx) => (
+          <Grid key={idx} item xs={8} md={4}>
+            <Button
+              variant="contained"
+              onClick={() => handleOnClick(linkName)}
+              onKeyDown={e => handleOnKeyDown(e, linkName)}
+              sx={overrideLinkStyle}
+            >
+              <HomepageCard {...props} />
+            </Button>
+          </Grid>
+        ))
+      : null;
+  };
+
   return (
     <section className={styles.features}>
       <div className="container">
