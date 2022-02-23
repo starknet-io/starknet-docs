@@ -1,9 +1,9 @@
 import React from 'react';
 import {CardContent, CardMedia, Typography} from '@mui/material';
-import {GlobalStyles} from '@mui/styled-engine';
 
 const HomepageCard = ({title, text, img}) => {
   console.log('got img: ', img);
+  // const blue = '#29296E';
   const blue = '#29296E';
   return (
     <>
