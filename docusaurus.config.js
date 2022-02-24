@@ -27,6 +27,7 @@ const config = {
       crossorigin: 'anonymous'
     }
   ],
+
   presets: [
     [
       'classic',
