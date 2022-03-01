@@ -14,7 +14,7 @@ const config = {
   baseUrl: '/starknet-docs/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/favicon.svg',
   organizationName: 'starkware-libs', // Usually your GitHub org/user name.
   projectName: 'starknet-docs', // Usually your repo name.
   deploymentBranch: 'deployed',
