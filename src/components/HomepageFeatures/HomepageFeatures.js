@@ -22,7 +22,7 @@ export const HomepageFeatures = () => {
   const renderCards = () => {
     const handleOnClick = linkName => {
       if (!linkName) return;
-      if (linkName.indexOf('http') > -1) {
+      if (linkName.startsWith('http')) {
         window.open(linkName, '_blank');
       } else {
         history.push(linkName);
