@@ -20,7 +20,15 @@ export const HomepageFeatures = () => {
   const history = useHistory();
 
   const renderCards = () => {
-    const handleOnClick = linkName => history.push(linkName);
+    const handleOnClick = linkName => {
+      if (!linkName) return;
+      if (linkName.indexOf('http') > -1) {
+        window.open(linkName, '_blank');
+      } else {
+        history.push(linkName);
+      }
+    };
+
     const handleOnKeyDown = (event, linkName) => {
       if (event.key === 'Enter') {
         history.push(linkName);
