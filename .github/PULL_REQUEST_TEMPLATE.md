@@ -5,8 +5,6 @@ If the PR is related to an open issue please link to it.
 
 ### Check List
 
-- [ ] Changes have been done against master branch, and PR does not conflict
-- [ ] New unit / functional tests have been added (whenever applicable)
-- [ ] Test are passing in local environment
+- [ ] Changes have been done against dev branch, and PR does not conflict
 - [ ] Docs have been updated
-- [ ] PR title is follow the convention: `<type>[optional scope]: <description>`, e.g: `fix: minor typos in code`
+- [ ] PR title is follow the convention: `<docs/feat/fix/chore>(optional scope): <description>`, e.g: `fix: minor typos in code`
