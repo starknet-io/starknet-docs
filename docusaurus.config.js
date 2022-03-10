@@ -9,8 +9,8 @@ const katex = require('rehype-katex');
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'StarkNet Documentation',
-  url: 'https://starknet-docs.github.io/',
-  baseUrl: '/starknet-docs/',
+  url: 'https://docs.starknet.io/',
+  baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.svg',
