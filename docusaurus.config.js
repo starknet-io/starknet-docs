@@ -9,9 +9,8 @@ const katex = require('rehype-katex');
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'StarkNet Documentation',
-  // tagline: 'Dinosaurs are cool',
-  url: 'https://starknet-docs.github.io/',
-  baseUrl: '/starknet-docs/',
+  url: 'https://docs.starknet.io/',
+  baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.svg',
@@ -68,7 +67,7 @@ const config = {
             type: 'doc',
             docId: 'intro',
             position: 'left',
-            label: 'Tutorial'
+            label: 'Technical Documentation'
           },
           {
             href: 'https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet',
@@ -84,7 +83,7 @@ const config = {
             title: 'Docs',
             items: [
               {
-                label: 'Tutorial',
+                label: 'Intro',
                 to: '/docs/intro'
               }
             ]
@@ -106,19 +105,6 @@ const config = {
               }
             ]
           }
-          // {
-          //   title: 'More',
-          //   items: [
-          //     {
-          //       label: 'Blog',
-          //       to: '/blog',
-          //     },
-          //     {
-          //       label: 'GitHub',
-          //       href: 'https://github.com/facebook/docusaurus',
-          //     },
-          //   ],
-          // },
         ],
         copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`
       },
