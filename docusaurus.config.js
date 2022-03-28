@@ -117,8 +117,8 @@ const config = {
         appId: 'AUAGSTLC17',
         apiKey: 'da23a50c70f3629f310f44535a015f9f',
         indexName: 'starknet',
-        searchParameters: {},
-      },
+        searchParameters: {}
+      }
     })
 };
 
