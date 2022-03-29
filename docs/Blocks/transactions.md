@@ -29,7 +29,7 @@ The Deploy transaction’s hash is calculated as follows:
 
 $$
 \begin{aligned}
-deploy\_tx\_hash = & h("deploy", contract\_address, sn\_keccak(“constructor”)\\&, h(constructor\_calldata), chain\_id)
+\text{deploy\_tx\_hash} = h( & \text{"deploy"}, \text{contract\_address}, sn\_keccak(\text{“constructor”}),\\ & h(\text{constructor\_calldata}), \text{chain\_id})
 \end{aligned}
 $$
 
@@ -54,8 +54,18 @@ An invoke function transaction has the following fields:
 | `entry_point_selector` | `Field element`      | The encoding of the selector for the function invoked (the entry point in the contract)   |
 | `calldata`             | `List<FieldElement>` | The arguments passed to the invoked function                                              |
 | `signature`            | `List<FieldElement>` | Additional information given by the caller, representing the signature of the transaction |
+| `max_fee`              | `Field element`      | The maximum fee that the sender is willing to pay for the transaction                     |
+| `version`              | `Field element`      | The intended StarkNet OS version                                                          |
 
 </APITable>
+
+:::info transaction version
+
+The StarkNet OS contains a hard-coded version (currently set to 0), and can only accept transactions
+with this version. A transaction with a different version can not be included in a proof. By advancing the version with breaking changes
+in the StarkNet OS, we can prevent old transactions from being executed in this unintended version, thus protecting the user. Note that setting a different version can be useful for testing purposes, since even if the transaction is properly signed, it can never be included in the production StarkNet (testnet or mainnet).
+
+:::
 
 ### Transaction hash
 
@@ -63,7 +73,7 @@ The invoke function transaction hash is calculated as a hash over the given tran
 
 $$
 \begin{aligned}
-invoke\_tx\_hash = & h("invoke", contract\_address, entry\_point\_selector\\&, h(calldata), chain\_id)
+\text{invoke\_tx\_hash} = h( & \text{"invoke"}, \text{version}, \text{contract\_address}, \text{entry\_point\_selector}, \\ & h(\text{calldata}), \text{max\_fee}, \text{chain\_id})
 \end{aligned}
 $$
 
