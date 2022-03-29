@@ -14,10 +14,10 @@ A deploy transaction has the following fields:
 
 | Name                    | Type                 | Description                                                                      |
 | ----------------------- | -------------------- | -------------------------------------------------------------------------------- |
-| `contract_address_salt` | `Field element`      | A random number used to distinguish between different instances of the contract  |
-| `contract_code`         | `Field element`      | A path to the json containing the contract’s definition                          |
+| `contract_address_salt` | `FieldElement`       | A random number used to distinguish between different instances of the contract  |
+| `contract_code`         | `FieldElement`       | A path to the json containing the contract’s definition                          |
 | `constructor_calldata`  | `List<FieldElement>` | The arguments passed to the constructor during deployment                        |
-| `caller_address`        | `Field element`      | Who invoked the deployment. Set to 0 (in future: the deploying account contract) |
+| `caller_address`        | `FieldElement`       | Who invoked the deployment. Set to 0 (in future: the deploying account contract) |
 
 </APITable>
 
@@ -50,12 +50,12 @@ An invoke function transaction has the following fields:
 
 | Name                   | Type                 | Description                                                                               |
 | ---------------------- | -------------------- | ----------------------------------------------------------------------------------------- |
-| `contract_address`     | `Field element`      | The address of the contract invoked by this transaction                                   |
-| `entry_point_selector` | `Field element`      | The encoding of the selector for the function invoked (the entry point in the contract)   |
+| `contract_address`     | `FieldElement`       | The address of the contract invoked by this transaction                                   |
+| `entry_point_selector` | `FieldElement`       | The encoding of the selector for the function invoked (the entry point in the contract)   |
 | `calldata`             | `List<FieldElement>` | The arguments passed to the invoked function                                              |
 | `signature`            | `List<FieldElement>` | Additional information given by the caller, representing the signature of the transaction |
-| `max_fee`              | `Field element`      | The maximum fee that the sender is willing to pay for the transaction                     |
-| `version`              | `Field element`      | The intended StarkNet OS version                                                          |
+| `max_fee`              | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction                     |
+| `version`              | `FieldElement`       | The intended StarkNet OS version                                                          |
 
 </APITable>
 
