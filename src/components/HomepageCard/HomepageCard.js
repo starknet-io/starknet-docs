@@ -1,14 +1,17 @@
 import React from 'react';
 import {CardContent, CardMedia, Typography} from '@mui/material';
 
+const HomepageAvatar = img => {};
+
 export const HomepageCard = ({title, text, img}) => {
   return (
     <>
       <CardMedia
         component="img"
-        height="60"
+        height="50"
         title={title}
         image={`./img/${img}`}
+        sx={{width: 'unset'}}
       />
       <CardContent>
         <Typography
