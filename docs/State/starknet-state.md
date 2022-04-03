@@ -1,4 +1,4 @@
-# StarkNet state
+# StarkNet State
 
 The state of StarkNet is a mapping between addresses (251 bit field elements) and contract’s state.
 
