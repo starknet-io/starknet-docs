@@ -10,9 +10,14 @@ const overrideLinkStyle = {
   width: '100%',
   minHeight: '100%',
   backgroundColor: '#fff',
+  border: '1px dashed var(--cust-color-primary)',
+  boxShadow: 'none !important',
+  color: 'inherit',
+  padding: '23px 25px',
+  borderRadius: '10px',
   [':hover']: {
     boxShadow: '-1px 5px 19px 0px rgba(0,0,0,0.3)',
-    backgroundColor: '#fff'
+    backgroundColor: 'var(--cust-color-primary)'
   }
 };
 
@@ -36,12 +41,13 @@ export const HomepageFeatures = () => {
     };
     return list.length
       ? list.map(({linkName, ...props}, idx) => (
-          <Grid key={idx} item xs={8} md={4}>
+          <Grid key={idx} item xs={12} sm={6} md={4} lg={2.4}>
             <Button
               variant="contained"
               onClick={() => handleOnClick(linkName)}
               onKeyDown={e => handleOnKeyDown(e, linkName)}
               sx={overrideLinkStyle}
+              className={styles.card}
             >
               <HomepageCard {...props} />
             </Button>
@@ -56,8 +62,8 @@ export const HomepageFeatures = () => {
         <div className="row">
           <Grid
             container
-            spacing={4}
-            sx={{justifyContent: 'center', padding: '0 24px'}}
+            spacing={1.5}
+            sx={{justifyContent: 'center', padding: '0 20px'}}
           >
             {renderCards()}
           </Grid>

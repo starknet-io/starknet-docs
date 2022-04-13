@@ -59,7 +59,7 @@ const config = {
       navbar: {
         title: 'StarkNet',
         logo: {
-          alt: 'My Site Logo',
+          alt: 'StarkWare Logo',
           src: 'img/logo.svg'
         },
         items: [
@@ -77,7 +77,10 @@ const config = {
         ]
       },
       footer: {
-        style: 'dark',
+        logo: {
+          alt: 'StarkWare Logo',
+          src: 'img/logo.svg',
+        },
         links: [
           {
             title: 'Docs',
