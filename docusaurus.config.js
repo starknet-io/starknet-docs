@@ -59,15 +59,15 @@ const config = {
       navbar: {
         title: 'StarkNet',
         logo: {
-          alt: 'My Site Logo',
-          src: 'img/logo.svg'
+          alt: 'StarkWare Logo',
+          src: 'img/logo.svg',
+          href: 'https://starknet.io'
         },
         items: [
           {
-            type: 'doc',
-            docId: 'intro',
             position: 'left',
-            label: 'Technical Documentation'
+            label: 'Technical Documentation',
+            to: '/'
           },
           {
             href: 'https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet',
@@ -77,7 +77,6 @@ const config = {
         ]
       },
       footer: {
-        style: 'dark',
         links: [
           {
             title: 'Docs',
