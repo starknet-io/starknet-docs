@@ -95,7 +95,7 @@ Note that only the most recent value reaches L1. That is, the transaction's fee 
 For more information, see the exact [format](../Data%20Availabilty/on-chain-data#format).
 
 Let $c_w$ denote the L1 calldata cost of a 32 byte word, measured in gas. With 16 gas per byte we have $c_w=16\cdot 32=512$.
-Consequently, the assosiated storage update fee for a transaction updating $n$ unique contracts and $m$ unique keys is:
+Consequently, the associated storage update fee for a transaction updating $n$ unique contracts and $m$ unique keys is:
 
 $$
 \text{gas\_price}\cdot c_w\cdot\underbrace{(2n+2m)}_{\text{number of words}}
