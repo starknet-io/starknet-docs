@@ -14,10 +14,10 @@ A deploy transaction has the following fields:
 
 | Name                    | Type                 | Description                                                                      |
 | ----------------------- | -------------------- | -------------------------------------------------------------------------------- |
-| `contract_address_salt` | `Field element`      | A random number used to distinguish between different instances of the contract  |
-| `contract_code`         | `Field element`      | A path to the json containing the contract’s definition                          |
+| `contract_address_salt` | `FieldElement`       | A random number used to distinguish between different instances of the contract  |
+| `contract_code`         | `FieldElement`       | A path to the json containing the contract’s definition                          |
 | `constructor_calldata`  | `List<FieldElement>` | The arguments passed to the constructor during deployment                        |
-| `caller_address`        | `Field element`      | Who invoked the deployment. Set to 0 (in future: the deploying account contract) |
+| `caller_address`        | `FieldElement`       | Who invoked the deployment. Set to 0 (in future: the deploying account contract) |
 
 </APITable>
 
@@ -29,7 +29,7 @@ The Deploy transaction’s hash is calculated as follows:
 
 $$
 \begin{aligned}
-deploy\_tx\_hash = & h("deploy", contract\_address, sn\_keccak(“constructor”)\\&, h(constructor\_calldata), chain\_id)
+\text{deploy\_tx\_hash} = h( & \text{"deploy"}, \text{contract\_address}, sn\_keccak(\text{“constructor”}),\\ & h(\text{constructor\_calldata}), \text{chain\_id})
 \end{aligned}
 $$
 
@@ -50,12 +50,22 @@ An invoke function transaction has the following fields:
 
 | Name                   | Type                 | Description                                                                               |
 | ---------------------- | -------------------- | ----------------------------------------------------------------------------------------- |
-| `contract_address`     | `Field element`      | The address of the contract invoked by this transaction                                   |
-| `entry_point_selector` | `Field element`      | The encoding of the selector for the function invoked (the entry point in the contract)   |
+| `contract_address`     | `FieldElement`       | The address of the contract invoked by this transaction                                   |
+| `entry_point_selector` | `FieldElement`       | The encoding of the selector for the function invoked (the entry point in the contract)   |
 | `calldata`             | `List<FieldElement>` | The arguments passed to the invoked function                                              |
 | `signature`            | `List<FieldElement>` | Additional information given by the caller, representing the signature of the transaction |
+| `max_fee`              | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction                     |
+| `version`              | `FieldElement`       | The intended StarkNet OS version                                                          |
 
 </APITable>
+
+:::info transaction version
+
+The StarkNet OS contains a hard-coded version (currently set to 0), and can only accept transactions
+with this version. A transaction with a different version can not be included in a proof. By advancing the version with breaking changes
+in the StarkNet OS, we can prevent old transactions from being executed in this unintended version, thus protecting the user. Note that setting a different version can be useful for testing purposes, since even if the transaction is properly signed, it can never be included in the production StarkNet (testnet or mainnet).
+
+:::
 
 ### Transaction hash
 
@@ -63,7 +73,7 @@ The invoke function transaction hash is calculated as a hash over the given tran
 
 $$
 \begin{aligned}
-invoke\_tx\_hash = & h("invoke", contract\_address, entry\_point\_selector\\&, h(calldata), chain\_id)
+\text{invoke\_tx\_hash} = h( & \text{"invoke"}, \text{version}, \text{contract\_address}, \text{entry\_point\_selector}, \\ & h(\text{calldata}), \text{max\_fee}, \text{chain\_id})
 \end{aligned}
 $$
 

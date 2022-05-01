@@ -38,7 +38,7 @@ $$
 h(a,b) = \left[shift\_point + a_{low} \cdot P_0 + a_{high} \cdot P1 + b_{low} \cdot P2  + b_{high} \cdot P3\right]_x
 $$
 
-where the values of the constants $shift\_point, P_0, P_1, P_2, P_3$ can be found [here](https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/crypto/starkware/crypto/signature/fast_pedersen_hash.py), and $[P]_x$ denotes the $x$ cooredinate of the point $P$.
+where the values of the constants $shift\_point, P_0, P_1, P_2, P_3$ can be found [here](https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/crypto/starkware/crypto/signature/fast_pedersen_hash.py), and $[P]_x$ denotes the $x$ coordinate of the point $P$.
 
 ### Array hashing
 
