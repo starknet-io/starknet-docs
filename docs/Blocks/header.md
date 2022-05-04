@@ -14,7 +14,7 @@ The following fields define the block header:
 | ------------------------ | ------------------------ | ----------------------------------------------------------------------------------------- | :----------------: |
 | `parent_block_hash`      | `field element`          | The hash of this block's parent                                                           | :heavy_check_mark: |
 | `block_number`           | `integer` \| `"pending"` | The number (height) of this block                                                         | :heavy_check_mark: |
-| `global_state_root`      | `field element`          | The hash of this block's parent                                                           | :heavy_check_mark: |
+| `global_state_root`      | `field element`          | The state [commitment](../State/starknet-state#state-commitment) after this block         | :heavy_check_mark: |
 | `sequencer_address`      | `Ethereum address?`      | The Ethereum address of the sequencer submitting the state update that creates this block | :heavy_check_mark: |
 | `block_timestamp`        | `timestamp`              | The time the sequencer created this block before executing transactions                   | :heavy_check_mark: |
 | `transaction_count`      | `field element`          | The number of transactions in a block                                                     | :heavy_check_mark: |
