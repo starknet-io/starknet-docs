@@ -4,7 +4,7 @@ import APITable from '@site/src/components/APITable';
 
 :::tip
 
-All the CLI commands require the `--network` parameter, which can be either `alpha-goerli` or `alpha-network`.
+All the CLI commands require the `--network` parameter, which can be either `alpha-goerli` or `alpha-mainnet`.
 You can set the `STARKNET_NETWORK` environment variable, causing subsequent calls to the
 StarkNet CLI to use the specified network, e.g. to interact with testnet you can set:
 
