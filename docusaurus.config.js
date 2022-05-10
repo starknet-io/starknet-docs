@@ -64,10 +64,9 @@ const config = {
         },
         items: [
           {
-            type: 'doc',
-            docId: 'intro',
             position: 'left',
-            label: 'Technical Documentation'
+            label: 'Technical Documentation',
+            to: '/'
           },
           {
             href: 'https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet',
