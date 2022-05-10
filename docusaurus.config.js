@@ -60,7 +60,8 @@ const config = {
         title: 'StarkNet',
         logo: {
           alt: 'StarkWare Logo',
-          src: 'img/logo.svg'
+          src: 'img/logo.svg',
+          href: 'https://starknet.io',
         },
         items: [
           {
