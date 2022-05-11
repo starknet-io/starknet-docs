@@ -10,19 +10,19 @@ The following fields define the block header:
 
 <APITable>
 
-| Name                     | Type                     | Description                                                                               |    Implemented     |
-| ------------------------ | ------------------------ | ----------------------------------------------------------------------------------------- | :----------------: |
-| `parent_block_hash`      | `field element`          | The hash of this block's parent                                                           | :heavy_check_mark: |
-| `block_number`           | `integer` \| `"pending"` | The number (height) of this block                                                         | :heavy_check_mark: |
-| `global_state_root`      | `field element`          | The state [commitment](../State/starknet-state#state-commitment) after this block         | :heavy_check_mark: |
-| `sequencer_address`      | `Ethereum address?`      | The Ethereum address of the sequencer submitting the state update that creates this block | :heavy_check_mark: |
-| `block_timestamp`        | `timestamp`              | The time the sequencer created this block before executing transactions                   | :heavy_check_mark: |
-| `transaction_count`      | `field element`          | The number of transactions in a block                                                     | :heavy_check_mark: |
-| `transaction_commitment` | `field element`          | A commitment to the transactions included in the block                                    | :heavy_check_mark: |
-| `event_count`            | `field element`          | The number of events                                                                      | :heavy_check_mark: |
-| `event_commitment`       | `field_element`          | A commitment to the events produced in this block                                         | :heavy_check_mark: |
-| `protocol_version`       | `integer`                | The version of the StarkNet protocol used when creating this block                        |                    |
-| `extra data`             | `field element`          | Extraneous data that might be useful for running transactions                             |                    |
+| Name                     | Type           | Description                                                                       |    Implemented     |
+| ------------------------ | -------------- | --------------------------------------------------------------------------------- | :----------------: |
+| `parent_block_hash`      | `FieldElement` | The hash of this block's parent                                                   | :heavy_check_mark: |
+| `block_number`           | `Integer`      | The number (height) of this block                                                 | :heavy_check_mark: |
+| `global_state_root`      | `FieldElement` | The state [commitment](../State/starknet-state#state-commitment) after this block | :heavy_check_mark: |
+| `sequencer_address`      | `FieldElement` | The StarkNet address of the sequencer who created this block                      | :heavy_check_mark: |
+| `block_timestamp`        | `Timestamp`    | The time the sequencer created this block before executing transactions           | :heavy_check_mark: |
+| `transaction_count`      | `Integer`      | The number of transactions in a block                                             | :heavy_check_mark: |
+| `transaction_commitment` | `FieldElement` | A commitment to the transactions included in the block                            | :heavy_check_mark: |
+| `event_count`            | `Integer`      | The number of events                                                              | :heavy_check_mark: |
+| `event_commitment`       | `FieldElement` | A commitment to the events produced in this block                                 | :heavy_check_mark: |
+| `protocol_version`       | `Integer`      | The version of the StarkNet protocol used when creating this block                |                    |
+| `extra data`             | `FieldElement` | Extraneous data that might be useful for running transactions                     |                    |
 
 </APITable>
 
