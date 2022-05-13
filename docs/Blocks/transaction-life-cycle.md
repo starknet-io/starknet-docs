@@ -1,6 +1,6 @@
 # Transaction Lifecycle
 
-The following are the possible statuses of transaction from the moment it the moment it is included in a proof validated by L1.
+The following are the possible statuses of a transaction from the moment it's included in a proof to the moment it's validated by L1.
 
 ## Transaction status
 
@@ -35,7 +35,7 @@ Transaction was accepted on-chain.
 
 ## The pending block
 
-Today, StarkNet supports querying the new block before its construction is complete. This feature improves the liveness of the system prior to the decentralization phase, but will probably become obsolete once the system is decentralized, as full nodes will only propagate finalized blocks through the network.
+Today, StarkNet supports querying the new block before its construction is complete. This feature improves the uptime of the system prior to the decentralization phase, but will probably become obsolete once the system is decentralized, as full nodes will only propagate finalized blocks through the network.
 
 During the construction of the block, as it is accumulating new transactions, the block’s status is PENDING. While PENDING, new transactions are dynamically added to the block. Once the sequencer decides to “close” the block, it becomes `ACCEPTED_ON_L2` and its hash is computed.
 
