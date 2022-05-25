@@ -4,7 +4,7 @@ import APITable from '@site/src/components/APITable';
 
 :::tip
 
-All the CLI commands require the `--network` parameter, which can be either `alpha-goerli` or `alpha-network`.
+All the CLI commands require the `--network` parameter, which can be either `alpha-goerli` or `alpha-mainnet`.
 You can set the `STARKNET_NETWORK` environment variable, causing subsequent calls to the
 StarkNet CLI to use the specified network, e.g. to interact with testnet you can set:
 
@@ -137,10 +137,18 @@ Calls a StarkNet contract without affecting the state, can take the following ar
 - `function_name`\* - name of the function which is called
 - `arguments`\* - inputs to the called function, represented by a list of space-delimited values
 - `block_hash` - the hash of the block used as the context for the call operation. If this argument is omitted, the latest block is used
-- `block_number` - same as block_hash, but specifies the context block by number
+- `block_number` - same as block_hash, but specifies the context block by number or [tag](#block_tag)
 - `signature_information` - list of field elements as described [here](../Blocks/transactions#signature)
-- `wallet_name` - the name of the desired wallet, use [deploy_account](./commands#starknet-deploy_account) to set-up new accounts in the CLI.
+- `wallet_name` - the name of the desired wallet, use [deploy_account](./commands#starknet-deploy_account) to set-up new accounts in the CLI
 - `nonce` - account nonce, only relevant if the call is going through an account
+
+<a name="block_tag"></a>
+
+:::info Block Tag
+
+A block context can be specified via the `latest` or `pending` tags, where the former refers to the latest accepted on L2 block and the latter refers to the [pending block](../Blocks/transaction-life-cycle#the-pending-block).
+
+:::
 
 ### starknet get_block
 
@@ -153,7 +161,7 @@ starknet get_block
 Returns the requested block, exactly one of the following arguments must be given:
 
 - `block_hash` - hash of the requested block
-- `block_number` - number of the requested block
+- `block_number` - number or [tag](#block_tag) of the requested block
 
 ### starknet get_code
 
@@ -168,7 +176,7 @@ Returns the ABI and the byte code of the requested contract, can take the follow
 
 - `contact_address`\* - address of the requested contract
 - `block_hash` - the hash of the block used as the context for the operation. If this argument is omitted, the latest block is used
-- `block_number` - same as block_hash, but specifies the context block by number.
+- `block_number` - same as block_hash, but specifies the context block by number or [tag](#block_tag)
 
 ### starknet get_storage_at
 
@@ -185,7 +193,7 @@ Queries a contract’s storage at a specific key, can take the following argumen
 - `contract_address` \*- address of the requested contract
 - `key`\* - the requested key from the given contract’s storage
 - `block_hash` - the hash of the block relative to which the storage will be provided. In case this argument is not given, the latest block is used
-- `block_number` - same as block_hash, but specifies the context block by number
+- `block_number` - same as block_hash, but specifies the context block by number or [tag](#block_tag)
 
 ### starknet get_transaction
 
