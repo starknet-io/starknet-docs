@@ -54,7 +54,7 @@ export const HomepageCard = ({title, text, img}) => {
         >
           {text}
         </Typography>
-        <Button
+        {/* <Button
           component="span"
           sx={{
             color: 'inherit',
@@ -85,7 +85,7 @@ export const HomepageCard = ({title, text, img}) => {
           }
         >
           Explore Blocks
-        </Button>
+        </Button> */}
       </CardContent>
     </>
   );
