@@ -36,7 +36,7 @@ export const HomepageCard = ({title, text, img}) => {
           component="div"
           sx={{
             color: 'inherit',
-            fontSize: 22,
+            fontSize: 18,
             fontWeight: 600,
             textTransform: 'initial'
           }}
