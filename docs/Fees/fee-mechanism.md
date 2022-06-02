@@ -2,12 +2,6 @@
 
 In this section, we will review StarkNet Alpha 0.8.0 fee mechanism. If you want to skip the motivation and deep dive into the mechanism, you can skip directly to the final [formula](./fee-mechanism#overall-fee).
 
-<!-- TODO(Ariel 13/04/2022): update on 0.9.0 -->
-
-:::info
-Note that this is only the first version, and we expect the fee mechanism to evolve with future releases, lowering fees for the user. In order to allow backward compatibility, fees will be optional until 0.9.0.
-:::
-
 ## Introduction
 
 Users can specify the maximum fee that they are willing to pay for a transaction via the `max_fee` [field](../Blocks/transactions#max_fee).
@@ -159,7 +153,3 @@ where $w$ is the weights vector discussed above and $c_w$ is the calldata cost (
 ## When is the fee charged?
 
 The fee is charged atomically with the transaction execution on L2. The StarkNet OS injects a transfer of the fee-related ERC-20, with an amount equal to the fee paid, sender equals to the transaction submitter, and the sequencer as a receiver.
-
-<!-- TODO(Ariel 13/04/2022): update on 0.9.0 -->
-
-Note that fees are not yet enforced at the time of writing (that is, the sequencer may include a transaction without the “max fee” field).
