@@ -28,7 +28,7 @@ Deploys an account contract, can take the following arguments:
 
 :::info
 
-Today, the StarkNet CLI only works with the Open-Zeppelin account contract which can be found [here](https://github.com/OpenZeppelin/cairo-contracts/blob/main/contracts/Account.cairo). The wallet provider used by the CLI can be found [here](https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/wallets/open_zeppelin.py).
+Today, the StarkNet CLI only works with the OpenZeppelin account contract which can be found [here](https://github.com/OpenZeppelin/cairo-contracts/blob/main/contracts/Account.cairo). The wallet provider used by the CLI can be found [here](https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/wallets/open_zeppelin.py).
 To use this provider, either set up the following environment variable or pass the same value directly to the `wallet_provider` parameter:
 
 ```
