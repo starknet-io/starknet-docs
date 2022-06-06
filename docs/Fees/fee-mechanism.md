@@ -2,12 +2,6 @@
 
 In this section, we will review StarkNet Alpha 0.8.0 fee mechanism. If you want to skip the motivation and deep dive into the mechanism, you can skip directly to the final [formula](./fee-mechanism#overall-fee).
 
-<!-- TODO(Ariel 13/04/2022): update on 0.9.0 -->
-
-:::info
-Note that this is only the first version, and we expect the fee mechanism to evolve with future releases, lowering fees for the user. In order to allow backward compatibility, fees will be optional until 0.9.0.
-:::
-
 ## Introduction
 
 Users can specify the maximum fee that they are willing to pay for a transaction via the `max_fee` [field](../Blocks/transactions#max_fee).
@@ -74,10 +68,11 @@ The weights in 0.8.0 are:
 
 ### On Chain Data
 
-The on-chain data associated with a transaction is composed of two parts
+The on-chain data associated with a transaction is composed of three parts
 
 - storage updates
 - l2→l1 messages
+- deployed contracts
 
 #### Storage Updates
 
@@ -109,7 +104,7 @@ Note that there are many possible improvements to the above pessimistic estimati
 
 #### L2→L1 Messages
 
-When a transaction which raises the `send_message_to_l1` syscall is included in a state update, the following data reaches L1:
+When a transaction which raises the `send_message_to_l1` syscall is included in a state update, the following [data](../Data%20Availabilty/on-chain-data#format) reaches L1:
 
 - l2 sender address
 - l1 destination address
@@ -122,6 +117,21 @@ $$
 \text{gas\_price}\cdot c_w\cdot(3+\text{payload\_size})
 $$
 
+#### Deployed Contracts
+
+When a transactions which raises the `deploy` syscall is included in a state update, the following [data](../Data%20Availabilty/on-chain-data#format) reaches L1:
+
+- contract addresss
+- class hash
+- number of constructor arguments
+- constructor arguments
+
+Consequently, the fee associated with a single deployment is:
+
+$$
+\text{gas\_price}\cdot c_w\cdot(3+\text{\#\text{ of constructor arguments}})
+$$
+
 ## Overall Fee
 
 The fee for a transaction with:
@@ -130,11 +140,12 @@ The fee for a transaction with:
 - $n$ unique contract updates
 - $m$ unique key updates
 - $t$ messages with payload sizes $q_1,...,q_t$
+- $\ell$ deployments with number of constructor arguments $c_1,...,c_\ell$
 
 is given by:
 
 $$
-F = \text{gas\_price}\cdot\left(\max_k v_k w_k + c_w\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i\right)\right)
+F = \text{gas\_price}\cdot\left(\max_k v_k w_k + c_w\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i + 3\ell + \sum\limits_{i=1}^\ell c_i\right)\right)
 $$
 
 where $w$ is the weights vector discussed above and $c_w$ is the calldata cost (in gas) per 32 byte word.
@@ -142,7 +153,3 @@ where $w$ is the weights vector discussed above and $c_w$ is the calldata cost (
 ## When is the fee charged?
 
 The fee is charged atomically with the transaction execution on L2. The StarkNet OS injects a transfer of the fee-related ERC-20, with an amount equal to the fee paid, sender equals to the transaction submitter, and the sequencer as a receiver.
-
-<!-- TODO(Ariel 13/04/2022): update on 0.9.0 -->
-
-Note that fees are not yet enforced at the time of writing (that is, the sequencer may include a transaction without the “max fee” field).
