@@ -91,7 +91,7 @@ Where:
 
 ## Declare transaction
 
-The declare transaction is used to introduce new classes into the state of StarkNet, enabling other contracts to deploy instances of those classes or using them in a library call. For more information, see [contract classes](../contracts/contract-classes.md).
+The declare transaction is used to introduce new classes into the state of StarkNet, enabling other contracts to deploy instances of those classes or using them in a library call. For more information, see [contract classes](../Contracts/contract-classes.md).
 
 A declare transaction has the following fields:
 
