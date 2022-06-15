@@ -1,17 +1,17 @@
 # Fee Mechanism
 
-In this section, we will review StarkNet Alpha 0.8.0 fee mechanism. If you want to skip the motivation and deep dive into the mechanism, you can skip directly to the final [formula](./fee-mechanism#overall-fee).
+In this section, we will review StarkNet Alpha 0.8.0 fee mechanism. If you want to skip the motivation and deep dive into the mechanism, you can skip directly to the final [formula](./fee-mechanism.md#overall-fee).
 
 ## Introduction
 
-Users can specify the maximum fee that they are willing to pay for a transaction via the `max_fee` [field](../Blocks/transactions#max_fee).
+Users can specify the maximum fee that they are willing to pay for a transaction via the `max_fee` [field](../Blocks/transactions.md#max_fee).
 
 The only limitation on the sequencer (enforced by the StarkNet OS) is that the actual fee charged is bounded by `max_fee`, but for now, StarkWare’s sequencer will only charge the fee required to cover the proof cost (potentially less than the max fee).
 
 Presently, the sequencer only takes into account L1 costs involving proof submission. There are two components affecting the L1 footprint of a transaction:
 
-- [computational complexity](./fee-mechanism#computation): the heavier the transaction, the larger its portion in the proof verification cost.
-- [on chain data](./fee-mechanism#on-chain-data): L1 calldata cost originating from [data availability](../Data%20Availabilty/on-chain-data) and L2→L1 messages.
+- [computational complexity](./fee-mechanism.md#computation): the heavier the transaction, the larger its portion in the proof verification cost.
+- [on chain data](./fee-mechanism.md#on-chain-data): L1 calldata cost originating from [data availability](../Data%20Availabilty/on-chain-data.md) and L2→L1 messages.
 
 ## Fee Units
 
@@ -87,7 +87,7 @@ Whenever a transaction updates a key at the storage of some contract, the follow
 Note that only the most recent value reaches L1. That is, the transaction's fee only depends on the number of **unique** storage updates (if the same storage cell is updated multiple times within the transaction, the fee remains that of a single update).
 :::
 
-For more information, see the exact [format](../Data%20Availabilty/on-chain-data#format).
+For more information, see the exact [format](../Data%20Availabilty/on-chain-data.md#format).
 
 Let $c_w$ denote the L1 calldata cost of a 32 byte word, measured in gas. With 16 gas per byte we have $c_w=16\cdot 32=512$.
 Consequently, the associated storage update fee for a transaction updating $n$ unique contracts and $m$ unique keys is:
@@ -104,7 +104,7 @@ Note that there are many possible improvements to the above pessimistic estimati
 
 #### L2→L1 Messages
 
-When a transaction which raises the `send_message_to_l1` syscall is included in a state update, the following [data](../Data%20Availabilty/on-chain-data#format) reaches L1:
+When a transaction which raises the `send_message_to_l1` syscall is included in a state update, the following [data](../Data%20Availabilty/on-chain-data.md#format) reaches L1:
 
 - l2 sender address
 - l1 destination address
@@ -119,7 +119,7 @@ $$
 
 #### Deployed Contracts
 
-When a transactions which raises the `deploy` syscall is included in a state update, the following [data](../Data%20Availabilty/on-chain-data#format) reaches L1:
+When a transactions which raises the `deploy` syscall is included in a state update, the following [data](../Data%20Availabilty/on-chain-data.md#format) reaches L1:
 
 - contract addresss
 - class hash

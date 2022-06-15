@@ -5,7 +5,7 @@
 Contracts on L1 can interact asynchronously with contracts on L2 via the L1→L2 messaging protocol. In the first step, an L1 contract initiates a message to an L2 contract on StarkNet. It does so by calling the [`sendMessageToL2`](https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L100) function on the StarkNet Core Contract with the message parameters. The StarkNet Core Contract hashes the message parameters (the L1 sender address, the recipient contract address on StarkNet, function selector, and the relevant calldata) and increases the hash counter by 1.
 
 A message is then decoded into a StarkNet transaction which invokes a function annotated with the `l1_handler` decorator on the target contract.
-The StarkNet sequencer, upon seeing enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction which invokes the relvant `l1_handler`. The handled message is then attached to the proof of the relevant state update – and the message is cleared (or the count is deduced) when the state is updated. At this point the message is considered handled.
+The StarkNet sequencer, upon seeing enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction which invokes the relevant `l1_handler`. The handled message is then attached to the proof of the relevant state update – and the message is cleared (or the count is deduced) when the state is updated. At this point the message is considered handled.
 
 The above flow is illustrated in the following diagram:
 

@@ -13,16 +13,16 @@ The contract's hash is a hash of its definition. The elements defining a contrac
 The contract’s hash is the chain hash[^4] of the above, computed as follows:
 
 - start with $h(0,api\_version)$
-- for every line in the above (excluding the first), compute $h(h(previous\_line), new\_line)$, where the hash of an array is defined [here](../Hashing/hash-functions#array-hashing).
+- for every line in the above (excluding the first), compute $h(h(previous\_line), new\_line)$, where the hash of an array is defined [here](../Hashing/hash-functions.md#array-hashing).
 - let $c$ denote the cumulative hash resulting from applying the above process; the contract’s hash is then $h(c, \textrm{number\_of\_lines})$, where $\text{number\_of\_lines}$ is 7.
   For more details, see the [Cairo implementation](https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contracts.cairo#L47).
 
 [^1]:
     An entry point is a pair `(selector, offset)`, where offset is the offset of the instruction that should be called inside the contract’s bytecode
     :::info Function selector
-    The selector is an identifier through which the function is callable in transactions or in other contracts. The selector is the [starknet_keccak](../Hashing/hash-functions#starknet-keccak) hash of the function name, encoded in ASCII.
+    The selector is an identifier through which the function is callable in transactions or in other contracts. The selector is the [starknet_keccak](../Hashing/hash-functions.md#starknet-keccak) hash of the function name, encoded in ASCII.
     :::
 
 [^2]: ASCII encoding of the builtin names
-[^3]: Here we mean [starknet_keccak](../Hashing/hash-functions#starknet-keccak)
-[^4]: [Pedersen hash](../Hashing/hash-functions#pedersen-hash)
+[^3]: Here we mean [starknet_keccak](../Hashing/hash-functions.md#starknet-keccak)
+[^4]: [Pedersen hash](../Hashing/hash-functions.md#pedersen-hash)

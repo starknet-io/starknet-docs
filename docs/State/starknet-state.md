@@ -3,18 +3,18 @@
 The state of StarkNet consists of:
 
 - contract instances: a mapping between addresses (251 bit field elements) and contract’s state.
-- [contract classes](../Contracts/contract-classes): a mapping between class hash and the class definition
+- [contract classes](../Contracts/contract-classes.md): a mapping between class hash and the class definition
 
 A contract state consists of:
 
 - class_hash (defines the functionality)
-- [contract storage](../Contracts/contract-storage) (a key-value mapping where the key/values are field elements)
+- [contract storage](../Contracts/contract-storage.md) (a key-value mapping where the key/values are field elements)
 
 With the above definition, we can provide a brief sketch of StarkNet’s transition function. A transaction $tx$ transitions the system from state $S$ to state $S’$ if:
 
-- $tx$ is an [invoke](../Blocks/transactions#invoke-transaction) transaction, and the storage of $S’$ is the result of executing the target contract code with respect to the previous state $S$ (the arguments, contract address, and the specific entry point are part of the transaction)
-- $tx$ is a [deploy](../Blocks/transactions#deploy-transaction) transaction, and $S’$ contains the new contract’s state at the contract’s address. Additionally, the storage of $S$ is updated according to the execution of the contract’s constructor.
-- $tx$ is a [declare](../Blocks/transactions#declare-transaction) transaction, and $S'$ contains the class hash and definition in the contract classes mapping
+- $tx$ is an [invoke](../Blocks/transactions.md#invoke-transaction) transaction, and the storage of $S’$ is the result of executing the target contract code with respect to the previous state $S$ (the arguments, contract address, and the specific entry point are part of the transaction)
+- $tx$ is a [deploy](../Blocks/transactions.md#deploy-transaction) transaction, and $S’$ contains the new contract’s state at the contract’s address. Additionally, the storage of $S$ is updated according to the execution of the contract’s constructor.
+- $tx$ is a [declare](../Blocks/transactions.md#declare-transaction) transaction, and $S'$ contains the class hash and definition in the contract classes mapping
 
 ## State Commitment
 
@@ -26,9 +26,9 @@ $$
 
 Where:
 
-- $\text{contract\_hash}$ is the hash of the contract’s definition discussed [here](../Contracts/contract-hash)
+- $\text{contract\_hash}$ is the hash of the contract’s definition discussed [here](../Contracts/contract-hash.md)
 - $\text{storage\_root}$ is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract’s storage
-- $h$ is the [Pedersen](../Hashing/hash-functions#pedersen-hash) hash function.
+- $h$ is the [Pedersen](../Hashing/hash-functions.md#pedersen-hash) hash function.
 
 :::info
 Note that, as of the time of writing, the commitment does not include classes information. This will be added in future versions.

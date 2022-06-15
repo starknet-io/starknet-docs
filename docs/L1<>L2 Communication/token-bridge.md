@@ -12,19 +12,19 @@ The bridges facilitate a user’s ability to conduct their transactions with the
 
 The user calls the function `deposit` (see [ERC-20 deposit](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/solidity/StarknetERC20Bridge.sol#L10) and [ETH deposit](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/solidity/StarknetEthBridge.sol#L10)), supplying as parameters the recipient address on StarkNet and the amount to transfer in the case of ERC-20 token. The deposit function then:
 
-- Checks that the funds transferred are within the Alpha [limitations](./token-bridge#starkgate-alpha-limitations)
+- Checks that the funds transferred are within the Alpha [limitations](./token-bridge.md#starkgate-alpha-limitations)
 - Transfers the funds from the user account to the StarkNet bridge
 - Emits a deposit [event](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/solidity/StarknetTokenBridge.sol#L101) with the sender address on L1, the recipient address on L2, and the amount
 - Sends a message to the relevant L2 bridge with the amount to be transferred, and the recipient address as parameters. Note that, since every single bridge is dedicated to one token type, the token type doesn't have to be explicit here.
 
-At the end of this step (i.e., after the execution on L1) the deposit transaction is known to StarkNet’s sequencer, yet sequencers may wait for enough L1 confirmations before corresponding deposit transaction is initated on L2. During this step, the status of the L2 deposit transaction is [`NOT_RECEIVED`](../Blocks/transaction-life-cycle#not_received).
+At the end of this step (i.e., after the execution on L1) the deposit transaction is known to StarkNet’s sequencer, yet sequencers may wait for enough L1 confirmations before corresponding deposit transaction is initated on L2. During this step, the status of the L2 deposit transaction is [`NOT_RECEIVED`](../Blocks/transaction-life-cycle.md#not_received).
 
 #### Step 2: Deposit Triggered on StarkNet
 
 Once enough block confirmations are received for step 1, the sequencers may refer to the deposit request by triggering the L1 handler “
 [`handle_deposit`](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/cairo/token_bridge.cairo#L135) on the L2 bridge. The function `handle_deposit` verifies that the deposit indeed came from the corresponding L1 bridge. It then calls to the relevant ERC-20 contract (e.g. the ERC-20 representing ETH on StarkNet) and mints the tokens for the user.
 
-At the end of this step (i.e., after the sequencer processed this transaction, but before a proof is generated), the status of the deposit request will be [`ACCEPTED_ON_L2`](../Blocks/transaction-life-cycle#accepted_on_l2).
+At the end of this step (i.e., after the sequencer processed this transaction, but before a proof is generated), the status of the deposit request will be [`ACCEPTED_ON_L2`](../Blocks/transaction-life-cycle.md#accepted_on_l2).
 
 #### Step 3: The Block That Includes The Transfer Is Proved
 
@@ -57,7 +57,8 @@ In order to reduce the risks involved in using an Alpha version, StarkGate Alpha
 
 | Token | Max deposit | Max total value locked |
 | ----- | ----------- | ---------------------- |
-| ETH   | 0.025 Eth   | 225 Eth                |
+| ETH   | 0.25 Eth    | 320 Eth                |
+| DAI   | 50 Dai      | 100,000 Dai            |
 
 :::info
 We plan to gradually ease these limitations and lift them completely, as confidence grows.
