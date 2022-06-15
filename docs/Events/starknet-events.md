@@ -22,7 +22,7 @@ end
 message_received.emit(1, 2);
 ```
 
-The emit function emits an event with a single key, which is an identifier of the event, given by $\text{sn\_keccak(event\_name)}$, where $\text{event\_name}$ is the ASCII encoding of the event’s name and $\text{sn\_keccak}$ is defined [here](../Hashing/hash-functions#starknet-keccak). To emit custom keys, one should use the low level `emit_event` system call:
+The emit function emits an event with a single key, which is an identifier of the event, given by $\text{sn\_keccak(event\_name)}$, where $\text{event\_name}$ is the ASCII encoding of the event’s name and $\text{sn\_keccak}$ is defined [here](../Hashing/hash-functions.md#starknet-keccak). To emit custom keys, one should use the low level `emit_event` system call:
 
 ```js
 from starkware.starknet.common.syscalls import emit_event
@@ -65,7 +65,7 @@ message_received.emit(2, data, p)
 
 :::
 
-The emitted events are part of the [transaction receipt](../Blocks/transaction-life-cycle#transaction-receipt).
+The emitted events are part of the [transaction receipt](../Blocks/transaction-life-cycle.md#transaction-receipt).
 
 ## Event ABI
 
@@ -99,7 +99,7 @@ $$
 
 Where:
 
-- $\text{keys\_hash}$, $\text{data\_hash}$ are the hashes of the keys list and data list correspondingly (see [array hashing](../Hashing/hash-functions#array-hashing)).
-- $h$ is the [pedersen](../Hashing/hash-functions#pedersen-hash) hash function
+- $\text{keys\_hash}$, $\text{data\_hash}$ are the hashes of the keys list and data list correspondingly (see [array hashing](../Hashing/hash-functions.md#array-hashing)).
+- $h$ is the [pedersen](../Hashing/hash-functions.md#pedersen-hash) hash function
 
-The event hashes are included in the [`event_commitment`](../Blocks/header#event_commitment) field of a block.
+The event hashes are included in the [`event_commitment`](../Blocks/header.md#event_commitment) field of a block.

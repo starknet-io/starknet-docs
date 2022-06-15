@@ -12,13 +12,13 @@ The state diffs contain information on every contact whose storage was updated a
 
 - Number of cells that encode contract deployments
 - For each deployed contract, we have:
-  - `contract_address` - the [address](../Contracts/contract-address) of the deployed contract
-  - `contract_hash` - the [hash](../Contracts/contract-hash) of the contract
+  - `contract_address` - the [address](../Contracts/contract-address.md) of the deployed contract
+  - `contract_hash` - the [hash](../Contracts/contract-hash.md) of the contract
   - `len(constructor_call_data)` - the number of arguments to the contract constructor
   - `constructor_call_data` - the list of arguments to the constructor
 - Number of contracts whose storage is updated
 - For each such contract, we have:
-  - `contract_address` - the [address](../Contracts/contract-address) of the contract
+  - `contract_address` - the [address](../Contracts/contract-address.md) of the contract
   - `num_of_storage_updates` - number of storage updates
   - For each storage update:
     - `key` - the address inside the contract's storage where the value is updated

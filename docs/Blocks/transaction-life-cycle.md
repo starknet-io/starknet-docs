@@ -15,7 +15,7 @@ Transaction will now either execute successfully or be rejected.
 
 ### PENDING
 
-Transaction executed successfully and entered the [pending block](./transaction-life-cycle#the-pending-block).
+Transaction executed successfully and entered the [pending block](./transaction-life-cycle.md#the-pending-block).
 
 ### REJECTED
 

@@ -7,7 +7,7 @@ StarkNet, in its Alpha version, supports two types of transactions: a `Deploy` t
 ## Deploy transaction
 
 :::caution
-The deploy transaction will be deprecated in future StarkNet versions. To deploy new constract instances, you can use the `deploy` syscall. For more information, see [contract classes](../Contracts/contract-classes).
+The deploy transaction will be deprecated in future StarkNet versions. To deploy new constract instances, you can use the `deploy` syscall. For more information, see [contract classes](../Contracts/contract-classes.md).
 :::
 
 A deploy transaction is a transaction type used to deploy contracts to StarkNet.
@@ -42,9 +42,9 @@ Where:
 
 - The placeholder zero is used to align the hash computation for the different types of transactions (here, it holds the place of the `max_fee` field which exsists in both `invoke` and `declare` transactions)
 - “deploy” and “constructor” constant’s prefixes, encoded in bytes (ASCII), with big-endian.
-- $h$ is the [Pedersen](../Hashing/hash-functions#pedersen-hash) hash and $sn\_keccak$ is [StarkNet Keccak](../Hashing/hash-functions#starknet-keccak)
-- `chain_id` is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions#chain-id).
-- `contract_address` is calculated as described [here](../Contracts/contract-address).
+- $h$ is the [Pedersen](../Hashing/hash-functions.md#pedersen-hash) hash and $sn\_keccak$ is [StarkNet Keccak](../Hashing/hash-functions.md#starknet-keccak)
+- `chain_id` is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions.md#chain-id).
+- `contract_address` is calculated as described [here](../Contracts/contract-address.md).
 
 ## Invoke Transaction
 
@@ -86,12 +86,12 @@ $$
 Where:
 
 - “invoke” is a constant prefix, encoded in bytes (ASCII), with big-endian.
-- `chain_id` is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions#chain-id).
-- $$h$$ is the [Pedersen](../Hashing/hash-functions#pedersen-hash) hash
+- `chain_id` is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions.md#chain-id).
+- $$h$$ is the [Pedersen](../Hashing/hash-functions.md#pedersen-hash) hash
 
 ## Declare transaction
 
-The declare transaction is used to introduce new classes into the state of StarkNet, enabling other contracts to deploy instances of those classes or using them in a library call. For more information, see [contract classes](../contracts/contract-classes).
+The declare transaction is used to introduce new classes into the state of StarkNet, enabling other contracts to deploy instances of those classes or using them in a library call. For more information, see [contract classes](../Contracts/contract-classes.md).
 
 A declare transaction has the following fields:
 
@@ -121,12 +121,12 @@ $$
 Where:
 
 - The placeholders zeros are used to align the hash computation for the different types of transactions (here, they stand for the empty call data and entry point selector)
-- `chain_id` is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions#chain-id).
-- $$h$$ is the [Pedersen](../Hashing/hash-functions#pedersen-hash) hash
+- `chain_id` is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions.md#chain-id).
+- $$h$$ is the [Pedersen](../Hashing/hash-functions.md#pedersen-hash) hash
 
 ## Signature
 
-While StarkNet does not have a specific signature scheme built into the protocol, the Cairo language, in which smart contracts are written, does have an efficient implementation for ECDSA signature with respect to a [STARK-friendly curve](../Hashing/hash-functions#stark-curve).
+While StarkNet does not have a specific signature scheme built into the protocol, the Cairo language, in which smart contracts are written, does have an efficient implementation for ECDSA signature with respect to a [STARK-friendly curve](../Hashing/hash-functions.md#stark-curve).
 
 The generator used in the ECDSA algorithm is $G=\left(g_x, g_y\right)$ where:
 
