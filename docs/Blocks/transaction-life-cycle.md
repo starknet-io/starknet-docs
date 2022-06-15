@@ -1,6 +1,6 @@
 # Transaction Lifecycle
 
-The following are the possible statuses of a transaction from the moment it's included in a proof to the moment it's validated by L1.
+The following are the possible statuses of a transaction from the moment it's sent by the user to the moment it's validated by L1.
 
 ## Transaction status
 
