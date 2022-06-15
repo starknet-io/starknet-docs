@@ -60,8 +60,8 @@ Sends a transaction to the StarkNet sequencer, can take the following arguments:
 - `contract_abi`\* - a path to a JSON file containing the called [contract’s abi](https://www.cairo-lang.org/docs/hello_starknet/intro.html#the-contract-s-abi)
 - `function_name`\*- the name of the called function
 - `arguments`\* - inputs to the called function, represented by a list of space-delimited values`
-- `signature_information` - list of field elements as described [here](../Blocks/transactions#signature)
-- `wallet_name` - the name of the desired wallet, use [deploy_account](./commands#starknet-deploy_account) to set-up new accounts in the CLI.
+- `signature_information` - list of field elements as described [here](../Blocks/transactions.md#signature)
+- `wallet_name` - the name of the desired wallet, use [deploy_account](./commands.md#starknet-deploy_account) to set-up new accounts in the CLI.
 - `nonce` - account nonce, only relevant if the call is going through an account
 
 :::tip
@@ -113,7 +113,7 @@ The possible statuses of a transaction are:
 - `ACCEPTED_ON_L2`
 - `ACCEPTED_ON_L1`
 
-Refer to [this](../Blocks/transaction-life-cycle) section for more information about the transaction lifecycle.
+Refer to [this](../Blocks/transaction-life-cycle.md) section for more information about the transaction lifecycle.
 
 ### starknet call
 
@@ -138,15 +138,15 @@ Calls a StarkNet contract without affecting the state, can take the following ar
 - `arguments`\* - inputs to the called function, represented by a list of space-delimited values
 - `block_hash` - the hash of the block used as the context for the call operation. If this argument is omitted, the latest block is used
 - `block_number` - same as block_hash, but specifies the context block by number or [tag](#block_tag)
-- `signature_information` - list of field elements as described [here](../Blocks/transactions#signature)
-- `wallet_name` - the name of the desired wallet, use [deploy_account](./commands#starknet-deploy_account) to set-up new accounts in the CLI
+- `signature_information` - list of field elements as described [here](../Blocks/transactions.md#signature)
+- `wallet_name` - the name of the desired wallet, use [deploy_account](./commands.md#starknet-deploy_account) to set-up new accounts in the CLI
 - `nonce` - account nonce, only relevant if the call is going through an account
 
 <a name="block_tag"></a>
 
 :::info Block Tag
 
-A block context can be specified via the `latest` or `pending` tags, where the former refers to the latest accepted on L2 block and the latter refers to the [pending block](../Blocks/transaction-life-cycle#the-pending-block).
+A block context can be specified via the `latest` or `pending` tags, where the former refers to the latest accepted on L2 block and the latter refers to the [pending block](../Blocks/transaction-life-cycle.md#the-pending-block).
 
 :::
 
@@ -211,7 +211,7 @@ Returns the requested transaction, expects the following argument:
 starknet get_transaction_receipt --hash <transaction_hash>
 ```
 
-Returns the [receipt](../Blocks/transaction-life-cycle#transaction-receipt) associated with the transaction, expects the following argument:
+Returns the [receipt](../Blocks/transaction-life-cycle.md#transaction-receipt) associated with the transaction, expects the following argument:
 
 - `transaction_hash`\* - hash of the requested transaction
 

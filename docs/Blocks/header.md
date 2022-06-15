@@ -14,7 +14,7 @@ The following fields define the block header:
 | ------------------------ | -------------- | --------------------------------------------------------------------------------- | :----------------: |
 | `parent_block_hash`      | `FieldElement` | The hash of this block's parent                                                   | :heavy_check_mark: |
 | `block_number`           | `Integer`      | The number (height) of this block                                                 | :heavy_check_mark: |
-| `global_state_root`      | `FieldElement` | The state [commitment](../State/starknet-state#state-commitment) after this block | :heavy_check_mark: |
+| `global_state_root`      | `FieldElement` | The state [commitment](../State/starknet-state.md#state-commitment) after this block | :heavy_check_mark: |
 | `sequencer_address`      | `FieldElement` | The StarkNet address of the sequencer who created this block                      | :heavy_check_mark: |
 | `block_timestamp`        | `Timestamp`    | The time the sequencer created this block before executing transactions           | :heavy_check_mark: |
 | `transaction_count`      | `Integer`      | The number of transactions in a block                                             | :heavy_check_mark: |
@@ -42,7 +42,7 @@ h(B)=h(&\text{block\_number}, \text{ global\_state\_root}, \text{ sequencer\_add
 \end{aligned}
 $$
 
-Where $h$ is the [Pedersen](../Hashing/hash-functions#pedersen-hash) hash.
+Where $h$ is the [Pedersen](../Hashing/hash-functions.md#pedersen-hash) hash.
 
 :::note placeholders
 Zeroes inside the hash computation of an object are used as placeholders, to be replaced in the future by meaningful fields.

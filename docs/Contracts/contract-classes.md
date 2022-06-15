@@ -8,6 +8,6 @@ A contract class does not necessarily have a deployed instance in StarkNet.
 
 ## Using Classes
 
-New classes can be added to the state of StarkNet with the [`declare`](../Blocks/transactions#declare-transaction) transaction. New instances of a previously declared class can be deployed via the `deploy` system call.
+New classes can be added to the state of StarkNet with the [`declare`](../Blocks/transactions.md#declare-transaction) transaction. New instances of a previously declared class can be deployed via the `deploy` system call.
 
 To use the functionality of a declared class, without deploying an instance of that class, you can use the `library_call` system call. This system call is an analogue of Ethereum's delegate call in the world of classes. You can use class code directly, instead of having a placeholder contract deployed, which is used only for its code.
