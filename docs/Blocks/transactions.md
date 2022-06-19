@@ -101,7 +101,7 @@ A declare transaction has the following fields:
 | ---------------- | -------------------- | ----------------------------------------------------------------------------------------- |
 | `contract_class` | `ContractClass`      | The class object                                                                          |
 | `sender_address` | `FieldElement`       | The address of the account initiating the transaction                                     |
-| `max_fee`        | `List<FieldElement>` | The maximum fee that the sender is willing to pay for the transaction                     |
+| `max_fee`        | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction                     |
 | `signature`      | `List<FieldElement>` | Additional information given by the caller, representing the signature of the transaction |
 | `nonce`          | `FieldElement`       | The transaction nonce                                                                     |
 | `version`        | `FieldElement`       | The transaction's version [^1]                                                            |
