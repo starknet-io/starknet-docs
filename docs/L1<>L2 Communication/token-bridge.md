@@ -37,7 +37,7 @@ Once the sequencer completes the block construction, StarkNet’s provers will p
 To initiate a withdraw, a user calls the [`initiate_withdraw`](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/cairo/token_bridge.cairo#L103) function on the L2 bridge contract, supplying as parameters the recipient address on Ethereum, as well as the amount to transfer. The withdraw function then:
 
 - Burns the transferred amount of tokens from the balance of the withdrawal’s initiator
-- Sends a message to the relevant L1 bridge with the amount to be transferred, and the recipient address as parameters. As before, since the bridgs are token-specific, the token itself is implicit here.
+- Sends a message to the relevant L1 bridge with the amount to be transferred, and the recipient address as parameters. As before, since the bridges are token-specific, the token itself is implicit here.
 
 #### Step 2: The Block That Includes The Transaction Is Proved
 
