@@ -57,7 +57,7 @@ In order to reduce the risks involved in using an Alpha version, StarkGate Alpha
 
 | Token | Max deposit | Max total value locked |
 | ----- | ----------- | ---------------------- |
-| ETH   | 0.25 Eth    | 320 Eth                |
+| ETH   | 0.25 Eth    | 450 Eth                |
 | DAI   | 50 Dai      | 100,000 Dai            |
 | USDC  | 100 USDC    | 100,000 USDC           |
 | USDT  | 100 USDT    | 100,000 USDT           |
