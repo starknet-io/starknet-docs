@@ -59,6 +59,9 @@ In order to reduce the risks involved in using an Alpha version, StarkGate Alpha
 | ----- | ----------- | ---------------------- |
 | ETH   | 0.25 Eth    | 320 Eth                |
 | DAI   | 50 Dai      | 100,000 Dai            |
+| USDC  | 100 USDC    | 100,000 USDC           |
+| USDT  | 100 USDT    | 100,000 USDT           |
+| WBTC  | 0.005 WBTC  | 5 WBTC                 |
 
 :::info
 We plan to gradually ease these limitations and lift them completely, as confidence grows.
