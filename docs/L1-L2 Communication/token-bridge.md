@@ -17,7 +17,7 @@ The deposit function then:
 - Checks that the funds transferred are within the Alpha [limitations](./token-bridge.md#starkgate-alpha-limitations)
 - Transfers the funds from the user account to the StarkNet bridge
 - Emits a deposit [event](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/solidity/StarknetTokenBridge.sol#L101) with the sender address on L1, the recipient address on L2, and the amount
-- Sends a message to the relevant L2 bridge with the amount to be transferred, and the recipient address as parameters. Note that, since every single bridge is dedicated to one token type, the token type doesn't have to be explicit here. The deposit fee is passed along to the StarkNet Core contract, which is responsible for messaging.
+- Sends a message to the relevant L2 bridge with the amount to be transferred, and the recipient address as parameters. Note that, since every single bridge is dedicated to one token type, the token type doesn't have to be explicit here. The deposit fee is passed along to the StarkNet Core contract, where it remains locked until the consumption of this message (for more details, see [L1→L2 message fees](./messaging-mechanism.md#l1--l2-message-fees)).
 
 At the end of this step (i.e., after the execution on L1) the deposit transaction is known to StarkNet’s sequencer, yet sequencers may wait for enough L1 confirmations before corresponding deposit transaction is initated on L2. During this step, the status of the L2 deposit transaction is [`NOT_RECEIVED`](../Blocks/transaction-life-cycle.md#not_received).
 
@@ -32,7 +32,7 @@ At the end of this step (i.e., after the sequencer processed this transaction, b
 
 Once the sequencer completes the block construction, StarkNet’s provers will prove its validity and submit a state update to L1. When this happens, the message confirming the funds transfer will be cleared from the StarkNet Core Contract, and the fact that the user has transferred their funds will be part of the now finalized state of StarkNet. Note that if the message wasn’t on L1 to begin with (meaning StarkNet “invented” a deposit request), the state update would fail.
 
-After completing this step, the sequencer collects the desposit fee (to the sequencer, see is just a message fee).
+After completing this step, the sequencer collects the desposit fee (to the sequencer, this is just a message fee).
 
 ### L2→L1 Transfer (Withdraw)
 

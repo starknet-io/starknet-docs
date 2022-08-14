@@ -243,7 +243,7 @@ Returns the fee estimation for a given contract call, can take the following arg
         --inputs <arguments>
 ```
 
-Returns the fee estimation for a given l1 handler application, can take the following arguments:
+Returns the fee estimation for a given [l1 handler](../L1-L2%20Communication/messaging-mechanism.md#l1--l2-message-fees) application, can take the following arguments:
 
 - `from_address`\* - the L1 address of the sender
 - `to_address`\* - the L2 address of the receipient
