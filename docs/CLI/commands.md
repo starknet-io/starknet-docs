@@ -216,6 +216,41 @@ Returns the [receipt](../Blocks/transaction-life-cycle.md#transaction-receipt) a
 
 - `transaction_hash`\* - hash of the requested transaction
 
+### starknet estimate_fee
+
+```bash title="estimate_fee"
+    starknet estimate_fee
+        --address <contract_address>
+        --abi <contract_abi>
+        --function <function_name>
+        --inputs <arguments>
+```
+
+Returns the fee estimation for a given contract call, can take the following arguments:
+
+- `address`\* - the address of the called contract
+- `contract_abi`\* - a path to a JSON file containing the called [contract’s abi](https://www.cairo-lang.org/docs/hello_starknet/intro.html#the-contract-s-abi)
+- `function_name`\*- the name of the called function
+- `arguments`\* - inputs to the called function, represented by a list of space-delimited values`
+
+### starknet estimate_message_fee
+
+```bash title="estimate_message_fee"
+    starknet estimate_message_fee
+        --from_address <sender_address>
+        --to_address <contract_address>
+        --function <function_name>
+        --inputs <arguments>
+```
+
+Returns the fee estimation for a given l1 handler application, can take the following arguments:
+
+- `from_address`\* - the L1 address of the sender
+- `to_address`\* - the L2 address of the receipient
+- `contract_abi`\* - a path to a JSON file containing the [abi](https://www.cairo-lang.org/docs/hello_starknet/intro.html#the-contract-s-abi) of the receiving contract on L2
+- `function_name`\*- the name of the desired l1 handler
+- `arguments`\* - inputs to the called handler, represented by a list of space-delimited values
+
 :::tip Custom endpoints
 When working with the CLI, it's possible to manually choose the read/write endpoints for the
 interaction with StarkNet, by adding the ``--feeder_gateway_url` and `gateway_url` parameters.
