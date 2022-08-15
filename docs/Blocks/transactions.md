@@ -6,7 +6,7 @@ StarkNet, in its Alpha version, supports two types of transactions: a `Deploy` t
 
 ## Deploy transaction
 
-:::caution
+:::important
 The deploy transaction will be deprecated in future StarkNet versions. To deploy new constract instances, you can use the `deploy` syscall. For more information, see [contract classes](../Contracts/contract-classes.md).
 :::
 
@@ -18,11 +18,11 @@ A deploy transaction has the following fields:
 
 | Name                    | Type                 | Description                                                                      |
 | ----------------------- | -------------------- | -------------------------------------------------------------------------------- |
-| `contract_address_salt` | `FieldElement`       | A random number used to distinguish between different instances of the contract  |
-| `contract_definition`   | `ContractClass`      | The object that defines the contract's functionality                             |
-| `constructor_calldata`  | `List<FieldElement>` | The arguments passed to the constructor during deployment                        |
-| `caller_address`        | `FieldElement`       | Who invoked the deployment. Set to 0 (in future: the deploying account contract) |
-| `version`               | `FieldElement`       | The transaction's version [^1]                                                   |
+| `contract_address_salt` | `FieldElement`       | A random number used to distinguish between different instances of the contract. |
+| `contract_definition`   | `ContractClass`      | The object that defines the contract's functionality.                            |
+| `constructor_calldata`  | `List<FieldElement>` | The arguments passed to the constructor during deployment.                       |
+| `caller_address`        | `FieldElement`       | Who invoked the deployment. Set to 0 (in future: the deploying account contract).|
+| `version`               | `FieldElement`       | The transaction's version. Possible values are 1 or 0.<br>When the fields that comprise a transaction change, either by adding a new field or removing an existing field, then the transaction version increases. Including a transaction whose version is not supported by the StarkNet OS prevents that transaction from being included in a block.                                                   |
 
 </APITable>
 
@@ -56,20 +56,23 @@ An invoke function transaction has the following fields:
 
 | Name                   | Type                 | Description                                                                               |
 | ---------------------- | -------------------- | ----------------------------------------------------------------------------------------- |
-| `contract_address`     | `FieldElement`       | The address of the contract invoked by this transaction                                   |
-| `entry_point_selector` | `FieldElement`       | The encoding of the selector for the function invoked (the entry point in the contract)   |
+| `contract_address` (Transaction version 0) <br> `account_contract_address` (Transaction version 1.0)    | `FieldElement`       | The address of the contract invoked by this transaction.                                   |
+| `entry_point_selector` (Transaction version 0) | `FieldElement`       | The encoding of the selector for the function invoked (the entry point in the contract)   |
 | `calldata`             | `List<FieldElement>` | The arguments passed to the invoked function                                              |
 | `signature`            | `List<FieldElement>` | Additional information given by the caller, representing the signature of the transaction |
 | `max_fee`              | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction                     |
-| `version`              | `FieldElement`       | The transaction's version [^1]                                                            |
+| `nonce`                | `FieldElement`       | (Transaction version 1)<br>The transaction nonce.                                         |
+| `version`              | `FieldElement`       | The transaction's version. Possible values are 1 or 0.<br>When the fields that comprise a transaction change, either by adding a new field or removing an existing field, then the transaction version increases. Including a transaction whose version is not supported by the StarkNet OS prevents that transaction from being included in a block.|
 
 </APITable>
 
 :::info transaction version
 
-The StarkNet OS contains a hard-coded version (currently set to 0), and can only accept transactions
+The StarkNet OS contains a hard-coded version, and can only accept transactions
 with this version. A transaction with a different version can not be included in a proof. By advancing the version with breaking changes
-in the StarkNet OS, we can prevent old transactions from being executed in this unintended version, thus protecting the user. Note that setting a different version can be useful for testing purposes, since even if the transaction is properly signed, it can never be included in the production StarkNet (testnet or mainnet).
+in the StarkNet OS, we can prevent old transactions from being executed in this unintended version, thus protecting the user.
+
+Note that setting a different version can be useful for testing purposes, because even if the transaction is properly signed, it can never be included in the production StarkNet (testnet or mainnet).
 
 :::
 
@@ -99,12 +102,12 @@ A declare transaction has the following fields:
 
 | Name             | Type                 | Description                                                                               |
 | ---------------- | -------------------- | ----------------------------------------------------------------------------------------- |
-| `contract_class` | `ContractClass`      | The class object                                                                          |
-| `sender_address` | `FieldElement`       | The address of the account initiating the transaction                                     |
-| `max_fee`        | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction                     |
+| `contract_class` | `ContractClass`      | The class object.                                                                         |
+| `sender_address` | `FieldElement`       | The address of the account initiating the transaction.                                    |
+| `max_fee`        | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction.                    |
 | `signature`      | `List<FieldElement>` | Additional information given by the caller, representing the signature of the transaction |
-| `nonce`          | `FieldElement`       | The transaction nonce                                                                     |
-| `version`        | `FieldElement`       | The transaction's version [^1]                                                            |
+| `nonce`          | `FieldElement`       | The transaction nonce.                                                                    |
+| `version`        | `FieldElement`       | The transaction's version. Possible values are 1 or 0.<br>When the fields that comprise a transaction change, either by adding a new field or removing an existing field, then the transaction version increases. Including a transaction whose version is not supported by the StarkNet OS prevents that transaction from being included in a block.                                                          |
 
 </APITable>
 
@@ -145,5 +148,3 @@ Two constants are currently used:
 
 - `SN_MAIN` for StarkNet’s main network.
 - `SN_GOERLI` for StarkNet's testnet.
-
-[^1]: The StarkNet OS defines the supported transaction versions (e.g. if a new field is added to the transaction, then the version is increased). A transaction whose version is not supported by the StarkNet OS can not be included in a block.
