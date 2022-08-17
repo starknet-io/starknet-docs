@@ -1,0 +1,47 @@
+[id="deposit"]
+= Deposit
+
+The first step taken by the user who wishes to trade is to deposit her funds into StarkEx. This is done by first depositing the funds to the on-chain StarkEx contract. A corresponding off-chain deposit transaction then updates the off-chain state.
+
+image::deposit-flow.png[]
+
+[id="step_1_alice_deposits_funds_on_chain"]
+== Step 1: Alice Deposits Funds On-Chain
+
+Alice makes an on-chain transaction to deposit funds. The deposit operation supports deposits of ETH, ERC-20, ERC-721, and ERC-1155.
+
+The deposit function gets the following parameters:
+
+* `starkKey` - The `starkKey` corresponding to the `vaultId`.
+* `assetType` - The asset identifier of the token to be deposited. For more information, see xref:starkex-specific-concepts.adoc[here.]
+* `vaultId` - The recipient L2 account.
+* `quantizedAmount` - For ERC-20 and ERC-1155, the amount to be deposited. For ERC-721, this value must be `1`.
+
+For more information, see the xref:README-smart-contracts.adoc[smart contract documentation].
+
+[NOTE]
+====
+Users can deposit to any vault, i.e. they can deposit to vaults that are not owned by them.
+====
+
+[id="step_2_off_chain_deposit_transaction"]
+== Step 2: Off-Chain Deposit Transaction
+
+The off-chain app sends a deposit transaction to the StarkEx gateway.
+
+[id="step_3_deposit_included_in_a_batch"]
+== Step 3: Deposit Included in a Batch
+
+The StarkEx service verifies that there are indeed enough funds in the pending deposits area in the StarkEx smart contract to complete the off-chain deposit.
+
+If the deposit is valid, it is included in a batch to be submitted on-chain along with the validity proof.
+
+[NOTE]
+====
+Note: Even before the deposit is proven and the proof is accepted on-chain, the funds already exist in the user's off-chain vault, and subsequent requests to use these funds may be executed.
+====
+
+[id="step_4_remove_funds_from_the_pending_deposits_area"]
+== Step 4: Remove Funds from the Pending Deposits Area
+
+As part of the  xref:contract-management.adoc#state-update[`state update`], the smart contract deduces the relevant amount of funds from the "pending deposits" area.

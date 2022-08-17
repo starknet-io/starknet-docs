@@ -1,0 +1,36 @@
+[id="on_chain_configuration_perpetual_trading"]
+= On-Chain Configuration (Perpetual Trading)
+
+
+For perpetual trading, the system configuration must be reflected on-chain in order to preserve soundness.
+
+The importance of this is explained in the following example. There is one configuration that dictates who is allowed to sign on price feeds of the different assets. If a batch is proven with respect to an invalid Oracle, which is different to what is reflected on-chain, then the proof will be rejected. Otherwise, a malicious operator could have changed this configuration off-chain and signed any price feed with an arbitrary price of their choice.
+
+The smart contract contains two configuration types:``globalConfiguration`` and `syntheticConfiguration` , which is set per each synthetic `assetId`. In order to reduce the gas cost, we do not store the full configuration on-chain but rather a hash commitment.
+[NOTE]
+====
+If you are worried about the security of the system, we recommend you check that the full configuration is accessible to you, along with the hash calculations that attest that it corresponds to the on-chain configuration commitment. This information can be obtained, for example, on the application site.
+====
+
+[id="global_configuration"]
+== Global Configuration
+
+Contains the following fields:
+
+* Max funding rate - used to verify the xref:funding-tick-1.adoc[Funding Tick transaction] off-chain&#x20;
+* `collateral_asset_id`
+* The  xref:starkex-specific-concepts.adoc#quantization[quantization] of the  `collateral_asset_id`
+* Sizes (i.e. depths) of Merkle trees used off-chain
+* `price_validity_period` - used to check the validity of xref:oracle-price-tick.adoc[Oracle Prices Ticks].&#x20;
+* `funding_validity_period` - used to check the validity of  xref:starkex-specific-concepts.adoc#quantization[Funding Ticks.]
+
+[id="configuration_per_synthetic"]
+== Configuration Per Synthetic `assetId`
+
+Contains the following fields:
+
+* The asset's  xref:starkex-specific-concepts.adoc#quantization[resolution]
+* The asset's risk factor. The risk factor is a representation of the maintenance margin required for this asset.
+* List of possible names to identify this asset, that will be signed by different Oracle companies (see xref:becoming-an-oracle-provider-for-starkex.adoc[])
+* List of public keys that are allowed to sign on this asset&#x20;
+* Quorum needed for approving a new price&#x20;

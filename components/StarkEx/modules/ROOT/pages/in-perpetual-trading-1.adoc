@@ -1,0 +1,58 @@
+[id="perpetual_trading_v2_0"]
+= Perpetual Trading v2.0
+
+
+[id="register"]
+== Register
+
+Before calling any forced operation, the user must call the registration function in the StarkEx contract. This function is signed and gets three parameters: `starkKey`, `ethereumAddress`, and `starksignture` (on that ethereum address)
+
+[id="forced_withdrawal"]
+== Forced Withdrawal
+
+The function https://github.com/starkware-libs/starkex-contracts/blob/ceb62c0cd127f9758f0a347f6bfbc9b5a8d0235f/scalable-dex/contracts/src/interactions/ForcedWithdrawals.sol#L17[`forcedWithdrawalRequest`] is a part of an anti-censorship mechanism that allows the user to withdraw funds.
+
+The user supplies `positionId` and the `starkKey,` as well as the `quantizedAmount` he wishes to withdraw, and a boolean called `premiumCost`. Only the user to whom this `starkKey` belongs may submit this request. When this function is called, the event https://github.com/starkware-libs/starkex-contracts/blob/ceb62c0cd127f9758f0a347f6bfbc9b5a8d0235f/scalable-dex/contracts/src/interactions/ForcedWithdrawals.sol#L37[`LogForceWithdrawalRequest`] (with the relevant `starkKey, positionId`) is emitted.
+
+[NOTE]
+====
+The role of the parameter `premiumCost` is to prevent DoS attack performed through StarkEx Forced Withdrawal mechanism by setting a high cost to perform this operation. On the other hand, we do not wish to set a high cost for an honest usage of this mechanism. Hence, StarkEx smart contract will accept only 10 transactions per block with `premiumCost` set to False. If a user sends a Forced Withdrawal transaction with `premiumCost` set to true, it is guaranteed that the transaction will be accepted, but then the gas cost of the transaction is set to 1M.
+====
+
+If the application fails to service the request (does not submit a proof attesting the invalidity of the request or the execution of it), upon the expiration of a https://github.com/starkware-libs/starkex-contracts/blob/ceb62c0cd127f9758f0a347f6bfbc9b5a8d0235f/scalable-dex/contracts/src/libraries/LibConstants.sol#L16[`FREEZE_GRACE_PERIOD`], the user is entitled to freeze the contract by calling https://github.com/starkware-libs/starkex-contracts/blob/ceb62c0cd127f9758f0a347f6bfbc9b5a8d0235f/scalable-dex/contracts/src/interactions/ForcedWithdrawals.sol#L40[`freezeRequest`]. (See xref:README-forced-operations.adoc[here] the entire flow and xref:forced-withdrawal[here] the conditions under which the `forcedWithdrawal` request is valid). The user supplies the `positionId`, the `starkKey` and the `quantizedAmount`, and indicating the `positionId` for which the forced withdrawal request has not been serviced. Once the contract is frozen, funds can be extracted using the escape operation, fully described in xref:escape[Escapes].
+
+A user cannot cancel Forced Withdrawal requests.
+
+[id="forcedtrade"]
+== ForcedTrade
+
+In order to allow users to close their positions prior to submitting xref:forced_withdrawal[forcedWithdrawal] requests, the user may call the https://github.com/starkware-libs/starkex-contracts/blob/ceb62c0cd127f9758f0a347f6bfbc9b5a8d0235f/scalable-dex/contracts/src/interactions/ForcedTrades.sol#L31[ForcedTrade] functionality in order to trade with another position (potentially, this other vault may also belong to the same user - useful in an event of key recovery). See xref:README-forced-operations.adoc[] for a discussion of the general flow, and  xref:perpetual-trading-forced-withdrawal-and-forced-trade.adoc#forced-trade[] for the full details on the parameters, as well as on-chain validity checks performed on them.
+
+If the application fails to service the request (or prove its invalidity), upon the expiration of a https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/libraries/LibConstants.sol#L16[`FREEZE_GRACE_PERIOD`], the user is entitled to freeze the contract by calling https://github.com/starkware-libs/starkex-contracts/blob/ceb62c0cd127f9758f0a347f6bfbc9b5a8d0235f/scalable-dex/contracts/src/interactions/ForcedTrades.sol#L104[`freezeRequest`]., supplying the parameters for the original request (except `submissionExpirationTime, nonce, signature, premiumCost`). for which the forced trade request has not been serviced. Once the contract is frozen, funds can be extracted using the escape operation, fully described in xref:escape[Escapes].
+
+[NOTE]
+====
+Both sides of the trade must be registered.
+====
+
+[id="escape"]
+== Escape
+
+Once the application becomes frozen the escape operation is what allows users to withdraw their funds and leave the application.
+
+Any escaper entity/user may perform an escape operation as follows:
+
+*Step 1:* Escapers must obtain a Merkle path of a vault to be evicted with respect to the frozen vault tree root. StarkEx for perpetual uses ZK-Rollups to provide on-chain data availability. Therefore, the data to generate a Merkle path is available through the `calldata` submitted on-chain along with the proof.
+
+[NOTE]
+====
+An open-source python script that generates these MerklePaths from the on-chain data will be published by StarkWare soon.
+====
+
+*Step 2:* Escapers call https://github.com/starkware-libs/starkex-contracts/blob/ceb62c0cd127f9758f0a347f6bfbc9b5a8d0235f/scalable-dex/contracts/src/perpetual/components/PerpetualEscapeVerifier.sol#L170[`verifyEscape`] function on the `EscapeVerifier` contract with the Merkle proof for the vault to be evicted. See https://github.com/starkware-libs/starkex-contracts/blob/ceb62c0cd127f9758f0a347f6bfbc9b5a8d0235f/scalable-dex/contracts/src/perpetual/components/PerpetualEscapeVerifier.sol#L1[Escape Verifier] for more details on the proof structure. If the proof is valid, this results in the registration of the following fact - `keccak256(starkKey, quantizedAmount, balanceTreeRoot, vaultId)` , when `starkKey` is the public key of the user, `balanceTreeRoot` is the last root of the xref:README-off-chain-state.adoc#balances-tree[`balanceTree`]saved on-chain, and `quantizedAmount` represents the amount of USDC the user is allowed to withdraw, according to the prices of all the synthetic assets in the last approved batch, as well as the position state.
+
+*Step 3:* Escapers call https://github.com/starkware-libs/starkex-contracts/blob/ceb62c0cd127f9758f0a347f6bfbc9b5a8d0235f/scalable-dex/contracts/src/perpetual/components/PerpetualEscapes.sol#L38[`escape`] function with the same parameters as submitted to the `EscapeVerifier` (`starkKey`, `quantizedAmount`, `vaultId`). If a proof was accepted for the same parameters by the `EscapeVerifier`, and no prior escape call was made for the vault, the contract adds the vault balance to an on-chain pending withdrawals account under the `starkKey` of the vault owner (from the collateral asset).
+
+*Step 4:* The owner of the vault may then withdraw this amount from the pending withdrawals account by calling the normal withdraw function (see xref:README-withdrawal.adoc[Withdrawal]) to transfer the funds to the user's ETH or ERC-20 account (depending on the token type).
+
+Note that while anyone can perform the initial steps of the escape operation (including the application, for example), only the vault owner may perform the final step of transferring the funds.

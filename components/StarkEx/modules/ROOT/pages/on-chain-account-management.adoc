@@ -1,0 +1,49 @@
+[id="on_chain_account_management"]
+= On-Chain Account Management
+
+[id="deposit"]
+== Deposit
+
+Users that want to deposit to an on-chain account call the https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L78[`depositEthToVault`] or https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L84[`despositERC20toVault`] functions, which take `vaultId`, `assetId` (and also quantized `amount`, in the case of an ERC-20 deposit). These functions add the relevant amounts to the https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/StarkExStorage.sol#L15[`vaultsBalance`] mapping.
+
+[NOTE]
+====
+Due to the way https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/StarkExStorage.sol#L15[`vaultsBalance`] is defined, vaults can be set arbitrarily by the user -- since they aren't shared between users, or even between different assetId's that belong to the same user
+====
+
+When the chosen function finishes, the event https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L20[`LogDepositToVault`] is emitted.
+
+[NOTE]
+====
+A side effect of making a deposit to an on-chain account is that a _lock_ is placed on the newly deposited funds and existing funds in that vaultId, for the default lock period, `locktime`. Check out the xref:trade.adoc[trade flow] for more details as to why. With the lock implemented, the event https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/VaultLocks.sol#L14[`LogVaultWithdrawalLockSet`] is emitted.
+====
+
+After the deposit is completed, users can get their current on-chain account balance by calling the https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L70[`getVaultBalance`] function or get the remaining lock time by calling the https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/VaultLocks.sol#L31[`getVaultWithdrawalLock`] function. Both functions receive the `eth_address`, `asset_Id`, and `vault_id` as parameters.
+
+[id="withdrawal"]
+== Withdrawal
+
+Users that want to withdraw their funds from an on-chain account call the https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L93[`withdrawalFromVault`] function. This function verifies that the caller is indeed the owner of the account, that the funds are not locked, and that the balance is sufficient. If all constraints hold, the function passes the user their funds and emits the event https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L28[`LogWithdrawalFromVault`].
+
+[id="layer_1_limit_order"]
+== Layer 1 Limit Order
+
+A user that wants to xref:trade.adoc[trade] with the funds they have in the on-chain vault against funds on L2 or to initiate a xref:README-defi_pooling.adoc[DeFi pooling] calls the https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/OrderRegistry.sol#L70[`registerLimitOrder`] function, supplying the `exchange address` (the specific StarkEx contract address that this order should be executed on), as well as all the relevant parameters for executing such an order, such as:
+
+* token type for buy, sell, and fee
+* amounts
+* vaultIds for buy, sell, and fee
+* `nonce`
+* `expiration timestamp`
+
+[NOTE]
+====
+All the vaults that appear on a L1 limit order should belong to on-chain accounts.
+====
+
+[WARNING]
+====
+Never use the same `nonce` twice, as it might cause all the parameters of an order to be the same. In such a case, the StarkEx service will not be able to execute.
+====
+
+As discussed above, in order to respect L1 limit orders, the Operator might insist that the on-chain account owner lock their funds (if they are not already locked due to a deposit call). In such a case, the user may need to extend the lock period by calling the https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/VaultLocks.sol#L39[lockVault] function, supplying the Vault specification and the required lock time.

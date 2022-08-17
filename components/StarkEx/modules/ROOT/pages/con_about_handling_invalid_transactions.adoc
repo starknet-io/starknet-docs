@@ -1,0 +1,79 @@
+[id="about_handling_invalid_transactions_{context}"]
+= About handling invalid transactions
+
+The StarkEx gateway performs syntactic checks and context-free validation on each transaction it receives, and returns an error code if the transaction is not valid. In general, StarkEx detects errors as early as possible in the pipeline, but some errors are detected later, when StarkEx performs system checks that depend on the current state.
+
+Whenever an invalid transaction occurs in a batch, it prevents StarkEx from processing the batch. Additionally, any subsequent transactions that depend upon the first become invalid as well.
+
+For example, an invalid deposit to a vault might invalidate a subsequent withdrawal that depends upon the funds in that vault.
+
+Other possible causes of invalid transactions are:
+
+* Bugs
+* Reorganization of the blockchain
+* An order id is not registered on-chain
+* A fact is not registered on-chain for a conditional transfer
+* The expiration time of a transaction does not allow enough time for the proof to take place
+
+[id="alternative_transactions_{context}"]
+== Alternative transactions
+
+When StarkEx identifies an invalid transaction, StarkEx marks the transaction as invalid and sends a request to the application's endpoint for a list of alternative transactions.
+
+The alternative transactions within the list are processed in order. These transactions do not have ids.
+
+If StarkEx reaches the end of your list of transactions but it hasn't received enough total transactions to send to SHARP, StarkEx pauses and restarts processing the batch.
+
+[id="built_in_safety_{context}"]
+== Built-in safety
+
+As a safety measure, in order to maintain synchronization between your application's state and the StarkEx state, if after restarting batch processing, the id of the transaction that was previously marked as invalid is processed again, StarkEx again automatically identifies that transaction as invalid and sends a REPLACED_BEFORE error, even if the transaction is now valid.
+
+Most cases require manual intervention to continue processing the batch. In some cases, such as in the case of an on-chain reorg, you can prepare an automatic response to the REPLACED_BEFORE error. One possible response is to resend the same list of alternative transactions.
+
+You can set up your system's architecture to deal with REPLACED_BEFORE requests automatically, or insert any level of manual intervention you want for any reason, such as for a safety measure.
+
+[NOTE]
+====
+If the list of alternative transactions includes an invalid transaction, StarkEx discards the batch, pauses, and restarts processing the batch. Upon encountering the same transaction id, StarkEx again automatically identifies that transaction as invalid and sends a REPLACED_BEFORE error. In this case, you must investigate the actual cause of the error.
+====
+
+[id="example_invalid_transaction_and_an_alternative_transaction_list_{context}"]
+.﻿Example: Invalid transaction and an alternative transaction list
+
+The following example shows an error message for an invalid transaction. In response to this error, you need to send an list of one or more alternative transactions.
+
+In this example the balance is known to be valid, but it does not yet appear on-chain.
+
+[source,]
+----
+{
+    "reason_code": "INSUFFICIENT_ONCHAIN_BALANCE",
+    "tx_id": 7,
+    "reason_msg": "Not enough onchain balance to complete deposit. balance_used:10 onchain_balance:0 deposit: DepositRequest(vault_id=1, stark_key=2, token_id=3, amount=10)",
+    "tx": {
+        "stark_key": "0x2",
+        "token_id": "0x3",
+        "amount": "10",
+        "vault_id": 1,
+        "type": "DepositRequest"
+    }
+}
+----
+
+The following example shows a response with a list of one alternative transaction. In this case, it is the same transaction sent initially, assuming that the on-chain balance has been updated since receiving the error message:
+
+[source,json]
+----
+{
+    "alt_txs": [
+        {
+            "stark_key": "0x2",
+            "token_id": "0x3",
+            "amount": "10",
+            "vault_id": 1,
+            "type": "DepositRequest"
+        }
+    ]
+}
+----

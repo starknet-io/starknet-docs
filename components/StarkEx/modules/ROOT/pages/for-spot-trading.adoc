@@ -1,0 +1,21 @@
+[id="for_spot_trading"]
+= For Spot Trading
+
+
+In StarkEx for spot trading, registration is not required for user onboarding. The binding between the `starkKey` and the Ethereum address happens in the xref:README-withdrawal.adoc[Withdrawal] flow by requiring the user to specify a destination Ethereum address. This flow has changed due to the effort to reduce gas costs for users.
+[NOTE]
+====
+Notice that the register call is done after the relevant StarkKey belongs to a Vault with a positive balance. Thus, it is crucial that it would not be coupled with a wrong Ethereum address, and therefore a `starkKey` signature is required.
+====
+
+[id="full_withdrawal_registration"]
+== Full Withdrawal Registration&#x20;
+
+On-chain coupling of the off-chain `starkKey` to a specific Ethereum address is still required for supporting the xref:spot-trading-full-withdrawals.adoc[full withdrawal flow] as we want to enforce that only the true owner of the Vault could submit such requests for the Vault.
+
+The functions https://github.com/starkware-libs/starkex-contracts/blob/0efa9ce324b04226de5dcd7a0139b109bca8f074/scalable-dex/contracts/src/components/Users.sol#L53[registerSender] and https://github.com/starkware-libs/starkex-contracts/blob/0efa9ce324b04226de5dcd7a0139b109bca8f074/scalable-dex/contracts/src/components/Users.sol#L57[registerEthAddress] are doing just that - they get a `starkKey`, a STARK Signature on a msg containing an (or the sender's)`ethereumAddress`. If the signature is valid, it registers the specified `starkKey` to the specified `ethereumAddress.`
+
+[WARNING]
+====
+STARK signatures are very expensive to verify on-chain - the cost of this transaction is around 1M gas, so it is not recommended to use it unless you need to perform a xref:spot-trading-full-withdrawals.adoc[fullWithdrawal].
+====

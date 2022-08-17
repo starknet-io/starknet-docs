@@ -1,0 +1,64 @@
+[id="oracle_price_tick"]
+= Oracle Price Tick
+
+:stem: latexmath
+
+image::oracle-price.png[]
+
+StarkEx for perpetual trading uses external Oracle price feeds in order to take the most recent prices into account in the business logic. Here we describe the process that a new price goes through. The process starts when the application gets price updates signed by the price Oracles. Then the application aggregates the signed prices and sends them to StarkEx as an Oracle Price Tick request. StarkEx checks the validity of the request and finally includes the new prices in a batch.
+[NOTE]
+====
+If you are interested in the soundness of the Oracle prices, we recommend reading up on the xref:on-chain-configuration-perpetual-trading.adoc[on-chain configuration]. This contains further information about who is authorized to sign a new price and what the required number of signatures are.
+====
+
+[id="step_1_the_application_collects_signatures_on_a_price"]
+== Step 1: The Application Collects Signatures on a Price
+
+Oracle providers that are registered in the system (check xref:becoming-an-oracle-provider-for-starkex.adoc[this page] for details regarding registration), sign on a price update of an `assetId.` This update is represented by the following tuple,`(price, time, name)`, where `price` represents the new price, `time` is the timestamp of the update and `name` is a unique identifier of the `assetId` and oracle identity. For more details on how to generate price feeds, read xref:becoming-an-oracle-provider-for-starkex.adoc[here].
+
+The application aggregates these signatures, and sends to StarkEx an Oracle Price Tick transaction, that includes the following:
+
+* The new `system_time`
+* A list of `assetId` for which the price is updated.&#x20;
+* For each `assetId` in the list, it sends a list of `(price, time, name, sig)` as well as `current_price` that will be de-facto used by StarkEx for the next transactions.&#x20;
+
+[id="step_2_prices_are_included_in_the_batch_and_starkex_verifies_the_batch"]
+== Step 2: Prices are Included in the Batch and StarkEx Verifies the Batch
+
+StarkEx does not explicitly prove the validity of all Oracle signatures in all the Oracle Price Ticks, since it is not efficient. Instead, it uses a hybrid approach. StarkEx includes in the  xref:how-cairo-is-used-in-starkex.adoc#starkex-proves-batches[batch header], for each `assetId`, the entire quorum of signatures that attests to the minimal and maximal prices in a batch. For the rest of the prices, StarkEx only proves that they are between the minimal and maximal price.
+
+[NOTE]
+====
+Since the application can already play with the order of transaction and/or mix and match different signatures from different legitimate oracle sources to create a variety of possible medians, this optimization doesn't reduce the security of the system.
+====
+
+We proceed to describe two phases of batch verification. The first phase is performed on the full batch and the second phase is performed per an Oracle Price Tick transaction.
+
+* The price is the median of the list stem:[(price_1,\dots, price_n)]
+* stem:[n \geq \text{config\[assetId\].quorum}]
+* For each tuplestem:[i \in \{1,...,n\}]
+ ** stem:[sig_i]is a valid signature with a unique public key stem:[pk_i]from the list `config[assetId].keys` , on the tuple stem:[(price_i,time_i, name_i)]
+ ** stem:[name_i]appears in the list `config[assetId].names`
+* Each value in the liststem:[(time_1,\dots, time_n)] is in a  xref:on-chain-configuration-perpetual-trading.adoc#global-configuration[`price_validity_period`]-hours window. Furthermore, stem:[\min(time_1,\dots, time_n)]is at least``batch_starting_time - price_validity_period`` and stem:[\max (time_1,\dots, time_n)]is at most `batch_end_time`.
+
+[id="phase_1_starkex_verifies_the_batchs_minimal_and_maximal_price"]
+=== Phase 1: StarkEx Verifies the Batch's Minimal and Maximal Price
+
+For each `assetId` (including assets that didn't receive an update in this batch), StarkEx verifies the `minimal_price` and `maximal_price`. This is done by verifying the following conditions for the Oracle Price Tick that attests to each of them. Bear in mind that an Oracle Price Tick contains a list of stem:[n] tuplesstem:[(price_i,time_i, name_i, sig_i)].
+
+* The price is the median of the liststem:[(price_1,\dots, price_n)]
+* stem:[n \geq \text{config\[assetId\].quorum}]
+* For each tuplestem:[i \in \{1,...,n\}]
+ ** stem:[sig_i]is a valid signature with a unique public key stem:[pk_i]from the list `config[assetId].keys` , on the tuple stem:[(price_i,time_i, name_i)]
+ ** stem:[name_i]appears in the list `config[assetId].names`
+* Each value in the liststem:[(time_1,\dots, time_n)] is in a 24-hours window. Furthermore, stem:[\min(time_1,\dots, time_n)]is at least one day less than``batch_starting_time`` and stem:[\max (time_1,\dots, time_n)]is at most `batch_end_time`.
+
+[id="phase_2_starkex_verifies_the_validity_of_each_oracle_price_tick_separately"]
+=== Phase 2: StarkEx Verifies the Validity of each Oracle Price Tick Separately
+
+For each Oracle Price Tick in the batch, StarkEx verifies the following conditions:
+
+* `system_time >= prev system_time`
+* For every `assetId:`
+ ** ``current_price``is bigger than or equals the `minimal_price` of this batch
+ ** ``current_price``is smaller than or equals the `maximal_price` of this batch

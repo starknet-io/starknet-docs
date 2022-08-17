@@ -1,0 +1,49 @@
+[id="conditional_transfer"]
+= Conditional Transfer
+
+
+image::conditional-transfers.png[]
+
+Conditional transfers are off-chain transfers that are valid only if an on-chain event occurred. Use cases of conditional transfers can include (but are not limited to):
+
+*Fast Withdrawals:* Alice wants to receive money on-chain without waiting for a proof (remember that in the regular xref:README-withdrawal.adoc[withdrawal] flow, the funds become available on-chain only once the proof is accepted). She signs a conditional transfer, giving 1000 USDC to a Liquidity Provider's off-chain vault, conditional on getting 1000 USDC minus a fee, from his Ethereum Address on-chain to her Ethereum Address on-chain.
+
+More info on fast withdrawals can be found link:https://medium.com/starkware/starkexchange-fast-withdrawals-using-cookie-jars-88eefea6a11a[_StarkExchange: Fast Withdrawals using Cookie Jars_].
+
+*Swap assets at Uniswap:* Alice doesn't like the current ETH/DAI ratio in the off-chain app, and wants to take advantage of a really high ETH price on Uniswap. She signs an off-chain Conditional Transfer, giving 1ETH to an LP vault. This transfer is conditional on the fact that this LP deposits in her name, to StarkEx, the amount of DAI she expects to get for 0.99ETH on Uniswap.
+
+[id="step_1_alice_sends_conditional_transfer_request_to_the_application"]
+== Step 1: Alice sends Conditional Transfer Request to the Application
+
+Alice sends a Conditional Transfer request to the Application. In addition to fields used for a xref:transfer.adoc[regular Transfer], the Conditional Transfers include two additional fields:
+
+* `address`: an address of a smart contract on Ethereum. This contract should implement the xref:fact-registry.adoc[fact registry pattern].
+* `fact`: a fact that should be registered in this smart contract in order to approve the conditional transfer.
+
+Alice knows that only if the `fact` is true in the `address`, her transaction will be valid and the Application will be able to execute it. +
+See  xref:signatures.adoc#fast-withdrawal-example-using-conditional-transfer[here] for Conditional Transfer structure.
+
+[WARNING]
+====
+The fact registry contract is external to the StarkEx system and can have arbitrary logic. Users should verify the contract to ensure it implements the conditional logic they expect.
+====
+
+[id="step_2_on_chain_transaction_registers_the_fact"]
+== Step 2: On-Chain Transaction Registers the Fact
+
+An on-chain transaction to the fact registry contract at `address` is transacted and results in the registration of the `fact` as valid.
+[NOTE]
+====
+In the above example of *Fast Withdrawals*, `fact` will be the hash of Alice's Ethereum Address, the type of token and the amount. When a transaction to the fact registry contract at `address` is made, the contract will first transfer the necessary amount of funds from the sender to Alice's Ethereum Address, and will then register `fact` as true. +
+Alice knows that her off-chain conditional transfer will only be valid after the required amount of funds are transferred to her on-chain.
+====
+
+[id="step_3_application_sends_the_conditional_transfer_transaction_to_starkex"]
+== Step 3: Application Sends the Conditional Transfer Transaction to StarkEx
+
+After the `fact` is registered as true in `address`, the Application sends the Conditional Transfer transaction to StarkEx. Then, the same validity checks as in  xref:transfer.adoc[transfer] are done
+
+[id="step_4_conditional_transfer_is_included_in_a_batch"]
+== Step 4: Conditional Transfer is Included in a Batch
+
+If the transaction is valid, it is included in a batch to be submitted on-chain along with validity proof. The xref:conditional-transfer.adoc[`stateUpdate`] on-chain transaction includes the `address` and the `fact` as `calldata`. If this fact is not registered as true, the state update is rejected.

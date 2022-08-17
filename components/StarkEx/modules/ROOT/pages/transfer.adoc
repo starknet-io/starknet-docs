@@ -1,0 +1,39 @@
+[id="transfer"]
+= Transfer
+
+image::transfer-flow.png[]
+
+[id="step_1_alice_sends_transfer_request_to_the_application"]
+== Step 1: Alice Sends Transfer Request to the Application
+
+Alice sends the Application a signed Transfer request, which includes:
+
+* The receiving `vaultId,` and `starkKey`
+* The `vaultId` and `starkKey` of the vault that funds will be taken from
+* The relevant ( xref:starkex-specific-concepts.adoc#quantization[quantized]) `amount` and `assetId`
+* `expiration_timestamp`
+* `nonce`
+
+For the full transaction structure, see message encodings for xref:signatures.adoc#transfer-example[Spot Trading].
+
+[NOTE]
+====
+In starkEx for perpetual trading, only transfer of the collateral asset id is allowed.
+====
+
+[id="step_2_application_sends_transfer_transaction_to_starkex"]
+== Step 2: Application Sends Transfer Transaction to StarkEx
+
+The Application sends the Transfer transaction to StarkEx service. StarkEx service verifies:
+
+* The signature is valid and the signing `starkKey` matches the `vaultId`
+* The sender `vaultId` has enough funds (according to the application business logic)
+* The receiver `vaultId` indeed has the receiver `starkKey`
+* The Transfer has not expired
+* The Transfer was not executed before (checked in the xref:README-off-chain-state.adoc[`ordersTree`])
+* For perpetual trading: the `assetId` corresponds to the collateral token
+
+[id="step_3_transfer_included_in_a_batch"]
+== Step 3: Transfer Included in a Batch
+
+If the Transfer is valid, the Transfer is included in a batch to be submitted on-chain along with validity proof. For full details on state update on-chain, see xref:contract-management.adoc#state-update[Contract Management].

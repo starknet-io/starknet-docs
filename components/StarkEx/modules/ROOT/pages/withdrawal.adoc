@@ -1,0 +1,37 @@
+[id="spot_trading"]
+= Spot Trading
+
+
+image::withdrawal-flow.png[]
+
+[id="step_1_off_chain_withdrawal_request_initiated_by_the_user"]
+== Step 1: Off-Chain Withdrawal Request Initiated by the User <<step-1-off-chain-withdrawal-request-initiated-by-the-user,>>
+
+The user submits a withdrawal request to the off-chain application.
+
+[id="step_2_off_chain_transfer_transaction"]
+== Step *2*: Off-Chain Transfer Transaction  <<step-2-off-chain-withdrawal-transaction,>>
+
+In StarkEx for spot trading, starting v4.0, there is no on-chain registration. This means that the registration of the Ethereum address must happen off-chain. This is implemented using the transfer transaction as follows:
+
+A transfer request, signed by the user, moves the funds from the user's Vault to another off-chain Vault, which is identified with the user's Ethereum address instead of the `starkKey`.
+
+[id="step_3_off_chain_withdrawal_transaction"]
+== Step *3*: Off-Chain Withdrawal Transaction <<step-2-off-chain-withdrawal-transaction,>>
+
+The off-chain app checks the validity of the withdrawal request according to its business logic and the relevant `vaultId` state. If it is valid, it sends the off-chain withdrawal transaction to the StarkEx service.
+
+[id="step_4_withdrawal_included_in_a_batch"]
+== Step 4: Withdrawal Included in a Batch <<step-3-withdrawal-included-in-a-batch,>>
+
+StarkEx verifies that the withdrawal request is valid, according to the relevant business logic statement to be proved, and the relevant `vaultId` state. If the withdrawal is valid, it is aggregated to a batch to be submitted on-chain along with a validity proof.
+
+[id="step_5_funds_move_to_the_withdrawal_area"]
+== Step 5: Funds Move to the Withdrawal Area <<step-4-funds-move-to-the-withdrawal-area,>>
+
+Upon performing `state update` , the StarkEx smart contract moves the relevant funds to the withdrawal area, under the user identity that appears in the withdrawn L2 vault.
+
+[id="step_6_on_chain_withdrawal_transaction"]
+== Step 6: On-Chain Withdrawal Transaction <<step-5-on-chain-withdrawal-transaction,>>
+
+Once the funds are in the withdrawal area, the user the funds are belonged to under can make an on-chain call to withdraw the funds to any recipient. For more info, see `withdrawals`​

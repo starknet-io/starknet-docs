@@ -1,0 +1,153 @@
+[id="perpetual_trading"]
+= Perpetual Trading
+
+:stem: latexmath
+
+To interact with the system, users have to send messages containing orders they wish to execute. The following order types are currently supported:
+
+* Withdrawal, requesting collateral to move from the L2 state to L1
+* Limit Order with Fees, declaring intent to sell a certain amount of a certain asset in exchange for a different asset at a certain ratio. One of the assets must be the collateral
+* Conditional Transfer with Fees, requesting collateral to be transferred from one vault to another if some on-chain event was recorded.
+* Transfer with Fees, requesting collateral to be transferred from one vault to another.
+
+The transaction is sent directly to the application through an interface exposed there, and the validity of the signature over all the fields is verified by the proof system.
+
+In the case of Withdrawal, the signature is constructed as follows:
+
+[stem]
+++++
+ECDSA(H(w_1, w_5), k_{private})
+++++
+
+In the case of Limit Order/Transfer/Conditional Transfer with Fees, the signature is constructed as follows:
+
+[stem]
+++++
+ECDSA(H(H(H(H(w_1, w_2), w_3),w_4),w_5), k_{private})
+++++
+
+Where https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm[ECDSA] is the regular elliptic curve digital signature algorithm, stem:[H] is the xref:pedersen-hash-function.adoc[Pedersen hash function], stem:[k_{private}] is the user's private key, and the words stem:[w_1],stem:[w_2],stem:[w_3],stem:[w_4], stem:[w_5]andstem:[w_6]are _252-bit_ words containing the data required for the signature, as described in the next section.
+
+[id="withdrawal"]
+== Withdrawal
+
+For withdrawal, the signature is constructed as follows:
+
+stem:[w_1]is the withdrawn `assetId` +
+stem:[w_5]is defined as follows:
+
+----
+       +----+-----------------+---------+-----------+---------+------------+
+#bits  | 10 |       64        |   32    |    32     |    32   |     49     |
+       +----+-----------------+---------+-----------+---------+------------+
+label    A           B            C         D             E          F
+----
+
+* `A`:  order type
+ ** 6 for a Withdrawal
+* `B`: `positionId` from which the user wants to take funds.
+* `C`: `nonce` for the transaction.
+* `D`: `quantizedAmount` to be withdrawn
+* `E`: `expirationTimestamp`, in hours since the Unix epoch.  _For example, for the order to expire 24 hours from the beginning of the current hour, set the timestamp to_stem:[⌊\frac{𝑡_{𝑢𝑛𝑖𝑥}}{3600}⌋+24]
+* `F`: padding of zeros
+
+[id="limit_order_with_fees"]
+== Limit Order with Fees
+
+For limit order with fees, the signature is constructed as follows:
+
+[stem]
+++++
+ECDSA(H(H(H(H(w_1, w_2), w_3),w_4),w_5), k_{private})
+++++
+
+stem:[w_1] is the `assetId` to be sold +
+stem:[w_2]is the `assetId` to be bought. +
+stem:[w_3]is the `assetId` used to pay the fee. +
+stem:[w_4]is defined as follows:
+
+----
+         +-------+--------------+--------------+--------------+--------+
+#bits    | 27    |   64         |   64 .       |      64      |   32   |
+         +-------+--------------+--------------+--------------+--------+
+label      A               B            C                 D       E
+----
+
+* `A`: padding of zeros
+* `B`: `quantizedAmount` to be sold.
+* `C`: `quantizedAmount` to be bought
+* `D`: `quantizedAmount` to pay fees
+* `E`: `nonce` for the transaction.
+
+stem:[w_5]is defined as follows:
+
+----
+         +---+--------------+--------------+--------------+-----+-----+
+#bits    | 10|   64         |   64 .       |         64   | 32  |  17 |
+         +---+--------------+--------------+--------------+-----+-----+
+label      A      B            C                 D           E     F
+----
+
+* `A`:  order type
+ ** 3 for a Limit Order with Fees
+* `B`: `positionId` from which the user wants to take funds.
+* `C`: `positionId` from which the user wants to take funds.
+* `D`: `positionId` from which the user wants to take funds.
+* `E`: `expirationTimestamp`, in hours since the Unix epoch.  _For example, for the order to expire 24 hours from the beginning of the current hour, set the timestamp to_stem:[⌊\frac{𝑡_{𝑢𝑛𝑖𝑥}}{3600}⌋+24]
+* `F`: padding of zeros
+
+[id="transfer_with_feesconditional_transfer_with_fees"]
+== Transfer with Fees/Conditional Transfer with Fees
+
+For transfer with fees, the signature is constructed as follows:
+
+For Transfer with Fees, the encoding is as follows
+
+[stem]
+++++
+ECDSA(H(H(H(H(w_1, w_2), w_3),w_4),w_5), k_{private})
+++++
+
+For Conditional Transfer with Fees, the encoding is as follows
+
+[stem]
+++++
+ECDSA(H(H(H(H(H(w_1, w_2), w_3),w_6),w_4),w_5), k_{private})
+++++
+
+stem:[w_1]is the `assetId` to be sold +
+stem:[w_2]is the `assetId` used to pay the fee. +
+stem:[w_3]is the `receiver_starkKey` used to pay the fee. +
+stem:[w_4]is defined as follows
+
+----
+         +-------+--------------+--------------+--------------+--------+
+#bits    | 27    |   64         |   64 .       |      64      |   32   |
+         +-------+--------------+--------------+--------------+--------+
+label      A               B            C                 D       E
+----
+
+* `A`: padding of zeros
+* `B`: sender``positionId``&#x20;
+* `C`: receiver `positionId`
+* `D`: fee `positionId`
+* `E`: `nonce` for the transaction.
+
+stem:[w_5]is defined as follows:
+
+----
+         +---+--------------+--------------+--------+-----------------+
+#bits    | 10|   64         |   64         |   32   |       81        |
+         +---+--------------+--------------+--------+-----------------+
+label      A      B            C                 D           E
+----
+
+* `A`:  order type
+ ** 4 for Transfer with Fees
+ ** 5 for Conditional Transfer with Fees
+* `B`: `quantizedAmount` to transfer
+* `C`: `quantizedAmount` to limit the max fee
+* `D`: `expirationTimestamp`, in hours since the Unix epoch.  _For example, for the order to expire 24 hours from the beginning of the current hour, set the timestamp to_stem:[⌊\frac{𝑡_{𝑢𝑛𝑖𝑥}}{3600}⌋+24]
+* `E`: padding of zeros
+
+stem:[w_6] is the `condition` defined as Perdersen hash of the contract address and fact.

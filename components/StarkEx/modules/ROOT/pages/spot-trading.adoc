@@ -1,0 +1,35 @@
+[id="spot_trading"]
+= Spot Trading
+
+image::trade-flow.png[]
+
+[id="step_1_alice_and_bob_send_limit_orders_to_the_application"]
+== Step 1: Alice and Bob Send Limit Orders to the Application
+
+Alice wants to trade 1 ETH for 400 DAI, and Bob would like to trade 400 DAI for 1 ETH. Both send to the off-chain app the corresponding (signed) limit order requests, which contain two `vaultId` (the `vaultId` from which sold funds are taken, and the `vaultId` to which bought funds should arrive), the two relevant `assetId,` the two relevant (quantized) `amounts`, the `expirationTimestamp` of the order (hours since epoch), and a `nonce`(to prevent replay attacks).
+
+For information on limit order structure, see xref:signatures.adoc#order-example[Message encodings] for spot trading.
+
+[id="step_2_the_application_sends_settlement_transaction_to_starkex"]
+== Step 2: The Application Sends Settlement Transaction to StarkEx
+
+The application matches the limit orders of Alice and Bob, sending to StarkEx a Settlement transaction that includes both orders, alongside the actual transferred amounts between Alice and Bob's vaults.
+
+[NOTE]
+====
+Partial fulfillment is supported. The amounts transferred between Alice and Bob may be smaller than the amounts they signed on, as long as the ratios are in line with what they signed on. We monitor the fulfillment status of the orders with the xref:README-off-chain-state.adoc#orders-tree[`orders_tree`]``
+====
+
+StarkEx checks the validity of the Settlement:
+
+* `assetId` of the two orders match (i.e. bought `assetId` of one is the sold `assetId` of the other)&#x20;
+* The ratio between sell amount and buy amount for Alice and Bob is at least as good as the ratio each signed on.
+* Each of the orders in the Settlement was signed by a``starkKey`` that corresponds to the order's``vaultId``.
+* The balance in each `vaultId` is sufficient to fulfill the trade.
+* Both orders are not already fulfilled (and the traded amount will not cause Alice and Bob to transfer more than what they signed on in the order)
+* The `expirationTimestamp` of the order refers to the future.
+
+[id="step_3_settlement_included_in_a_batch"]
+== Step 3: Settlement Included in a Batch
+
+If the Settlement is valid, the Settlement is included in a batch to be submitted on-chain along with validity proof. See  xref:contract-management.adoc#state-update[here] for full details on state update on-chain.

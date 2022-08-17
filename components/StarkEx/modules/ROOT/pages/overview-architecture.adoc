@@ -1,0 +1,119 @@
+[id="starkex_partner_integration"]
+= StarkEx Partner Integration
+
+
+StarkEx enables Partners to power their application in a secure, robust, and scalable non-custodial environment. StarkEx provides a Layer 2 scalability engine supporting multiple exchanges and platforms. This document provides a high-level overview to assist with Partner onboarding. The term "`Partner System`" describes the system built and operated by the Partner and powered by the StarkEx scalability engine. Note, this document supports anticipated use cases but is not intended to inhibit a Partner's creativity.
+
+[id="overview"]
+== Overview
+
+As per the diagram below, the StarkEx system is designed to accept user transactions from the Partner back end. These transactions are then batched and processed by the StarkEx system. The process and division of responsibilities are outlined below.
+
+image::integration.png[]
+
+[id="component_description_and_responsibilities"]
+== Component Description and Responsibilities:
+
+[id="1_front_end"]
+== (1) Front End
+
+The Partner System should support two operation types; on-chain and off-chain.
+
+[id="on_chain_operations"]
+=== On-Chain Operations
+
+[id="requirement"]
+==== *Requirement*
+
+On-chain operations are standard Ethereum transactions. The system should support on-chain deposits and withdrawals via the StarkEx smart contract API.
+
+[id="best_practice"]
+==== Best Practice
+
+Best practice is for the Partner front end to assist the user with building and signing transactions via a wallet.
+
+A common pattern is for the Partner front end to notify the back end about each on-chain transaction. The back end can wait for those transactions to be mined and act accordingly. For example, if the on-chain transaction is a deposit, the back-end will initiate an off-chain deposit request.
+
+The StarkEx contracts are publishedhttps://github.com/starkware-libs/starkex-contracts/tree/master/scalable-dex/contracts/src[here].
+
+[id="off_chain_operations"]
+=== *Off-Chain Operations*
+
+Off-chain operations are those operations executed in the StarkEx scalability engine. Some of these operations must be signed using the StarkEx signature scheme; i.e., the Partner front end wallet must support the StarkEx cryptographic library. Signed operations should be passed to the Partner's back end and then to (2) for order verification. +
+The StarkEx cryptographic library is publishedhttps://github.com/starkware-libs/starkex-resources/tree/master/crypto/starkware/crypto/signature[here].
+
+[id="2_order_verification"]
+== (2) Order Verification
+
+User operations must be verified (e.g., signatures, balances, and vault Ids) to ensure that the Partner's back end does not assume the validity of inputs provided by the user. It is, therefore, recommended that the back end verifies the parameters required to complete a transaction.
+
+When such validations require asynchronous access to external resources, for example, when a user deposits on-chain, the validation should wait for the deposit to be mined on-chain (typically, this requires several block confirmations) before fully processing the deposit request.
+
+[id="3_business_logic"]
+== (3) Business Logic
+
+This component supplies any business logic the Partner's System supports (e.g., a matching engine). The business logic handles the transactions to be passed to StarkEx and updates the account state accordingly.
+
+[id="4_transaction_stream"]
+== (4) Transaction Stream
+
+=== Requirement
+
+All transactions transmitted to StarkEx should be validated and indexed with consecutive identifiers called tx_ids, starting from 0. The tx_id field is used to enforce the expected order of execution in StarkEx, even if the transactions are sent concurrently. Note, if there is a "`gap`" in the tx ids, StarkEx waits for the gap to be fulfilled before continuing to transactions with higher tx_id.
+
+=== Best Practice
+
+It is best practice to store any information needed to revert the transaction state on the Partner System; see Error Handling below.
+
+[id="5_transaction_sender"]
+== (5) Transaction Sender
+
+[id="normal_flow"]
+=== Normal Flow
+
+Once the StarkEx Gateway acknowledges the transaction is received correctly, it is guaranteed to be executed (except for extreme scenarios; see Edge Cases below). This allows the transaction to be presented to the user as complete via the front end without waiting for the finalization on-chain.
+
+[id="edge_cases"]
+=== Edge Cases
+
+If a transaction is found to be invalid in the context-dependent, error-checking phase inside StarkEx (e.g., insufficient balances), it will not be executed. Such cases are handled with a fallback flow; such errors should only occur if there are bugs in one of the systems.
+
+Note, the StarkEx Gateway returns an error for transactions that are not correctly formatted or have invalid signatures (aka context-free errors) and does not acknowledge such transactions (the HTTP response is an error code 500).
+
+[id="6_error_handling"]
+== (6) Error Handling
+
+=== Requirement
+
+If an invalid transaction is detected (post-StarkEx Gateway), the StarkEx system reports the error to the Partner's dedicated endpoint (component number 6) with an appropriate error code. The Partner is expected to respond with a list of transactions to be executed in place of the invalid transaction (e.g., an empty list, effectively canceling the transaction).
+
+=== Best Practice
+
+As replacing transactions affects the state of the balances, it is recommended that the Partner keeps the transaction stream, including any auxiliary information required to revert them. This simplifies reverting the balances to the state just before the invalid transaction (i.e., revert all the transactions up to and including the invalid transaction). This mechanism replaces the invalid transaction and recomputes the balance state given the replacement.
+
+While most of the errors that can be reported at this phase can be prevented by the Partner application's logic (e.g., pre-transaction checks for insufficient balances at (2) operation validation), there are some errors that are beyond the control of the Partner. One example of this is an Ethereum network reorganization -- which may, for example, revert a deposit sent to the StarkEx contract.
+
+[id="7_batch_approval"]
+== (7) Batch Approval
+
+StarkEx is designed to provide the Partner with maximum control over the system's state. In particular, StarkEx allows the Partner's System to approve any batch before it is transmitted on-chain. This ensures that the expected state transition is consistent with the user's account state on the Partner's side. This mechanism allows the system to prevent the smart contract from reaching an unexpected state, providing another layer of protection from bugs that could lead to system state inconsistency.
+
+=== Best Practice
+
+For each batch, the system can investigate the list of transactions included in it and the set of balance changes applied by it. In the event of an inconsistency (e.g., balances don't match expectations due to rounding inconsistency), it is recommended that the Partner should:
+
+* not approve the state-transition
+* fire an alert, and apply a fallback
+
+Such a fallback may include a manual investigation, as reaching such a state implies a bug that should ideally be discovered, and handled, during the testing period.
+
+[id="8_censorship_prevention"]
+== (8) Censorship Prevention
+
+The StarkEx system is designed to protect users and maintain their self-custody over deposited assets. To prevent any attempt by the system to censor user requests, StarkEx allows users to force the execution of certain operations by submitting them directly to the StarkEx contract on-chain.
+
+When submitting a forced operation to the contract, the Partner must serve it in a timely fashion (within a defined time period). If this does not happen, the user may apply a penalty to the StarkEx contract, e.g., freeze the contract and prevent any new state updates. In order to prevent such penalties, it is crucial that the Partner System monitors and responds to forced operation requests in a timely manner.
+
+Note, even an illegal forced transaction must be served. In such an event, StarkEx would prove the transaction illegal, and it wouldn't affect the state.
+
+'''

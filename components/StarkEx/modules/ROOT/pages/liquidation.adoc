@@ -1,0 +1,33 @@
+[id="liquidation"]
+= Liquidation
+
+
+image::liquidation.png[]
+
+[id="step_1_alice_sends_a_limit_order_and_the_application_matches_it_to_bobs_undercollateralized_position"]
+== Step 1: Alice Sends a Limit Order, and the Application Matches it to Bob's Undercollateralized Position
+
+Let's look at the following example. Alice wants to sell 1 synthetic BTC for 30000 USDC and pay a maximum amount of 5 USDC as a fee for the trade. +
+Bob has a vault with -1 BTC and +31000 USDC. Notice that Bob's position can be matched against Alice's order. If Bob's position is below the maintenance margin according to the system parameters, the application can match between Alice's limit order and Bob's position without his signature or any consent from him.
+
+Concretely, after Alice sends a limit order as specified  xref:perpetual-trading.adoc#step-1-alice-and-bob-send-limit-orders-to-the-application[here], the application sends StarkEx a Liquidation request that includes Alice's limit order and the following:
+
+* The `positionId` of Bob
+* The actual amount of collateral transferred
+* The actual amount of synthetic transferred
+* The actual fee paid by Alice (Bob is not required to pay a fee, as he is liquidated)
+
+[id="step_2_starkex_checks_the_validity_of_the_request"]
+== Step 2:  StarkEx Checks the Validity of the Request
+
+StarkEx checks the following constraints:
+
+* The amounts and fees transferred are compatible with Alice's order, as described  xref:perpetual-trading.adoc#step-2-the-application-sends-settlement-transaction-to-starkex[here]
+* Bob's position is indeed liquidatable, i.e. the `Total Account Value / Total Maintenance Margin Requirement` ratio is below 1.
+* The `Total Account Value / Total Maintenance Margin Requirement` ratio of Bob's position is improved due to the liquidation
+* Bob's amount of synthetic holdings was reduced due to the trade
+
+[id="step_3_liquidate_included_in_a_batch"]
+== Step 3: Liquidate Included in a Batch
+
+If the Liquidation request is valid, it is included in a batch to be submitted on-chain along with validity proof. See  xref:contract-management.adoc#state-update[here] for a detailed description of the on-chain state update.

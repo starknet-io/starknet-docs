@@ -1,0 +1,53 @@
+[id="solution_architecture"]
+= Solution Architecture
+
+The StarkWare services are composed of the following components:
+
+[id="high_level_architecture"]
+== High-level Architecture
+
+image::starkware_arch_highlevel.png[]
+
+[id="shared_prover_sharp_and_verifier"]
+== Shared Prover (SHARP) and Verifier
+
+The Shared Prover, SHARP provides the infrastructure to support scalable applications. SHARP generates proofs to computational integrity statements. These proofs are submitted on-chain to the Verifier smart contract. The Verifier smart contract then stores the hash of every valid statement in a dedicated xref:fact-registry.adoc[fact registry].
+
+[id="applications"]
+== Applications
+
+SHARP and the Verifier smart contract provide a service developed and maintained by StarkWare to serve customers according to their dedicated logic, such as supporting an Exchange.
+
+The state achieved by a customer's application is committed on the application's dedicated Ethereum-based smart contract.
+
+[NOTE]
+====
+Typically, only the hash of the state is kept on-chain. To enforce the trustless nature of the system, the on-chain state can only be updated by a proof attesting to the validity of the state transition. StarkWare's SHARP provides this proof.
+====
+
+At a high-level, StarkWare Applications do the following:
+
+. *Process Requests*
++
+StarkWare Applications process customer requests, transform these transactions into provable statements, and send these to SHARP. All via an intuitive customer API (step 1 in the diagram).
++
+Typically, several requests are batched together into a single statement (step 2 in the diagram). For example, a batch can compile 1000 financial transactions to be sent for proving.
+. *Prove with SHARP*
++
+SHARP constructs the proof.
+. *Register the Proof*
++
+SHARP transmits the proof to the on-chain Verifier smart contract (step 3 in the diagram).
+. *Register the State Transition*
++
+StarkWare Applications then apply the state transition on the customer application's smart contract (step 4 in the diagram).
++
+To ensure the transition's validity (i.e., that SHARP verified it), the customer application's smart contract corroborates that the transition statement is registered in the Verifier smart contract (step 5 in the diagram).
+
+
+
+
+
+.Additional resources
+
+* xref:starkware-exchange-applications.adoc[StarkWare Exchange applications]

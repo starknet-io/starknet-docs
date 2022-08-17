@@ -1,0 +1,39 @@
+[id="trade"]
+= Trade
+
+
+image::on-chain-trade.png[]
+
+[id="step_1_on_chain_account_and_off_chain_account_owners_submit_orders"]
+== Step 1: On-Chain Account and Off-Chain Account Owners Submit Orders
+
+The on-chain account owner calls the function https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/OrderRegistry.sol#L70[`registerLimitOrder`], and creates a  xref:on-chain-account-management.adoc#l1-limit-order[limit order record on L1]. This order is matched against other order/s submitted to the same exchange -- potentially including an off-chain order from an owner of an off-chain account.
+
+[id="step_2_the_operator_matches_the_orders"]
+== Step 2: The Operator Matches the Orders
+
+The operator sends a settlement to StarkEx with the bundled orders.
+
+[NOTE]
+====
+The flow and checks, from StarkEx perspective, are very similar to the xref:README-trade.adoc[off-chain trade flow], except the L1 limit order arrives without a signature (since Ethereum signatures are expensive to verify in Cairo). The authenticity of this order is verified against the L1 `order registry` contracts, as described in Step 3.
+====
+
+[id="step_3_state_update"]
+== Step 3: State Update
+
+After StarkEx creates a batch, SHARP generates a proof for it, it is published and verified on-chain, and the StarkEx service calls the `StateUpdate` function. The `stateUpdate` contains the data of all the L1 limit orders for this batch. The StarkEx contract then verifies that such orders were indeed submitted through the `orderRegistry`, and that there is sufficient balance in the relevant on-chain accounts to allow these orders to be executed. If all the conditions apply, it adjusts the balance for the existing on-chain accounts, according to the L1 limit order specifications.
+
+[id="locks_on_on_chain_accounts"]
+== Locks on On-Chain Accounts
+
+Note that the operator deposits the funds from a settlement to an off-chain account in Step 2, but deducts those funds from the on-chain account in Step 3, i.e., *after* a batch is created and proved on-chain. Thus, a successful withdrawal request sent between Steps 2 and 3 might cause the `stateUpdate` to fail due to a lack of sufficient funds (forcing the operator to revert the settlement, re-prove everything, etc.). A well-timed series of such withdrawals could be a vector for DOS attack on StarkEx.
+
+To prevent this issue, a "lock" is applied on the funds in on-chain accounts. On deposit, the funds are automatically locked for `defaultVaultWithdrawalLock`. With the funds locked, the operator may settle against L1 limit orders without exposure to risk.
+
+Users may customize this lock time on their on-chain account's funds should they wish to comply with such requirements.
+
+[NOTE]
+====
+The operator may choose to select trusted users who are not required to lock their funds for an order. The exact management of which users/addresses should lock their funds in advance and which users are trusted is up to the operator.
+====

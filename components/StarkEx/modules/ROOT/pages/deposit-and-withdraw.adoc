@@ -1,0 +1,46 @@
+[id="depositing_and_withdrawing_on_chain"]
+= Depositing and withdrawing on-chain
+
+
+[id="depositing_to_an_on_chain_account"]
+== Depositing to an on-chain account
+
+To send funds to a L1 vault, use the corresponding function, as follows:
+
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L77[`depositEthToVault`] (ETH)
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L96[`depositERC20ToVault`] (ERC-20)
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L118[`depositERC1155ToVault`] (ERC-1155)
+
+Include the following parameters:
+
+* `assetId` (ETH, ERC-20, ERC-1155)
+* `vaultId` (ETH, ERC-20, ERC-1155)
+*  xref:starkex-specific-concepts.adoc#quantization[`quantizedAmount`] to deposit (ERC-20, ERC-1155)
+
+[NOTE]
+====
+Unlike off-chain accounts, which can contain NFTs (ERC-721 tokens), on-chain accounts can only contain ETH, ERC-20 tokens, or ERC-1155 tokens.
+====
+
+As part of the deposit flow, the funds are automatically locked for the period defined by `defaultVaultWithdrawalLock`. Funds cannot be withdrawn from a locked vault. See xref:trade.adoc[_Trade_]  for the full explanation of why locks are needed.
+
+[id="withdrawing_from_an_on_chain_account"]
+== Withdrawing from an on-chain account
+
+To withdraw funds from a L1 vault, use the corresponding function, as follows:
+
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L156[`withdrawFromVault`] (ETH, ERC-20)
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/starkex/components/VaultDepositWithdrawal.sol#L179[`withdrawErc1155FromVault`] (ERC-1155)
+
+Include the following parameters:
+
+* `assetId` (ETH, ERC-20, ERC-1155)
+* `vaultId` (ETH, ERC-20, ERC-1155)
+*  xref:starkex-specific-concepts.adoc#quantization[`quantizedAmount`] to deposit (ETH, ERC-20, ERC-1155)
+
+The function verifies the following conditions are true:
+
+* The vault specified under `msg.sender` contains at least the specified amount of the specified asset.
+* The funds are not locked.
+
+If both conditions are true, the account owner receives their funds, and the amount is deducted from the on-chain account balance.

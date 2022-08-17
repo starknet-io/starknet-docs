@@ -1,0 +1,111 @@
+[id="deposit_and_withdrawal_for_off_chain_accounts"]
+= Deposit and withdrawal for off-chain accounts
+
+
+[id="deposit"]
+== Deposit
+
+To deposit ETH, call the payable function `deposit`, which takes the amount through `msg.value.`
+
+To deposit ERC-20, ERC-721, or ERC-1155 to StarkEx, use the following functions:
+
+. `approval` on the ERC-20, ERC-721, or ERC-1155 contract, authorizing StarkEx to transfer funds on behalf of the user.
+. `deposit` (ETH, ERC-20) or `depositWithTokenId` (ERC-721, ERC-1155) on the StarkEx contract, with the following parameters:
+ ** the user's `starkKey`
+ ** xref:starkex-specific-concepts.adoc[`assetType`]
+ ** `tokenId` (ERC-721, ERC-1155)
+ ** the user's `vaultId`
+ ** `quantizedAmount`  and  to send the deposit.
+
+The result of the operation, assuming all requirements are met, is that the amount of ETH, ERC-20, ERC-721, or ERC-1155 tokens, specified in the `deposit` call and multiplied by the quantization factor, is transferred on behalf of the user to the contract.
+
+In addition, the contract adds the funds to an accumulator of pending deposits for the provided `starkKey`, `assetType` and `vaultId`. The `starkKey` can belong to the user that called `deposit` or to a different user. When this happens, the event `LogDeposit` is emitted.
+
+To inspect the funds in the Pending Deposits area, call `getDepositBalance` and `getQuantizedDepositBalance`. Both of these functions get `starkKey`,  xref:starkex-specific-concepts.adoc#assetinfo-assettype-and-assetid[`assetId`] and `vaultId` and return the pending amount of funds that correspond to the input parameters. These funds are pending deposit to the vault `vaultId` belonging to the user that owns the specified `starkKey`. Be aware that if there are several pending deposits with the same parameters, these functions return the accumulated value.
+
+In order to remove funds from the Pending Deposits area, the application needs to include the removal of funds in a proof, which results in the addition of the amount deposited to the specified xref:starkex-specific-concepts.adoc[vault]. When the contract receives a valid proof, it deducts the transferred funds from the pending deposits for the specified `starkKey`, xref:starkex-specific-concepts.adoc[`assetType`] and `vaultId`.
+
+Until that point, the user can cancel the deposit by performing a time-locked cancel-deposit operation that consists of calls to the following functions:
+
+* `depositCancel`: Sets a timer. When the timer expires, the user can reclaim the deposit. Before the timer expires, the user cannot reclaim funds because the application might be processing the deposit to include in the off-chain vault. Only the recipient of the funds can call `depositCancel`.  When this function completes, it emits the event `LogDepositCancel`.
+* `depositReclaim`: Transfers funds from the contract back to the on-chain user account. This transfer only succeeds if the timer set by `depositCancel` has expired. This operation results in a transfer of all pending funds, that is, funds not accounted for in proofs for off-chain inclusion, back to the user account on the ERC-20, ERC-721, or ERC-1155 contract, or on their ETH balance. When this function completes, it emits the event `LogDepositCancelReclaimed`.
+
+If according to the off-chain state, the `vaultId` and `starkKey` specified in the deposit request do not match each other, this deposit is not valid and cannot be included in a proof. The funds remain in the deposit area. However, the funds can still be reclaimed to the address, `ethereumAddress`, that deposited them by using `depositCancel` and `depositReclaim`. The user that owns the `starkKey` in the original `deposit` function call must call these functions.
+
+[id="additional_resources"]
+=== Additional resources
+
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Deposits.sol#L271[`deposit` (ETH, ERC-20)]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Deposits.sol#L174[`depositWithTokenId` (ERC-721, ERC-1155)]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Deposits.sol#L56[`LogDeposit`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Deposits.sol#L113[`getDepositBalance`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Deposits.sol#L122[`getQuantizedDepositBalance`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Deposits.sol#L281[`depositCancel`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Deposits.sol#L85[`LogDepositCancel`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Deposits.sol#L318[`depositReclaim`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Deposits.sol#L87[`LogDepositCancelReclaimed`]
+
+[id="register_and_deposit"]
+== Register and deposit
+
+The following functions are wrappers around `registerUser` and `deposit`. You can call these functions to add a user to StarkEx:
+
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/CompositeActionsV2.sol#L8[`registerAndDepositERC20`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/CompositeActionsV2.sol#L21[`registerAndDepositEth`]
+
+*StarkEx for Perpetual Trading:* These functions creates a mapping between the user's `starkKey` and the user's `ethereumAddress` and deposits funds in the same transaction.
+*StarkEx for Spot Trading:* These functions are equivalent to `deposit`. These functions still exist for backwards-compatibility.
+
+[id="withdrawing_funds_from_the_starkex_contract"]
+== Withdrawing funds from the StarkEx contract
+
+You can withdraw funds once they are in the on-chain contract. The following types of withdrawals relate to different asset types in the system:
+
+* ETH
+* ERC-20 tokens
+* ERC-721 tokens
+* ERC-1155 tokens
+* Assets that were minted off-chain
+
+The procedures for withdrawing these asset types vary slightly.
+
+[id="funds_become_available_for_an_on_chain_withdrawal"]
+=== Funds become available for an on-chain withdrawal
+
+When a new state update is submitted on-chain, it may contain off-chain withdrawal transactions (see xref:README-withdrawal.adoc[Withdrawal]). This transaction results in an addition of the withdrawn amount to the on-chain pending withdrawals area, specifically under the vault owner's `starkKey` and the appropriate xref:starkex-specific-concepts.adoc[`assetType`]. At the same time, this amount is also deducted from the off-chain vault.
+
+When this happens, an event is emitted, with the following parameters: `starkKey`, `assetType` and the (non-accumulative)`quantizedAmount` and unquantized amount as parameters. The event is of type https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/AcceptModifications.sol#L19[`LogWithdrawalAllowed`] or https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/AcceptModifications.sol#L26[`LogNftWithdrawalAllowed`] for ERC-20, ETH, ERC-721, and off-chain minted asset respectively.
+
+After this step, the funds can be viewed with the function https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L94[`getWithdrawalBalance`] that gets the `starkKey` and `assetId` as input. Note that the funds are still at the StarkEx contract.
+
+[id="on_chain_calls_to_extract_assets_from_the_starkex_contract"]
+=== On-chain calls to extract assets from the StarkEx contract
+
+Anyone can withdraw for a `starkKey` of a pending withdrawal account by calling the on-chain withdrawal function, link:https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L108[`withdraw`] for ERC-20/ETH and link:https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L133[`withdrawWithTokenId`] for ERC-721 or ERC-1155, to perform the actual withdrawal of the asset, transferring it to the user's on-chain account.
+
+Two other types of withdrawals exist in the system, which can only be performed by the `ethereumAddress` that owns the `starkKey`:
+
+. To withdraw an off-chain minted asset, call the on-chain link:https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L174[`withdrawAndMint`] function to mint the asset on the fly and transfer it to the user's account.
+. To withdraw to another Ethereum address, call one of the following on-chain functions, providing the  `recipient` parameter, which is the `ethereumAddress` that should receive the withdrawn funds. This option is not available for off-chain minted assets. The functions are:
+ * link:https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L108[`withdraw`] for ERC-20/ETH
+ * link:https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L166[`withdrawNft`] for ERC-721
+
+After the second step, one of the following events is emitted as a notification that a withdrawal has occurred:
+
+* For ERC-20/ETH withdrawal, the event https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L60[`LogWithdrawalPerformed`] is emitted, with the parameters of the relevant `starkKey`, the `recipient` Ethereum address, the `assetType`, `quantizedAmount` and unquantized amounts.
+* For ERC-721 withdrawal, the event https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L68[`LogNftWithdrawalPerformed`] is emitted, with the parameters of the relevant `starkKey`, the `recipient` Ethereum address, the `assetId`.
+* For off-chain minted assets, the event https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L86[`LogMintWithdrawalPerformed`] is emitted, with the parameters of the relevant `starkKey`, the `recipient` Ethereum address, the `assetType`, `quantizedAmount` , unquantized amounts and `assetId`
+
+The result of the operation, assuming all requirements are met, is that an amount of assets in the pending withdrawal account, (times the quantization factor for ERC-20/ETH) , is transferred to the corresponding account of the recipient.
+
+It is possible to perform multiple withdrawals from off-chain vaults, and withdraw the entire amount using only one withdraw call to the on-chain contract, as long as the withdrawals are of the same `assetId`/`mintingBlob` and `starkKey`.
+
+A withdrawal request cannot be canceled. Once funds reach the pending withdrawals account on-chain, they cannot be moved back into an off-chain vault before completion of the withdrawal to the corresponding account of the user.
+
+Assets that are already on-chain can still be reclaimed even when the contract is Frozen by calling the relevant withdraw function from the following:
+
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L108[`withdraw`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L99[`withdrawTo`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L166[`withdrawNft`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L153[`NftWithdrawTo`]
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L174[`withdrawAndMint`]

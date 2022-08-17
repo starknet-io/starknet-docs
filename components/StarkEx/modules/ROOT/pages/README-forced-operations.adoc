@@ -1,0 +1,30 @@
+[id="forced_operations"]
+= Forced Operations
+
+image::forced-operation.png[]
+
+In order to guarantee self custody of the funds, at any point in time, a user may opt to perform a forced request. Forced requests are initiated by an L1 transaction, to avoid censorship. In case that the request is not served within a limited time frame, the user is able to freeze the contract (and thus the exchange) and withdraw directly from the frozen contract.
+
+[id="forced_operation_flows"]
+== Forced Operation Flows
+
+The syntax and business logic of forced operations varies depending on the specific application StarkEx serves. However, in general - there are two possible flows, "positive" and "negative".
+
+[id="positive_flow_the_application_serves_the_forced_operation"]
+=== Positive Flow: The Application Serves the Forced Operation
+
+The Application sends the Forced Operation to StarkEx. StarkEx decides whether the on-chain request is valid based on the identity of the exact request and the business logic involved. For example - let's assume Alice requested to withdraw 1000 USDC from a specific``vaultId`` (which she, allegedly, owns).
+
+If the request is valid, the operation is executed on Alice's off-chain vault. In our example, 1000 USDC will be deducted from Alice's off-chain balance, and the same amount will be marked as belonging to Alice's on-chain
+
+If this is not the case (for example, Alice can withdraw at most 500USDC according to the business logic, or the owner of vault number `vaultId` is actually Bob), StarkEx proves it, and no funds are moved on-chain.
+
+In both cases, after the proof for this request is submitted, the request is removed from the pending Forced Operations. This means that it can no longer justify any future request to freeze the contract.
+
+[id="negative_flow_operator_tries_to_censor_alice"]
+=== Negative Flow: Operator Tries to Censor Alice
+
+If enough time has passed (FREEZE_GRACE___PERIOD) and the Forced Operation is still in the pending Forced Operations area, Alice can call link:https://github.com/starkware-libs/starkex-contracts/blob/v2.0/scalable-dex/contracts/src/interactions/FullWithdrawals.sol#L66[`freezeRequest`] along with the parameters of the ignored Forced Operation. +
+As a result, the exchange becomes frozen, and no further state updates can get accepted. Withdrawals of on-chain funds are still possible.
+
+For information on the frozen state of the smart contract, see xref:README-in-spot-trading.adoc[Forced Actions and Escape Hatch].

@@ -1,0 +1,51 @@
+[id="perpetual_trading"]
+= Perpetual Trading
+
+image::trade-flow.png[]
+
+[id="step_1_alice_and_bob_send_limit_orders_to_the_application"]
+== Step 1: Alice and Bob Send Limit Orders to the Application
+
+Let's look at the following example. Alice wants to sell 1 synthetic BTC for 30000 USDC and pay a maximum amount of 5 USDC as a fee for the trade. Bob wants to sell 30000 USDC for 0.99 synthetic BTC and pay a maximum amount of 10 USDC as a fee. Both send the corresponding (signed) limit order requests to the off-chain app. +
+The limit order contains the user's `positionId` , the `assetId` and the `amount` of the traded assets (synthetic and collateral), as well as `feeAmount`, an `expirationTimestamp` of the order and a `nonce`(to prevent replay attacks).
+
+See  xref:in-perpetual.adoc#limit-order[here] for limit order structure.
+
+[id="step_2_the_application_sends_settlement_transaction_to_starkex"]
+== Step 2: The Application Sends Settlement Transaction to StarkEx
+
+The application matches the limit orders of Alice and Bob and creates a Settlement transaction. This transaction includes both orders, alongside the actual transferred amounts between Alice and Bob's vaults. In the example above, 0.99BTC will be transferred from Alice to Bob in exchange for 30,000 USDC.
+
+Note that after the settlement Alice still has an open order with the remaining 0.01 BTC to sell (and at least 300 USDC to receive for them), and this amount can be matched against further orders.
+
+[NOTE]
+====
+Partial fulfillment is supported. I.e. the amounts transferred between Alice and Bob may be smaller than the amounts they signed on, as long as the ratios are in line to what they signed on. In this example, after the settlement, Alice still has an open order with the remaining 0.01 BTC to sell (and at least 300 USDC to get for them), and this amount can be matched against further orders.
+
+StarkEx monitors the fulfillment status of the orders with the xref:README-off-chain-state.adoc#orders-tree[`orders_tree`].
+====
+
+[NOTE]
+====
+StarkEx for perpetual will always ensure that the amount of synthetics transferred by the settlement is identical to that specified in the order. The actual amount of transferred collateral can be different to that specified in the order, depending on the application order-matching output. For a sell synthetic token order, the transferred amount can be equal to or larger than specified in the order, and for a buy synthetic token order, the amount can be equal to or smaller than specified in the order.
+====
+
+StarkEx checks the validity of the Settlement:
+
+* `assetId` of the two orders matches (i.e. bought `assetId` of one is the sold `assetId` of the other)
+* Exactly one of the traded `assetId` is the collateral.
+* The ratio between the sell amount and the buy amount for Alice and Bob is at least as good as the ratio each signed on.
+* The ratio between the actual amount of fee taken and the actual amount of collateral transferred is equal to or less than the ratio between the total fee and the total collateral transferred, signed on by the user.
+* Each of the orders in the settlement was signed by a``starkKey`` that corresponds to the order's``vaultId``.
+* The positions involved in the trade are (at the end of the trade), above the maintenance margin, or the ratio between the positions' value and their maintenance margin is improved due to the trade.
+* Both orders have not already been fulfilled and the traded amounts will not cause Alice and Bob to transfer more than what they signed on in the order.
+* The `expirationTimestamp` of the order refers to the future.
+
+[id="step_3_settlement_included_in_a_batch"]
+== Step 3: Settlement Included in a Batch
+
+If the Settlement is valid, it is included in a batch to be submitted on-chain along with validity proof. See  xref:contract-management.adoc#state-update[here] for full details on the on-chain state update.
+[NOTE]
+====
+Like in any other transaction, funding effects take place before the settlement is applied to the position.
+====

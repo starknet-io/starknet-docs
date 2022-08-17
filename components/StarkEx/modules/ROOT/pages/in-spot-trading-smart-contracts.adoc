@@ -1,0 +1,33 @@
+[id="spot_trading"]
+= Spot Trading
+:imagesdir: images
+
+[id="full_withdrawal"]
+== Full Withdrawal
+
+The function https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/interactions/FullWithdrawals.sol#L46[`fullWithdrawalRequest`] is a part of an anti-censorship mechanism that allows the user to withdraw his funds. The user supplies the `vaultId` and the `starkKey`. Only the user to whom this `starkKey` belongs may submit this request. When this function is called, the event https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/interactions/FullWithdrawals.sol#L44[`LogFullWithdrawalRequest`] (with the relevant `starkKey, vaultId`) is emitted.
+
+[NOTE]
+====
+The Full Withdrawal function consumes a lot of gas and is expected to be used only as an anticensorship mechanism. For regular withdrawals, check out the  xref:README-withdrawal.adoc[Withdrawal flow], and the xref:public-interactions.adoc#withdrawal[Withdrawal function].
+====
+
+If the application fails to service the request, upon the expiration of a https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/libraries/LibConstants.sol#L16[`FREEZE_GRACE_PERIOD`], the user is entitled to freeze the contract by calling https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/interactions/FullWithdrawals.sol#L58[`freezeRequest`]. (See the entire flow xref:README-forced-operations.adoc[here] and the conditions of a valid fullWithdrawal request xref:in-spot-trading.adoc[here]). The user supplies the `vaultId` and the `starkKey` and indicating the `vaultId` for which the full withdrawal request has not been serviced. Once the contract is frozen, funds can be extracted using the escape operation, fully described in xref:in-spot-trading.adoc#escape[Escapes].
+
+A user cannot cancel Full Withdrawal requests.
+
+To avoid the potential attack of the application by a flood of full withdrawal requests, the rate of such requests must be limited. In the current implementation, this is achieved by making the request's cost exceed 1M gas.
+
+[id="escape"]
+== Escape
+
+Once the application becomes frozen (see xref:README-forced-operations.adoc[Forced Operations] for the full flow) the escape operation is what allows users to withdraw their funds and leave the application.
+
+Any escaper entity/user may perform an escape operation as follows:
+
+. Escapers must obtain a Merkle path of a vault to be evicted with respect to the frozen vault tree root. Typically, once the application is frozen, such data will be made public or obtainable from an application API, depending on the application's data availability approach.&#x20;
+. Escapers call https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/EscapeVerifier.sol#L105[`verifyEscape`] function on the ``EscapeVerifier``contract with the Merkle proof for the vault to be evicted. See  xref:fact-registry.adoc#escape-verifier[Escape Verifier] for more details on the proof structure. If the proof is valid, this results in the registration of the following fact - `keccak256(starkKey, assetId, quantizedAmount, vaultRoot, height, vaultId)`.
+. Escapers call https://github.com/starkware-libs/starkex-contracts/blob/e42fedeb2d6a262edc7ed5086e4cecddc2df087e/scalable-dex/contracts/src/starkex/components/Escapes.sol#L34[`escape`] function with the same parameters as submitted to the `EscapeVerifier` (`starkKey`, `assetId`, `quantizedAmount`, `vaultId`). If a proof was accepted for the same parameters by the `EscapeVerifier`, and no prior escape call was made for the vault, the contract adds the vault balance to an on-chain pending withdrawals account under the `starkKey` of the vault owner and the appropriate `assetId`.
+. The owner of the vault may then withdraw this amount from the pending withdrawals account by calling the normal withdraw function (see xref:README-withdrawal.adoc[Withdrawal]) to transfer the funds to the user's ETH or ERC-20 account (depending on the token type).
+
+Note that while anyone can perform the initial steps of the escape operation (including the application, for example), only the vault owner may perform the final step of transferring the funds.

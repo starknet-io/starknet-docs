@@ -1,0 +1,48 @@
+[id="minting_an_nft_off_chain"]
+= Minting an NFT off-chain
+
+Although an NFT can remain off-chain as long as your user only wants to execute L2 operations, such as  minting and trading, for a mintable asset to be fully non-custodial, you must enable your users to withdraw the new NFT to L1. To do so, you pair it with the on-chain contract in which the asset is minted and register it with the StarkEx smart contract.
+
+.Prerequisites
+
+* You must have minting privileges for the `mintFor` function. Only minters should have these privileges.
+
+.Procedure
+
+1. Define a new NFT asset type by deploying an ERC-721 contract that includes a `mintFor` function. The `minFor` function mints an ERC-721 token. When your user withdraws an NFT onto L1, the StarkEx smart contract calls this function. The `mintFor` function mints the L2 NFT onto L1 as a new, ERC-721 token.
++
+The `mintFor` function is defined in the ERC-721 and ERC-20 contracts, with the following signature:
++
+`MINTABLE_TOKEN(address).mintFor(withdrawer=msg.sender, asset_blob, amount)`
+
+2. After you deploy the new ERC-721 contract to L1, register it to the StarkEx smart contract with the `registerToken` function in the `TokenRegister.sol` smart contract.
++
+[NOTE]
+====
+Validium vaults and ZK-Rollup vaults each have a range of 31 bits for the id of each vault. When you allocate new vaults, consider that the simplest way to allocate new vaults is sequentially. You can also reuse vaults with a zero balance.
+====
+
+3. Mint new tokens on L2 by using the https://starkware.co/starkex-restapi-v4/common.html#common.objects.api.transaction_requests.MintRequest[`MintRequest`] method in the StarkEx Common Objects API. The `token_id` field is computed as explained in xref:starkex-specific-concepts.adoc#assetinfo-assettype-and-assetid[AssetInfo, AssetType and AssetId]. This field sets the mapping to the ERC-721 contract, the `token_id` computation includes the contract address.
++
+[NOTE]
+====
+Be aware that mintable ERC-721 tokens have an `asset_id` parameter instead of `token_id`, but semantically, these parameters are identical.
+====
++
+The `MintRequest` method mints this token to an unused vault that you specify in the function call, such as your own vault or a user's vault.
+
+4. If you mint the new token to your own vault, you can either transfer it to a user, using the https://starkware.co/starkex-restapi-v4/common.html#common.objects.api.transaction_requests.TransferRequest[`TransferRequest`] API method, or trade it  using the https://starkware.co/starkex-restapi-v4/common.html#common.objects.api.transaction_requests.SettlementRequest[`SettlementRequest`] API method. Both of these transactions have a fee mechanism, so you can collect fees.
++
+[NOTE]
+====
+A settlement transaction contains 2 signed limit orders.
+====
+
+5. Your user can hold or trade the NFT on L2. To do any transactions on L1, you must first withdraw to L1 using the https://starkware.co/starkex-restapi-v4/common.html#common.objects.api.transaction_requests.WithdrawalRequest[`WithdrawalRequest`] API method. The withdrawal is included in a batch, and finalized on L2, and then it is available for your user to withdraw to L1. The L1 StarkEx contract https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L174[`withdrawAndMint`] function actually mints the NFT on L1 and transfers it to your user's Ethereum account.
+
+.Additional resources
+
+* https://starkware.co/starkex-restapi-v4/common.html[StarkEx Common Object API reference]
+* https://github.com/starkware-libs/starkex-contracts/blob/75c3a2a8dfff70604d851fc6b1a2bc8bc1a3964b/scalable-dex/contracts/src/components/TokenRegister.sol#L80[`registerToken`] function in the `TokenRegister.sol` contract
+* https://github.com/starkware-libs/starkex-contracts/blob/master/scalable-dex/contracts/src/interactions/Withdrawals.sol#L174[`withdrawAndMint`] function in the `Withdrawals.sol` contract
+* The `mintFor` function appears in the ERC-721 and ERC-20 contracts.

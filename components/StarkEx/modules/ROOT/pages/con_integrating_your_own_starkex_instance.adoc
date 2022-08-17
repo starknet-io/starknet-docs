@@ -1,0 +1,52 @@
+[integrating_your_own_starkex_instance_{context}]
+= Integrating your own StarkEx instance
+
+When you begin working with StarkEx, you receive your own instance of StarkEx on testnet, and your own L1 StarkEx contract.
+
+.Prerequisites
+
+* (Recommended) You have used the StarkEx Playground. For more information, see the https://docs.starkware.co/starkex-playground-tutorial/[StarkEx Playground tutorial].
+* You have a dedicated instance of StarkEx for your application. For information on getting your own instance of StarkEx, contact us at info@starkware.co.
+
+[id="a_real_starkex_instance_compared_with_the_playground_{context}"]
+== A real StarkEx instance compared with the Playground
+
+|===
+| *A real StarkEx instance* | *StarkEx Playground*
+
+| You are the only Operator. You have full control of your StarkEx instance.
+| There are multiple Operators.
+
+| You manage the `vaultId` allocation as part of your application.
+| The `vaultId` value that you define for your transaction can be taken by someone else.
+
+| You are the only one sending transactions, so you don't need to call `get_first_unused_tx_id`. +
+ +
+StarkEx processes transactions sequentially, based on the value of each transaction's id, so the ids in your list of transactions must include all integers in the range of values. +
+ +
+For example, for a list of three transactions, the list of transaction id values cannot be `0,1,3`, it must be `0,1,2`. It can also be non-sequential, such as `0,2,1`. If the list doesn't include an integer, StarkEx stops processing when it reaches the missing id and waits for it to be submitted.
+// DELETE THIS; UNNECESSARYMoreover, because the gateway can process many transactions in parallel, it might not receive the actual next unused transaction id. So do not use `get_first_unused_tx_id`.
+
+| In order to get the next transaction id, you must query the StarkEx gateway by calling `get_first_unused_tx_id`, because other Playground users need to sync the next `tx_id`. +
+ +
+Be aware that StarkEx does not process two transactions with the same id and does not process a transaction if the transaction with the previous id has not been processed.
+|===
+
+
+[id="high_level_steps_{context}"]
+== High level steps
+
+. For ZK-Rollup and Validium, set up a <<setting_up_dac_service,service to query StarkEx's availability gateway, compute the new state, and approve it>>.
+. For Validium  only, <<about_dac,set up a Data Availability Committee (DAC)>>.
+. <<handling_alt_txs,Enable alternative transactions>> to replace invalid transactions in a batch. One invalid transaction can potentially invalidate the entire batch.
+. <<handling_Forced_Withdrawal_request,Add an event handler to your application to monitor and handle on-chain full withdrawal requests>> and serve them in a timely manner.
+. <<Setting_up_mutual_authentication,Set up mutual authentication>> to enable encrypted communication between your application and StarkEx.
+
+////
+include::con_data_availability.adoc[leveloffset=+1]
+include::proc_setting_up_the_committee_service.adoc[leveloffset=+1]
+include::con_about_handling_invalid_transactions.adoc[leveloffset=+1]
+include::proc_handling_invalid_transactions.adoc[leveloffset=+1]
+include::con_about_handling_a_full_withdrawal_request.adoc[leveloffset=+1]
+include::proc_setting_up_certificate_based_mutual_authentication.adoc[leveloffset=+1]
+////

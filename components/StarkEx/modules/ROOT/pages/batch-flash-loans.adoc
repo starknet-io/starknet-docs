@@ -1,0 +1,38 @@
+[id="batch_flash_loans"]
+= Batch Flash Loans
+
+
+A batch flash loan enables the Operator to lend itself a very large amount of assets for the duration of a batch. This capacity is fundamental to enabling efficient Automated Market Maker (AMM) capabilities, as described in the dAMM design pattern. This _lending_ functionality is essentially an accounting trick. Because StarkEx only outputs balance differences, the Operator can swap with itself from L1 to L2 and back.
+
+* Beginning of batch - K TK_A --> 0 TK_B _(K being a large amount)_
+* End of batch - 0 TK_B --> K TK_A
+
+The batch flash loan feature can be activated or deactivated by setting parameters at contract deployment. When deactivated, the contract checks the maximum negative balance the L1 Vault held during the batch and rejects the transaction if the difference is greater than the amount in the L1 Vault.
+
+[id="preprocessing_step_operator_creates_two_l1_limit_orders"]
+== Preprocessing Step: Operator Creates Two L1 Limit Orders
+
+To flash loan TK_A, the Operator creates 2 L1 Limit Orders _(known as L1LOs)_
+
+* L1LO #1: 10^15^ TK_A --> 0 TK___B
+* L1L2 #2: 0 TK_B --> 10^15^ TK___A
+
+[id="step_1_loan"]
+== Step 1: Loan
+
+To create a loan, the Operator must follow these steps. _For brevity, we call an "off-chain Limit Order", L2LO._
+
+. Operator signs a L2LO#3: 0 TK_B --> 0 TK___A
+. Operator matches L1LO#1 with L2LO#3
+. Operator now owns 10^15^ TK_A on their off-chain Vault, and the L1 Vault has -10^15^ TK_A
+
+Notice, since we don't provide any TK_B, the Operator may reuse the L1LOs as a partial fulfillment.
+
+[id="step_2_loan_payback"]
+== Step 2: Loan Payback
+
+To reimburse the loan, the Operator follows these steps.
+
+. Operator signs a L2LO#4: 10^15^ TK_A --> 0 TK___B
+. Operator matches L1LO#2 with L2LO#4
+. L1 Vault net balance is now 0 for both TK_A and TK_B

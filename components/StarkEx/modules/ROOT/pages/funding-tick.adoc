@@ -1,0 +1,40 @@
+[id="deleverage"]
+= Deleverage
+
+image::deleverage.png[]
+
+[id="step_1_the_total_value_of_alices_position_becomes_negative_the_app_matches_it_with_bobs_position"]
+== Step 1: The Total Value of Alice's Position Becomes Negative, The App Matches it with Bob's Position
+
+Let's look at the following example. Alice has a position with -1 BTC and +29,000 USDC. A new Oracle price tick changed the price of BTC from 28,800 USDC to 29,400 USDC. This caused Alice's position to have a negative balance.
+
+In such cases, the Application is allowed to match Alice's position with Bob's position, if Bob has an amount of BTC with the opposite sign. In our example, If Bob has a positive amount of BTC, then his position can be matched against Alice's. He can provide the entire 1 BTC or only a part of it.
+
+After the matching is set, the application sends the following paramaters to StarkEx:
+
+* The `positionId` of Alice and Bob
+* The synthetic `assetId` transferred
+* The `amount_synthetic` transferred
+* The `amount_collateral` transferred
+* The direction of the trade (i.e. whether Alice buys or sells the synthetic)
+
+[id="step_2_starkex_checks_the_validity_of_the_request"]
+== Step 2: StarkEx Checks the Validity of the Request
+
+StarkEx checks the following constraints:
+
+* Alice's position indeed needs to be leveraged, meaning, she has a negative balance according to the most updated prices.
+* Alice's and Bob's BTC signs are opposite.
+* Alice's and Bob's total amount of synthetic assets became smaller due to the transaction and didn't change their sign.
+* For Bob, the ratio of `Total Account Value / Total Maintenance Margin Requirement` is either above 1, or got improved due to the transaction.
+* The amounts transferred between Alice and Bob, preserve the ratio of Alice's `Total Account Value / Total Maintenance Margin Requirement`
+
+[NOTE]
+====
+The rationale behind the last condition is to guarantee fairness for users in the system. For example, in the position detailed above (Alice has -1BTC, +29000USDC) we can give Alice 1BTC for 29,000USDC or give Alice 0.1BTC in exchange for 2900USDC, but we can't give Alice 0.1BTC in exchange for 5000USDC (this is not fair to Alice) or give Alice 0.1BTC for 1000USDC (not fair to Bob).
+====
+
+[id="step_3_deleverage_included_in_a_batch"]
+== Step 3: Deleverage Included in a Batch
+
+If the Deleverage request is valid, it is included in a batch to be submitted on-chain along with the validity proof. See  xref:contract-management.adoc#state-update[here] for full details on the on-chain state update.

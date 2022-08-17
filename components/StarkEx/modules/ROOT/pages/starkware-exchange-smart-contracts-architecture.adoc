@@ -1,0 +1,82 @@
+[id="starkex_smart_contracts_architecture"]
+= StarkEx Smart Contracts Architecture
+
+
+[id="high_level_architecture"]
+== High-Level Architecture
+
+image::contracts_arch.png[]
+
+The StarkEx smart contract enforces a trader's self-custody. It maintains the Exchange state hash and allows a state transition only if _both_ the integrity Verifier (Verifier fact registry) and the Committee fact registry (supporting custom constraints) approve the new state.
+
+[id="components"]
+== Components
+
+[id="1_proxy_contract"]
+=== 1. Proxy Contract
+
+The Proxy contract holds the system state and owns all the funds deposited to the Exchange. It includes minimal functionality, implementing the https://blog.openzeppelin.com/proxy-patterns/[(solidity) proxy pattern]. It delegates all ( xref:starkware-exchange-smart-contracts-architecture.adoc#upgradability[but upgradability-related calls]) to the dispatcher contract.
+
+[id="2_dispatcher_contract"]
+=== 2. Dispatcher Contract
+
+The Dispatcher contract invokes the business logic of the StarkEx smart contract.
+[NOTE]
+====
+Ethereum limits contract size to 24kB. To accommodate this, the logic is spread among several library contracts and invoked with https://medium.com/coinmonks/delegatecall-calling-another-contract-function-in-solidity-b579f804178c[delegate calls].
+====
+
+The Dispatcher contract implementation is similar to the suggested https://hiddentao.com/archives/2020/05/28/upgradeable-smart-contracts-using-diamond-standard[diamond pattern]. It introduces an optimization by using a https://en.wikipedia.org/wiki/Perfect_hash_function[perfect hash] with a small image (e.g., 4 bits), mapping function names to contract addresses. The contracts implementing these functions are called the sub-contracts.
+
+[id="3_sub_contracts"]
+=== 3. Sub-Contracts
+
+The sub-contracts implement different modules used by the StarkEx smart contract. They are executed in the context of the Proxy contract (both address and storage), using https://medium.com/coinmonks/delegatecall-calling-another-contract-function-in-solidity-b579f804178c[delegate calls].
+
+[id="4_verifier_fact_registry"]
+=== 4. Verifier Fact Registry
+
+A contract linking the Exchange Application main contract (all the code executed in the context of the Proxy contract) to the Verifier contract (which is part of the SHARP proving service). It implements the fact registry API, and translates facts of the format the Exchange Application Contract uses to the format the SHARP Proving Service Verifier contract uses (e.g., by hashing it with the Cairo application program hash).
+[NOTE]
+====
+Please find further information about the https://medium.com/starkware/the-fact-registry-a64aafb598b6[fact registry API] or view the https://starkware.co/starkex/api/modules.html[API documentation].
+====
+
+[id="5_committee_fact_registry"]
+=== 5. Committee Fact Registry
+
+A fact registry enforcing custom off-chain approval of state transitions (e.g., data availability on some off-chain repository).
+
+[id="6_escape_verifier_fact_registry"]
+=== 6. Escape Verifier Fact Registry
+
+This component serves the self-custody feature in the case of a frozen Exchange Application contract. Traders use it to prove possession of the frozen contract's funds, which allows them to withdraw those funds upon satisfaction.
+
+[id="upgradability"]
+== Upgradability
+
+[id="standard_flow"]
+=== Standard Flow
+
+The Proxy contract supports upgradability by changing the address of the Dispatcher contract (i.e., the version) it delegates the calls to. To ensure self custody, an immediate upgrade is not supported.
+
+The standard upgrade flow is:
+
+. Register a new version of a contract.
+. A timelock is applied. This allows any trader that does not approve the new version, to leave the system.
+. After the timelock period, the version can be switched to the new version.
+
+Versions that already passed this standard flow can be reinvoked. This enables the *immediate* return to a previous version in case of a bug in a new version.
+
+[id="soundness_issues_immediate_fix"]
+=== Soundness Issues Immediate-Fix
+
+In case of a soundness issue with the Verifier fact registry, a new Verifier can be added immediately. To ensure the operation does not harm the system soundness, this operation allows state transition only if *all* the Verifiers approve it. Note, the simplest scenario is that both old and new Verifiers approve the change. However, the list can be more extensive.
+
+A Verifier can be removed from the list only after a timelock. This prevents the Operator from causing harm to the system's soundness.
+
+The same mechanism applies to Committee contracts.
+[NOTE]
+====
+See also: xref:fact-registry.adoc[fact registry] for further information on the verification process.
+====

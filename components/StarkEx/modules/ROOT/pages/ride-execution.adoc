@@ -1,0 +1,26 @@
+[id="ride_execution"]
+= Ride execution
+
+
+[id="ride_execution_main_flow"]
+== Ride execution -- Main Flow
+
+Once the DeFi Pooling Admin decides to depart the Ride, it informs the Operator to stop accepting new join requests from users.
+
+____
+In the analogy of a bus ride, the ride can only depart once all passengers are physically standing on the bus.
+____
+
+Pre-departure, the collated DeFi Pooling funds must exist on-chain in order to execute an on-chain operation to trade them. Therefore, the Admin waits until the StarkEx state includes all settlements by users joining the Ride. Once this is done, the funds of all the passengers are available on-chain in the StarkEx smart contract for the Pool Manager to use.
+
+Next, the Admin calls the Pool Manager Ride Departure function. This function executes the following operations:
+
+. The Pool Manager withdraws funds from the StarkEx smart contract and applies them to the Pool Manager smart contract.
+. The Pool Manager buys Strategy tokens for the entire value of Invested tokens it controls. This operation succeeds only if the price of this trade is lower or equal to the price that the users agreed to when they joined the Ride.
+. If the trade succeeds, the Pool Manager smart contract deposits the entire value of Strategy tokens it controls back to the StarkEx smart contract; and submits an on-chain limit order to sell those for Ride tickets. The price to buy one Strategy token should be exactly the total amount of Ride tickets divided by the total amount of Strategy tokens.
+
+image::DeFi-Pooling-4A.png[]
+
+== Fallback flow
+
+If the trade doesn't succeed, i.e., the price to buy Strategy tokens was higher than the price the users agreed to pay, the Pool Manager smart contract deposits back the Investment tokens and submits an on-chain limit order to sell them back to the users in exchange for their Ride tickets.

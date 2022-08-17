@@ -1,0 +1,44 @@
+[id="off_chain_state"]
+= Off-chain state
+
+[id="balances_tree"]
+== Balances tree
+
+The first element in the off-chain state of StarkEx is the Balances tree, represented by the keyword `balancesTree`. The Balances tree is a https://en.wikipedia.org/wiki/Merkle_tree[Merkle Tree], whose leaves are StarkEx _Vaults_. Each vault contains a key, represented by the keyword `starkKey`. `starkKey` is a unique key that identifies the user in the off-chain state. Other elements in the vault are defined according to the business logic.
+
+[id="additional_resources"]
+.Additional resources
+
+*  xref:in-spot-trading.adoc#vault-structure[Structure of the vault for spot trading]
+*  xref:in-perpetual-trading.adoc#vault-structure[Structure of the vault for perpetual trading]
+
+[id="orders_tree"]
+== Orders tree
+
+The Orders tree is a Patricia tree, which is easier to update and search than a Merkle tree. The Orders tree, represented by the key word `ordersTree`, prevents the Operator from replaying transactions in the system. To prevent this attack, StarkEx does the following:
+
+. A leaf in the Orders tree represents an order. Each leaf has a key and a value. The leaf key, `i`, serves as the id of the leaf. The key value includes the already fulfilled amount of the limit order with the hash `i`. For example, if Alice signed a transfer request for 1000 USDC, with a hash value `0xdeadbeef`, StarkEx stores 1000 USDC, after quantization, in leaf index `0xdeadbeef` in the Orders tree.
+. If the Operator tries to resubmit Alice's order, then when validating a transfer, StarkEx checks that this transfer was not previously executed by checking that the value in leaf number `0xdeadbeef` is zero. Because the value is not zero, the on-chain Cairo Verifier cannot accept this order.
+. The Orders tree is used to keep track of assets that were previously minted.
+
+[NOTE]
+====
+The Orders tree also supports partial fulfillment of limit orders. +
+On trades, the Operator must provide the original user's limit order, as well as the corresponding amount that is transferred in this settlement. StarkEx enforces that the value saved in the Orders tree, plus the new transferred amount, is still less than the amount that the user signed on in the original limit order.
+====
+
+[id="unique_minting"]
+=== Unique minting
+
+With StarkEx, your users can trustlessly mint a cryptographically ensured, unique ERC-721 NFT, off-chain, and withdraw it to layer 1.
+
+[id="additional_resources_2"]
+.Additional resources
+
+*  xref:starkex-specific-concepts.adoc#quantization[Quantization]
+*  xref:transfer.adoc[Checking the validity of a transfer]
+
+[id="enforcing_consistency_in_the_on_chain_state"]
+== Enforcing consistency in the on-chain state
+
+The StarkEx smart contract stores the root of the Balances tree and the root of the Orders tree, which are a commitment to the off-chain state. The off-chain state is the tuple of roots. The state is updated when the contract receives a new proof that there exists a valid sequence of transactions that, when executed, changes the current state to a new state.
