@@ -8,16 +8,14 @@ The bridges facilitate a user’s ability to conduct their transactions with the
 
 ### L1→L2 Transfer (Deposit)
 
-#### Step 1: Call The Deposit Function on L1 and pay the deposit fee
+#### Step 1: Call The Deposit Function on L1
 
-The user calls the function `deposit` (see [ERC-20 deposit](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/solidity/StarknetERC20Bridge.sol#L10) and [ETH deposit](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/solidity/StarknetEthBridge.sol#L10)), supplying as parameters the recipient address on StarkNet and the amount to transfer in the case of ERC-20 token.
-
-The deposit function then:
+The user calls the function `deposit` (see [ERC-20 deposit](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/solidity/StarknetERC20Bridge.sol#L10) and [ETH deposit](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/solidity/StarknetEthBridge.sol#L10)), supplying as parameters the recipient address on StarkNet and the amount to transfer in the case of ERC-20 token. The deposit function then:
 
 - Checks that the funds transferred are within the Alpha [limitations](./token-bridge.md#starkgate-alpha-limitations)
 - Transfers the funds from the user account to the StarkNet bridge
 - Emits a deposit [event](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/solidity/StarknetTokenBridge.sol#L101) with the sender address on L1, the recipient address on L2, and the amount
-- Sends a message to the relevant L2 bridge with the amount to be transferred, and the recipient address as parameters. Note that, since every single bridge is dedicated to one token type, the token type doesn't have to be explicit here. The deposit fee is passed along to the StarkNet Core contract, where it remains locked until the consumption of this message (for more details, see [L1→L2 message fees](./messaging-mechanism.md#l1--l2-message-fees)).
+- Sends a message to the relevant L2 bridge with the amount to be transferred, and the recipient address as parameters. Note that, since every single bridge is dedicated to one token type, the token type doesn't have to be explicit here.
 
 At the end of this step (i.e., after the execution on L1) the deposit transaction is known to StarkNet’s sequencer, yet sequencers may wait for enough L1 confirmations before corresponding deposit transaction is initated on L2. During this step, the status of the L2 deposit transaction is [`NOT_RECEIVED`](../Blocks/transaction-life-cycle.md#not_received).
 
@@ -31,8 +29,6 @@ At the end of this step (i.e., after the sequencer processed this transaction, b
 #### Step 3: The Block That Includes The Transfer Is Proved
 
 Once the sequencer completes the block construction, StarkNet’s provers will prove its validity and submit a state update to L1. When this happens, the message confirming the funds transfer will be cleared from the StarkNet Core Contract, and the fact that the user has transferred their funds will be part of the now finalized state of StarkNet. Note that if the message wasn’t on L1 to begin with (meaning StarkNet “invented” a deposit request), the state update would fail.
-
-After completing this step, the sequencer collects the desposit fee (to the sequencer, this is just a message fee).
 
 ### L2→L1 Transfer (Withdraw)
 
