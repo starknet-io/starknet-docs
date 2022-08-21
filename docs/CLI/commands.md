@@ -57,10 +57,10 @@ starknet invoke
 
 Sends a transaction to the StarkNet sequencer, can take the following arguments:
 
-- `address`\* - the address of the called contract
-- `contract_abi`\* - a path to a JSON file containing the called [contract’s abi](https://www.cairo-lang.org/docs/hello_starknet/intro.html#the-contract-s-abi)
-- `function_name`\*- the name of the called function
-- `arguments`\* - inputs to the called function, represented by a list of space-delimited values`
+- `address`\* - the address of the contract being called
+- `contract_abi`\* - a path to a JSON file that contains the [abi](../Contracts/contract-abi.md) of the contract being called
+- `function_name`\*- the name of the function being called
+- `arguments`\* - inputs to the function being called, represented by a list of space-delimited values`
 - `signature_information` - list of field elements as described [here](../Blocks/transactions.md#signature)
 - `wallet_name` - the name of the desired wallet, use [deploy_account](./commands.md#starknet-deploy_account) to set-up new accounts in the CLI.
 - `nonce` - account nonce, only relevant if the call is going through an account
@@ -133,10 +133,10 @@ starknet call
 
 Calls a StarkNet contract without affecting the state, can take the following arguments:
 
-- `contract_address`\* - address of the called contract
-- `contract_abi`\* - path to a JSON file containing the called [contract’s abi](https://www.cairo-lang.org/docs/hello_starknet/intro.html#the-contract-s-abi)
+- `contract_address`\* - address of the contract being called
+- `contract_abi`\* - a path to a JSON file that contains the [abi](../Contracts/contract-abi.md) of the contract being called
 - `function_name`\* - name of the function which is called
-- `arguments`\* - inputs to the called function, represented by a list of space-delimited values
+- `arguments`\* - inputs to the function being called, represented by a list of space-delimited values
 - `block_hash` - the hash of the block used as the context for the call operation. If this argument is omitted, the latest block is used
 - `block_number` - same as block_hash, but specifies the context block by number or [tag](#block_tag)
 - `signature_information` - list of field elements as described [here](../Blocks/transactions.md#signature)
@@ -228,10 +228,10 @@ Returns the [receipt](../Blocks/transaction-life-cycle.md#transaction-receipt) a
 
 Returns the fee estimation for a given contract call. Can take the following arguments:
 
-- `address`\* - the address of the called contract
-- `contract_abi`\* - a path to a JSON file containing the called [contract’s abi](https://www.cairo-lang.org/docs/hello_starknet/intro.html#the-contract-s-abi)
-- `function_name`\*- the name of the called function
-- `arguments`\* - inputs to the called function, represented by a list of space-delimited values`
+- `address`\* - the address of the contract being called
+- `contract_abi`\* - a path to a JSON file that contains the [abi](../Contracts/contract-abi.md) of the contract being called
+- `function_name`\*- the name of the function being called
+- `arguments`\* - inputs to the function being called, represented by a list of space-delimited values`
 
 ### starknet estimate_message_fee
 
@@ -247,7 +247,7 @@ Returns the fee estimation for a given [L1 handler](../L1-L2%20Communication/mes
 
 - `from_address`\* - the L1 address of the sender
 - `to_address`\* - the L2 address of the receipient
-- `contract_abi`\* - a path to a JSON file containing the [abi](https://www.cairo-lang.org/docs/hello_starknet/intro.html#the-contract-s-abi) of the receiving contract on L2
+- `contract_abi`\* - a path to a JSON file containing the [abi](../Contracts/contract-abi.md) of the receiving contract on L2
 - `function_name`\*- the name of the desired L1 handler
 - `arguments`\* - inputs to the called handler, represented by a list of space-delimited values
 
