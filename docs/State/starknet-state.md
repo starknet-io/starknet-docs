@@ -9,6 +9,15 @@ A contract state consists of:
 
 - class_hash (defines the functionality)
 - [contract storage](../Contracts/contract-storage.md) (a key-value mapping where the key/values are field elements)
+- contract nonce - the number of transactions sent from this contract
+
+<!-- TODO Ariel 04/09: replace this note with a reference to account abstraction / nonce section -->
+
+:::info nonce
+Similarly to Ethereum, the nonce is an attribute of a contract which is used to provide replay protection at the protocol level. When a transaction is sent from a given contract, the nonce field on the transaction must match the nonce of the contract. After the transaction is executed, the contract's nonce is increased by one.
+
+Note that while on Ethereum, only EOAs can send transactions and consequently have a non-zero nonce, on StarkNet, only account contracts can send transactions and have a non-zero nonce.
+:::
 
 With the above definition, we can provide a brief sketch of StarkNet’s transition function. A transaction $tx$ transitions the system from state $S$ to state $S’$ if:
 
