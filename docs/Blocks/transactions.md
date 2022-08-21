@@ -7,7 +7,7 @@ StarkNet, in its Alpha version, supports two types of transactions: a `Deploy` t
 ## Deploy transaction
 
 :::important
-The deploy transaction will be deprecated in future StarkNet versions. To deploy new constract instances, you can use the `deploy` syscall. For more information, see [contract classes](../Contracts/contract-classes.md).
+The deploy transaction is deprecated and will be removed in a future release of StarkNet OS. To deploy new contract instances, you can use the `deploy` syscall. For more information, see [contract classes](../Contracts/contract-classes.md).
 :::
 
 A deploy transaction is a transaction type used to deploy contracts to StarkNet.
@@ -34,7 +34,7 @@ The Deploy transaction’s hash is calculated as follows:
 
 $$
 \begin{aligned}
-\text{deploy\_tx\_hash} = h( & \text{"deploy"}, \text{version}, \text{contract\_address}, sn\_keccak(\text{“constructor”}),\\ & h(\text{constructor\_calldata}), 0, \text{chain\_id})
+\text{deploy\_tx\_hash} = h( & \text{``deploy"}, \text{version}, \text{contract\_address}, sn\_keccak(\text{“constructor”}),\\ & h(\text{constructor\_calldata}), 0, \text{chain\_id})
 \end{aligned}
 $$
 
@@ -50,6 +50,17 @@ Where:
 
 The invoke function transaction is the main transaction type used to invoke contract functions in StarkNet.
 
+:::info
+Each version of the StarkNet OS contains a hard-coded version of each transaction, and can only accept transactions
+with this version. A transaction with a different version cannot be included in a proof, which protects the user.
+
+You can use a different transaction version for testing purposes, because even if the transaction is properly signed, it can never be included in the production StarkNet (testnet or mainnet).
+:::
+
+:::important
+Transaction version 0 is deprecated and will be removed in a future release of StarkNet OS.
+:::
+
 An invoke function transaction has the following fields:
 
 <APITable>
@@ -57,25 +68,15 @@ An invoke function transaction has the following fields:
 | Name                       | Supported in transaction version | Type                 | Description                                                                                                                                                                                                                                                                                                                                            |
 | -------------------------- | :------------------------------: | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `contract_address`         |                0                 | `FieldElement`       | The address of the contract invoked by this transaction.                                                                                                                                                                                                                                                                                               |
-| `account_contract_address` |                1                 | `FieldElement`       | The address of the sender of this transaction.                                                                                                                                                                                                                                                                                               |
+| `sender_address`           |                1                 | `FieldElement`       | The address of the sender of this transaction.                                                                                                                                                                                                                                                                                                         |
 | `entry_point_selector`     |                0                 | `FieldElement`       | The encoding of the selector for the function invoked (the entry point in the contract)                                                                                                                                                                                                                                                                |
-| `calldata`                 |               0, 1               | `List<FieldElement>` | The arguments passed to the invoked function                                                                                                                                                                                                                                                                                                           |
-| `signature`                |               0,1                | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.                                                                                                                                                                                                                                                              |
-| `max_fee`                  |               0,1                | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction                                                                                                                                                                                                                                                                                  |
-| `nonce`                    |               0,1                | `FieldElement`       | (Transaction version 1)<br/>The transaction nonce.                                                                                                                                                                                                                                                                                                     |
-| `version`                  |               0,1                | `FieldElement`       | The transaction's version. Possible values are 1 or 0.<br/>When the fields that comprise a transaction change, either by adding a new field or removing an existing field, then the transaction version increases. Including a transaction whose version is not supported by the StarkNet OS prevents that transaction from being included in a block. |
+| `calldata`                 |               0, 1               | `List<FieldElement>` | Version 1: the arguments that are passed  to the `validate` and `execute` functions.<br/>Version 0: The arguments that are passed to the invoked function                                                                                                                                                                                              |
+| `signature`                |               0, 1               | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.                                                                                                                                                                                                                                                                          |
+| `max_fee`                  |               0, 1               | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction                                                                                                                                                                                                                                                                                  |
+| `nonce`                    |                1                 | `FieldElement`       | (Transaction version 1)<br/>The transaction nonce.                                                                                                                                                                                                                                                                                                     |
+| `version`                  |               0, 1               | `FieldElement`       | The transaction's version. Possible values are 1 or 0.<br/>When the fields that comprise a transaction change, either by adding a new field or removing an existing field, then the transaction version increases. Including a transaction whose version is not supported by the StarkNet OS prevents that transaction from being included in a block. |
 
 </APITable>
-
-:::info transaction version
-
-The StarkNet OS contains a hard-coded version, and can only accept transactions
-with this version. A transaction with a different version can not be included in a proof. By advancing the version with breaking changes
-in the StarkNet OS, we can prevent old transactions from being executed in this unintended version, thus protecting the user.
-
-Note that setting a different version can be useful for testing purposes, because even if the transaction is properly signed, it can never be included in the production StarkNet (testnet or mainnet).
-
-:::
 
 ### Calculating the hash of an invoke transaction
 
@@ -83,7 +84,7 @@ The invoke function transaction hash is calculated as a hash over the given tran
 
 $$
 \begin{aligned}
-\text{invoke\_tx\_hash} = h( & \text{"invoke"}, \text{version}, \text{contract\_address}, \text{entry\_point\_selector}, \\ & h(\text{calldata}), \text{max\_fee}, \text{chain\_id})
+\text{invoke\_tx\_hash} = h( & \text{``invoke"}, \text{version}, \text{contract\_address}, \text{entry\_point\_selector}, \\ & h(\text{calldata}), \text{max\_fee}, \text{chain\_id})
 \end{aligned}
 $$
 
@@ -106,7 +107,7 @@ A declare transaction has the following fields:
 | `contract_class` | `ContractClass`      | The class object.                                                                                                                                                                                                                                                                                                                                      |
 | `sender_address` | `FieldElement`       | The address of the account initiating the transaction.                                                                                                                                                                                                                                                                                                 |
 | `max_fee`        | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction.                                                                                                                                                                                                                                                                                 |
-| `signature`      | `List<FieldElement>` | Additional information given by the caller, representing the signature of the transaction                                                                                                                                                                                                                                                              |
+| `signature`      | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.                                                                                                                                                                                                                                                              |
 | `nonce`          | `FieldElement`       | The transaction nonce.                                                                                                                                                                                                                                                                                                                                 |
 | `version`        | `FieldElement`       | The transaction's version. Possible values are 1 or 0.<br/>When the fields that comprise a transaction change, either by adding a new field or removing an existing field, then the transaction version increases. Including a transaction whose version is not supported by the StarkNet OS prevents that transaction from being included in a block. |
 
@@ -118,7 +119,7 @@ The declare transaction hash is calculated as a hash over the given transaction 
 
 $$
 \begin{aligned}
-\text{invoke\_tx\_hash} = h( & \text{"declare"}, \text{version}, \text{sender\_address}, \\& 0, 0, \text{max\_fee}, \text{chain\_id}, \text{class\_hash})
+\text{declare\_tx\_hash} = h( & \text{``declare"}, \text{version}, \text{sender\_address}, \\& 0, \text{class\_hash}, \text{max\_fee}, \text{chain\_id}, \text{nonce})
 \end{aligned}
 $$
 
