@@ -62,6 +62,7 @@ func deploy{syscall_ptr : felt*}(
     constructor_calldata : felt*,
 ) -> (contract_address : felt)
 ```
+
 ### Get caller address
 
 Returns the address of the calling contract or 0 if this transaction was not initiated by another contract.
@@ -81,6 +82,7 @@ This system call can be raised by calling the following function, which is avail
 ```js title="get_block_number"
 func get_block_number{syscall_ptr : felt*}() -> (block_number : felt)
 ```
+
 ### Get block timestamp
 
 Gets the timestamp of the block in which the transaction is executed.
