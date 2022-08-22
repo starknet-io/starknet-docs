@@ -12,6 +12,10 @@ StarkNet CLI to use the specified network, e.g. to interact with testnet you can
 
 :::
 
+:::info mandatory arguments
+Throughout this section, the asterisk symbol \* denotes non-optional arguments.
+:::
+
 ### starknet deploy_account
 
 ```bash title="deploy account"
@@ -20,7 +24,7 @@ starknet deploy_account
   --account <account_name>
 ```
 
-Deploys an account contract, can take the following arguments:
+Deploys an account contract, accepts the following arguments:
 
 - `account_name` - the name given to the account, used for managing multiple accounts from the CLI (if not specified, the name
   `__default__` is used.
@@ -55,7 +59,7 @@ starknet invoke
   --nonce <nonce>
 ```
 
-Sends a transaction to the StarkNet sequencer, can take the following arguments:
+Sends a transaction to the StarkNet sequencer, accepts the following arguments:
 
 - `address`\* - the address of the contract being called
 - `contract_abi`\* - a path to a JSON file that contains the [abi](../Contracts/contract-abi.md) of the contract being called
@@ -79,7 +83,7 @@ starknet deploy
   --token <token>
 ```
 
-Deploys a new contract, can take the following arguments:
+Deploys a new contract, accepts the following arguments:
 
 - `salt` - a seed that is used in the computation of the contract’s address (if not specified, the sequencer will choose a random string)
 - `contract_definition`\* - path to a JSON file containing the contract’s bytecode and abi (can be obtained by executing [starknet-compile](https://www.cairo-lang.org/docs/hello_starknet/intro.html#compile-the-contract))
@@ -99,7 +103,7 @@ starknet tx_status
   --error_message
 ```
 
-Returns the transaction status, can take the following arguments:
+Returns the transaction status, accepts the following arguments:
 
 - `transaction_hash`\* - hash of the requested transaction
 - `contract_definition` - path to a JSON file containing the compiled contract to which the transaction was addressed. If supplied, the debug information from the compiled contract will be used to add error locations.
@@ -131,7 +135,7 @@ starknet call
   --nonce <nonce>
 ```
 
-Calls a StarkNet contract without affecting the state, can take the following arguments:
+Calls a StarkNet contract without affecting the state, accepts the following arguments:
 
 - `contract_address`\* - address of the contract being called
 - `contract_abi`\* - a path to a JSON file that contains the [abi](../Contracts/contract-abi.md) of the contract being called
@@ -173,7 +177,7 @@ starknet get_code
   --block_number <block_number>
 ```
 
-Returns the ABI and the byte code of the requested contract, can take the following arguments:
+Returns the ABI and the byte code of the requested contract, accepts the following arguments:
 
 - `contact_address`\* - address of the requested contract
 - `block_hash` - the hash of the block used as the context for the operation. If this argument is omitted, the latest block is used
@@ -189,7 +193,7 @@ starknet get_storage_at
   --block_number <block_number>
 ```
 
-Queries a contract’s storage at a specific key, can take the following arguments:
+Queries a contract’s storage at a specific key, accepts the following arguments:
 
 - `contract_address` \*- address of the requested contract
 - `key`\* - the requested key from the given contract’s storage
@@ -226,7 +230,7 @@ Returns the [receipt](../Blocks/transaction-life-cycle.md#transaction-receipt) a
         --inputs <arguments>
 ```
 
-Returns the fee estimation for a given contract call. Can take the following arguments:
+Returns the fee estimation for a given contract call. Accepts the following arguments:
 
 - `address`\* - the address of the contract being called
 - `contract_abi`\* - a path to a JSON file that contains the [abi](../Contracts/contract-abi.md) of the contract being called
@@ -243,7 +247,7 @@ Returns the fee estimation for a given contract call. Can take the following arg
         --inputs <arguments>
 ```
 
-Returns the fee estimation for a given [L1 handler](../L1-L2%20Communication/messaging-mechanism.md#l1--l2-message-fees) application. Can take the following arguments:
+Returns the fee estimation for a given [L1 handler](../L1-L2%20Communication/messaging-mechanism.md#l1--l2-message-fees) application. Accepts the following arguments:
 
 - `from_address`\* - the L1 address of the sender
 - `to_address`\* - the L2 address of the receipient
