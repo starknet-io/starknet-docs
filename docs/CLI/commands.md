@@ -13,7 +13,7 @@ StarkNet CLI to use the specified network, e.g. to interact with testnet you can
 :::
 
 :::info mandatory arguments
-Throughout this section, the asterisk symbol \* denotes non-optional arguments.
+Throughout this section, the asterisk symbol \* denotes required arguments.
 :::
 
 ### starknet deploy_account
@@ -250,7 +250,7 @@ Returns the fee estimation for a given contract call. Accepts the following argu
 Returns the fee estimation for a given [L1 handler](../L1-L2%20Communication/messaging-mechanism.md#l1--l2-message-fees) application. Accepts the following arguments:
 
 - `from_address`\* - the L1 address of the sender
-- `to_address`\* - the L2 address of the receipient
+- `to_address`\* - the L2 address of the recipient
 - `contract_abi`\* - a path to a JSON file containing the [abi](../Contracts/contract-abi.md) of the receiving contract on L2
 - `function_name`\*- the name of the desired L1 handler
 - `arguments`\* - inputs to the called handler, represented by a list of space-delimited values

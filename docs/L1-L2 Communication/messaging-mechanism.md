@@ -28,7 +28,7 @@ The above flow is illustrated in the following diagram:
 
 ### Structure And Hashing
 
-As demonstrated above, the structure of a L2 → L1 message is given by:
+As demonstrated above, the structure of an L2 → L1 message is given by:
 
 <table>
 <tr><th> L2 → L1 Message </th></tr>
@@ -40,7 +40,7 @@ As demonstrated above, the structure of a L2 → L1 message is given by:
 
 </td></tr> </table>
 
-The hash of a L2 → L1 message is computed on L1 as follows:
+The hash of an L2 → L1 message is computed on L1 as follows:
 
 ```
 keccak256(
@@ -64,7 +64,7 @@ Contracts on L1 can interact asynchronously with contracts on L2 via the L1→L2
   - **2.2.** The L2 transaction invokes the relevant l1_handler.
 - **3.** The L1 Handler transaction that was created in the previous step is added to a proof.
 - **4.** The state update is received on the Core contract
-- **5.** the message is cleared from the Core contract's storage. At this point the message is considered handled.
+- **5.** the message is cleared from the Core contract's storage. At this point the message is handled.
 
 The above flow is illustrated in the following diagram:
 
@@ -100,7 +100,7 @@ Throughtout the lifecycle of the message, the assoicated fee is locked in the Co
 also return the fee to the sender.
 :::
 
-The fee itself is calculated in the [same manner](../Fees/fee-mechanism.md#overall-fee) as "regular" L2 transactions. You can use the [CLI](../CLI/commands#starknet-estimate_message_fee) to get an estimate of a L1 → L2 message fee.
+The fee itself is calculated in the [same manner](../Fees/fee-mechanism.md#overall-fee) as "regular" L2 transactions. You can use the [CLI](../CLI/commands#starknet-estimate_message_fee) to get an estimate of an L1 → L2 message fee.
 
 ### Structure And Hashing
 
