@@ -1,8 +1,18 @@
-`INVOKE_FUNCTION`import APITable from '@site/src/components/APITable';
+import APITable from '@site/src/components/APITable';
 
 # Transaction structure
 
-StarkNet, in its Alpha version, supports two types of transactions: a `Deploy` transaction and an `INVOKE_FUNCTION` transaction. We describe the available fields for both of these transaction types and how the transaction hash is calculated in both cases.
+StarkNet, in its Alpha version, supports two types of transactions: a _deploy_ transaction and an _invoke_ transaction. This topic describes the available fields for both of these transaction types and how the transaction hash is calculated in both cases.
+
+## Transaction versioning
+
+Each list of supported versions of StarkNet contains a hard-coded version of each transaction type, and can only accept transactions with this version. A transaction with a different version cannot be included in a proof.
+
+Setting a different version can be useful for testing purposes, since even if the transaction is properly signed, it can never be included in StarkNet, neither in testnet or in Mainnet.
+
+You can use various testing tools to submit a transaction with any supported transaction version in the StarkNet production environment. These tools include [StarkNet devnet](https://github.com/Shard-Labs/starknet-devnet) or the testing framework. For more information on the testing framework, see [Hello Cairo](https://www.cairo-lang.org/docs/index.html).
+
+
 
 ## Deploy transaction
 
@@ -40,37 +50,29 @@ $$
 
 Where:
 
-- The placeholder zero is used to align the hash computation for the different types of transactions (here, it holds the place of the `max_fee` field which exsists in both `invoke` and `declare` transactions)
+- The placeholder zero is used to align the hash computation for the different types of transactions. Here, it holds the place of the `max_fee` field which exists in both invoke and declare transactions.
 - “deploy” and “constructor” constant’s prefixes, encoded in bytes (ASCII), with big-endian.
 - $h$ is the [Pedersen](../Hashing/hash-functions.md#pedersen-hash) hash and $sn\_keccak$ is [StarkNet Keccak](../Hashing/hash-functions.md#starknet-keccak)
 - `chain_id` is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions.md#chain-id).
 - `contract_address` is calculated as described [here](../Contracts/contract-address.md).
 
-## `INVOKE_FUNCTION` Transaction
+## Invoke Transaction
 
-The `INVOKE_FUNCTION` transaction is the main transaction type used to invoke contract functions in StarkNet.
-
-:::tip
-Each version of StarkNet contains a hard-coded version of each transaction, and can only accept transactions
-with this version. A transaction with a different version cannot be included in a proof, which protects the user.
-
-You can use various testing tools to submit a transaction with any supported transaction version in the StarkNet production environment. These tools include [StarkNet devnet](https://github.com/Shard-Labs/starknet-devnet) or the testing framework. For more information on the testing framework, see [Hello Cairo](https://www.cairo-lang.org/docs/index.html).
-:::
+The invoke transaction is the main transaction type used to invoke contract functions in StarkNet.
 
 :::important
 Transaction version 0 is deprecated and will be removed in a future release of StarkNet.
 :::
 
-An `INVOKE_FUNCTION` transaction has the following fields:
+### Invoke transaction version 1
 
-**Invoke transaction version 1**
+**Transaction fields**
 
 <APITable>
 
 | Name                   | Type                 | Description                                                                                                                                                                                                             |
 | ---------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sender_address`       | `FieldElement`       | The address of the sender of this transaction.                                                                                                                                                                          |
-| `entry_point_selector` | `FieldElement`       | The encoding of the selector for the function invoked (the entry point in the contract)                                                                                                                                 |
 | `calldata`             | `List<FieldElement>` | The arguments that are passed to the `validate` and `execute` functions.                                                                                                                                                |
 | `signature`            | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.                                                                                                                                           |
 | `max_fee`              | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction                                                                                                                                                   |
@@ -79,7 +81,9 @@ An `INVOKE_FUNCTION` transaction has the following fields:
 
 </APITable>
 
-**Invoke transaction version 0**
+### Invoke transaction version 0
+
+**Transaction fields**
 
 <APITable>
 
@@ -94,9 +98,9 @@ An `INVOKE_FUNCTION` transaction has the following fields:
 
 </APITable>
 
-#### Calculating the hash of an `INVOKE_FUNCTION` transaction
+### Calculating the hash of an invoke transaction
 
-The `INVOKE_FUNCTION` transaction hash is calculated as a hash over the given transaction elements, specifically:
+The invoke transaction hash is calculated as a hash over the given transaction elements, specifically:
 
 $$
 \begin{aligned}
