@@ -2,11 +2,17 @@ import APITable from '@site/src/components/APITable';
 
 # Transaction structure
 
-StarkNet, in its Alpha version, supports two types of transactions: a _deploy_ transaction and an _invoke_ transaction. This topic describes the available fields for both of these transaction types and how the transaction hash is calculated in both cases.
+StarkNet supports the following types of transactions:
+
+- _deploy_ transaction
+- _invoke_ transaction
+- _declare_ transaction
+
+This topic describes the available fields for these transaction types and how each transaction hash is calculated.
 
 ## Transaction versioning
 
-Each list of supported versions of StarkNet contains a hard-coded version of each transaction type, and can only accept transactions with this version. A transaction with a different version cannot be included in a proof.
+Each version of StarkNet contains a hard-coded list of supported transaction versions of each transaction type, and can only accept transactions with this version. A transaction with a different version cannot be included in a proof, and thus will never be added to a StarkNet block.
 
 Setting a different version can be useful for testing purposes, since even if the transaction is properly signed, it can never be included in StarkNet, neither in testnet or in Mainnet.
 
