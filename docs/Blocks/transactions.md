@@ -12,7 +12,11 @@ This topic describes the available fields for these transaction types and how ea
 
 ## Transaction versioning
 
-Each version of StarkNet contains a hard-coded list of supported transaction versions of each transaction type, and can only accept transactions with this version. A transaction with a different version cannot be included in a proof, and thus will never be added to a StarkNet block.
+StarkNet supports the transaction versions described here.
+
+When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
+
+Do not submit a transaction that uses an unsupported transaction type, because it cannot be included in a proof, and so cannot become part of a StarkNet block.
 
 ## Deploy transaction
 
@@ -26,13 +30,13 @@ A deploy transaction has the following fields:
 
 <APITable>
 
-| Name                    | Type                 | Description                                                                                                                                                                                                                                                                                                 |
-| ----------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `contract_address_salt` | `FieldElement`       | A random number used to distinguish between different instances of the contract.                                                                                                                                                                                                                            |
-| `contract_definition`   | `ContractClass`      | The object that defines the contract's functionality.                                                                                                                                                                                                                                                       |
-| `constructor_calldata`  | `List<FieldElement>` | The arguments passed to the constructor during deployment.                                                                                                                                                                                                                                                  |
-| `caller_address`        | `FieldElement`       | Who invoked the deployment. Set to 0 (in future: the deploying account contract).                                                                                                                                                                                                                           |
-| `version`               | `FieldElement`       | The transaction's version. Possible values are 1 or 0.<br/>When the fields that comprise a transaction change, either by adding a new field or removing an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of StarkNet. |
+| Name                    | Type                 | Description                                                                                                                                                                                                                                                                                                                  |
+| ----------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `contract_address_salt` | `FieldElement`       | A random number used to distinguish between different instances of the contract.                                                                                                                                                                                                                                             |
+| `contract_definition`   | `ContractClass`      | The object that defines the contract's functionality.                                                                                                                                                                                                                                                                        |
+| `constructor_calldata`  | `List<FieldElement>` | The arguments passed to the constructor during deployment.                                                                                                                                                                                                                                                                   |
+| `caller_address`        | `FieldElement`       | Who invoked the deployment. Set to 0 (in future: the deploying account contract).                                                                                                                                                                                                                                            |
+| `version`               | `FieldElement`       | The transaction's version. Possible values are 1 or 0.<br/>When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of StarkNet. |
 
 </APITable>
 
@@ -111,7 +115,7 @@ $$
 Where:
 
 - $$invoke$$ is a constant prefix, encoded in bytes (ASCII), with big-endian.
-- $$chain_id$$ is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions.md#chain-id).
+- $$chain\_id$$ is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions.md#chain-id).
 - $$h$$ is the [Pedersen](../Hashing/hash-functions.md#pedersen-hash) hash
 
 ## Declare transaction
@@ -122,14 +126,14 @@ A declare transaction has the following fields:
 
 <APITable>
 
-| Name             | Type                 | Description                                                                                                                                                                                                                                                                                                 |
-| ---------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `contract_class` | `ContractClass`      | The class object.                                                                                                                                                                                                                                                                                           |
-| `sender_address` | `FieldElement`       | The address of the account initiating the transaction.                                                                                                                                                                                                                                                      |
-| `max_fee`        | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction.                                                                                                                                                                                                                                      |
-| `signature`      | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.                                                                                                                                                                                                                               |
-| `nonce`          | `FieldElement`       | The transaction nonce.                                                                                                                                                                                                                                                                                      |
-| `version`        | `FieldElement`       | The transaction's version. Possible values are 1 or 0.<br/>When the fields that comprise a transaction change, either by adding a new field or removing an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of StarkNet. |
+| Name             | Type                 | Description                                                                                                                                                                                                                                                                                                                  |
+| ---------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `contract_class` | `ContractClass`      | The class object.                                                                                                                                                                                                                                                                                                            |
+| `sender_address` | `FieldElement`       | The address of the account initiating the transaction.                                                                                                                                                                                                                                                                       |
+| `max_fee`        | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction.                                                                                                                                                                                                                                                       |
+| `signature`      | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.                                                                                                                                                                                                                                                |
+| `nonce`          | `FieldElement`       | The transaction nonce.                                                                                                                                                                                                                                                                                                       |
+| `version`        | `FieldElement`       | The transaction's version. Possible values are 1 or 0.<br/>When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of StarkNet. |
 
 </APITable>
 
