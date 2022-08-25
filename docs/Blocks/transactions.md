@@ -14,12 +14,6 @@ This topic describes the available fields for these transaction types and how ea
 
 Each version of StarkNet contains a hard-coded list of supported transaction versions of each transaction type, and can only accept transactions with this version. A transaction with a different version cannot be included in a proof, and thus will never be added to a StarkNet block.
 
-Setting a different version can be useful for testing purposes, since even if the transaction is properly signed, it can never be included in StarkNet, neither in testnet or in Mainnet.
-
-You can use various testing tools to submit a transaction with any supported transaction version in the StarkNet production environment. These tools include [StarkNet devnet](https://github.com/Shard-Labs/starknet-devnet) or the testing framework. For more information on the testing framework, see [Hello Cairo](https://www.cairo-lang.org/docs/index.html).
-
-
-
 ## Deploy transaction
 
 :::important
@@ -76,14 +70,14 @@ Transaction version 0 is deprecated and will be removed in a future release of S
 
 <APITable>
 
-| Name                   | Type                 | Description                                                                                                                                                                                                             |
-| ---------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sender_address`       | `FieldElement`       | The address of the sender of this transaction.                                                                                                                                                                          |
-| `calldata`             | `List<FieldElement>` | The arguments that are passed to the `validate` and `execute` functions.                                                                                                                                                |
-| `signature`            | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.                                                                                                                                           |
-| `max_fee`              | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction                                                                                                                                                   |
-| `nonce`                | `FieldElement`       | The transaction nonce.                                                                                                                                                                                                  |
-| `version`              | `FieldElement`       | The transaction's version. The value is 1.<br/>When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. |
+| Name             | Type                 | Description                                                                                                                                                                                                             |
+| ---------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sender_address` | `FieldElement`       | The address of the sender of this transaction.                                                                                                                                                                          |
+| `calldata`       | `List<FieldElement>` | The arguments that are passed to the `validate` and `execute` functions.                                                                                                                                                |
+| `signature`      | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.                                                                                                                                           |
+| `max_fee`        | `FieldElement`       | The maximum fee that the sender is willing to pay for the transaction                                                                                                                                                   |
+| `nonce`          | `FieldElement`       | The transaction nonce.                                                                                                                                                                                                  |
+| `version`        | `FieldElement`       | The transaction's version. The value is 1.<br/>When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. |
 
 </APITable>
 
@@ -116,8 +110,8 @@ $$
 
 Where:
 
-- “invoke” is a constant prefix, encoded in bytes (ASCII), with big-endian.
-- `chain_id` is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions.md#chain-id).
+- $$invoke$$ is a constant prefix, encoded in bytes (ASCII), with big-endian.
+- $$chain_id$$ is a constant value that specifies the network to which this transaction is sent. See [Chain-Id](./transactions.md#chain-id).
 - $$h$$ is the [Pedersen](../Hashing/hash-functions.md#pedersen-hash) hash
 
 ## Declare transaction
