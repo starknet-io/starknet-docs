@@ -1,27 +1,28 @@
 [id="contract_hash"]
 = Contract Hash
+:stem: latexmath
 
 The contract's hash is a hash of its definition. The elements defining a contract are:
 
-* API version (the version under which the contract was deployed)
-* Array of external functions entry points footnote:1[An entry point is a pair `(selector, offset)`, where offset is the offset of the instruction that should be called inside the contract's bytecode
-
+* API version - The version under which the contract was deployed.
+* Array of external functions entry points - An entry point is a pair `(selector, offset)`, where offset is the offset of the instruction that should be called inside the contract's bytecode.
++
 [NOTE]
 ====
 *Function selector*
 
-The selector is an identifier through which the function is callable in transactions or in other contracts. The selector is the xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak\] hash of the function name, encoded in ASCII.
+The selector is an identifier through which the function is callable in transactions or in other contracts. The selector is the xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak] hash of the function name, encoded in ASCII.
 ====
+* Array of https://www.cairo-lang.org/docs/hello_starknet/l1l2.html#receiving-a-message-from-l1[L1 handlers] entry points.
+* Array of constructors entry points - Currently, the compiler allows only one constructor.
+* Array of used builtin names - An ASCII-encode array, ordered by declaration.
+* Keccak - The xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak], of the contract's program. The contract's program stands for the JSON obtained by executing `starknet-compile` with the `--no_debug_info` flag. To see the exact computation of this field, see https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contract_hash.py#L116[our repo].
+* Bytecode - Represented by an array of field elements.
 
-* Array of https://www.cairo-lang.org/docs/hello_starknet/l1l2.html#receiving-a-message-from-l1[L1 handlers] entry points
-* Array of constructors entry points (currently, the compiler allows only one constructor)
-* Array of used builtin names footnote:2[ASCII encoding of the builtin names] (ordered by declaration)
-* Keccakfootnote:3[Here we mean xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak\]] of the contract's program. Here, the contract's program stands for the JSON obtained by executing `starknet-compile` with the `--no_debug_info` flag. To see the exact computation of this field, see https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contract_hash.py#L116[our repo].
-* Bytecode (represented by an array of field elements)
+The contract's hash is the chain hash, that is, the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen hash], of the above, computed as follows:
 
-The contract's hash is the chain hashfootnote:4[xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen hash\]] of the above, computed as follows:
+. Start with stem:[$h(0,api\_version)$].
+. For every line in the above, excluding the first, compute stem:[$h(h(previous\_line), new\_line)$], where the hash of an array is defined as xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak].
+. Let stem:[$c$] denote the cumulative hash resulting from applying the above process; the contract's hash is then stem:[$h(c, \textrm{number_of_lines})$], where stem:[$\text{number_of_lines}$] is 7.
 
-* start with stem:[$h(0,api_version)$]
-* for every line in the above (excluding the first), compute stem:[$h(h(previous_line), new_line)$], where the hash of an array is defined xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak\].
-* let stem:[$c$] denote the cumulative hash resulting from applying the above process; the contract's hash is then stem:[$h(c, \textrm\{number_of_lines})$], where stem:[$\text\{number_of_lines}$] is 7.
 For more details, see the https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contracts.cairo#L47[Cairo implementation].

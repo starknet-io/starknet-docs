@@ -13,10 +13,10 @@ A contract state consists of:
 * class_hash (defines the functionality)
 * xref:../Contracts/contract-storage.adoc[contract storage] (a key-value mapping where the key/values are field elements)
 
-With the above definition, we can provide a brief sketch of StarkNet's transition function. A transaction stem:[$tx$] transitions the system from state stem:[$S$] to state stem:[$S`'$] if:
+With the above definition, we can provide a brief sketch of StarkNet's transition function. A transaction stem:[$tx$] transitions the system from state stem:[$S$] to state stem:[$S'$] if:
 
-* stem:[$tx$] is an xref:../Blocks/transactions.adoc#invoke-transaction[invoke] transaction, and the storage of stem:[$S`'$] is the result of executing the target contract code with respect to the previous state stem:[$S$] (the arguments, contract address, and the specific entry point are part of the transaction)
-* stem:[$tx$] is a xref:../Blocks/transactions.adoc#deploy-transaction[deploy] transaction, and stem:[$S`'$] contains the new contract's state at the contract's address. Additionally, the storage of stem:[$S$] is updated according to the execution of the contract's constructor.
+* stem:[$tx$] is an xref:../Blocks/transactions.adoc#invoke-transaction[invoke] transaction, and the storage of stem:[$S'$] is the result of executing the target contract code with respect to the previous state stem:[$S$] (the arguments, contract address, and the specific entry point are part of the transaction)
+* stem:[$tx$] is a xref:../Blocks/transactions.adoc#deploy-transaction[deploy] transaction, and stem:[$S'$] contains the new contract's state at the contract's address. Additionally, the storage of stem:[$S$] is updated according to the execution of the contract's constructor.
 * stem:[$tx$] is a xref:../Blocks/transactions.adoc#declare-transaction[declare] transaction, and stem:[$S'$] contains the class hash and definition in the contract classes mapping
 
 [id="state_commitment"]
@@ -26,13 +26,13 @@ The state commitment is a digest which uniquely (up to hash collisions) encodes 
 
 [stem]
 ++++
-h(h(h(\text{contract\_hash}, \text{storage\_root}), 0),0)
+h(h(h(\text{contract_hash}, \text{storage_root}), 0),0)
 ++++
 
 Where:
 
-* stem:[$\text\{contract_hash}$] is the hash of the contract's definition discussed xref:../Contracts/contract-hash.adoc[here]
-* stem:[$\text\{storage_root}$] is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract's storage
+* stem:[$\text{contract_hash}$] is the hash of the contract's definition discussed xref:../Contracts/contract-hash.adoc[here]
+* stem:[$\text{storage_root}$] is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract's storage
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash function.
 
 [NOTE]
@@ -48,7 +48,7 @@ The commitment does not include class information. This will be added in future 
 
 As mentioned above, our commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$]. The actual data is placed in the leaves, and a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes (leaves or internal) are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
 
-stem:[$path$] is an integer in stem:[$[0, 2{caret}\{length}-1]$], and the binary expansion of stem:[$path$] indicates how should we proceed along the tree, where the first step is indicated by the most significant bit, and stem:[$0,1$] are interpreted as left, right correspondingly. Note that the reason that length is specified and cannot be deduced from stem:[$path$] is that we're dealing with field elements of fixed size (251 bits each). For a node with stem:[$length>0$], following stem:[$path$] leads the highest node whose both right and left child are none empty.
+stem:[$path$] is an integer in stem:[$[0, 2^{length}-1\]$], and the binary expansion of stem:[$path$] indicates how should we proceed along the tree, where the first step is indicated by the most significant bit, and stem:[$0,1$] are interpreted as left, right correspondingly. Note that the reason that length is specified and cannot be deduced from stem:[$path$] is that we're dealing with field elements of fixed size (251 bits each). For a node with stem:[$length>0$], following stem:[$path$] leads the highest node whose both right and left child are none empty.
 
 The following rules specify how the tree is constructed from a given set of leaves:
 
@@ -78,10 +78,10 @@ parent=
 \end{cases}
 ++++
 
-[discrete#example_trie]
-==== Example Trie
+[#example_trie]
+.Example Trie
 
-We now show an example of the construction of a height 3 Merkle-Patricia tree from the leaves stem:[$[0,0,1,0,0,1,0,0]$]:
+We now show an example of the construction of a height 3 Merkle-Patricia tree from the leaves stem:[$[0,0,1,0,0,1,0,0\]$]:
 
 image::trie.png[trie]
 
