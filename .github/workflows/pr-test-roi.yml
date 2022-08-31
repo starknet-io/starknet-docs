@@ -1,0 +1,25 @@
+name: PR workflow
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+
+    - name: Install Antora
+      run: npm i antora@3.0.3
+    - name: Generate Site
+      run: npx antora playbook.yml
+    - name: Publish to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.USER_TOKEN }}
+        publish_dir: build/pr-${{ github.ref }}
