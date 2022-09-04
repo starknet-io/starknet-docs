@@ -1,6 +1,6 @@
 # Fee Mechanism
 
-In this section, we will review StarkNet Alpha 0.8.0 fee mechanism. If you want to skip the motivation and deep dive into the mechanism, you can skip directly to the final [formula](./fee-mechanism.md#overall-fee).
+In this section, we will review StarkNet Alpha fee mechanism. If you want to skip the motivation and deep dive into the mechanism, you can skip directly to the final [formula](./fee-mechanism.md#overall-fee). This section focuses on fees paid by an account on L2. For information about messaging fees that are paid on L1, see [L1 → L2 message fees](../L1-L2%20Communication/messaging-mechanism.md#l1--l2-message-fees).
 
 ## Introduction
 

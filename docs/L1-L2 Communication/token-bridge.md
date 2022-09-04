@@ -37,7 +37,7 @@ Once the sequencer completes the block construction, StarkNet’s provers will p
 To initiate a withdraw, a user calls the [`initiate_withdraw`](https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/cairo/token_bridge.cairo#L103) function on the L2 bridge contract, supplying as parameters the recipient address on Ethereum, as well as the amount to transfer. The withdraw function then:
 
 - Burns the transferred amount of tokens from the balance of the withdrawal’s initiator
-- Sends a message to the relevant L1 bridge with the amount to be transferred, and the recipient address as parameters. As before, since the bridgs are token-specific, the token itself is implicit here.
+- Sends a message to the relevant L1 bridge with the amount to be transferred, and the recipient address as parameters. As before, since the bridges are token-specific, the token itself is implicit here.
 
 #### Step 2: The Block That Includes The Transaction Is Proved
 
@@ -57,8 +57,11 @@ In order to reduce the risks involved in using an Alpha version, StarkGate Alpha
 
 | Token | Max deposit | Max total value locked |
 | ----- | ----------- | ---------------------- |
-| ETH   | 0.25 Eth    | 320 Eth                |
+| ETH   | 0.25 Eth    | 450 Eth                |
 | DAI   | 50 Dai      | 100,000 Dai            |
+| USDC  | 100 USDC    | 100,000 USDC           |
+| USDT  | 100 USDT    | 100,000 USDT           |
+| WBTC  | 0.005 WBTC  | 5 WBTC                 |
 
 :::info
 We plan to gradually ease these limitations and lift them completely, as confidence grows.

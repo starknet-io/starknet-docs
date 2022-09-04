@@ -12,6 +12,10 @@ StarkNet CLI to use the specified network, e.g. to interact with testnet you can
 
 :::
 
+:::info mandatory arguments
+Throughout this section, the asterisk symbol \* denotes required arguments.
+:::
+
 ### starknet deploy_account
 
 ```bash title="deploy account"
@@ -20,7 +24,7 @@ starknet deploy_account
   --account <account_name>
 ```
 
-Deploys an account contract, can take the following arguments:
+Deploys an account contract, accepts the following arguments:
 
 - `account_name` - the name given to the account, used for managing multiple accounts from the CLI (if not specified, the name
   `__default__` is used.
@@ -28,7 +32,8 @@ Deploys an account contract, can take the following arguments:
 
 :::info
 
-Today, the StarkNet CLI only works with the OpenZeppelin account contract which can be found [here](https://github.com/OpenZeppelin/cairo-contracts/blob/main/src/openzeppelin/account/Account.cairo). The wallet provider used by the CLI can be found [here](https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/wallets/open_zeppelin.py).
+Today, the StarkNet CLI only works with the [OpenZeppelin account contract](https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/third_party/open_zeppelin/Account.cairo).
+The CLI uses this specific [wallet provider](https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/wallets/open_zeppelin.py).
 To use this provider, either set up the following environment variable or pass the same value directly to the `wallet_provider` parameter:
 
 ```
@@ -54,12 +59,12 @@ starknet invoke
   --nonce <nonce>
 ```
 
-Sends a transaction to the StarkNet sequencer, can take the following arguments:
+Sends a transaction to the StarkNet sequencer, accepts the following arguments:
 
-- `address`\* - the address of the called contract
-- `contract_abi`\* - a path to a JSON file containing the called [contract’s abi](https://www.cairo-lang.org/docs/hello_starknet/intro.html#the-contract-s-abi)
-- `function_name`\*- the name of the called function
-- `arguments`\* - inputs to the called function, represented by a list of space-delimited values`
+- `address`\* - the address of the contract being called
+- `contract_abi`\* - a path to a JSON file that contains the [abi](../Contracts/contract-abi.md) of the contract being called
+- `function_name`\*- the name of the function being called
+- `arguments`\* - inputs to the function being called, represented by a list of space-delimited values`
 - `signature_information` - list of field elements as described [here](../Blocks/transactions.md#signature)
 - `wallet_name` - the name of the desired wallet, use [deploy_account](./commands.md#starknet-deploy_account) to set-up new accounts in the CLI.
 - `nonce` - account nonce, only relevant if the call is going through an account
@@ -78,7 +83,7 @@ starknet deploy
   --token <token>
 ```
 
-Deploys a new contract, can take the following arguments:
+Deploys a new contract, accepts the following arguments:
 
 - `salt` - a seed that is used in the computation of the contract’s address (if not specified, the sequencer will choose a random string)
 - `contract_definition`\* - path to a JSON file containing the contract’s bytecode and abi (can be obtained by executing [starknet-compile](https://www.cairo-lang.org/docs/hello_starknet/intro.html#compile-the-contract))
@@ -98,7 +103,7 @@ starknet tx_status
   --error_message
 ```
 
-Returns the transaction status, can take the following arguments:
+Returns the transaction status, accepts the following arguments:
 
 - `transaction_hash`\* - hash of the requested transaction
 - `contract_definition` - path to a JSON file containing the compiled contract to which the transaction was addressed. If supplied, the debug information from the compiled contract will be used to add error locations.
@@ -130,12 +135,12 @@ starknet call
   --nonce <nonce>
 ```
 
-Calls a StarkNet contract without affecting the state, can take the following arguments:
+Calls a StarkNet contract without affecting the state, accepts the following arguments:
 
-- `contract_address`\* - address of the called contract
-- `contract_abi`\* - path to a JSON file containing the called [contract’s abi](https://www.cairo-lang.org/docs/hello_starknet/intro.html#the-contract-s-abi)
+- `contract_address`\* - address of the contract being called
+- `contract_abi`\* - a path to a JSON file that contains the [abi](../Contracts/contract-abi.md) of the contract being called
 - `function_name`\* - name of the function which is called
-- `arguments`\* - inputs to the called function, represented by a list of space-delimited values
+- `arguments`\* - inputs to the function being called, represented by a list of space-delimited values
 - `block_hash` - the hash of the block used as the context for the call operation. If this argument is omitted, the latest block is used
 - `block_number` - same as block_hash, but specifies the context block by number or [tag](#block_tag)
 - `signature_information` - list of field elements as described [here](../Blocks/transactions.md#signature)
@@ -172,7 +177,7 @@ starknet get_code
   --block_number <block_number>
 ```
 
-Returns the ABI and the byte code of the requested contract, can take the following arguments:
+Returns the ABI and the byte code of the requested contract, accepts the following arguments:
 
 - `contact_address`\* - address of the requested contract
 - `block_hash` - the hash of the block used as the context for the operation. If this argument is omitted, the latest block is used
@@ -188,7 +193,7 @@ starknet get_storage_at
   --block_number <block_number>
 ```
 
-Queries a contract’s storage at a specific key, can take the following arguments:
+Queries a contract’s storage at a specific key, accepts the following arguments:
 
 - `contract_address` \*- address of the requested contract
 - `key`\* - the requested key from the given contract’s storage
@@ -215,8 +220,43 @@ Returns the [receipt](../Blocks/transaction-life-cycle.md#transaction-receipt) a
 
 - `transaction_hash`\* - hash of the requested transaction
 
+### starknet estimate_fee
+
+```bash title="estimate_fee"
+    starknet estimate_fee
+        --address <contract_address>
+        --abi <contract_abi>
+        --function <function_name>
+        --inputs <arguments>
+```
+
+Returns the fee estimation for a given contract call. Accepts the following arguments:
+
+- `address`\* - the address of the contract being called
+- `contract_abi`\* - a path to a JSON file that contains the [abi](../Contracts/contract-abi.md) of the contract being called
+- `function_name`\*- the name of the function being called
+- `arguments`\* - inputs to the function being called, represented by a list of space-delimited values`
+
+### starknet estimate_message_fee
+
+```bash title="estimate_message_fee"
+    starknet estimate_message_fee
+        --from_address <sender_address>
+        --to_address <contract_address>
+        --function <function_name>
+        --inputs <arguments>
+```
+
+Returns the fee estimation for a given [L1 handler](../L1-L2%20Communication/messaging-mechanism.md#l1--l2-message-fees) application. Accepts the following arguments:
+
+- `from_address`\* - the L1 address of the sender
+- `to_address`\* - the L2 address of the recipient
+- `contract_abi`\* - a path to a JSON file containing the [abi](../Contracts/contract-abi.md) of the receiving contract on L2
+- `function_name`\*- the name of the desired L1 handler
+- `arguments`\* - inputs to the called handler, represented by a list of space-delimited values
+
 :::tip Custom endpoints
-When working with the CLI, it's possible to manually choose the read/write endpoints for the
+When working with the CLI, you can manually set the read/write endpoints for the
 interaction with StarkNet, by adding the ``--feeder_gateway_url` and `gateway_url` parameters.
 
 The following are the endpoints for StarkNet testnet and mainnet:
