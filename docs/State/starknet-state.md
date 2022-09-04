@@ -14,7 +14,7 @@ A contract state consists of:
 <!-- TODO Ariel 04/09: replace this note with a reference to account abstraction / nonce section -->
 
 :::info nonce
-Similarly to Ethereum, the nonce is an attribute of a contract which is used to provide replay protection at the protocol level. When a transaction is sent from a given contract, the nonce field on the transaction must match the nonce of the contract. After the transaction is executed, the contract's nonce is increased by one.
+Similarly to Ethereum, the contract's nonce is used to provide replay protection at the protocol level. When a transaction is sent to a given contract, the transaction's nonce must match the nonce of the contract. After the transaction is executed, the contract's nonce is increased by one.
 
 Note that while on Ethereum, only EOAs can send transactions and consequently have a non-zero nonce, on StarkNet, only account contracts can send transactions and have a non-zero nonce.
 :::
