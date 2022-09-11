@@ -55,8 +55,8 @@ In order to calculate the transaction hash, we first need to obtain the deployed
 ++++
 
 Where:
-
-* The placeholder zero is used to align the hash computation for the different types of transactions. Here, it holds the place of the `max_fee` field which exists in both invoke and declare transactions.
+* The placeholder zero is used to align the hash computation for the different types of transactions.
+* “deploy” and “constructor” are constant strings encoded in ASCII.
 * stem:[\text{"deploy"}] and stem:[\text{"constructor"}] constant's prefixes, encoded in bytes (ASCII), with big-endian.
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash and $sn_keccak$ is xref:../Hashing/hash-functions.adoc#starknet-keccak[StarkNet Keccak]
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
@@ -103,21 +103,40 @@ Transaction version 0 is deprecated and will be removed in a future version of S
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 |===
 
-=== Calculating the hash of an invoke transaction
+=== Calculating the hash of a v1 invoke transaction
 
 The invoke transaction hash is calculated as a hash over the given transaction elements, specifically:
 
 [stem]
 ++++
 \begin{aligned}
-\text{invoke_tx_hash} = h( & \text{"invoke"}, \text{version}, \text{contract_address}, \text{entry_point_selector}, \\
+\text{invoke_v1_tx_hash} = h( & \text{"invoke"}, \text{version}, \text{sender_address}, 0, h(\text{calldata}), \\
 & h(\text{calldata}), \text{max_fee}, \text{chain_id})
 \end{aligned}
 ++++
 
 Where:
 
-* stem:[\text{"invoke"}] is a constant prefix, encoded in bytes (ASCII), with big-endian.
+* stem:[\text{"invoke"}] is a constant prefix string, encoded in ASCII.
+* The placeholder zero is used to align the hash computation for the different types of transactions.
+* stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
+
+=== Calculating the hash of a v0 invoke transaction
+
+The hash of a v0 invoke transaction is computed as follows:
+
+[stem]
+++++
+\begin{aligned}
+\text{invoke_v0_tx_hash} = h( & \text{"invoke"}, \text{version}, \text{contract_address}, \text{entry_point_selector}, \\
+& h(\text{calldata}), \text{max_fee}, \text{chain_id})
+\end{aligned}
+++++
+
+Where:
+
+* stem:[\text{"invoke"}] is a constant prefix string, encoded in (ASCII).
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
 
@@ -139,21 +158,42 @@ A declare transaction has the following fields:
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of StarkNet.
 |===
 
-=== Calculating the hash of a declare transaction
+=== Calculating the hash of a v1 declare transaction
 
-The declare transaction hash is calculated as a hash over the given transaction elements, specifically:
+The hash of a v1 declare transaction is computed as follows:
 
 [stem]
 ++++
 \begin{aligned}
-\text{declare_tx_hash} = h( & \text{"declare"}, \text{version}, \text{sender_address}, \\
-& 0, \text{class_hash}, \text{max_fee}, \text{chain_id}, \text{nonce})
+\text{declare_v1_tx_hash} = h( & \text{"declare"}, \text{version}, \text{sender_address}, 0, \text{class_hash}, \text{max_fee}, \text{chain_id}, \text{nonce})
 \end{aligned}
 ++++
 
 Where:
 
-* The placeholder zero is used to align the hash computation for the different types of transactions (here, they stand for the empty call data and entry point selector)
+* stem:[\text{declare}] is a constant prefix string, encoded in ASCII.
+* The placeholders zero is used to align the hash computation for the different types of transactions.
+* `class_hash` is the hash of the xref:../Contracts/contract-classes.adoc[contract class]. See xref:../Contracts/contract-hash.adoc[Contract Hash] for details about how the hash is computed.
+* The placeholder zero is used to align the hash computation for the different types of transactions.
+* stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
+
+=== Calculating the hash of a v0 declare transaction
+
+The hash of a v0 declare transaction is computed as follows:
+
+[stem]
+++++
+\begin{aligned}
+\text{declare_v0_tx_hash} = h( & \text{"declare"}, \text{version}, \text{sender_address}, 0, 0, \text{max_fee}, \text{chain_id}, \text{class_hash})
+\end{aligned}
+++++
+
+Where:
+
+* stem:[\text{declare}] is a constant prefix string, encoded in ASCII.
+* The placeholder zeros are used to align the hash computation for the different types of transactions.
+* `class_hash` is the hash of the xref:../Contracts/contract-classes.adoc[contract class]. See xref:../Contracts/contract-hash.adoc[Contract Hash] for details about how the hash is computed.
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
 
@@ -168,7 +208,7 @@ stem:[g_x=8747394510780077664574649897743220836492786075332494811513824810728688
 [id="chain-id"]
 == Chain-Id
 
-StarkNet currently supports two chain IDs. Chain IDs are given as numbers, representing an encoding of specific constants as bytes (ASCII) using big-endian, as illustrated by the following Python snippet:
+StarkNet currently supports two chain IDs. Chain IDs are given as numbers, representing the ASCII encoding of specific constant strings, as illustrated by the following Python snippet:
 
 [source,python]
 ----
