@@ -30,6 +30,7 @@ A deploy transaction is a transaction type used to deploy contracts to StarkNet.
 
 A deploy transaction has the following fields:
 
+[%autowidth]
 |===
 | Name | Type | Description
 
@@ -49,18 +50,18 @@ In order to calculate the transaction hash, we first need to obtain the deployed
 [stem]
 ++++
 \begin{aligned}
-\text{deploy_tx_hash} = h( & \text{"deploy"}, \text{version}, \text{ contract_address}, \text{sn_keccak}(\text{"constructor"}), \\
+\text{deploy_tx_hash} = h( & ``\text{deploy"}, \text{version}, \text{ contract_address}, \text{sn_keccak}(``\text{constructor"}), \\
 & h(\text{constructor_calldata}), 0, \text{chain_id})
 \end{aligned}
 ++++
 
 Where:
+
 * The placeholder zero is used to align the hash computation for the different types of transactions.
 * “deploy” and “constructor” are constant strings encoded in ASCII.
-* stem:[\text{"deploy"}] and stem:[\text{"constructor"}] constant's prefixes, encoded in bytes (ASCII), with big-endian.
-* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash and $sn_keccak$ is xref:../Hashing/hash-functions.adoc#starknet-keccak[StarkNet Keccak]
-* stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
-* stem:[\text{contract_address}] is calculated as described xref:../Contracts/contract-address.adoc[here].
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash and stem:[$sn\_keccak$] is xref:../Hashing/hash-functions.adoc#starknet-keccak[StarkNet Keccak]
+* `chain_id` is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
+* `contract_address` is calculated as described xref:../Contracts/contract-address.adoc[here].
 
 == Invoke Transaction
 
@@ -75,12 +76,13 @@ Transaction version 0 is deprecated and will be removed in a future release of S
 
 .Transaction fields
 
+[%autowidth]
 |===
 | Name | Type | Description
 
 | `sender_address` | `FieldElement` | The address of the sender of this transaction.
-| `calldata` | `List+++<FieldElement>+++` | The arguments that are passed to the `validate` and `execute` functions.
-| `signature` | `List+++<FieldElement>+++` | Additional information given by the sender, used to validate the transaction.
+| `calldata` | `List<FieldElement>` | The arguments that are passed to the `validate` and `execute` functions.
+| `signature` | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.
 | `max_fee` | `FieldElement` | The maximum fee that the sender is willing to pay for the transaction
 | `nonce` | `FieldElement` | The transaction nonce.
 | `version` | `FieldElement` | The transaction's version. The value is 1. +
@@ -90,13 +92,14 @@ When the fields that comprise a transaction change, either with the addition of 
 === Invoke transaction version 0
 
 .Transaction fields
+[%autowidth]
 |===
 | Name | Type | Description
 
 | `contract_address` | `FieldElement` | The address of the contract invoked by this transaction.
 | `entry_point_selector` | `FieldElement` | The encoding of the selector for the function invoked (the entry point in the contract)
-| `calldata` | `List+++<FieldElement>+++` | The arguments that are passed to the invoked function
-| `signature` | `List+++<FieldElement>+++` | Additional information given by the sender, used to validate the transaction.
+| `calldata` | `List<FieldElement>` | The arguments that are passed to the invoked function
+| `signature` | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.
 | `max_fee` | `FieldElement` | The maximum fee that the sender is willing to pay for the transaction
 | `version` | `FieldElement` | The transaction's version. The value is 0. +
 Transaction version 0 is deprecated and will be removed in a future version of StarkNet. +
@@ -110,14 +113,14 @@ The invoke transaction hash is calculated as a hash over the given transaction e
 [stem]
 ++++
 \begin{aligned}
-\text{invoke_v1_tx_hash} = h( & \text{"invoke"}, \text{version}, \text{sender_address}, 0, h(\text{calldata}), \\
-& h(\text{calldata}), \text{max_fee}, \text{chain_id})
+\text{invoke_v1_tx_hash} = h( & ``\text{invoke"}, \text{version}, \text{sender_address}, 0, h(\text{calldata}), \\
+& \text{max_fee}, \text{chain_id}, \text{nonce})
 \end{aligned}
 ++++
 
 Where:
 
-* stem:[\text{"invoke"}] is a constant prefix string, encoded in ASCII.
+* stem:[\text{invoke}] is a constant prefix string, encoded in ASCII.
 * The placeholder zero is used to align the hash computation for the different types of transactions.
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
@@ -129,14 +132,14 @@ The hash of a v0 invoke transaction is computed as follows:
 [stem]
 ++++
 \begin{aligned}
-\text{invoke_v0_tx_hash} = h( & \text{"invoke"}, \text{version}, \text{contract_address}, \text{entry_point_selector}, \\
+\text{invoke_v0_tx_hash} = h( & ``\text{invoke"}, \text{version}, \text{contract_address}, \text{entry_point_selector}, \\
 & h(\text{calldata}), \text{max_fee}, \text{chain_id})
 \end{aligned}
 ++++
 
 Where:
 
-* stem:[\text{"invoke"}] is a constant prefix string, encoded in (ASCII).
+* stem:[\text{invoke}] is a constant prefix string, encoded in (ASCII).
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
 
@@ -146,13 +149,14 @@ The declare transaction is used to introduce new classes into the state of Stark
 
 A declare transaction has the following fields:
 
+[%autowidth]
 |===
 | Name | Type | Description
 
 | `contract_class` | `ContractClass` | The class object.
 | `sender_address` | `FieldElement` | The address of the account initiating the transaction.
 | `max_fee` | `FieldElement` | The maximum fee that the sender is willing to pay for the transaction.
-| `signature` | `List+++<FieldElement>+++` | Additional information given by the sender, used to validate the transaction.
+| `signature` | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.
 | `nonce` | `FieldElement` | The transaction nonce.
 | `version` | `FieldElement` | The transaction's version. Possible values are 1 or 0. +
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of StarkNet.
@@ -165,15 +169,14 @@ The hash of a v1 declare transaction is computed as follows:
 [stem]
 ++++
 \begin{aligned}
-\text{declare_v1_tx_hash} = h( & \text{"declare"}, \text{version}, \text{sender_address}, 0, \text{class_hash}, \text{max_fee}, \text{chain_id}, \text{nonce})
+\text{declare_v1_tx_hash} = h( & ``\text{declare"}, \text{version}, \text{sender_address}, 0, \text{class_hash}, \text{max_fee}, \text{chain_id}, \text{nonce})
 \end{aligned}
 ++++
 
 Where:
 
 * stem:[\text{declare}] is a constant prefix string, encoded in ASCII.
-* The placeholders zero is used to align the hash computation for the different types of transactions.
-* `class_hash` is the hash of the xref:../Contracts/contract-classes.adoc[contract class]. See xref:../Contracts/contract-hash.adoc[Contract Hash] for details about how the hash is computed.
+* stem:[\text{class_hash}] is the hash of the xref:../Contracts/contract-classes.adoc[contract class]. See xref:../Contracts/contract-hash.adoc[Contract Hash] for details about how the hash is computed.
 * The placeholder zero is used to align the hash computation for the different types of transactions.
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
@@ -185,7 +188,7 @@ The hash of a v0 declare transaction is computed as follows:
 [stem]
 ++++
 \begin{aligned}
-\text{declare_v0_tx_hash} = h( & \text{"declare"}, \text{version}, \text{sender_address}, 0, 0, \text{max_fee}, \text{chain_id}, \text{class_hash})
+\text{declare_v0_tx_hash} = h( & ``\text{declare"}, \text{version}, \text{sender_address}, 0, 0, \text{max_fee}, \text{chain_id}, \text{class_hash})
 \end{aligned}
 ++++
 
@@ -193,7 +196,7 @@ Where:
 
 * stem:[\text{declare}] is a constant prefix string, encoded in ASCII.
 * The placeholder zeros are used to align the hash computation for the different types of transactions.
-* `class_hash` is the hash of the xref:../Contracts/contract-classes.adoc[contract class]. See xref:../Contracts/contract-hash.adoc[Contract Hash] for details about how the hash is computed.
+* stem:[\text{class_hash}] is the hash of the xref:../Contracts/contract-classes.adoc[contract class]. See xref:../Contracts/contract-hash.adoc[Contract Hash] for details about how the hash is computed.
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
 
