@@ -8,7 +8,7 @@ This data allows anyone that observes Ethereum to reconstruct the current state 
 
 ## Format
 
-The state diffs contain information on every contact whose storage was updated and additional information on contract deployments. Those differences are sent as `unit256[]` array as part of the calldata, and are encoded as follows:
+The state diffs contain information on every contract whose storage was updated and additional information on contract deployments. Those differences are sent as `uint256[]` array as part of the calldata, and are encoded as follows:
 
 - Number of cells that encode contract deployments
 - For each deployed contract, we have:
