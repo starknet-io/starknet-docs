@@ -1,24 +1,105 @@
 [id="commands"]
 = Commands
 
-[TIP]
+[NOTE]
 ====
-All the CLI commands require the `--network` parameter, which can be either `alpha-goerli` or `alpha-mainnet`.
-You can set the `STARKNET_NETWORK` environment variable, causing subsequent calls to the
-StarkNet CLI to use the specified network, e.g. to interact with testnet you can set:
+An asterisk (*) denotes required arguments.
+====
 
-`export STARKNET_NETWORK=alpha-goerli`
-====
+[id="basic_command_line_syntax"]
+== Basic command line syntax
+
+To enter a starknet command, use the following syntax:
+
+[source,bash]
+----
+$ starknet <command> <options>
+----
+
+Where:
+
+`<command>` represents a single command that executes an operation on StarkNet.
+
+`<options>` represents zero or more command line options, each of which modifies the operation of the command.
+
+[id="setting_the_starknet_network_environment"]
+== Setting the StarkNet network environment
+
+You need to set your StarkNet network environment to use either testnet or Mainnet.
+
+You can set the environment using either a command-line option or an environment variable.
+
+Possible values are:
+
+`alpha-goerli`:: Sets the StarkNet network to testnet
+`alpha-mainnet`:: Sets the StarkNet network to Mainnet
+
+.Setting the network environment using a command-line option
+
+When you enter any command, include the `--network` option. For example to use Mainnet, enter a command as follows:
+
+[source,bash]
+----
+$ starknet <command> --network alpha-mainnet <options>
+----
 
 [NOTE]
 ====
-Throughout this section, the asterisk (*) denotes required arguments.
+You can place the `--network` option before or after any other option.
 ====
+
+.Setting the network environment using an environment variable
+
+Set the `STARKNET_NETWORK` environment variable as follows:
+
+[source,bash]
+----
+$ export STARKNET_NETWORK=<starknet_network>
+----
+
+For example, to use testnet, enter the following command:
+
+[source,bash]
+----
+$ export STARKNET_NETWORK=alpha-goerli
+----
+
+== Setting custom endpoints
+
+When working with the CLI, you can manually set the endpoints for the gateways that enable you to
+interact with StarkNet, by including the following options:
+
+`--feeder_gateway_url`:: Sets the custom endpoint for read commands.
+`--gateway_url`:: Sets the custom endpoint for write commands.
+
+The following are the endpoints for StarkNet testnet and Mainnet:
+
+* Testnet feeder gateway URL: https://alpha4.starknet.io/feeder_gateway/
+* Mainnet feeder gateway URL: https://alpha-mainnet.starknet.io/feeder_gateway/
+* Testnet gateway URL: https://alpha4.starknet.io/gateway/
+* Mainnet gateway URL: https://alpha-mainnet.starknet.io/gateway/
+
+.Example: Setting a custom read endpoint
+
+The following command returns the ABI using the Mainnet feeder gateway.
+
+[source,bash]
+----
+$ starknet get_code --feeder_gateway_url https://alpha-mainnet.starknet.io/feeder_gateway/ <options>
+----
+
+.Example: Setting a custom write endpoint
+
+The following command sends a transaction to the StarkNet sequencer
+ using the Mainnet gateway.
+
+[source,bash]
+----
+$ starknet invoke --gateway_url https://alpha-mainnet.starknet.io/gateway/ <options>
+----
 
 [id="starknet_deploy_account"]
 == starknet deploy_account
-
-
 
 [source,terminal]
 ----
@@ -105,7 +186,7 @@ Deploys a new contract, accepts the following arguments:
 
 [NOTE]
 ====
-The deploy token is a temporary measure which will be deprecated when fees are incorporated in the system. Only relevant for mainnet.
+The deploy token is a temporary measure which will be deprecated when fees are incorporated in the system. Only relevant for Mainnet.
 ====
 
 == starknet tx_status
@@ -280,25 +361,10 @@ starknet estimate_message_fee
     --inputs <arguments>
 ----
 
-Returns the fee estimation for a given [L1 handler](../L1-L2%20Communication/messaging-mechanism.md#l1--l2-message-fees) application. Accepts the following arguments:
+Returns the fee estimation for a given xref:../L1-L2_Communication/messaging-mechanism.adoc#l1-l2-message-fees[L1 handler] application. Accepts the following arguments:
 
 - `from_address`* - the L1 address of the sender
 - `to_address`* - the L2 address of the recipient
 - `contract_abi`* - a path to a JSON file containing the xref:../Contracts/contract-abi.adoc[abi] of the receiving contract on L2
 - `function_name`*- the name of the desired L1 handler
 - `arguments`* - inputs to the called handler, represented by a list of space-delimited values
-
-[TIP]
-====
-*Custom endpoints*
-
-When working with the CLI, you can manually set the read/write endpoints for the
-interaction with StarkNet, by adding the `--feeder_gateway_url` and `gateway_url` parameters.
-
-The following are the endpoints for StarkNet testnet and mainnet:
-
-* Testnet feeder gateway URL: https://alpha4.starknet.io/feeder_gateway/
-* Mainnet feeder gateway URL: https://alpha-mainnet.starknet.io/feeder_gateway/
-* Testnet gateway URL: https://alpha4.starknet.io/gateway/
-* Mainnet gateway URL: https://alpha-mainnet.starknet.io/gateway/
-====
