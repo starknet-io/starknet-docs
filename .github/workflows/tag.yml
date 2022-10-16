@@ -1,0 +1,41 @@
+name: Tag workflow
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  create-release:
+    name: Creating a release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.USER_TOKEN }}
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - name: Install Antora and the Antora Lunr Extension
+        run: npm i antora @antora/lunr-extension@v1.0.0-alpha.8
+
+      - name: Extract release data
+        id: get-release-data
+        run: |
+          echo "::set-output name=tag::${GITHUB_REF##*/}"
+          echo "::set-output name=file::${GITHUB_REPOSITORY#*/}-${GITHUB_REF##*/}"
+
+#      - name: Generate Site
+#        run: npx antora playbook.yml
+
+#      - name: Deploy to GitHub Pages
+#        if: ${{ !contains(steps.get-release-data.outputs.tag, '-') }}
+#        uses: peaceiris/actions-gh-pages@v3
+#        with:
+#          github_token: ${{ secrets.USER_TOKEN }}
+#          publish_dir: ./build
+#          user_name: ${{ secrets.USER_NAME }}
+#          user_email: ${{ secrets.USER_EMAIL }}
