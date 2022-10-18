@@ -3,35 +3,21 @@ name: Pull request workflow
 on: pull_request
 
 jobs:
-  format-check:
-    name: Checking formatting
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 14
-
-      - name: Install node_modules
-        run: yarn
-
-      - name: Run Prettier check
-        run: yarn run format:check
 
   test-deploy:
     name: Test deploy
     runs-on: ubuntu-latest
-    needs: format-check
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      - uses: actions/setup-node@v2
+      - name: Install Node.js
+        uses: actions/setup-node@v2
         with:
-          node-version: 14
+          node-version: 16
 
-      - name: Install node_modules
-        run: yarn
+#      - name: Install Antora and the Antora Lunr Extension
+#        run: npm i antora @antora/lunr-extension@v1.0.0-alpha.8
 
-      - name: Run build
-        run: yarn run build
+      - name: Generate Site
+        run: npx antora playbook.yml
