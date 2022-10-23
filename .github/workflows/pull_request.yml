@@ -15,17 +15,21 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: 16
-      - name: Install node_modules
-        run: yarn
 
       - name: Generate Site
-        run: yarn generate
+        run: antora playbook.yml
+
+      - name: Extract PR details
+        id: details
+        run: |
+          PR_ID=${{ github.event.pull_request.number }}
+          PREVIEW_PATH=previews/${PR_ID}
 
       - name: Copy build folder to remote
         uses: garygrossgarten/github-action-scp@release
         with:
           local: public_html
-          remote: scp/review
+          remote: scp/public_html/test-reviews/$PREVIEW_PATH
           host: ${{ secrets.STAGING_IP }}
           username: ${{ secrets.STAGING_USER }}
           password: ${{ secrets.STAGING_PASS }}
