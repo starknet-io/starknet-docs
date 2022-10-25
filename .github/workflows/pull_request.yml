@@ -21,19 +21,14 @@ jobs:
       - name: Generate Site
         run: yarn generate
 
-      - name: Extract PR details
-        id: pr
-        run: |
-          PR_ID=pr-${{ github.event.pull_request.number }}
-          PREVIEW_PATH=previews/${PR_ID}
-          echo "::set-output name=PR_ID::${PR_ID}"
+
 
       - name: "Upload generated content"
         uses: actions/upload-artifact@v2
         with:
           name: starknet-site
           if-no-files-found: error
-          path: 
+          path:
             public_html
 
 #      - name: Copy build folder to remote
@@ -45,7 +40,7 @@ jobs:
 #          source: "public_html"
 #          target: "test-reviews"
   publish:
-    name: Test deploy
+    name: deploy-review
     runs-on: ubuntu-latest
     needs:
       - test-deploy
@@ -55,6 +50,13 @@ jobs:
         with:
           ref: gh-pages
           github_token: ${{ secrets.USER_TOKEN }}
+
+      - name: Extract PR details
+        id: pr
+        run: |
+          PR_ID=pr-${{ github.event.pull_request.number }}
+          PREVIEW_PATH=previews/${PR_ID}
+          echo "::set-output name=PR_ID::${PR_ID}"
 
       - name: "Remove preview build directory"
         run: rm -rf ${{ steps.pr.outputs.PR_ID }}
