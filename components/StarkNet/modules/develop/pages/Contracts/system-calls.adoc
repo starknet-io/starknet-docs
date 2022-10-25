@@ -6,140 +6,42 @@ So writing smart contracts requires some operations, such as calling another con
 
 The StarkNet contract language supports these operations by using system calls. System calls enable a contract to require services from the StarkNet OS. You can use system calls in a function to get information that depends on the broader state of StarkNet, which would otherwise be inaccessible, rather than local variables that appear in the function's scope.
 
-[id="send_message_to_L1"]
-== `send_message_to_L1`
-
-Tells the StarkNet OS to send a message to L1.
+[id="call_contract"]
+== `call_contract`
 
 .Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
-func send_message_to_l1{syscall_ptr : felt*}(
-    __to_address__ : felt, __payload_size__ : felt, __payload__ : felt*
-)
-----
-
-.Description
-
-Tells the StarkNet OS to send a message to L1. This system call includes the message parameters as part of the proof's output. This system call exposes these parameters to the StarkNet Core contract on L1 once the state update, including the transaction, is received.
-
-For more information, see StarkNet's xref:../L1-L2_Communication/messaging-mechanism.adoc[messaging mechanism].
-
-.Arguments
-
-`_to_address_`: The recipient's L1 address.
-`_payload_size_`: The size of the message payload.
-`_payload_`:: A pointer to an array containing the contents of the message.
-
-.Return values
-
-None.
-
-.Common library
-
-link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/common/messages.cairo[messages.cairo]
-
-.Example
-
-The following example sends a message whose content is (1,2) to the L1 contract whose address is 3423542542364363.
-
-[source,cairo,subs="+quotes,+macros"]
-----
-let payload = alloc()
-payload[0] = 1
-payload[1] = 2
-send_message_to_l1(3423542542364363,2,payload)
-----
-
-[id="library_call"]
-== `library_call`
-
-Calls the requested function in any previously declared class.
-
-.Syntax
-
-[source,cairo,subs="+quotes,+macros"]
-----
-func library_call{syscall_ptr : felt*}(
-    __class_hash__ : felt, __function_selector__ : felt, __calldata_size__ : felt, __calldata__ : felt*
-) -> (__retdata_size__ : felt, __retdata__ : felt*)
-
-----
-
-.Description
-
-Calls the requested function in any previously declared class. This system call replaces the known delegate call functionality from Ethereum, with the important difference that there is only one contract involved.
-
-The class is only used for its logic.
-
-.Arguments
-
-`_class_hash_`:: The hash of the class you want to use.
-`_function_selector_`:: A selector for a function within that class.
-`_calldata_size_`:: The size, in bytes, of the calldata.
-`_calldata_`:: The calldata.
-`_retdata_size_`:: The size, in bytes, of the retdata.
-`_redata_`:: The retdata.
-
-.Return values
-
-???
-
-.Common library
-
-link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/common/syscalls.cairo[`syscalls.cairo`]
-
-.Example
-
-???
-
-[id="library_call_l1_handler"]
-== `library_call_l1_handler`
-
-Calls the requested function or an L1 handler in any previously declared class.
-
-.Syntax
-
-[source,cairo,subs="+quotes,+macros"]
-----
-func library_call_l1_handler{syscall_ptr : felt*}(
-    __class_hash__ : felt, __function_selector__ : felt, __calldata_size__ : felt, __calldata__ : felt*
+func call_contract{syscall_ptr : felt*}(
+    __contract_address__ : felt, __function_selector__ : felt, __calldata_size__ : felt, __calldata__ : felt*
 ) -> (__retdata_size__ : felt, __retdata__ : felt*)
 ----
 
 .Description
 
-// Does this call the function/L1 handler, or tell the OS to call function/L1 handler???
-Calls the requested function or an L1 handler in any previously declared class.
+Calls a given contract. This system call expects the address of the called contract, a selector for a function within that contract, and call arguments.
 
-Same as `library_call`, but also allows calling an L1 handler., which is not directly callable otherwise (for more details, see StarkNet's xref:../L1-L2_Communication/messaging-mechanism.adoc#l1–l2-messages[messaging mechanism].
-
-When an L1 handler is invoked via this system call, no L1→L2 message is consumed. This enables a L1 handler to use the logic inside a different L1 handler from an existing class.
-
-[TIP]
+[NOTE]
 ====
-It is recommended to raise this system call only inside a L1 handler.
+This is considered a lower level syntax for calling contracts. If the interface of the called contract is available, then you can use a more straightforward syntax. For more information, see the link:https://starknet.io/docs/hello_starknet/calling_contracts.html[Calling contracts] in the _Hello StarkNet_ tutorial.
 ====
-
-This system call expects the hash of the class you want to use, a selector for a L1 handler within that class, and call arguments. The `library_call` system call can be raised by calling the following function, which is available in `syscalls.cairo`:
 
 .Arguments
 
-`_class_hash_`:: The hash of the class you want to use.
-`_function_selector_`:: A selector for a function within that class.
+`_contract_address_`:: The address of the contract you want to call.
+`_function_selector_`:: A selector for a function within that contract.
 `_calldata_size_`:: The size, in bytes, of the calldata.
 `_calldata_`:: The calldata.
-`_retdata_size_`:: The size, in bytes, of the retdata.
-`_redata_`:: The retdata.
 
 .Return values
 
-???
+`_retdata_size_`:: The size, in bytes, of the return data.
+`_retdata_`:: The return data.
 
 .Common library
 
-link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/common/syscalls.cairo[`syscalls.cairo`]
+link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L42[`syscalls.cairo`]
 
 .Example
 
@@ -147,8 +49,6 @@ link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/star
 
 [id="deploy"]
 == `deploy`
-
-Deploys a new instance of a previously declared class.
 
 .Syntax
 
@@ -168,10 +68,14 @@ Deploys a new instance of a previously declared class.
 
 .Arguments
 
-`_class_hash_`: The class hash of the contract to be deployed
-`_contract_address_salt_`: The salt, an arbitrary value provided by the sender, used in the computation of the [contract's address](./contract-address)
-`_constructor_calldata_size_`: The size, in bytes, of the constructor's calldata.
-`_constructor_calldata_`: The constructor's calldata.
+`_class_hash_`:: The class hash of the contract to be deployed
+`_contract_address_salt_`:: The salt, an arbitrary value provided by the sender, used in the computation of the xref:Contracts/contract-address.adoc[contract's address].
+`_constructor_calldata_size_`:: The size, in bytes, of the constructor's calldata.
+`_constructor_calldata_`:: The constructor's calldata.
+
+.Return values
+
+`_contract_address_`:: The address of the deployed contract.
 
 .Common library
 
@@ -181,10 +85,106 @@ link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/star
 
 ???
 
+[id="emit_event"]
+== `emit_event`
+
+.Syntax
+
+[source,cairo,subs="+quotes,+macros"]
+----
+func emit_event{syscall_ptr : felt*}(__keys_len__ : felt, __keys__ : felt*, __data_len__ : felt, __data__ : felt*)
+----
+
+.Description
+
+Emits an event with a given set of keys and data.
+
+For more information, and for a higher level syntax for emitting events, see xref:Events/starknet-events.adoc[StarkNet events].
+
+.Arguments
+
+`_keys_len_`:: ???
+`_keys_`:: ???
+`_data_len_`:: ???
+`_data_`:: ???
+
+.Return values
+
+None.
+
+.Common library
+
+link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L301[`syscalls.cairo`]
+
+.Example
+
+???
+
+
+
+[id="get_block_number"]
+== `get_block_number`
+
+[source,cairo,subs="+quotes,+macros"]
+----
+func get_block_number{syscall_ptr : felt*}() -> (__block_number__ : felt)
+----
+
+.Description
+
+Gets the number of the block in which the transaction is executed.
+
+.Arguments
+
+None.
+
+.Return values
+
+// Does "the number of the block" mean "the block's ID"???
+`_block_number_`:: The number of the block in which the transaction is executed.
+
+.Common library
+
+link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L161[`syscalls.cairo`]
+
+.Example
+
+???
+
+[id="get_block_timestamp"]
+== `get_block_timestamp`
+
+.Syntax
+
+[source,cairo,subs="+quotes,+macros"]
+----
+func get_block_timestamp{syscall_ptr : felt*}() -> (__block_timestamp__ : felt)
+----
+
+.Description
+
+Gets the timestamp of the block in which the transaction is executed.
+
+.Arguments
+
+None.
+
+.Return values
+
+'_block_timestamp_':: The timestamp of the block in which the transaction is executed
+
+.Common library
+
+link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L210[`syscalls.cairo`]
+
+.Common library
+
+.Example
+
+???
+
 [id="get_caller_address"]
 == `get_caller_address`
-
-Returns the address of the calling contract or 0 if this transaction was not initiated by another contract.
 
 .Syntax
 [source,cairo,subs="+quotes,+macros"]
@@ -212,75 +212,27 @@ link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/star
 
 ???
 
-[id="get_block_number"]
-== `get_block_number`
-
-Gets the number of the block in which the transaction is executed.
-
-[source,cairo,subs="+quotes,+macros"]
-----
-func get_block_number{syscall_ptr : felt*}() -> (block_number : felt)
-----
-
-.Description
-
-.Arguments
-
-.Return values
-
-.Common library
-
-link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L161[`syscalls.cairo`]
-
-.Example
-
-???
-
-[id="get_block_timestamp"]
-== `get_block_timestamp`
-
-Gets the timestamp of the block in which the transaction is executed.
-
-.Syntax
-
-[source,cairo,subs="+quotes,+macros"]
-----
-func get_block_timestamp{syscall_ptr : felt*}() -> (block_timestamp : felt)
-----
-
-.Description
-
-Gets the timestamp of the block in which the transaction is executed.
-
-.Arguments
-
-.Return values
-
-.Common library
-
-link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L210[`syscalls.cairo`]
-
-.Common library
-
-.Example
-
-???
-
 [id="get_contract_address"]
 == `get_contract_address`
 
-Gets the address of the contract who raised the system call.
-
 .Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
-func get_contract_address{syscall_ptr : felt*}() -> (contract_address : felt)
+func get_contract_address{syscall_ptr : felt*}() -> (__contract_address__ : felt)
 ----
+
+.Description
+
+Gets the address of the contract who raised the system call.
 
 .Arguments
 
+None.
+
 .Return values
+
+`_contract_address_`:: The address of the contract who raised the system call.
 
 .Common library
 
@@ -293,16 +245,24 @@ link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412
 [id="get_sequencer_address"]
 == `get_sequencer_address`
 
-Returns the address of the sequencer that is producing this block.
-
 .Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
-func get_sequencer_address{syscall_ptr : felt*}() -> (sequencer_address : felt)
+func get_sequencer_address{syscall_ptr : felt*}() -> (__sequencer_address__ : felt)
 ----
 
+.Description
+
+Returns the address of the sequencer that generated the current block.
+
 .Arguments
+
+None.
+
+.Return values
+
+`_sequencer_address_`:: The address of the sequencer that generated the current block.
 
 .Common library
 
@@ -312,60 +272,218 @@ link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412
 
 ???
 
-[id="call_contract"]
-== `call_contract`
+[id="get_transaction_info"]
+== `get_transaction_info`
 
-Calls a given contract. This system call expects the address of the called contract, a selector for a function within that contract, and call arguments.
+Gets information about the original transaction.
 
 .Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
-func call_contract{syscall_ptr : felt*}(
-    contract_address : felt, function_selector : felt, calldata_size : felt, calldata : felt*
-) -> (retdata_size : felt, retdata : felt*)
+func get_tx_info{syscall_ptr : felt*}() -> (__tx_info__ : TxInfo*)
 ----
 
 .Description
 
-Calls a given contract. This system call expects the address of the called contract, a selector for a function within that contract, and call arguments.
-
-Note that this is considered a lower level syntax for calling contracts. If the interface of the called contract is available, then a more straightforward syntax can be used. See the https://starknet.io/docs/hello_starknet/calling_contracts.html[tutorial] for more details.
+Gets information about the original transaction.
 
 .Arguments
 
+None.
+
 .Return values
+
+`_tx_info_`:: The following information about the original transaction:
++
+// What does "intended" mean?
+* the intended StarkNet OS version
+* the address of the account that initiated this transaction
+* the maximum fee that is allowed to be charged for the inclusion of this transaction
+* the signature of the account that initiated this transaction
+* the transaction's hash
+* the intended chain id
 
 .Common library
 
-link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L42[`syscalls.cairo`]
+link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L301[`syscalls.cairo`]
 
 .Example
 
 ???
 
-
-[id="storage_read"]
-== `storage_read`
-
-Gets the value of a key in the storage of the calling contract. This system call expects the key to be read.
+[id="library_call"]
+== `library_call`
 
 .Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
-func storage_read{syscall_ptr : felt*}(address : felt) -> (value : felt)
+func library_call{syscall_ptr : felt*}(
+    __class_hash__ : felt, __function_selector__ : felt, __calldata_size__ : felt, __calldata__ : felt*
+) -> (__retdata_size__ : felt, __retdata__ : felt*)
+
 ----
 
 .Description
 
-Gets the value of a key in the storage of the calling contract. This system call expects the key to be read.
+Calls the requested function in any previously declared class.
 
-Note that this is considered a low level access to the contract's storage, for a more high level syntax see xref:./contract-storage.adoc#storage_variables[storage variables].
+This system call replaces the known delegate call functionality from Ethereum, with the important difference that there is only one contract involved.
+
+The class is only used for its logic.
 
 .Arguments
 
+`_class_hash_`:: The hash of the class you want to use.
+`_function_selector_`:: A selector for a function within that class.
+`_calldata_size_`:: The size, in bytes, of the calldata.
+`_calldata_`:: The calldata.
+
 .Return values
+
+`_retdata_size_`:: The size, in bytes, of the return data.
+`_retdata_`:: The return data.
+
+.Common library
+
+link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/common/syscalls.cairo[`syscalls.cairo`]
+
+.Example
+
+???
+
+[id="library_call_l1_handler"]
+== `library_call_l1_handler`
+
+.Syntax
+
+[source,cairo,subs="+quotes,+macros"]
+----
+func library_call_l1_handler{syscall_ptr : felt*}(
+    __class_hash__ : felt, __function_selector__ : felt, __calldata_size__ : felt, __calldata__ : felt*
+) -> (__retdata_size__ : felt, __retdata__ : felt*)
+----
+
+.Description
+
+// Does this call the function/L1 handler, or tell the OS to call function/L1 handler???
+Calls the requested function or an L1 handler in any previously declared class.
+
+Same as `library_call`, but also allows calling an L1 handler, which is not directly callable otherwise. For more information, see StarkNet's xref:L1-L2_Communication/messaging-mechanism.adoc#l1–l2_messages[messaging mechanism].
+
+// Who would consume the l1->L2 message?
+// How do you enter the symbol "→"
+// Once more, I'm against using a symbol that is outside the normal set of characters we use day to day. I think that "L1-L2" is almost, if not exactly, as clear as "L1→L2" and less bug-prone.
+When you invoke an L1 handler with this system call, no L1→L2 message
+// Consumed by who?
+is consumed.
+
+// "This enables" what does "this" refer to? The fact that no L1-L2 message is consumed?
+This enables an L1 handler to use the logic inside a different L1 handler from an existing class.
+
+[TIP]
+====
+It is recommended to raise this system call only inside an L1 handler.
+====
+
+.Arguments
+
+`_class_hash_`:: The hash of the class you want to use.
+`_function_selector_`:: A selector for an L1 handler function within that class.
+`_calldata_size_`:: The size, in bytes, of the calldata.
+`_calldata_`:: The calldata.
+
+.Return values
+
+`_retdata_size_`:: The size, in bytes, of the return data.
+`_retdata_`:: The return data.
+
+.Common library
+
+link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/common/syscalls.cairo[`syscalls.cairo`]
+
+.Example
+
+???
+
+[id="send_message_to_L1"]
+== `send_message_to_L1`
+
+.Syntax
+
+[source,cairo,subs="+quotes,+macros"]
+----
+func send_message_to_l1{syscall_ptr : felt*}(
+    __to_address__ : felt, __payload_size__ : felt, __payload__ : felt*
+)
+----
+
+.Description
+
+Tells the StarkNet OS to send a message to L1.
+
+This system call includes the message parameters as part of the proof's output. This system call exposes these parameters to the StarkNet Core contract on L1 once the state update, including the transaction, is received.
+
+For more information, see StarkNet's xref:L1-L2_Communication/messaging-mechanism.adoc[messaging mechanism].
+
+.Arguments
+
+`_to_address_`:: The recipient's L1 address.
+`_payload_size_`:: The size of the message payload.
+`_payload_`:: A pointer to an array containing the contents of the message.
+
+.Return values
+
+None.
+
+.Common library
+
+link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/common/messages.cairo[messages.cairo]
+
+.Example
+
+The following example sends a message whose content is `(1,2)` to the L1 contract whose address is `3423542542364363`.
+
+[source,cairo,subs="+quotes,+macros"]
+----
+let payload = alloc()
+payload[0] = 1
+payload[1] = 2
+send_message_to_l1(3423542542364363,2,payload)
+----
+
+
+[id="storage_read"]
+== `storage_read`
+
+.Syntax
+
+[source,cairo,subs="+quotes,+macros"]
+----
+func storage_read{syscall_ptr : felt*}(__address__ : felt) -> (__value__ : felt)
+----
+
+.Description
+
+Gets the value of a key in the storage of the calling contract.
+
+This system call expects the key to be read.
+// To be read by whom, for what reason? What does it mean that the system call "expects" the key to be read? What does the system call actually do with the value once it gets it? Or maybe a better question is why would I be running the syscall to get the key's value?
+
+[NOTE]
+====
+This system call provides low-level access to the contract's storage. To access the storage at a higher level access, xref:./contract-storage.adoc#storage_variables[storage variables].
+// What does low-level and high-level mean here?
+====
+
+.Arguments
+
+`_address_`:: The address of the calling contract.
+
+.Return values
+
+`_value_`:: The value of the key.
 
 .Common library
 
@@ -391,11 +509,20 @@ func storage_write{syscall_ptr : felt*}(address : felt, value : felt)
 
 Sets the value of a key in the storage of the calling contract. This system call execpts a key and the value to be written.
 
-Note that this is considered a low level access to the contract's storage, for a more high level syntax see xref:./contract-storage.adoc#storage_variables[storage variables]
+[NOTE]
+====
+This system call provides low-level access to the contract's storage. To access the storage at a higher level access, xref:./contract-storage.adoc#storage_variables[storage variables].
+// What does low-level and high-level mean here?
+====
 
 .Arguments
 
+`_address_`:: The address of the calling contract.
+`_value_`:: The value of the key.
+
 .Return values
+
+None.
 
 .Common library
 
@@ -404,69 +531,3 @@ link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412
 .Example
 
 ???
-
-[id="get_transaction_info"]
-== `get_transaction_info`
-
-Gets information about the original transaction.
-
-.Syntax
-
-[source,cairo,subs="+quotes,+macros"]
-----
-func get_tx_info{syscall_ptr : felt*}() -> (tx_info : TxInfo*)
-----
-
-.Description
-
-Gets the following information about the original transaction:
-
-* the intended StarkNet OS version
-* the address of the account who initiated this transaction
-* the maximum fee that is allowed to be charged for the inclusion of this transaction
-* the signature of the account who initiated this transaction
-* the transaction's hash
-* the intended chain id
-
-.Arguments
-
-.Return values
-
-.Common library
-
-link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L301[`syscalls.cairo`]
-
-.Example
-
-???
-
-[id="emit_event"]
-== `emit_event`
-
-Emits an event with a given set of keys and data.
-
-.Syntax
-
-[source,cairo,subs="+quotes,+macros"]
-----
-func emit_event{syscall_ptr : felt*}(keys_len : felt, keys : felt*, data_len : felt, data : felt*)
-----
-
-.Description
-
-Emits an event with a given set of keys and data.
-
-For more information, and for a higher level syntax for emitting events, see xref:../Events/starknet-events.adoc[StarkNet events].
-
-.Arguments
-
-.Return values
-
-.Common library
-
-link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L301[`syscalls.cairo`]
-
-.Example
-
-???
-
