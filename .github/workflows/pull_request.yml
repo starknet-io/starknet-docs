@@ -68,16 +68,9 @@ jobs:
           name: starknet-site
           path: ${{ steps.pr.outputs.PR_ID }}
 
-#      - name: make dir
-#        run: mkdir -p ${{ steps.pr.outputs.PR_ID }}
-#      - name: copy files
-#        run: cp -r public_html ${{ steps.pr.outputs.PR_ID }}
-#      - name: copy folder
-#        run: cp -r ${{ steps.pr.outputs.PR_ID }}/ public_html/
-
       - name: PR preview details
         run:
-          echo "you can preview the PR at https://starknet-community-libs.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/public_html/documentation/"
+          echo "you can preview the PR at https://starknet-community-libs.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/documentation/"
 
       - name: "Commit changes"
         run: |
@@ -94,11 +87,11 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.USER_TOKEN }}"
 
-#      - name: Deploy to GitHub Pages
-#        uses: peaceiris/actions-gh-pages@v3
-#        with:
-#          github_token: ${{ secrets.USER_TOKEN }}
-#          publish_dir: ./public_html
-#          user_name: ${{ secrets.USER_NAME }}
-#          user_email: ${{ secrets.USER_EMAIL }}
-
+      - name: "Send comment to PR"
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          echo "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://starknet-community-libs.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/documentation/ ." >/tmp/comment
+          gh pr comment ${{ github.event.pull_request.number }} -F /tmp/comment
+        env:
+          GITHUB_TOKEN: "${{ secrets.USER_TOKEN }}"
