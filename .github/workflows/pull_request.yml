@@ -28,6 +28,14 @@ jobs:
           PREVIEW_PATH=previews/${PR_ID}
           echo "::set-output name=PR_ID::${PR_ID}"
 
+      - name: "Upload generated content"
+        uses: actions/upload-artifact@v2
+        with:
+          name: starknet-site
+          if-no-files-found: error
+          path: public_html
+            _site
+
 #      - name: Copy build folder to remote
 #        uses: appleboy/scp-action@master
 #        with:
@@ -36,22 +44,59 @@ jobs:
 #          password: ${{ secrets.STAGING_PASS }}
 #          source: "public_html"
 #          target: "test-reviews"
-      - name: make dir
+  publish:
+    name: Test deploy
+    runs-on: ubuntu-latest
+    needs:
+      - test-deploy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          ref: gh-pages
+          github_token: ${{ secrets.USER_TOKEN }}
+
+      - name: "Remove preview build directory"
+        run: rm -rf ${{ steps.pr.outputs.PR_ID }}
+      - name: "Create preview build directory"
         run: mkdir -p ${{ steps.pr.outputs.PR_ID }}
-      - name: copy files
-        run: cp -r public_html ${{ steps.pr.outputs.PR_ID }}
-      - name: copy folder
-        run: cp -r ${{ steps.pr.outputs.PR_ID }}/ public_html/
+      - name: "Download generated content"
+        uses: actions/download-artifact@v2
+        with:
+          name: starknet-site
+          path: ${{ steps.pr.outputs.PR_ID }}
+
+#      - name: make dir
+#        run: mkdir -p ${{ steps.pr.outputs.PR_ID }}
+#      - name: copy files
+#        run: cp -r public_html ${{ steps.pr.outputs.PR_ID }}
+#      - name: copy folder
+#        run: cp -r ${{ steps.pr.outputs.PR_ID }}/ public_html/
 
       - name: PR preview details
         run:
           echo "you can preview the PR at https://starknet-community-libs.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/public_html/documentation/"
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.USER_TOKEN }}
-          publish_dir: ./public_html
-          user_name: ${{ secrets.USER_NAME }}
-          user_email: ${{ secrets.USER_EMAIL }}
+      - name: "Commit changes"
+        run: |
+          set -euo pipefail
+          git config user.name "GitHub Actions"
+          git config user.email noreply@github.com
+          git add .
+          if ! git diff-index --quiet HEAD --; then
+            git commit -m "Adding or updating preview build for PR ${{ steps.pr.outputs.PR_ID }}
+            git push --set-upstream origin gh-pages
+          else
+            echo -e "No changes found."
+          fi
+        env:
+          GITHUB_TOKEN: "${{ secrets.USER_TOKEN }}"
+
+#      - name: Deploy to GitHub Pages
+#        uses: peaceiris/actions-gh-pages@v3
+#        with:
+#          github_token: ${{ secrets.USER_TOKEN }}
+#          publish_dir: ./public_html
+#          user_name: ${{ secrets.USER_NAME }}
+#          user_email: ${{ secrets.USER_EMAIL }}
 
