@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>A simple Automated Market Maker (AMM) :: StarkNet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/hello-starknet/amm/">
+    <link rel="prev" href="../account_setup/">
+    <link rel="next" href="../calling_contracts/">
+    <meta name="generator" content="Antora 3.1.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-129128514-2"></script>
+    <script>function gtag(){dataLayer.push(arguments)};window.dataLayer=window.dataLayer||[];gtag('js',new Date());gtag('config','UA-129128514-2')</script>
+    <script>var uiRootPath = '../../_'</script>
+    <link rel="icon" href="../../favicon.ico" type="image/x-icon">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <img src="/_/img/starknet_logo.png" alt="StarkNet logo" width="40px" height="40px" style="margin-top: 10px">
+      <a class="navbar-item" href="https://docs.starknet.io"><strong>StarkNet documentation</strong></a>
+      <!-- <span class="vertical-separator-header">|</span> -->
+        <div class="navbar-item search hide-for-print">
+          <div id="search-field" class="field">
+            <input id="search-input" type="text" placeholder="Search the docs" >
+          </div>
+        </div>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://starknet.io/docs/hello_starknet/index.html#hello-starknet" target="_blank">Hello StarkNet</a>
+        <a class="navbar-item" href="https://community.starknet.io/" target="_blank">StarkNet Community Forum</a>
+        <a class="navbar-item" href="http://starknet.io/discord" target="_blank">Discord</a>
+      </div>
+    </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="hello-starknet" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../writing_contracts/">Hello StarkNet</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="../writing_contracts/">Writing contracts</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../account_setup/">Account setup</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="./">AMM</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../calling_contracts/">Calling contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../user_auth/">User authentication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../deploying_from_contracts/">Deploying from contracts</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Hello StarkNet</span>
+    <span class="version">default</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../writing_contracts/">Hello StarkNet</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../writing_contracts/">default</a>
+        </li>
+      </ul>
+    </li>
+    <li class="component">
+      <a class="title" href="../../documentation/">StarkNet</a>
+      <ul class="versions">
+        <li class="version is-latest">
+          <a href="../../documentation/">default</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../../documentation/" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../writing_contracts/">Hello StarkNet</a></li>
+    <li><a href="../writing_contracts/">Writing contracts</a></li>
+    <li><a href="./">AMM</a></li>
+  </ul>
+</nav>
+<!--
+  <div class="edit-this-page"><a href="https://github.com/starknet-community-libs/hello-starknet/edit/main/modules/ROOT/pages/amm.adoc">Edit this Page</a></div>
+  -->
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">A simple Automated Market Maker (AMM)</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>In this tutorial, we’ll review the code of a simple AMM, written as a StarkNet contract, highlighting specific implementation details. The contract is deployable (and is actually deployed – <a href="https://amm-demo.starknet.starkware.co/">go check it out</a>) to the StarkNet Alpha release, and will be seamlessly deployable and compatible with future StarkNet releases.</p>
+</div>
+<div class="paragraph">
+<p>We will start by describing the scope of the contract functionality, and after that, we will dive into the implementation. Finally, we’ll show how to invoke the demo contract’s functionality on the StarkNet Alpha environment with a few concrete examples.</p>
+</div>
+<div class="paragraph">
+<p>Before we begin, you can review the full contract code <a href="https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/apps/amm_sample/amm_sample.cairo">here</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="amm_implementation_in_starknet_alphahttpswww_cairo_lang_orgdocshello_starknetamm_htmlamm_implementation_in_starknet_alpha"><a class="anchor" href="#amm_implementation_in_starknet_alphahttpswww_cairo_lang_orgdocshello_starknetamm_htmlamm_implementation_in_starknet_alpha"></a>AMM implementation in StarkNet Alphahttps://www.cairo-lang.org/docs/hello_starknet/amm.html#amm-implementation-in-starknet-alpha[]</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In order to understand the basics of automated market making, you may refer to the <a href="https://uniswap.org/docs/v2/protocol-overview/how-uniswap-works/">Uniswap docs</a>, or check the short description in our previous <a href="https://www.cairo-lang.org/docs/hello_cairo/amm.html#amm-cairo"><span class="std  std-ref">AMM tutorial</span></a>. For those who read the previous tutorial – comparing the code written there to the contract code in this tutorial can be a fun exercise that highlights the power of StarkNet.</p>
+</div>
+<div class="paragraph">
+<p>In this sample contract we’ll limit our functionality to exactly one pool to be managed by the contract. We will implement a straightforward swap functionality (in both directions), using a simple curve; i.e. the constant product formula (<span class="math  notranslate  nohighlight">\(x \cdot y = k\)</span>). We will refer to the tokens managed by the AMM as token A and token B, which may play the role of any type of fungible tokens.</p>
+</div>
+<div class="paragraph">
+<p>Some aspects that ideally would’ve been implemented in other contracts, e.g. minting tokens in an ERC20 contract, are mocked in this sample contract for simplicity. This functionality is not inherent to AMM functionality.</p>
+</div>
+<div class="paragraph">
+<p>What’s important to learn from this example is how StarkNet allows the developer of the application to focus on specifying their verifiable business logic and constraints, all while enjoying massive scalability without compromising security. In other words, only the invocable functions and the relevant storage variables used to maintain the state of the application need to be specified by the developer.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="the_amm_statehttpswww_cairo_lang_orgdocshello_starknetamm_htmlthe_amm_state"><a class="anchor" href="#the_amm_statehttpswww_cairo_lang_orgdocshello_starknetamm_htmlthe_amm_state"></a>The AMM statehttps://www.cairo-lang.org/docs/hello_starknet/amm.html#the-amm-state[]</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Let’s dive into the implementation. We’ll start by reviewing how we maintain the state of the AMM.</p>
+</div>
+<div class="paragraph">
+<p>We require two dedicated fields in order to maintain the state:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>The pool balance – how much liquidity is available in the pool, per token.</p>
+</li>
+<li>
+<p>The account balances – how many tokens of each type are kept in each account. As explained above, this is only needed for this release, and will be replaced with regular ERC-20 interactions in the future.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>In StarkNet, the programmatic model for storage is a simple key/value store. We can define a <a href="https://www.cairo-lang.org/docs/hello_starknet/intro.html#storage-var"><span class="std  std-ref">storage variable</span></a>, so reading from and writing to storage is simply a matter of calling <code>read</code> and <code>write</code> on that variable.</p>
+</div>
+<div class="paragraph">
+<p>For the pool balance we define:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>@storage_var
+func pool_balance(token_type: felt) -&gt; (balance: felt) {
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The pool balance is defined as a mapping between the token type (predefined constants) and the balance available in the pool for that token type.</p>
+</div>
+<div class="paragraph">
+<p>For the account balances we define:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>@storage_var
+func account_balance(account_id: felt, token_type: felt) -&gt; (
+    balance: felt
+) {
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The account balance is defined as a mapping from the account id and token type to the balance available in that account, for the given token type.</p>
+</div>
+<div class="paragraph">
+<p>We write a function that allows us to <em>modify</em> the balance of a given token type in a given account:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>func modify_account_balance{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(account_id: felt, token_type: felt, amount: felt) {
+    let (current_balance) = account_balance.read(
+        account_id, token_type
+    );
+    tempvar new_balance = current_balance + amount;
+    assert_nn_le(new_balance, BALANCE_UPPER_BOUND - 1);
+    account_balance.write(
+        account_id=account_id,
+        token_type=token_type,
+        value=new_balance,
+    );
+    return ();
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The logic is fairly straightforward:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Retrieve the existing account balance.</p>
+</li>
+<li>
+<p>Calculate the new balance.</p>
+</li>
+<li>
+<p>Assert it is not negative and doesn’t exceed the upper bound.</p>
+</li>
+<li>
+<p>Write it to the account balance storage variable.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Note that this also covers cases where we subtract an amount from the balance.</p>
+</div>
+<div class="paragraph">
+<p>As mentioned before, we assume that the reader is familiar with Cairo syntax. For those who are not, we briefly mention the relevant concepts.</p>
+</div>
+<div class="paragraph">
+<p>First, we observe the usage of <a href="https://www.cairo-lang.org/docs/how_cairo_works/builtins.html#implicit-arguments"><span class="std  std-ref">implicit arguments</span></a> passed to this function inside the curly brackets. Specifically, the arguments necessary for the assertion and storage operations. Wherever such functionality is used, we’ll pass these implicit arguments.</p>
+</div>
+<div class="paragraph">
+<p>Next, the assert functions used here are imported from Cairo’s <a href="https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/cairo/common/math.cairo">common math library</a> . In this case, <code>assert_nn_le</code> asserts that the first argument is nonnegative and is less than or equal to the second argument.</p>
+</div>
+<div class="paragraph">
+<p>To allow a user to read the balance of an account, we define the following <a href="https://www.cairo-lang.org/docs/hello_starknet/intro.html#view-decorator"><span class="std  std-ref">view function</span></a>:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>@view
+func get_account_token_balance{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(account_id: felt, token_type: felt) -&gt; (balance: felt) {
+    return account_balance.read(account_id, token_type);
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Similarly, for the pool balance:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>func set_pool_token_balance{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(token_type: felt, balance: felt) {
+    assert_nn_le(balance, BALANCE_UPPER_BOUND - 1);
+    pool_balance.write(token_type, balance);
+    return ();
+}
+
+@view
+func get_pool_token_balance{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(token_type: felt) -&gt; (balance: felt) {
+    return pool_balance.read(token_type);
+}</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="swapping_tokens"><a class="anchor" href="#swapping_tokens"></a>Swapping tokens</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>We now proceed to the primary functionality of the contract – swapping tokens.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>@external
+func swap{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(token_from: felt, amount_from: felt) -&gt; (amount_to: felt) {
+    let (account_id) = get_caller_address();
+
+    // Verify that token_from is either TOKEN_TYPE_A or TOKEN_TYPE_B.
+    assert (token_from - TOKEN_TYPE_A) * (token_from - TOKEN_TYPE_B) = 0;
+
+    // Check that the requested amount_from is valid.
+    assert_nn_le(amount_from, BALANCE_UPPER_BOUND - 1);
+
+    // Check that the user has enough funds.
+    let (account_from_balance) = get_account_token_balance(
+        account_id=account_id, token_type=token_from
+    );
+    assert_le(amount_from, account_from_balance);
+
+    // Execute the actual swap.
+    let (token_to) = get_opposite_token(token_type=token_from);
+    let (amount_to) = do_swap(
+        account_id=account_id,
+        token_from=token_from,
+        token_to=token_to,
+        amount_from=amount_from,
+    );
+
+    return (amount_to=amount_to);
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>swap</code> receives as inputs the account id, the token type and an amount of the token to be swapped. The function starts by verifying the validity of the inputs:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The token type is a valid token, by asserting that it is equal to one of the pool’s token types.</p>
+</li>
+<li>
+<p>The amount requested to be swapped is valid – it does not exceed the upper bound, and the account has enough funds to swap.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>If all checks pass, we proceed to execute the swap.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>func get_opposite_token(token_type: felt) -&gt; (t: felt) {
+    if (token_type == TOKEN_TYPE_A) {
+        return (t=TOKEN_TYPE_B);
+    } else {
+        return (t=TOKEN_TYPE_A);
+    }
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>get_opposite_token</code> receives as input a token type and returns the opposite token type.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>func do_swap{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(
+    account_id: felt,
+    token_from: felt,
+    token_to: felt,
+    amount_from: felt,
+) -&gt; (amount_to: felt) {
+    alloc_locals;
+
+    // Get pool balance.
+    let (local amm_from_balance) = get_pool_token_balance(
+        token_type=token_from
+    );
+    let (local amm_to_balance) = get_pool_token_balance(
+        token_type=token_to
+    );
+
+    // Calculate swap amount.
+    let (local amount_to, _) = unsigned_div_rem(
+        amm_to_balance * amount_from,
+        amm_from_balance + amount_from,
+    );
+
+    // Update token_from balances.
+    modify_account_balance(
+        account_id=account_id,
+        token_type=token_from,
+        amount=-amount_from,
+    );
+    set_pool_token_balance(
+        token_type=token_from,
+        balance=amm_from_balance + amount_from,
+    );
+
+    // Update token_to balances.
+    modify_account_balance(
+        account_id=account_id,
+        token_type=token_to,
+        amount=amount_to,
+    );
+    set_pool_token_balance(
+        token_type=token_to, balance=amm_to_balance - amount_to
+    );
+    return (amount_to=amount_to);
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The logic of the swapping itself is fairly straightforward:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Retrieve the amount of tokens available in the pool, per token type.</p>
+</li>
+<li>
+<p>Calculate the amount of tokens of the opposite type to be received by the pool.</p>
+</li>
+<li>
+<p>Update the account balances for both tokens, as well as the pool’s balances.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Most of this implementation invokes functions we described earlier (<code>get_pool_token_balance</code>, <code>modify_account_balance</code>, <code>set_pool_token_balance</code>). Note that the calculation of the amount to be swapped essentially implements the AMM constant product formula:</p>
+</div>
+<div class="paragraph">
+<p><span class="math  notranslate  nohighlight">\(\text{amount\_to} = \frac{\text{amm\_to\_balance} \cdot \text{amount\_from}}{\text{amm\_from\_balance} + \text{amount\_from}}\)</span></p>
+</div>
+<div class="paragraph">
+<p>We use Cairo’s common math library, specifically <code>unsigned_div_rem</code> (unsigned division with remainder) to calculate the amount of tokens to be received.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="initializing_the_amm"><a class="anchor" href="#initializing_the_amm"></a>Initializing the AMM</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>As we don’t have contract interaction and liquidity providers in this version, we will now define how to initialize the AMM – both the liquidity pool itself and some account balances.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>@external
+func init_pool{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(token_a: felt, token_b: felt) {
+    assert_nn_le(token_a, POOL_UPPER_BOUND - 1);
+    assert_nn_le(token_b, POOL_UPPER_BOUND - 1);
+
+    set_pool_token_balance(token_type=TOKEN_TYPE_A, bal=token_a);
+    set_pool_token_balance(token_type=TOKEN_TYPE_B, bal=token_b);
+
+    return ();
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Initializing the pool is a simple function that accepts two balances for the tokens (A,B), and sets them using the <code>set_pool_token_balance</code> function we defined above: The <code>POOL_UPPER_BOUND</code> is a constant defined to prevent overflows.</p>
+</div>
+<div class="paragraph">
+<p>Having this function defined, we proceed to add demo tokens to an account:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>@external
+func add_demo_token{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(token_a_amount: felt, token_b_amount: felt) {
+    let (account_id) = get_caller_address();
+
+    // Make sure the account's balance is much smaller than
+    // the pool init balance.
+    assert_nn_le(token_a_amount, ACCOUNT_BALANCE_BOUND - 1);
+    assert_nn_le(token_b_amount, ACCOUNT_BALANCE_BOUND - 1);
+
+    modify_account_balance(
+        account_id=account_id,
+        token_type=TOKEN_TYPE_A,
+        amount=token_a_amount,
+    );
+    modify_account_balance(
+        account_id=account_id,
+        token_type=TOKEN_TYPE_B,
+        amount=token_b_amount,
+    );
+
+    return ();
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that here we add another business constraint (for demo purposes) that the account is capped at some number calculated as a ratio from the pool cap. Specifically, <code>ACCOUNT_BALANCE_BOUND</code> is defined as <code>POOL_UPPER_BOUND</code> divided by <code>1000</code>, so the cap for an account is <code>1/1000</code> that of a pool. All constants are defined at the top of the contract file.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="interaction_examples"><a class="anchor" href="#interaction_examples"></a>Interaction examples</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>We can now explore a few examples that demonstrate contract interaction using the StarkNet CLI.</p>
+</div>
+<div class="paragraph">
+<p>Set the environment variable <code>STARKNET_NETWORK</code> as follows:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>export STARKNET_NETWORK=alpha-goerli</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>For this section you need the <a href="https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/apps/amm_sample/amm_sample.cairo">amm_sample.cairo</a> contract code.</p>
+</div>
+<div class="paragraph">
+<p>To generate the ABI of the contract, enter the following commands:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>starknet-compile amm_sample.cairo \
+    --output amm_sample_compiled.json \
+    --abi amm_sample_abi.json</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>First, declare and deploy the contract as explained in <a href="https://www.cairo-lang.org/docs/hello_starknet/intro.html#declare-contract"><span class="std  std-ref">Declare the contract on the StarkNet testnet</span></a> and <a href="https://www.cairo-lang.org/docs/hello_starknet/intro.html#deploy-contract"><span class="std  std-ref">Deploy the contract on the StarkNet testnet</span></a>. Denote the new deployed contract address by <code>${AMM_ADDRESS}</code>.</p>
+</div>
+<div class="paragraph">
+<p>We assume you are familiar with the StarkNet CLI. If this is not the case, we recommend you review <a href="https://www.cairo-lang.org/docs/hello_starknet/intro.html#starknet-intro"><span class="std  std-ref">this section</span></a>.</p>
+</div>
+<div class="paragraph">
+<p>Query the pool’s balance using:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>starknet call \
+    --address ${AMM_ADDRESS} \
+    --abi amm_sample_abi.json \
+    --function get_pool_token_balance \
+    --inputs 1</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In response, you should get the pool’s balance of token 1.</p>
+</div>
+<div class="paragraph">
+<p>Now let’s add some tokens to our account’s balance. (Note that every interaction with a contract through a function invocation must be done using an account. To set up an account, see <a href="https://www.cairo-lang.org/docs/hello_starknet/account_setup.html#account-setup"><span class="std  std-ref">Setting up a StarkNet account</span></a>.)</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>starknet invoke \
+    --address ${AMM_ADDRESS} \
+    --abi amm_sample_abi.json \
+    --function add_demo_token \
+    --inputs 1000 1000</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now that we have some tokens, we can use the AMM and swap <code>500</code> units of token 1 in exchange for some units of token 2 (the exact number depends on the current balance of the pool).</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>starknet invoke \
+    --address ${AMM_ADDRESS} \
+    --abi amm_sample_abi.json \
+    --function swap \
+    --inputs 1 500</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can now query the account’s balance of token 2 after the swap (replace <code>${ACCOUNT_ADDRESS}</code> with your account address):</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>starknet call \
+    --address ${AMM_ADDRESS} \
+    --abi amm_sample_abi.json \
+    --function get_account_token_balance \
+    --inputs ${ACCOUNT_ADDRESS} 2</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that the change will only take effect after the <code>swap</code> transaction’s status is either <code>ACCEPTED_ON_L2</code> or <code>ACCEPTED_ON_L1</code>.</p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="../account_setup/">Account setup</a></span>
+  <span class="next"><a href="../calling_contracts/">Calling contracts</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+<!--  <p>&copy; 2020-2022 StarkWare Industries</p> -->
+</footer>
+<script src="../../_/js/site.js"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+<script src="../../_/js/vendor/lunr.js"></script>
+<script src="../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../.." data-snippet-length="100" data-stylesheet="../../_/css/search.css"></script>
+<script async src="../../search-index.js"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  messageStyle: "none",
+  tex2jax: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]], ignoreClass: "nostem|nolatexmath" },
+  asciimath2jax: { delimiters: [["\\$", "\\$"]], ignoreClass: "nostem|noasciimath" },
+  TeX: { equationNumbers: { autoNumber: "none" } }
+})
+MathJax.Hub.Register.StartupHook("AsciiMath Jax Ready", function () {
+  MathJax.InputJax.AsciiMath.postfilterHooks.Add(function (data, node) {
+    if ((node = data.script.parentNode) && (node = node.parentNode) && node.classList.contains("stemblock")) {
+      data.math.root.display = "block"
+    }
+    return data
+  })
+})
+</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
+  </body>
+</html>

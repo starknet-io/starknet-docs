@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Calling another contract :: StarkNet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/hello-starknet/calling_contracts/">
+    <link rel="prev" href="../amm/">
+    <link rel="next" href="../user_auth/">
+    <meta name="generator" content="Antora 3.1.1">
+    <link rel="stylesheet" href="../../_/css/site.css">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-129128514-2"></script>
+    <script>function gtag(){dataLayer.push(arguments)};window.dataLayer=window.dataLayer||[];gtag('js',new Date());gtag('config','UA-129128514-2')</script>
+    <script>var uiRootPath = '../../_'</script>
+    <link rel="icon" href="../../favicon.ico" type="image/x-icon">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <img src="/_/img/starknet_logo.png" alt="StarkNet logo" width="40px" height="40px" style="margin-top: 10px">
+      <a class="navbar-item" href="https://docs.starknet.io"><strong>StarkNet documentation</strong></a>
+      <!-- <span class="vertical-separator-header">|</span> -->
+        <div class="navbar-item search hide-for-print">
+          <div id="search-field" class="field">
+            <input id="search-input" type="text" placeholder="Search the docs" >
+          </div>
+        </div>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://starknet.io/docs/hello_starknet/index.html#hello-starknet" target="_blank">Hello StarkNet</a>
+        <a class="navbar-item" href="https://community.starknet.io/" target="_blank">StarkNet Community Forum</a>
+        <a class="navbar-item" href="http://starknet.io/discord" target="_blank">Discord</a>
+      </div>
+    </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="hello-starknet" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../writing_contracts/">Hello StarkNet</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="../writing_contracts/">Writing contracts</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../account_setup/">Account setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../amm/">AMM</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="./">Calling contracts</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../user_auth/">User authentication</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../deploying_from_contracts/">Deploying from contracts</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Hello StarkNet</span>
+    <span class="version">default</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../writing_contracts/">Hello StarkNet</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../writing_contracts/">default</a>
+        </li>
+      </ul>
+    </li>
+    <li class="component">
+      <a class="title" href="../../documentation/">StarkNet</a>
+      <ul class="versions">
+        <li class="version is-latest">
+          <a href="../../documentation/">default</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../../documentation/" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../writing_contracts/">Hello StarkNet</a></li>
+    <li><a href="./">Calling contracts</a></li>
+  </ul>
+</nav>
+<!--
+  <div class="edit-this-page"><a href="https://github.com/starknet-community-libs/hello-starknet/edit/main/modules/ROOT/pages/calling_contracts.adoc">Edit this Page</a></div>
+  -->
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Calling another contract</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>A contract function may invoke an external function of another contract.</p>
+</div>
+<div class="paragraph">
+<p>Start by deploying the example contract in <code>starknet_intro</code> (the
+compilation and deployment instructions can be found at
+<code>the bottom of the page &lt;compile_contract&gt;</code>). Denote the address of
+this contract by <code>BALANCE_CONTRACT</code>.</p>
+</div>
+<div class="paragraph">
+<p>In order to call this contract from another contract, define an
+interface by copying the declarations of the external functions:</p>
+</div>
+<div class="paragraph">
+<p>cairo call_contract_interface</p>
+</div>
+<div class="paragraph">
+<p>@contract_interface namespace IBalanceContract \{ func
+increase_balance(amount: felt) \{ }</p>
+</div>
+<div class="quoteblock">
+<blockquote>
+<div class="paragraph">
+<p>func get_balance() &#8594; (res: felt) \{ }</p>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>}</p>
+</div>
+<div class="paragraph">
+<p>Note that the body of the functions and the implicit arguments should be
+removed from the definitions.</p>
+</div>
+<div class="paragraph">
+<p>You can use <code>IBalanceContract.increase_balance()</code> and
+<code>IBalanceContract.get_balance()</code> to invoke these functions on another
+contract. For example:</p>
+</div>
+<div class="paragraph">
+<p>cairo call_contract_code</p>
+</div>
+<div class="paragraph">
+<p>@external func call_increase_balance\{syscall_ptr: felt*,
+range_check_ptr}( contract_address: felt, amount: felt ) \{
+IBalanceContract.increase_balance( contract_address=contract_address,
+amount=amount ); return (); }</p>
+</div>
+<div class="paragraph">
+<p>@view func call_get_balance\{syscall_ptr: felt*, range_check_ptr}(
+contract_address: felt ) &#8594; (res: felt) \{ let (res) =
+IBalanceContract.get_balance( contract_address=contract_address );
+return (res=res); }</p>
+</div>
+<div class="paragraph">
+<p>Note that calling a function of another contract requires passing one
+additional argument before the function&#8217;s original arguments&#8201;&#8212;&#8201;the
+address of the called contract. For example,
+<code>IBalanceContract.increase_balance</code> gets two arguments:
+<code>contract_address</code> and <code>amount</code> (rather than just <code>amount</code>). In
+addition, the <code>syscall_ptr</code> and the <code>range_check_ptr</code> implicit
+arguments are required.</p>
+</div>
+<div class="paragraph">
+<p>Create a file named <code>proxy_contract.cairo</code> containing the interface
+declaration and the two functions <code>call_increase_balance()</code> and
+<code>call_get_balance()</code>, and deploy the contract. Denote the address of
+the new contract by <code>PROXY_CONTRACT</code>.</p>
+</div>
+<div class="paragraph">
+<p>Now, invoke <code>call_increase_balance</code> with <code>BALANCE_CONTRACT</code> as the
+value of the <code>contract_address</code> argument. Make sure you replace
+<code>PROXY_CONTRACT</code> and <code>BALANCE_CONTRACT</code> with the addresses you got
+when you deployed the two contracts:</p>
+</div>
+<div class="paragraph">
+<p>bash invoke_call_increase_balance</p>
+</div>
+<div class="paragraph">
+<p>starknet invoke --address PROXY_CONTRACT --abi proxy_contract_abi.json
+--function call_increase_balance --inputs BALANCE_CONTRACT 10000</p>
+</div>
+<div class="paragraph">
+<p>This will increase the balance stored in <code>BALANCE_CONTRACT</code>. Note that
+in our case, the storage of <code>PROXY_CONTRACT</code> will not be affected.</p>
+</div>
+<div class="paragraph">
+<p>Wait until the transaction is added to a block, and then check the
+balance using the following two ways:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Directly through <code>BALANCE_CONTRACT</code></p>
+<div class="paragraph">
+<p>bash calling_contracts_get_balance_a</p>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>starknet call --address BALANCE_CONTRACT --abi balance_contract_abi.json
+--function get_balance
+. Indirectly through <code>PROXY_CONTRACT</code></p>
+</div>
+<div class="paragraph">
+<p>+
+bash calling_contracts_get_balance_b</p>
+</div>
+<div class="paragraph">
+<p>starknet call --address PROXY_CONTRACT --abi proxy_contract_abi.json
+--function call_get_balance --inputs BALANCE_CONTRACT</p>
+</div>
+<div class="paragraph">
+<p>Both commands should return <code>10000</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="getting_the_current_contracts_address"><a class="anchor" href="#getting_the_current_contracts_address"></a>Getting the current contract&#8217;s address</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can get the current contract&#8217;s address by using the
+<code>get_contract_address()</code> library function.</p>
+</div>
+<div class="paragraph">
+<p>cairo get_contract_address</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">from starkware.starknet.common.syscalls import (</dt>
+<dd>
+<p>get_contract_address,</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>)</p>
+</div>
+<div class="paragraph">
+<p>let (contract_address) = get_contract_address();</p>
+</div>
+<div class="paragraph">
+<p>The above is similar to <code>address(this)</code> in Solidity.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="library_calls"><a class="anchor" href="#library_calls"></a>Library calls</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A library call is a way to invoke a function declared in a given
+contract class within the context of the calling contract. It is
+possible to invoke a function defined in any previously declared class
+(in particular, a class of any contract which is already deployed).</p>
+</div>
+<div class="paragraph">
+<p>Storage-changing operations in the invoked function will change the
+state of the calling contract. Similarly, <code>get_caller_address()</code> and
+<code>get_contract_address()</code> will return the same value they would have
+returned if they were called from the <strong>calling</strong> function.</p>
+</div>
+<div class="paragraph">
+<p>Note that a library call is very similar to Ethereum&#8217;s delegate call.
+The difference is that a delegate call requires a deployed contract,
+while a library call works with a contract class (the contract instance
+is not used in Ethereum&#8217;s delegate call anyway).</p>
+</div>
+<div class="paragraph">
+<p>To perform a library call, use the contract interface as above, but
+prepend <code>library_call_</code> to the function name and pass a class hash
+instead of a contract address.</p>
+</div>
+<div class="paragraph">
+<p>cairo library_call_increase_balance</p>
+</div>
+<div class="paragraph">
+<p>func balance() &#8594; (res: felt) \{ }</p>
+</div>
+<div class="paragraph">
+<p>@external func increase_my_balance\{syscall_ptr: felt*,
+range_check_ptr}( class_hash: felt, amount: felt ) \{ // Increase the
+local balance variable using a function from a // different contract
+class by using a library call.
+IBalanceContract.library_call_increase_balance( class_hash=class_hash,
+amount=amount ); return (); }</p>
+</div>
+<div class="paragraph">
+<p>Modify the file <code>proxy_contract.cairo</code> you created earlier by adding
+the code above. Recompile and redeploy this new version of the proxy
+contract, and denote its address by <code>PROXY_CONTRACT</code>.</p>
+</div>
+<div class="paragraph">
+<p>Next, declare a library class, in our case&#8201;&#8212;&#8201;the already compiled
+example balance contract.</p>
+</div>
+<div class="paragraph">
+<p>bash declare_balance_contract_class</p>
+</div>
+<div class="paragraph">
+<p>starknet declare --contract balance_contract_compiled.json</p>
+</div>
+<div class="paragraph">
+<p>Denote the hash of this class by <code>BALANCE_CLASS_HASH</code>. Now, invoke
+<code>increase_my_balance</code>:</p>
+</div>
+<div class="paragraph">
+<p>bash invoke_increase_my_balance</p>
+</div>
+<div class="paragraph">
+<p>starknet invoke --address PROXY_CONTRACT --abi proxy_contract_abi.json
+--function increase_my_balance --inputs BALANCE_CLASS_HASH 12321</p>
+</div>
+<div class="paragraph">
+<p>This increases the balance in the proxy contract&#8217;s storage using the
+<code>increase_balance()</code> function of the balance contract class. Unlike a
+regular contract call, here the balance of the calling contract (rather
+than of another contract) is modified.</p>
+</div>
+<div class="paragraph">
+<p>Note: you can use library call to invoke a function that changes a
+storage variable which wasn&#8217;t defined in the calling contract. In such a
+case, the new corresponding storage variable will be created in the
+calling contract, but it won&#8217;t be easily accessible (you can access it
+by a second library call, or directly using <code>storage_read()</code>).</p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="../amm/">AMM</a></span>
+  <span class="next"><a href="../user_auth/">User authentication</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+<!--  <p>&copy; 2020-2022 StarkWare Industries</p> -->
+</footer>
+<script src="../../_/js/site.js"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+<script src="../../_/js/vendor/lunr.js"></script>
+<script src="../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../.." data-snippet-length="100" data-stylesheet="../../_/css/search.css"></script>
+<script async src="../../search-index.js"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  messageStyle: "none",
+  tex2jax: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]], ignoreClass: "nostem|nolatexmath" },
+  asciimath2jax: { delimiters: [["\\$", "\\$"]], ignoreClass: "nostem|noasciimath" },
+  TeX: { equationNumbers: { autoNumber: "none" } }
+})
+MathJax.Hub.Register.StartupHook("AsciiMath Jax Ready", function () {
+  MathJax.InputJax.AsciiMath.postfilterHooks.Add(function (data, node) {
+    if ((node = data.script.parentNode) && (node = node.parentNode) && node.classList.contains("stemblock")) {
+      data.math.root.display = "block"
+    }
+    return data
+  })
+})
+</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
+  </body>
+</html>
