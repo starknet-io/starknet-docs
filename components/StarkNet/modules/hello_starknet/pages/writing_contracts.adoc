@@ -1,0 +1,371 @@
+[id="writing-starknet-contracts"]
+= Writing StarkNet contracts
+
+In order to follow this tutorial you should have basic familiarity with
+writing Cairo code. For example, you can read the first few pages of the
+link:https://starknet.io/docs/hello_cairo/index.html#hello-cairo[Hello,
+Cairo] tutorial. You should also
+link:https://starknet.io/docs/quickstart.html#quickstart[set up your
+environment] and make sure your installed Cairo version is at least
+`0.10.0` (you can check your version by running
+`cairo-compile --version`).
+
+[id="your-first-contract"]
+== Your first contract
+
+Let’s start by looking at the following StarkNet contract:
+
+[source,cairo]
+----
+// Declare this file as a StarkNet contract.
+%lang starknet
+
+from starkware.cairo.common.cairo_builtins import HashBuiltin
+
+// Define a storage variable.
+@storage_var
+func balance() -> (res: felt) {
+}
+
+// Increases the balance by the given amount.
+@external
+func increase_balance{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(amount: felt) {
+    let (res) = balance.read();
+    balance.write(res + amount);
+    return ();
+}
+
+// Returns the current balance.
+@view
+func get_balance{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}() -> (res: felt) {
+    let (res) = balance.read();
+    return (res=res);
+}
+----
+
+The first line, `%lang starknet` declares that this file should be
+read as a StarkNet contract file, rather than a regular Cairo program
+file. Trying to compile this file with `cairo-compile` will result in
+a compilation error. Compiling StarkNet contracts should be done with
+the `starknet-compile` command as we shall see below.
+
+Next, we have an import statement. If you’re not familiar with this type
+of statement, refer to the
+link:https://starknet.io/docs/hello_cairo/index.html#hello-cairo[Hello,
+Cairo] tutorial. Note that you don’t need to explicitly use the
+`%builtins` directive in StarkNet contracts.
+
+The first new primitive that we see in the code is `@storage_var`.
+Unlike a Cairo program, which is stateless, StarkNet contracts have a
+state, called “the contract’s storage”. Transactions invoked on such
+contracts may modify this state, in a way defined by the contract.
+
+The `@storage_var` decorator declares a variable which will be kept as
+part of this storage. In our case, this variable consists of a single
+`felt`, called `balance`. To use this variable, we will use the
+`balance.read()` and `balance.write()` functions which are
+automatically created by the `@storage_var` decorator. When a contract
+is deployed, all its storage cells are initialized to zero. In
+particular, all storage variables are initially zero.
+
+StarkNet contracts have no `main()` function. Instead, each function
+may be annotated as an external function (using the `@external`
+decorator). External functions may be called by the users of StarkNet,
+and by other contracts (see
+xref:calling_contracts.adoc[Calling another contract]).
+
+In our case, the contract has two external functions:
+`increase_balance` reads the current value of balance from the
+storage, adds the given amount to it and writes the new value back to
+storage. `get_balance` simply reads the balance and returns its value.
+
+The `@view` decorator is identical to the `@external` decorator. The
+only difference is that the method is _annotated_ as a method that only
+queries the state rather than modifying it. Note that in the current
+version this is not enforced by the compiler.
+
+Consider the three implicit arguments: `syscall_ptr`, `pedersen_ptr`
+and `range_check_ptr`:
+
+. You should be familiar with `pedersen_ptr`, which allows to compute
+the Pedersen hash function, and `range_check_ptr`, which allows to
+compare integers. But it seems that the contract doesn’t use any hash
+function or integer comparison, so why are they needed? The reason is
+that storage variables require these implicit arguments in order to
+compute the actual memory address of this variable. This may not be
+needed in simple variables such as `balance`, but with maps (see
+xref:user_auth.adoc#storage-maps[Storage maps])
+computing the Pedersen hash is part of what `read()` and `write()`
+do.
+. `syscall_ptr` is a new primitive, unique to StarkNet contracts (it
+doesn’t exist in Cairo). `syscall_ptr` allows the code to invoke
+system calls. It is also an implicit argument of `read()` and
+`write()` (required, in this case, because storage access is done
+using system calls).
+
+=== Programming without hints
+
+If you are familiar with programming in Cairo, you are probably familiar
+with link:https://starknet.io/docs/how_cairo_works/hints.html#hints[hints].
+Unfortunately (or fortunately, depending on your personal opinion),
+using hints in StarkNet is not possible. This is due to the fact that
+the contract’s author, the user invoking the function and the operator
+running it are likely to be different entities:
+
+. The operator cannot run arbitrary Python code due to security
+concerns.
+. The user won’t be able to verify that the operator ran the hint the
+contract author supplied.
+. It is not possible to prove that nondeterministic code _failed_, since
+you should either prove you executed the hint or prove that for any hint
+the code would’ve failed.
+
+For efficiency, hints are still used by the standard library functions,
+through a mechanism of whitelisting (a function is whitelisted by an
+operator if it agrees to run it, when it knows that it can run its hints
+successfully. It doesn’t have to do with the question of the soundness
+of the library function, which should be verified separately). This
+means that not all the Cairo library functions can be used when writing
+a StarkNet contract. See
+https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/security/starknet_common.cairo[here]
+for a list of the whitelisted library functions.
+
+[id="compile-the-contract"]
+== Compile the contract
+
+Create a file named `contract.cairo` and copy the contract code into
+it.
+
+Run the following command to compile your contract:
+
+[source,bash]
+----
+starknet-compile contract.cairo \
+    --output contract_compiled.json \
+    --abi contract_abi.json
+----
+
+As mentioned above, we can’t compile StarkNet contract using
+`cairo-compile` and we need to use `starknet-compile` instead.
+
+[id="the-contract-s-abi"]
+== The contract’s ABI
+
+Let’s examine the file `contract_abi.json` that was created during the
+contract’s compilation:
+
+[source,json]
+----
+[
+    {
+        "inputs": [
+            {
+                "name": "amount",
+                "type": "felt"
+            }
+        ],
+        "name": "increase_balance",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "get_balance",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]
+----
+
+The ABI file contains a list of all the callable functions and their
+expected inputs.
+
+[id="declare-the-contract-on-the-starknet-testnet"]
+== Declare the contract on the StarkNet testnet
+
+In order to instruct the CLI to work with the StarkNet testnet you
+should either pass `--network=alpha-goerli` on every use, or set the
+`STARKNET_NETWORK` environment variable as follows:
+
+[source,bash]
+----
+export STARKNET_NETWORK=alpha-goerli
+----
+
+Unlike Ethereum, StarkNet distinguishes between a contract class and a
+contract instance. A contract class represents the code of a contract
+(but with no state), while a contract instance represents a specific
+instance of the class, with its own state.
+
+Run the following command to declare your contract class on the StarkNet
+testnet:
+
+[source,bash]
+----
+starknet declare --contract contract_compiled.json
+----
+
+The output should look like:
+
+[source,bash]
+----
+Declare transaction was sent.
+Contract class hash: 0x1e2208b571b2cb68908f37a196ed5e391c8933a6db23bb3939acedee40d9b8a
+Transaction hash: 0x762e166dd3326b2e263eb5bcfdccd225dc88e067fdf7c92cf8ce5e4ea01f9f1
+----
+
+You can see here the class hash of your new contract. You’ll need this
+class hash in order to deploy an instance of the contract using the
+xref:deploying_from_contracts.adoc[deploy
+system call].
+
+== Deploy the contract on the StarkNet testnet
+
+[IMPORTANT]
+====
+The alpha release is an experimental release. Newer
+versions may require a reset of the network’s state (resulting in the
+removal of the deployed contracts).
+====
+
+Run the following command to deploy your contract on the StarkNet
+testnet (replace `$CLASS_HASH` with the class hash you got from
+`starknet declare`):
+
+[source,bash]
+----
+starknet deploy --class_hash $CLASS_HASH
+----
+
+The output should look like:
+
+[source,bash]
+----
+Invoke transaction for contract deployment was sent.
+Contract address: 0x039564c4f6d9f45a963a6dc8cf32737f0d51a08e446304626173fd838bd70e1c
+Transaction hash: 0x125e4bc5251af8ee2664ea0d1495b36c593f25f78f1a78f637a3f7aafa9e22
+----
+
+You can see here the address of your new contract. You’ll need this
+address to interact with the contract.
+
+Set the following environment variable:
+
+[source,bash]
+----
+# The deployment address of the previous contract.
+export CONTRACT_ADDRESS="<address of the previous contract>"
+----
+
+== Interact with the contract
+
+Run the following command to invoke the `increase_balance()`:
+
+[source,bash]
+----
+starknet invoke \
+    --address ${CONTRACT_ADDRESS} \
+    --abi contract_abi.json \
+    --function increase_balance \
+    --inputs 1234
+----
+
+The result should look like:
+
+[source,bash]
+----
+Invoke transaction was sent.
+Contract address: 0x039564c4f6d9f45a963a6dc8cf32737f0d51a08e446304626173fd838bd70e1c
+Transaction hash: 0x69d743891f69d758928e163eff1e3d7256752f549f134974d4aa8d26d5d7da8
+----
+
+[NOTE]
+====
+Due to the use of fees in StarkNet, every interaction with a
+contract through a function invocation must be done using an account. To
+set up an account, see
+xref:account_setup.adoc[Setting up a
+StarkNet account].
+====
+
+The following command allows you to query the transaction status based
+on the transaction hash that you got (here you’ll have to replace
+`TRANSACTION_HASH` with the transaction hash printed by
+`starknet invoke`):
+
+[source,bash]
+----
+starknet tx_status --hash TRANSACTION_HASH
+[source,bash]
+----
+
+The result should look like:
+
+[source,json]
+----
+{
+    "block_hash": "0x0",
+    "tx_status": "ACCEPTED_ON_L2"
+}
+----
+
+The possible statuses are:
+
+* `NOT_RECEIVED`: The transaction has not been received yet (i.e., not
+written to storage).
+* `RECEIVED`: The transaction was received by the sequencer.
+* `PENDING`: The transaction passed the validation and entered the
+pending block.
+* `REJECTED`: The transaction failed validation and thus was skipped.
+* `ACCEPTED_ON_L2`: The transaction passed the validation and entered
+an actual created block.
+* `ACCEPTED_ON_L1`: The transaction was accepted on-chain.
+
+== Query the balance
+
+Use the following command to query the current balance:
+
+----
+starknet call \
+    --address ${CONTRACT_ADDRESS} \
+    --abi contract_abi.json \
+    --function get_balance
+----
+
+The result should be:
+
+[source,bash]
+----
+1234
+----
+
+[NOTE]
+====
+To see the up-to-date balance you should wait until the
+`increase_balance` transaction status is at least `ACCEPTED_ON_L2`
+(that is, `ACCEPTED_ON_L2` or `ACCEPTED_ON_L1`). Otherwise, you’ll
+see the balance before the execution of the `increase_balance`
+transaction (that is, 0).
+====
+
+In the next section we will describe other CLI functions for querying
+StarkNet’s state. Note that while `deploy` and `invoke` affect
+StarkNet’s state, all other functions are read-only. In particular,
+using `call` instead of `invoke` on a function that may change the
+state, such as `increase_balance`, will return the result of the
+function without actually applying it to the current state, allowing the
+user to dry-run before committing to a state update.
