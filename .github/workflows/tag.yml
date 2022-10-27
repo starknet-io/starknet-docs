@@ -28,11 +28,11 @@ jobs:
           echo "::set-output name=tag::${GITHUB_REF##*/}"
           echo "::set-output name=file::${GITHUB_REPOSITORY#*/}-${GITHUB_REF##*/}"
 
-#      - name: Generate Site
-#        run: npx antora playbook.yml
+      - name: Generate Site
+        run: yarn generate
 
-#      - name: Zip artifacts
-#        run: zip -r ${{ steps.get-release-data.outputs.file }}.zip package.json CHANGELOG.md
+      - name: Zip artifacts
+        run: zip -r ${{ steps.get-release-data.outputs.file }}.zip package.json CHANGELOG.md
 
       - name: Create release
         uses: softprops/action-gh-release@v1
@@ -45,12 +45,5 @@ jobs:
           files: |
             ${{ steps.get-release-data.outputs.file }}.zip
 
-
-#      - name: Deploy to GitHub Pages
-#        if: ${{ !contains(steps.get-release-data.outputs.tag, '-') }}
-#        uses: peaceiris/actions-gh-pages@v3
-#        with:
-#          github_token: ${{ secrets.USER_TOKEN }}
-#          publish_dir: ./build
-#          user_name: ${{ secrets.USER_NAME }}
-#          user_email: ${{ secrets.USER_EMAIL }}
+      - name: scp upload to staging site
+        run: sshpass -p ${{ secrets.STAGING_PASS }} scp -o 'StrictHostKeyChecking no' -r public_html/ ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_IP }}:~/
