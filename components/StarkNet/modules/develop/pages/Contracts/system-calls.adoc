@@ -70,8 +70,8 @@ Deploys a new instance of a previously declared class.
 
 `_class_hash_`:: The class hash of the contract to be deployed
 `_contract_address_salt_`:: The salt, an arbitrary value provided by the sender, used in the computation of the xref:Contracts/contract-address.adoc[contract's address].
-`_constructor_calldata_size_`:: The size, in bytes, of the constructor's calldata.
-`_constructor_calldata_`:: The constructor's calldata.
+`_constructor_calldata_size_`:: The number of arguments to pass to the constructor, equal to the number of felts in `_constructor_calldata_`.
+`_constructor_calldata_`:: The constructor's calldata. An array of felts.
 
 .Return values
 
@@ -103,10 +103,10 @@ For more information, and for a higher level syntax for emitting events, see xre
 
 .Arguments
 
-`_keys_len_`:: ???
-`_keys_`:: ???
-`_data_len_`:: ???
-`_data_`:: ???
+`_keys_len_`:: The number of keys in the event. Analogous to Ethereum's event topics, you can use the link:https://github.com/starkware-libs/starknet-specs/blob/c270b8170684bb09741672a7a4ae5003670c3f43/api/starknet_api_openrpc.json#L569RPC[starknet_getEvents] method to filter these keys.
+`_keys_`:: The event's keys
+`_data_len_`:: The number of data elements in the event.
+`_data_`:: The event's data
 
 .Return values
 
@@ -118,9 +118,19 @@ link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412
 
 .Example
 
-???
+The following example emits an event with two keys, the https://www.cairo-lang.org/docs/how_cairo_works/consts.html#short-string-literals[strings] `status` and `deposit` and three data elements: `1`, `2`, and `3`.
 
-
+[source,cairo]
+----
+let (keys : felt*) = alloc()
+assert keys[0] = 'status'
+assert keys[1] = 'deposit'
+let (data : felt*) = alloc()
+assert data[0] = 1
+assert data[1] = 2
+assert data[2] = 3
+emit_event(2, keys, 3, data)
+----
 
 [id="get_block_number"]
 == `get_block_number`
@@ -140,7 +150,6 @@ None.
 
 .Return values
 
-// Does "the number of the block" mean "the block's ID"???
 `_block_number_`:: The number of the block in which the transaction is executed.
 
 .Common library
@@ -194,15 +203,15 @@ func get_caller_address{syscall_ptr : felt*}() -> (__caller_address__ : felt)
 
 .Description
 
-Returns the address of the calling contract or 0 if the transaction was not initiated by another contract.
+Returns the address of the calling contract, or 0 if the call was not initiated by another contract.
 
 .Arguments
 
-// It appears that __caller_address__ is something you need to supply when calling this function, but the description says that __call_address__ is actually what is returned. Is the `->` in the syntax actually supposed to indicate that __caller_address__ is the return value?
+None.
 
 .Return values
 
-`__caller_address__`:: The address of the calling contract, or 0 if the transaction was not initiated by another contract.
+`__caller_address__`:: The address of the calling contract, or 0 if the call was not initiated by another contract.
 
 .Common library
 
@@ -296,8 +305,7 @@ None.
 
 `_tx_info_`:: The following information about the original transaction:
 +
-// What does "intended" mean?
-* the intended StarkNet OS version
+* the version of the transaction
 * the address of the account that initiated this transaction
 * the maximum fee that is allowed to be charged for the inclusion of this transaction
 * the signature of the account that initiated this transaction
@@ -367,20 +375,13 @@ func library_call_l1_handler{syscall_ptr : felt*}(
 
 .Description
 
-// Does this call the function/L1 handler, or tell the OS to call function/L1 handler???
 Calls the requested function or an L1 handler in any previously declared class.
 
-Same as `library_call`, but also allows calling an L1 handler, which is not directly callable otherwise. For more information, see StarkNet's xref:L1-L2_Communication/messaging-mechanism.adoc#l1–l2_messages[messaging mechanism].
+Same as the `library_call` system call, but also enables you to call an L1 handler that cannot otherwise be called directly. For more information, see StarkNet's xref:L1-L2_Communication/messaging-mechanism.adoc#l1-l2_messages[messaging mechanism].
 
-// Who would consume the l1->L2 message?
-// How do you enter the symbol "→"
-// Once more, I'm against using a symbol that is outside the normal set of characters we use day to day. I think that "L1-L2" is almost, if not exactly, as clear as "L1→L2" and less bug-prone.
-When you invoke an L1 handler with this system call, no L1→L2 message
-// Consumed by who?
-is consumed.
+When you invoke an L1 handler with this system call, the recipient address does not consume an L1->L2 message.
 
-// "This enables" what does "this" refer to? The fact that no L1-L2 message is consumed?
-This enables an L1 handler to use the logic inside a different L1 handler from an existing class.
+This system call enables an L1 handler to use the logic inside an L1 handler that is different from an existing class.
 
 [TIP]
 ====
@@ -421,7 +422,7 @@ func send_message_to_l1{syscall_ptr : felt*}(
 
 .Description
 
-Tells the StarkNet OS to send a message to L1.
+Sends a message to L1.
 
 This system call includes the message parameters as part of the proof's output. This system call exposes these parameters to the StarkNet Core contract on L1 once the state update, including the transaction, is received.
 
