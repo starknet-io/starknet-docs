@@ -1,0 +1,112 @@
+[id="default-entry-point"]
+= Default entry point
+
+There are cases where the contract entry points are not known in advance. The most prominent example is a delegate proxy that forwards calls to an implementation contract class. Such a proxy can be implemented using the `__default__` entry point as follows:
+
+[source,cairo]
+----
+%lang starknet
+%builtins pedersen range_check bitwise
+
+from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.starknet.common.syscalls import library_call
+
+// The implementation class hash.
+@storage_var
+func implementation_hash() -> (class_hash: felt) {
+}
+
+@constructor
+func constructor{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(implementation_hash_: felt) {
+    implementation_hash.write(value=implementation_hash_);
+    return ();
+}
+
+@external
+@raw_input
+@raw_output
+func __default__{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(selector: felt, calldata_size: felt, calldata: felt*) -> (
+    retdata_size: felt, retdata: felt*
+) {
+    let (class_hash) = implementation_hash.read();
+
+    let (retdata_size: felt, retdata: felt*) = library_call(
+        class_hash=class_hash,
+        function_selector=selector,
+        calldata_size=calldata_size,
+        calldata=calldata,
+    );
+    return (retdata_size=retdata_size, retdata=retdata);
+}
+----
+
+The `__default__` entry point is executed if the requested selector does not match any of the entry point selectors in the contract.
+
+The `@raw_input` decorator instructs the compiler to pass the calldata as-is to the entry point, instead of parsing it into the requested arguments. In such a case, the function’s arguments must be `selector`, `calldata_size` and `calldata`. Similarly, the `@raw_output` decorator instructs the compiler not to process the function’s return value. In such a case the function’s return values must be `retdata_size` and `retdata`.
+
+Let’s see how to use this proxy pattern.
+
+Create a file named `balance_contract.cairo` containing the example balance contract code in xref:intro.adoc[Writing StarkNet contracts] and declare that contract as explained in xref:intro.adoc#declare-the-contract-on-the-starknet-testnet[Declare the contract on the StarkNet testnet]. Denote the hash of the new contract class by `$\{BALANCE_CLASS_HASH\}`.
+
+Now, create a file named `delegate_proxy.cairo` containing the proxy code above, and declare the contract the same way as `balance_contract.cairo`. Denote the hash of the new contract by `$\{DELEGATE_PROXY_CLASS_HASH\}`, and deploy that contract, with the value `$\{BALANCE_CLASS_HASH\}` for the `implementation_hash_` constructor argument:
+
+[source,shell]
+----
+starknet deploy \
+    --class_hash ${DELEGATE_PROXY_CLASS_HASH} \
+    --inputs ${BALANCE_CLASS_HASH}
+----
+
+Denote the address of the new contract by `PROXY_CONTRACT`.
+
+Invoke the `increase_balance` function of the balance class through the delegate proxy contract. You should use the address of the *delegate proxy contract* with the ABI of the *implementation class*, which is where the invoked function is defined. The rest of the parameters are as expected – the inputs of the function.
+
+[source,shell]
+----
+starknet invoke \
+    --address PROXY_CONTRACT \
+    --abi balance_contract_abi.json \
+    --function increase_balance \
+    --inputs 10000
+----
+
+This will increase the balance stored in the proxy contract. Note that in our case, the implementation balance contract was only declared and not deployed, so it does not have storage of its own.
+
+In a similar way to `__default__`, the `__l1_default__` entry point is executed when an L1 handler is invoked but the requested selector is missing. This entry point in combination with the `library_call_l1_handler` system call can be used to forward L1 handlers as follows:
+
+[source,cairo]
+----
+from starkware.starknet.common.syscalls import (
+    library_call_l1_handler,
+)
+
+@l1_handler
+@raw_input
+func __l1_default__{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(selector: felt, calldata_size: felt, calldata: felt*) {
+    let (class_hash) = implementation_hash.read();
+
+    library_call_l1_handler(
+        class_hash=class_hash,
+        function_selector=selector,
+        calldata_size=calldata_size,
+        calldata=calldata,
+    );
+    return ();
+}
+----
+
+The `library_call_l1_handler` system call is similar to `library_call` except that it invokes an `l1_handler` entry point instead of an `external` entry point. The system call does not consume an L1 -> L2 message as in the typical use case, the relevant message is consumed by the L1 handler that issued the system call.
+
+Note that calling `library_call_l1_handler` outside of an L1 handler may be dangerous, as the called handler is likely to assume the appropriate message was consumed.

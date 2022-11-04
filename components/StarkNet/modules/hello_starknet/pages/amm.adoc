@@ -1,14 +1,16 @@
+[id="a-simple-automated-market-maker-amm"]
 = A simple Automated Market Maker (AMM)
 
-In this tutorial, we’ll review the code of a simple AMM, written as a StarkNet contract, highlighting specific implementation details. The contract is deployable (and is actually deployed – https://amm-demo.starknet.starkware.co/[go check it out]) to the StarkNet Alpha release, and will be seamlessly deployable and compatible with future StarkNet releases.
+In this tutorial, we’ll review the code of a simple AMM, written as a StarkNet contract, highlighting specific implementation details. The contract is deployable (and is actually deployed – https://amm-demo.starknet.starkware.co[go check it out]) to the StarkNet Alpha release, and will be seamlessly deployable and compatible with future StarkNet releases.
 
 We will start by describing the scope of the contract functionality, and after that, we will dive into the implementation. Finally, we’ll show how to invoke the demo contract’s functionality on the StarkNet Alpha environment with a few concrete examples.
 
 Before we begin, you can review the full contract code https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/apps/amm_sample/amm_sample.cairo[here].
 
-== AMM implementation in StarkNet Alphahttps://www.cairo-lang.org/docs/hello_starknet/amm.html#amm-implementation-in-starknet-alpha[]
+[id="amm-implementation-in-starknet-alpha"]
+== AMM implementation in StarkNet Alpha
 
-In order to understand the basics of automated market making, you may refer to the https://uniswap.org/docs/v2/protocol-overview/how-uniswap-works/[Uniswap docs], or check the short description in our previous https://www.cairo-lang.org/docs/hello_cairo/amm.html#amm-cairo[[.std .std-ref]#AMM tutorial#]. For those who read the previous tutorial – comparing the code written there to the contract code in this tutorial can be a fun exercise that highlights the power of StarkNet.
+In order to understand the basics of automated market making, you may refer to the https://uniswap.org/docs/v2/protocol-overview/how-uniswap-works/[Uniswap docs], or check the short description in our previous link:https://starknet.io/docs/hello_cairo/amm.html#amm-cairo#amm-cairo[AMM tutorial^]. For those who read the previous tutorial – comparing the code written there to the contract code in this tutorial can be a fun exercise that highlights the power of StarkNet.
 
 In this sample contract we’ll limit our functionality to exactly one pool to be managed by the contract. We will implement a straightforward swap functionality (in both directions), using a simple curve; i.e. the constant product formula ([.math .notranslate .nohighlight]#latexmath:[x \cdot y = k]#). We will refer to the tokens managed by the AMM as token A and token B, which may play the role of any type of fungible tokens.
 
@@ -16,7 +18,8 @@ Some aspects that ideally would’ve been implemented in other contracts, e.g. m
 
 What’s important to learn from this example is how StarkNet allows the developer of the application to focus on specifying their verifiable business logic and constraints, all while enjoying massive scalability without compromising security. In other words, only the invocable functions and the relevant storage variables used to maintain the state of the application need to be specified by the developer.
 
-== The AMM statehttps://www.cairo-lang.org/docs/hello_starknet/amm.html#the-amm-state[]
+[id="the-amm-state"]
+== The AMM state
 
 Let’s dive into the implementation. We’ll start by reviewing how we maintain the state of the AMM.
 
@@ -25,33 +28,36 @@ We require two dedicated fields in order to maintain the state:
 . The pool balance – how much liquidity is available in the pool, per token.
 . The account balances – how many tokens of each type are kept in each account. As explained above, this is only needed for this release, and will be replaced with regular ERC-20 interactions in the future.
 
-In StarkNet, the programmatic model for storage is a simple key/value store. We can define a https://www.cairo-lang.org/docs/hello_starknet/intro.html#storage-var[[.std .std-ref]#storage variable#], so reading from and writing to storage is simply a matter of calling `+read+` and `+write+` on that variable.
+In StarkNet, the programmatic model for storage is a simple key/value store. We can define a xref:/intro.adoc#storage-var[storage variable], so reading from and writing to storage is simply a matter of calling `read` and `write` on that variable.
 
 For the pool balance we define:
 
-....
+[source,cairo]
+----
 @storage_var
 func pool_balance(token_type: felt) -> (balance: felt) {
 }
-....
+----
 
 The pool balance is defined as a mapping between the token type (predefined constants) and the balance available in the pool for that token type.
 
 For the account balances we define:
 
-....
+[source,cairo]
+----
 @storage_var
 func account_balance(account_id: felt, token_type: felt) -> (
     balance: felt
 ) {
 }
-....
+----
 
 The account balance is defined as a mapping from the account id and token type to the balance available in that account, for the given token type.
 
 We write a function that allows us to _modify_ the balance of a given token type in a given account:
 
-....
+[source,cairo]
+----
 func modify_account_balance{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
@@ -69,7 +75,7 @@ func modify_account_balance{
     );
     return ();
 }
-....
+----
 
 The logic is fairly straightforward:
 
@@ -82,13 +88,14 @@ Note that this also covers cases where we subtract an amount from the balance.
 
 As mentioned before, we assume that the reader is familiar with Cairo syntax. For those who are not, we briefly mention the relevant concepts.
 
-First, we observe the usage of https://www.cairo-lang.org/docs/how_cairo_works/builtins.html#implicit-arguments[[.std .std-ref]#implicit arguments#] passed to this function inside the curly brackets. Specifically, the arguments necessary for the assertion and storage operations. Wherever such functionality is used, we’ll pass these implicit arguments.
+First, we observe the usage of link:https://starknet.io/docs/how_cairo_works/builtins.html#implicit-arguments[implicit arguments] passed to this function inside the curly brackets. Specifically, the arguments necessary for the assertion and storage operations. Wherever such functionality is used, we’ll pass these implicit arguments.
 
-Next, the assert functions used here are imported from Cairo’s https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/cairo/common/math.cairo[common math library] . In this case, `+assert_nn_le+` asserts that the first argument is nonnegative and is less than or equal to the second argument.
+Next, the assert functions used here are imported from Cairo’s https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/cairo/common/math.cairo[common math library] . In this case, `assert_nn_le` asserts that the first argument is nonnegative and is less than or equal to the second argument.
 
-To allow a user to read the balance of an account, we define the following https://www.cairo-lang.org/docs/hello_starknet/intro.html#view-decorator[[.std .std-ref]#view function#]:
+To allow a user to read the balance of an account, we define the following xref:intro.adoc#view-decorator[view function]:
 
-....
+[source,cairo]
+----
 @view
 func get_account_token_balance{
     syscall_ptr: felt*,
@@ -97,11 +104,12 @@ func get_account_token_balance{
 }(account_id: felt, token_type: felt) -> (balance: felt) {
     return account_balance.read(account_id, token_type);
 }
-....
+----
 
 Similarly, for the pool balance:
 
-....
+[source,cairo]
+----
 func set_pool_token_balance{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
@@ -120,13 +128,15 @@ func get_pool_token_balance{
 }(token_type: felt) -> (balance: felt) {
     return pool_balance.read(token_type);
 }
-....
+----
 
+[id="swapping-tokens"]
 == Swapping tokens
 
 We now proceed to the primary functionality of the contract – swapping tokens.
 
-....
+[source,cairo]
+----
 @external
 func swap{
     syscall_ptr: felt*,
@@ -158,28 +168,30 @@ func swap{
 
     return (amount_to=amount_to);
 }
-....
+----
 
-`+swap+` receives as inputs the account id, the token type and an amount of the token to be swapped. The function starts by verifying the validity of the inputs:
+`swap` receives as inputs the account id, the token type and an amount of the token to be swapped. The function starts by verifying the validity of the inputs:
 
 * The token type is a valid token, by asserting that it is equal to one of the pool’s token types.
 * The amount requested to be swapped is valid – it does not exceed the upper bound, and the account has enough funds to swap.
 
 If all checks pass, we proceed to execute the swap.
 
-....
+[source,cairo]
+----
 func get_opposite_token(token_type: felt) -> (t: felt) {
-    if (token_type == TOKEN_TYPE_A) {
+    if (token_type = TOKEN_TYPE_A) {
         return (t=TOKEN_TYPE_B);
     } else {
         return (t=TOKEN_TYPE_A);
     }
 }
-....
+----
 
-`+get_opposite_token+` receives as input a token type and returns the opposite token type.
+`get_opposite_token` receives as input a token type and returns the opposite token type.
 
-....
+[source,cairo]
+----
 func do_swap{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
@@ -228,7 +240,7 @@ func do_swap{
     );
     return (amount_to=amount_to);
 }
-....
+----
 
 The logic of the swapping itself is fairly straightforward:
 
@@ -236,17 +248,19 @@ The logic of the swapping itself is fairly straightforward:
 . Calculate the amount of tokens of the opposite type to be received by the pool.
 . Update the account balances for both tokens, as well as the pool’s balances.
 
-Most of this implementation invokes functions we described earlier (`+get_pool_token_balance+`, `+modify_account_balance+`, `+set_pool_token_balance+`). Note that the calculation of the amount to be swapped essentially implements the AMM constant product formula:
+Most of this implementation invokes functions we described earlier (`get_pool_token_balance`, `modify_account_balance`, `set_pool_token_balance`). Note that the calculation of the amount to be swapped essentially implements the AMM constant product formula:
 
 [.math .notranslate .nohighlight]#latexmath:[\text{amount\_to} = \frac{\text{amm\_to\_balance} \cdot \text{amount\_from}}{\text{amm\_from\_balance} + \text{amount\_from}}]#
 
-We use Cairo’s common math library, specifically `+unsigned_div_rem+` (unsigned division with remainder) to calculate the amount of tokens to be received.
+We use Cairo’s common math library, specifically `unsigned_div_rem` (unsigned division with remainder) to calculate the amount of tokens to be received.
 
+[id="initializing-the-amm"]
 == Initializing the AMM
 
 As we don’t have contract interaction and liquidity providers in this version, we will now define how to initialize the AMM – both the liquidity pool itself and some account balances.
 
-....
+[source,cairo]
+----
 @external
 func init_pool{
     syscall_ptr: felt*,
@@ -261,13 +275,14 @@ func init_pool{
 
     return ();
 }
-....
+----
 
-Initializing the pool is a simple function that accepts two balances for the tokens (A,B), and sets them using the `+set_pool_token_balance+` function we defined above: The `+POOL_UPPER_BOUND+` is a constant defined to prevent overflows.
+Initializing the pool is a simple function that accepts two balances for the tokens (A,B), and sets them using the `set_pool_token_balance` function we defined above: The `POOL_UPPER_BOUND` is a constant defined to prevent overflows.
 
 Having this function defined, we proceed to add demo tokens to an account:
 
-....
+[source,cairo]
+----
 @external
 func add_demo_token{
     syscall_ptr: felt*,
@@ -294,74 +309,81 @@ func add_demo_token{
 
     return ();
 }
-....
+----
 
-Note that here we add another business constraint (for demo purposes) that the account is capped at some number calculated as a ratio from the pool cap. Specifically, `+ACCOUNT_BALANCE_BOUND+` is defined as `+POOL_UPPER_BOUND+` divided by `+1000+`, so the cap for an account is `+1/1000+` that of a pool. All constants are defined at the top of the contract file.
+Note that here we add another business constraint (for demo purposes) that the account is capped at some number calculated as a ratio from the pool cap. Specifically, `ACCOUNT_BALANCE_BOUND` is defined as `POOL_UPPER_BOUND` divided by `1000`, so the cap for an account is `1/1000` that of a pool. All constants are defined at the top of the contract file.
 
+[id="interaction-examples"]
 == Interaction examples
 
 We can now explore a few examples that demonstrate contract interaction using the StarkNet CLI.
 
-Set the environment variable `+STARKNET_NETWORK+` as follows:
+Set the environment variable `STARKNET_NETWORK` as follows:
 
-....
+[source,shell]
+----
 export STARKNET_NETWORK=alpha-goerli
-....
+----
 
 For this section you need the https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/apps/amm_sample/amm_sample.cairo[amm_sample.cairo] contract code.
 
 To generate the ABI of the contract, enter the following commands:
 
-....
+[source,shell]
+----
 starknet-compile amm_sample.cairo \
     --output amm_sample_compiled.json \
     --abi amm_sample_abi.json
-....
+----
 
-First, declare and deploy the contract as explained in https://www.cairo-lang.org/docs/hello_starknet/intro.html#declare-contract[[.std .std-ref]#Declare the contract on the StarkNet testnet#] and https://www.cairo-lang.org/docs/hello_starknet/intro.html#deploy-contract[[.std .std-ref]#Deploy the contract on the StarkNet testnet#]. Denote the new deployed contract address by `+${AMM_ADDRESS}+`.
+First, declare and deploy the contract as explained in xref:intro.adoc#declare-the-contract-on-the-starknet-testnet[Declare the contract on the StarkNet testnet] and xref:intro.adoc#deploy-the-contract-on-the-starknet-testnet[Deploy the contract on the StarkNet testnet]. Denote the new deployed contract address by `$\{AMM_ADDRESS\}`.
 
-We assume you are familiar with the StarkNet CLI. If this is not the case, we recommend you review https://www.cairo-lang.org/docs/hello_starknet/intro.html#starknet-intro[[.std .std-ref]#this section#].
+We assume you are familiar with the StarkNet CLI. If this is not the case, we recommend you review xref:intro.adoc[this section].
 
 Query the pool’s balance using:
 
-....
+[source,shell]
+----
 starknet call \
     --address ${AMM_ADDRESS} \
     --abi amm_sample_abi.json \
     --function get_pool_token_balance \
     --inputs 1
-....
+----
 
 In response, you should get the pool’s balance of token 1.
 
-Now let’s add some tokens to our account’s balance. (Note that every interaction with a contract through a function invocation must be done using an account. To set up an account, see https://www.cairo-lang.org/docs/hello_starknet/account_setup.html#account-setup[[.std .std-ref]#Setting up a StarkNet account#].)
+Now let’s add some tokens to our account’s balance. (Note that every interaction with a contract through a function invocation must be done using an account. To set up an account, see xref:account_setup.adoc[Setting up a StarkNet account].)
 
-....
+[source,shell]
+----
 starknet invoke \
     --address ${AMM_ADDRESS} \
     --abi amm_sample_abi.json \
     --function add_demo_token \
     --inputs 1000 1000
-....
+----
 
-Now that we have some tokens, we can use the AMM and swap `+500+` units of token 1 in exchange for some units of token 2 (the exact number depends on the current balance of the pool).
+Now that we have some tokens, we can use the AMM and swap `500` units of token 1 in exchange for some units of token 2 (the exact number depends on the current balance of the pool).
 
-....
+[source,shell]
+----
 starknet invoke \
     --address ${AMM_ADDRESS} \
     --abi amm_sample_abi.json \
     --function swap \
     --inputs 1 500
-....
+----
 
-You can now query the account’s balance of token 2 after the swap (replace `+${ACCOUNT_ADDRESS}+` with your account address):
+You can now query the account’s balance of token 2 after the swap (replace `$\{ACCOUNT_ADDRESS\}` with your account address):
 
-....
+[source,shell]
+----
 starknet call \
     --address ${AMM_ADDRESS} \
     --abi amm_sample_abi.json \
     --function get_account_token_balance \
     --inputs ${ACCOUNT_ADDRESS} 2
-....
+----
 
-Note that the change will only take effect after the `+swap+` transaction’s status is either `+ACCEPTED_ON_L2+` or `+ACCEPTED_ON_L1+`.
+Note that the change will only take effect after the `swap` transaction’s status is either `ACCEPTED_ON_L2` or `ACCEPTED_ON_L1`.
