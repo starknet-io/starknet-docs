@@ -462,10 +462,14 @@
 <p>A contract function may invoke an external function of another contract.</p>
 </div>
 <div class="paragraph">
-<p>Start by deploying the example contract in <a href="../intro/" class="xref page">Writing StarkNet contracts</a> (the compilation and deployment instructions can be found at <a href="../intro/#compile-the-contract" class="xref page">the bottom of the page</a>). Denote the address of this contract by <code>BALANCE_CONTRACT</code>.</p>
+<p>Start by deploying the example contract in <a href="../intro/" class="xref page">Writing StarkNet contracts</a> (the
+compilation and deployment instructions can be found at
+<a href="../intro/#compile-the-contract" class="xref page">the bottom of the page</a>). Denote the address of this contract by
+<code>BALANCE_CONTRACT</code>.</p>
 </div>
 <div class="paragraph">
-<p>In order to call this contract from another contract, define an interface by copying the declarations of the external functions:</p>
+<p>In order to call this contract from another contract, define an interface by copying the declarations
+of the external functions:</p>
 </div>
 <div id="call_contract_interface" class="listingblock">
 <div class="content">
@@ -480,10 +484,12 @@ namespace IBalanceContract {
 </div>
 </div>
 <div class="paragraph">
-<p>Note that the body of the functions and the implicit arguments should be removed from the definitions.</p>
+<p>Note that the body of the functions and the implicit arguments should be removed
+from the definitions.</p>
 </div>
 <div class="paragraph">
-<p>You can use <code>IBalanceContract.increase_balance()</code> and <code>IBalanceContract.get_balance()</code> to invoke these functions on another contract. For example:</p>
+<p>You can use <code>IBalanceContract.increase_balance()</code> and <code>IBalanceContract.get_balance()</code> to invoke
+these functions on another contract. For example:</p>
 </div>
 <div id="call_contract_code" class="listingblock">
 <div class="content">
@@ -509,13 +515,21 @@ func call_get_balance{syscall_ptr: felt*, range_check_ptr}(
 </div>
 </div>
 <div class="paragraph">
-<p>Note that calling a function of another contract requires passing one additional argument before the function’s original arguments – the address of the called contract. For example, <code>IBalanceContract.increase_balance</code> gets two arguments: <code>contract_address</code> and <code>amount</code> (rather than just <code>amount</code>). In addition, the <code>syscall_ptr</code> and the <code>range_check_ptr</code> implicit arguments are required.</p>
+<p>Note that calling a function of another contract requires passing one additional argument before the
+function’s original arguments – the address of the called contract. For example,
+<code>IBalanceContract.increase_balance</code> gets two arguments: <code>contract_address</code> and <code>amount</code> (rather than
+just <code>amount</code>). In addition, the <code>syscall_ptr</code> and the <code>range_check_ptr</code> implicit arguments are
+required.</p>
 </div>
 <div class="paragraph">
-<p>Create a file named <code>proxy_contract.cairo</code> containing the interface declaration and the two functions <code>call_increase_balance()</code> and <code>call_get_balance()</code>, and deploy the contract. Denote the address of the new contract by <code>PROXY_CONTRACT</code>.</p>
+<p>Create a file named <code>proxy_contract.cairo</code> containing the interface declaration and the two functions
+<code>call_increase_balance()</code> and <code>call_get_balance()</code>, and deploy the contract. Denote the address of
+the new contract by <code>PROXY_CONTRACT</code>.</p>
 </div>
 <div class="paragraph">
-<p>Now, invoke <code>call_increase_balance</code> with <code>BALANCE_CONTRACT</code> as the value of the <code>contract_address</code> argument. Make sure you replace <code>PROXY_CONTRACT</code> and <code>BALANCE_CONTRACT</code> with the addresses you got when you deployed the two contracts:</p>
+<p>Now, invoke <code>call_increase_balance</code> with <code>BALANCE_CONTRACT</code> as the value of the <code>contract_address</code>
+argument. Make sure you replace <code>PROXY_CONTRACT</code> and <code>BALANCE_CONTRACT</code> with the addresses you got
+when you deployed the two contracts:</p>
 </div>
 <div id="invoke_call_increase_balance" class="listingblock">
 <div class="content">
@@ -527,10 +541,12 @@ func call_get_balance{syscall_ptr: felt*, range_check_ptr}(
 </div>
 </div>
 <div class="paragraph">
-<p>This will increase the balance stored in <code>BALANCE_CONTRACT</code>. Note that in our case, the storage of <code>PROXY_CONTRACT</code> will not be affected.</p>
+<p>This will increase the balance stored in <code>BALANCE_CONTRACT</code>. Note that in our case, the storage of
+<code>PROXY_CONTRACT</code> will not be affected.</p>
 </div>
 <div class="paragraph">
-<p>Wait until the transaction is added to a block, and then check the balance using the following two ways:</p>
+<p>Wait until the transaction is added to a block, and then check the balance using the following two
+ways:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
@@ -590,16 +606,23 @@ let (contract_address) = get_contract_address();</code></pre>
 <h2 id="library-calls"><a class="anchor" href="#library-calls"></a>Library calls</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>A library call is a way to invoke a function declared in a given contract class within the context of the calling contract. It is possible to invoke a function defined in any previously declared class (in particular, a class of any contract which is already deployed).</p>
+<p>A library call is a way to invoke a function declared in a given contract class within the context of
+the calling contract. It is possible to invoke a function defined in any previously declared class
+(in particular, a class of any contract which is already deployed).</p>
 </div>
 <div class="paragraph">
-<p>Storage-changing operations in the invoked function will change the state of the calling contract. Similarly, <code>get_caller_address()</code> and <code>get_contract_address()</code> will return the same value they would have returned if they were called from the <strong>calling</strong> function.</p>
+<p>Storage-changing operations in the invoked function will change the state of the calling contract.
+Similarly, <code>get_caller_address()</code> and <code>get_contract_address()</code> will return the same value they would
+have returned if they were called from the <strong>calling</strong> function.</p>
 </div>
 <div class="paragraph">
-<p>Note that a library call is very similar to Ethereum’s delegate call. The difference is that a delegate call requires a deployed contract, while a library call works with a contract class (the contract instance is not used in Ethereum’s delegate call anyway).</p>
+<p>Note that a library call is very similar to Ethereum’s delegate call. The difference is that a
+delegate call requires a deployed contract, while a library call works with a contract class (the
+contract instance is not used in Ethereum’s delegate call anyway).</p>
 </div>
 <div class="paragraph">
-<p>To perform a library call, use the contract interface as above, but prepend <code>library_call_</code> to the function name and pass a class hash instead of a contract address.</p>
+<p>To perform a library call, use the contract interface as above, but prepend <code>library_call_</code> to the
+function name and pass a class hash instead of a contract address.</p>
 </div>
 <div id="library_call_increase_balance" class="listingblock">
 <div class="content">
@@ -622,7 +645,8 @@ func increase_my_balance{syscall_ptr: felt*, range_check_ptr}(
 </div>
 </div>
 <div class="paragraph">
-<p>Modify the file <code>proxy_contract.cairo</code> you created earlier by adding the code above. Recompile and redeploy this new version of the proxy contract, and denote its address by <code>PROXY_CONTRACT</code>.</p>
+<p>Modify the file <code>proxy_contract.cairo</code> you created earlier by adding the code above. Recompile and
+redeploy this new version of the proxy contract, and denote its address by <code>PROXY_CONTRACT</code>.</p>
 </div>
 <div class="paragraph">
 <p>Next, declare a library class, in our case – the already compiled example balance contract.</p>
@@ -645,10 +669,15 @@ func increase_my_balance{syscall_ptr: felt*, range_check_ptr}(
 </div>
 </div>
 <div class="paragraph">
-<p>This increases the balance in the proxy contract’s storage using the <code>increase_balance()</code> function of the balance contract class. Unlike a regular contract call, here the balance of the calling contract (rather than of another contract) is modified.</p>
+<p>This increases the balance in the proxy contract’s storage using the <code>increase_balance()</code> function of
+the balance contract class. Unlike a regular contract call, here the balance of the calling contract
+(rather than of another contract) is modified.</p>
 </div>
 <div class="paragraph">
-<p>Note: you can use library call to invoke a function that changes a storage variable which wasn’t defined in the calling contract. In such a case, the new corresponding storage variable will be created in the calling contract, but it won’t be easily accessible (you can access it by a second library call, or directly using <code>storage_read()</code>).</p>
+<p>Note: you can use library call to invoke a function that changes a storage variable which wasn’t
+defined in the calling contract. In such a case, the new corresponding storage variable will be
+created in the calling contract, but it won’t be easily accessible (you can access it by a second
+library call, or directly using <code>storage_read()</code>).</p>
 </div>
 </div>
 </div>
