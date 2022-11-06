@@ -4,13 +4,18 @@
 [id="installation"]
 == Installation
 
-Follow the installation instructions for the `cairo-lang` package in link:https://starknet.io/docs/quickstart.html[Setting up the environment^].
+Follow the installation instructions for the `cairo-lang` package in
+link:https://starknet.io/docs/quickstart.html[Setting up the environment^].
 
 [id="setting-up-the-network"]
 == Setting up the network
 
-In this tutorial we will use the StarkNet CLI (command line interface) to interact with StarkNet. In order to instruct the CLI to work with the StarkNet testnet you may either add the `--network=alpha-goerli` flag to every command, or simply set the `STARKNET_NETWORK` environment variable as follows:
+In this tutorial we will use the StarkNet CLI (command line interface) to interact with StarkNet. In
+order to instruct the CLI to work with the StarkNet testnet you may either add
+the `--network=alpha-goerli` flag to every command, or simply set the `STARKNET_NETWORK` environment
+variable as follows:
 
+[#setup_starknet_env]
 [source,bash]
 ----
 export STARKNET_NETWORK=alpha-goerli
@@ -19,10 +24,16 @@ export STARKNET_NETWORK=alpha-goerli
 [id="choosing-a-wallet-provider"]
 == Choosing a wallet provider
 
-Unlike Ethereum, which distinguishes between Externally Owned Accounts (EOA) and contracts, StarkNet doesn’t have this distinction. Instead, an account is represented by a deployed contract that defines the account’s logic – most notably the signature scheme that controls who can issue transactions from it.
+Unlike Ethereum, which distinguishes between Externally Owned Accounts (EOA) and contracts, StarkNet
+doesn’t have this distinction. Instead, an account is represented by a deployed contract that defines
+the account’s logic – most notably the signature scheme that controls who can issue transactions
+from it.
 
-To interact with StarkNet, you will need to deploy an account contract. In this tutorial, we will use a slightly modified version of OpenZeppelin’s standard for EOA contract (at the moment, the signature is computed differently). Set the `STARKNET_WALLET` environment variable as follows:
+To interact with StarkNet, you will need to deploy an account contract. In this tutorial, we will use
+a slightly modified version of OpenZeppelin’s standard for EOA contract (at the moment, the signature
+is computed differently). Set the `STARKNET_WALLET` environment variable as follows:
 
+[#setup_wallet]
 [source,bash]
 ----
 export STARKNET_WALLET=starkware.starknet.wallets.open_zeppelin.OpenZeppelinAccount
@@ -33,6 +44,7 @@ export STARKNET_WALLET=starkware.starknet.wallets.open_zeppelin.OpenZeppelinAcco
 
 Run the following command to initialize an account:
 
+[#initialize_account]
 [source,bash]
 ----
 starknet new_account
@@ -40,9 +52,10 @@ starknet new_account
 
 The output should resemble:
 
+[#initialize_account_output]
 [source,bash]
 ----
-Account address: 0x78d796e87cfa496bffad27be9ed42f2709bd6e32a6366f842fdf38664a1412d
+Account address: $[ACCOUNT_ADDRESS_TRIMMED]
 Public key: ...
 Move the appropriate amount of funds to the account, and then deploy the account
 by invoking the 'starknet deploy_account' command.
@@ -54,15 +67,21 @@ differently.
 [id="transferring-goerli-eth-to-the-account"]
 == Transferring Goerli ETH to the account
 
-In order to pay the fees required to deploy the account and execute transactions on StarkNet, you need enough ETH in your L2 account.
+In order to pay the fees required to deploy the account and execute transactions on StarkNet, you
+need enough ETH in your L2 account.
 
 You can acquire L2 ETH in the following ways:
 
-. Use the https://faucet.goerli.starknet.io/[StarkNet Faucet] to get small amounts of ETH directly to the account you have just created. This should suffice for simple transactions.
-. Use StarkGate – the StarkNet L2 bridge (https://goerli.etherscan.io/address/0xc3511006C04EF1d78af4C8E0e74Ec18A6E64Ff9e[L1 contract] / https://goerli.starkgate.starknet.io[Web App]) to transfer your existing Goerli L1 ETH to and from the L2 account.
+. Use the https://faucet.goerli.starknet.io/[StarkNet Faucet] to get small amounts of ETH directly to
+the account you have just created. This should suffice for simple transactions.
+. Use StarkGate – the StarkNet L2 bridge
+(https://goerli.etherscan.io/address/0xc3511006C04EF1d78af4C8E0e74Ec18A6E64Ff9e[L1 contract] /
+https://goerli.starkgate.starknet.io[Web App]) to transfer your existing Goerli L1 ETH to and
+from the L2 account.
 
 To estimate the fee required to deploy the account, run the following command:
 
+[#deploy_account_simulate]
 [source,bash]
 ----
 starknet deploy_account --simulate
@@ -77,18 +96,23 @@ Gas usage: 8224
 Gas price: 100000000000 WEI
 ----
 
-Note: you can also run the following command:
+[NOTE]
+====
+You can also run the following command:
 
+[#deploy_account_estimate_fee]
 [source,bash]
 ----
 starknet deploy_account --estimate_fee
 ----
+====
 
 [id="deploying-an-account"]
 == Deploying an account
 
 To deploy the account you initialized, run the following command:
 
+[#setup_deploy_account]
 [source,bash]
 ----
 starknet deploy_account
@@ -96,6 +120,7 @@ starknet deploy_account
 
 The output should resemble:
 
+[#setup_deploy_account_output]
 [source,bash]
 ----
 Sent deploy account contract transaction.
@@ -104,11 +129,20 @@ Contract address: ...
 Transaction hash: ...
 ----
 
-You may also specify a name for your account using `--account=my_account` if you want to maintain multiple accounts. If not specified, the default account (named `+__default__+`) is used.
+You may also specify a name for your account using `--account=my_account` if you want to maintain
+multiple accounts. If not specified, the default account (named `+__default__+`) is used.
 
-The `STARKNET_WALLET` environment variable instructs the StarkNet CLI to use your account in the `starknet invoke` and `starknet call` commands. If you want to do a direct call to a contract, without passing through your account contract, you can pass the `--no_wallet` argument to the CLI, which overrides the `STARKNET_WALLET` variable.
+The `STARKNET_WALLET` environment variable instructs the StarkNet CLI to use your account in the
+`starknet invoke` and `starknet call` commands. If you want to do a direct call to a contract,
+without passing through your account contract, you can pass the `--no_wallet` argument to the CLI,
+which overrides the `STARKNET_WALLET` variable.
 
 [WARNING]
 ====
-Using the builtin wallet providers that are part of the `cairo-lang` package (`starkware.starknet.wallets...`) is *not secure* (for example, the private key may be kept unencrypted and without backup in your home directory). You should only use them if you’re not overly concerned with losing access to your accounts (for example, for testing purposes). In addition, they are not deployed using the proxy pattern, so they cannot be upgraded and may stop working in future versions of StarkNet.
+Using the builtin wallet providers that are part of the `cairo-lang` package
+(`starkware.starknet.wallets...`) is *not secure* (for example, the private key may be kept
+unencrypted and without backup in your home directory). You should only use them if you’re not overly
+concerned with losing access to your accounts (for example, for testing purposes). In addition, they
+are not deployed using the proxy pattern, so they cannot be upgraded and may stop working in future
+versions of StarkNet.
 ====
