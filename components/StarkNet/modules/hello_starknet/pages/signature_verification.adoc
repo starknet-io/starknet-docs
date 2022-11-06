@@ -1,13 +1,18 @@
 [id="signature-verification"]
 = Signature verification
 
-Cairo allows one to verify ECDSA signatures over the STARK-friendly elliptic curve (for technical details see https://docs.starkware.co/starkex-docs/crypto/stark-curve[STARK Curve]).
+Cairo allows one to verify ECDSA signatures over the STARK-friendly elliptic curve
+(for technical details see https://docs.starkware.co/starkex-docs/crypto/stark-curve[STARK Curve]).
 
-Note that in most cases the best way to handle authentication is by using account contracts, rather than verifying the signature directly in the contract. However, for the sake of completeness, in the following section we explain how to verify signatures in Cairo.
+Note that in most cases the best way to handle authentication is by using account contracts,
+rather than verifying the signature directly in the contract. However, for the sake of completeness,
+in the following section we explain how to verify signatures in Cairo.
 
-Consider the following implementation of `increase_balance()`, which can replace the corresponding function in the contract found under xref:user_auth.adoc[Adding User Authentication]:
+Consider the following implementation of `increase_balance()`, which can replace the corresponding
+function in the contract found under xref:user_auth.adoc[Adding User Authentication]:
 
-[source,cairo]
+[#signature_increase_balance]
+[source,python]
 ----
 from starkware.cairo.common.cairo_builtins import (
     HashBuiltin,
@@ -44,19 +49,25 @@ func increase_balance{
 }
 ----
 
-Note that in this example `user` is represented by a public key (and not the address of an account contract, as was the case in the original example).
+Note that in this example `user` is represented by a public key (and not the address of an account
+contract, as was the case in the original example).
 
-`verify_ecdsa_signature()` behaves like an assert – in case the signature is invalid, the function will revert the entire transaction.
+`verify_ecdsa_signature()` behaves like an assert – in case the signature is invalid, the function
+will revert the entire transaction.
 
-Note that we don’t handle replay attacks here – once the user signs a transaction someone may call it multiple times. One way to prevent replay attacks is to add a nonce component to the signed message.
+Note that we don’t handle replay attacks here – once the user signs a transaction someone may call
+it multiple times. One way to prevent replay attacks is to add a nonce component to the signed
+message.
 
 [id="compile-and-deploy"]
 == Compile and deploy
 
-Save the new contract file as `signature_verification.cairo`. You can find the full Cairo file link:../_static/signature_verification.cairo[here].
+Save the new contract file as `signature_verification.cairo`. You can find the full Cairo file
+link:../_static/signature_verification.cairo[here].
 
 Compile and declare the contract:
 
+[#signature_compile_and_declare_starknet]
 [source,bash]
 ----
 starknet-compile signature_verification.cairo \
@@ -67,6 +78,7 @@ starknet declare --contract signature_compiled.json
 
 Deploy the contract:
 
+[#signature_deploy_starknet]
 [source,bash]
 ----
 starknet deploy --class_hash ${SIGNATURE_CONTRACT_CLASS_HASH}
@@ -77,9 +89,13 @@ where `$\{SIGNATURE_CONTRACT_CLASS_HASH\}` is the value of class_hash.
 [id="interacting-with-the-contract"]
 == Interacting with the contract
 
-First, we need to generate a pair of public and private keys. We will use a constant private key (of course, in a real application choosing a secure random private key is imperative). Then, we sign a message to increase the balance by `4321`. For this, we will use the following Python statements:
+First, we need to generate a pair of public and private keys. We will use a constant private key
+(of course, in a real application choosing a secure random private key is imperative).
+Then, we sign a message to increase the balance by `4321`. For this, we will use the following
+Python statements:
 
-[source,cairo]
+[#signature_sign]
+[source,python]
 ----
 from starkware.crypto.signature.signature import (
     pedersen_hash, private_to_stark_key, sign)
@@ -94,7 +110,8 @@ print(f'Signature: {signature}')
 
 You should get:
 
-[source,bash]
+[#signature_sign_output]
+[source,python]
 ----
 Public key: 1628448741648245036800002906075225705100596136133912895015035902954123957052
 Signature: (1225578735933442828068102633747590437426782890965066746429241472187377583468, 3568809569741913715045370357918125425757114920266578211811626257903121825123)
@@ -102,7 +119,7 @@ Signature: (12255787359334428280681026337475904374267828909650667464292414721873
 
 Using this signature, we may now update the balance:
 
-[[signature-increase-balance]]
+[#signature_invoke]
 [source,bash]
 ----
 starknet invoke \
@@ -115,3 +132,4 @@ starknet invoke \
         1225578735933442828068102633747590437426782890965066746429241472187377583468 \
         3568809569741913715045370357918125425757114920266578211811626257903121825123
 ----
+

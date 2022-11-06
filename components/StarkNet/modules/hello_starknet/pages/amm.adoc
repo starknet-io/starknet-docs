@@ -32,6 +32,7 @@ In StarkNet, the programmatic model for storage is a simple key/value store. We 
 
 For the pool balance we define:
 
+[#sn_amm_pool_balance]
 [source,cairo]
 ----
 @storage_var
@@ -43,6 +44,7 @@ The pool balance is defined as a mapping between the token type (predefined cons
 
 For the account balances we define:
 
+[#sn_amm_account_balance]
 [source,cairo]
 ----
 @storage_var
@@ -56,6 +58,7 @@ The account balance is defined as a mapping from the account id and token type t
 
 We write a function that allows us to _modify_ the balance of a given token type in a given account:
 
+[#sn_amm_modify_account]
 [source,cairo]
 ----
 func modify_account_balance{
@@ -94,6 +97,7 @@ Next, the assert functions used here are imported from Cairo’s https://github.
 
 To allow a user to read the balance of an account, we define the following xref:intro.adoc#view-decorator[view function]:
 
+[#sn_amm_get_account]
 [source,cairo]
 ----
 @view
@@ -108,6 +112,7 @@ func get_account_token_balance{
 
 Similarly, for the pool balance:
 
+[#sn_amm_get_set_account]
 [source,cairo]
 ----
 func set_pool_token_balance{
@@ -135,6 +140,7 @@ func get_pool_token_balance{
 
 We now proceed to the primary functionality of the contract – swapping tokens.
 
+[#sn_amm_swap]
 [source,cairo]
 ----
 @external
@@ -177,6 +183,7 @@ func swap{
 
 If all checks pass, we proceed to execute the swap.
 
+[#sn_amm_get_opposite_token]
 [source,cairo]
 ----
 func get_opposite_token(token_type: felt) -> (t: felt) {
@@ -190,6 +197,7 @@ func get_opposite_token(token_type: felt) -> (t: felt) {
 
 `get_opposite_token` receives as input a token type and returns the opposite token type.
 
+[#sn_amm_do_swap]
 [source,cairo]
 ----
 func do_swap{
@@ -259,6 +267,7 @@ We use Cairo’s common math library, specifically `unsigned_div_rem` (unsigned 
 
 As we don’t have contract interaction and liquidity providers in this version, we will now define how to initialize the AMM – both the liquidity pool itself and some account balances.
 
+[#sn_amm_init_amm]
 [source,cairo]
 ----
 @external
@@ -281,6 +290,7 @@ Initializing the pool is a simple function that accepts two balances for the tok
 
 Having this function defined, we proceed to add demo tokens to an account:
 
+[#sn_amm_add_tokens]
 [source,cairo]
 ----
 @external
@@ -320,6 +330,7 @@ We can now explore a few examples that demonstrate contract interaction using th
 
 Set the environment variable `STARKNET_NETWORK` as follows:
 
+[#amm_starknet_env]
 [source,bash]
 ----
 export STARKNET_NETWORK=alpha-goerli
@@ -329,6 +340,7 @@ For this section you need the https://github.com/starkware-libs/cairo-lang/blob/
 
 To generate the ABI of the contract, enter the following commands:
 
+[#amm_sample_compile]
 [source,bash]
 ----
 starknet-compile amm_sample.cairo \
@@ -342,6 +354,7 @@ We assume you are familiar with the StarkNet CLI. If this is not the case, we re
 
 Query the pool’s balance using:
 
+[#sn_amm_call_pool_balance]
 [source,bash]
 ----
 starknet call \
@@ -355,6 +368,7 @@ In response, you should get the pool’s balance of token 1.
 
 Now let’s add some tokens to our account’s balance. (Note that every interaction with a contract through a function invocation must be done using an account. To set up an account, see xref:account_setup.adoc[Setting up a StarkNet account].)
 
+[#sn_amm_invoke_add_tokens]
 [source,bash]
 ----
 starknet invoke \
@@ -364,8 +378,10 @@ starknet invoke \
     --inputs 1000 1000
 ----
 
-Now that we have some tokens, we can use the AMM and swap `500` units of token 1 in exchange for some units of token 2 (the exact number depends on the current balance of the pool).
+Now that we have some tokens, we can use the AMM and swap `500` units of token 1 in exchange for some
+units of token 2 (the exact number depends on the current balance of the pool).
 
+[#sn_amm_invoke_swap]
 [source,bash]
 ----
 starknet invoke \
@@ -375,8 +391,10 @@ starknet invoke \
     --inputs 1 500
 ----
 
-You can now query the account’s balance of token 2 after the swap (replace `$\{ACCOUNT_ADDRESS\}` with your account address):
+You can now query the account’s balance of token 2 after the swap (replace `$\{ACCOUNT_ADDRESS\}`
+with your account address):
 
+[#sn_amm_call_account_balance]
 [source,bash]
 ----
 starknet call \
@@ -386,4 +404,6 @@ starknet call \
     --inputs ${ACCOUNT_ADDRESS} 2
 ----
 
-Note that the change will only take effect after the `swap` transaction’s status is either `ACCEPTED_ON_L2` or `ACCEPTED_ON_L1`.
+Note that the change will only take effect after the `swap` transaction’s status is
+either `ACCEPTED_ON_L2` or `ACCEPTED_ON_L1`.
+

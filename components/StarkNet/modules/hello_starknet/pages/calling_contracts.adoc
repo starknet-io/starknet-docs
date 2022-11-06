@@ -3,10 +3,15 @@
 
 A contract function may invoke an external function of another contract.
 
-Start by deploying the example contract in xref:intro.adoc[Writing StarkNet contracts] (the compilation and deployment instructions can be found at xref:intro.adoc#compile-the-contract[the bottom of the page]). Denote the address of this contract by `BALANCE_CONTRACT`.
+Start by deploying the example contract in xref:intro.adoc[Writing StarkNet contracts] (the
+compilation and deployment instructions can be found at
+xref:intro.adoc#compile-the-contract[the bottom of the page]). Denote the address of this contract by
+`BALANCE_CONTRACT`.
 
-In order to call this contract from another contract, define an interface by copying the declarations of the external functions:
+In order to call this contract from another contract, define an interface by copying the declarations
+of the external functions:
 
+[#call_contract_interface]
 [source,cairo]
 ----
 @contract_interface
@@ -19,10 +24,13 @@ namespace IBalanceContract {
 }
 ----
 
-Note that the body of the functions and the implicit arguments should be removed from the definitions.
+Note that the body of the functions and the implicit arguments should be removed
+from the definitions.
 
-You can use `IBalanceContract.increase_balance()` and `IBalanceContract.get_balance()` to invoke these functions on another contract. For example:
+You can use `IBalanceContract.increase_balance()` and `IBalanceContract.get_balance()` to invoke
+these functions on another contract. For example:
 
+[#call_contract_code]
 [source,cairo]
 ----
 @external
@@ -46,12 +54,21 @@ func call_get_balance{syscall_ptr: felt*, range_check_ptr}(
 }
 ----
 
-Note that calling a function of another contract requires passing one additional argument before the function’s original arguments – the address of the called contract. For example, `IBalanceContract.increase_balance` gets two arguments: `contract_address` and `amount` (rather than just `amount`). In addition, the `syscall_ptr` and the `range_check_ptr` implicit arguments are required.
+Note that calling a function of another contract requires passing one additional argument before the
+function’s original arguments – the address of the called contract. For example,
+`IBalanceContract.increase_balance` gets two arguments: `contract_address` and `amount` (rather than
+just `amount`). In addition, the `syscall_ptr` and the `range_check_ptr` implicit arguments are
+required.
 
-Create a file named `proxy_contract.cairo` containing the interface declaration and the two functions `call_increase_balance()` and `call_get_balance()`, and deploy the contract. Denote the address of the new contract by `PROXY_CONTRACT`.
+Create a file named `proxy_contract.cairo` containing the interface declaration and the two functions
+`call_increase_balance()` and `call_get_balance()`, and deploy the contract. Denote the address of
+the new contract by `PROXY_CONTRACT`.
 
-Now, invoke `call_increase_balance` with `BALANCE_CONTRACT` as the value of the `contract_address` argument. Make sure you replace `PROXY_CONTRACT` and `BALANCE_CONTRACT` with the addresses you got when you deployed the two contracts:
+Now, invoke `call_increase_balance` with `BALANCE_CONTRACT` as the value of the `contract_address`
+argument. Make sure you replace `PROXY_CONTRACT` and `BALANCE_CONTRACT` with the addresses you got
+when you deployed the two contracts:
 
+[#invoke_call_increase_balance]
 [source,bash]
 ----
 starknet invoke \
@@ -61,12 +78,15 @@ starknet invoke \
     --inputs BALANCE_CONTRACT 10000
 ----
 
-This will increase the balance stored in `BALANCE_CONTRACT`. Note that in our case, the storage of `PROXY_CONTRACT` will not be affected.
+This will increase the balance stored in `BALANCE_CONTRACT`. Note that in our case, the storage of
+`PROXY_CONTRACT` will not be affected.
 
-Wait until the transaction is added to a block, and then check the balance using the following two ways:
+Wait until the transaction is added to a block, and then check the balance using the following two
+ways:
 
 . Directly through `BALANCE_CONTRACT`
 +
+[#calling_contracts_get_balance_a]
 [source,bash]
 ----
 starknet call \
@@ -76,6 +96,7 @@ starknet call \
 ----
 . Indirectly through `PROXY_CONTRACT`
 +
+[#calling_contracts_get_balance_b]
 [source,bash]
 ----
 starknet call \
@@ -92,6 +113,7 @@ Both commands should return `10000`.
 
 You can get the current contract’s address by using the `get_contract_address()` library function.
 
+[#get_contract_address]
 [source,cairo]
 ----
 from starkware.starknet.common.syscalls import (
@@ -108,14 +130,22 @@ The above is similar to `address(this)` in Solidity.
 [#library-calls]
 == Library calls
 
-A library call is a way to invoke a function declared in a given contract class within the context of the calling contract. It is possible to invoke a function defined in any previously declared class (in particular, a class of any contract which is already deployed).
+A library call is a way to invoke a function declared in a given contract class within the context of
+the calling contract. It is possible to invoke a function defined in any previously declared class
+(in particular, a class of any contract which is already deployed).
 
-Storage-changing operations in the invoked function will change the state of the calling contract. Similarly, `get_caller_address()` and `get_contract_address()` will return the same value they would have returned if they were called from the *calling* function.
+Storage-changing operations in the invoked function will change the state of the calling contract.
+Similarly, `get_caller_address()` and `get_contract_address()` will return the same value they would
+have returned if they were called from the *calling* function.
 
-Note that a library call is very similar to Ethereum’s delegate call. The difference is that a delegate call requires a deployed contract, while a library call works with a contract class (the contract instance is not used in Ethereum’s delegate call anyway).
+Note that a library call is very similar to Ethereum’s delegate call. The difference is that a
+delegate call requires a deployed contract, while a library call works with a contract class (the
+contract instance is not used in Ethereum’s delegate call anyway).
 
-To perform a library call, use the contract interface as above, but prepend `library_call_` to the function name and pass a class hash instead of a contract address.
+To perform a library call, use the contract interface as above, but prepend `library_call_` to the
+function name and pass a class hash instead of a contract address.
 
+[#library_call_increase_balance]
 [source,cairo]
 ----
 // Define a local balance variable in our proxy contract.
@@ -136,10 +166,12 @@ func increase_my_balance{syscall_ptr: felt*, range_check_ptr}(
 }
 ----
 
-Modify the file `proxy_contract.cairo` you created earlier by adding the code above. Recompile and redeploy this new version of the proxy contract, and denote its address by `PROXY_CONTRACT`.
+Modify the file `proxy_contract.cairo` you created earlier by adding the code above. Recompile and
+redeploy this new version of the proxy contract, and denote its address by `PROXY_CONTRACT`.
 
 Next, declare a library class, in our case – the already compiled example balance contract.
 
+[#declare_balance_contract_class]
 [source,bash]
 ----
 starknet declare --contract balance_contract_compiled.json
@@ -147,6 +179,7 @@ starknet declare --contract balance_contract_compiled.json
 
 Denote the hash of this class by `BALANCE_CLASS_HASH`. Now, invoke `increase_my_balance`:
 
+[#invoke_increase_my_balance]
 [source,bash]
 ----
 starknet invoke \
@@ -156,6 +189,12 @@ starknet invoke \
     --inputs BALANCE_CLASS_HASH 12321
 ----
 
-This increases the balance in the proxy contract’s storage using the `increase_balance()` function of the balance contract class. Unlike a regular contract call, here the balance of the calling contract (rather than of another contract) is modified.
+This increases the balance in the proxy contract’s storage using the `increase_balance()` function of
+the balance contract class. Unlike a regular contract call, here the balance of the calling contract
+(rather than of another contract) is modified.
 
-Note: you can use library call to invoke a function that changes a storage variable which wasn’t defined in the calling contract. In such a case, the new corresponding storage variable will be created in the calling contract, but it won’t be easily accessible (you can access it by a second library call, or directly using `storage_read()`).
+Note: you can use library call to invoke a function that changes a storage variable which wasn’t
+defined in the calling contract. In such a case, the new corresponding storage variable will be
+created in the calling contract, but it won’t be easily accessible (you can access it by a second
+library call, or directly using `storage_read()`).
+
