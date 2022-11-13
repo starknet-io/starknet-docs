@@ -1,0 +1,193 @@
+[id="deploying-a-contract-by-another-contract"]
+= Deploying a contract by another contract
+
+[id="the-deploy-system-call"]
+== The deploy system call
+
+A contract may use the `deploy` system call in order to deploy another contract. Note that the
+contract class of the deployed contract must be declared before the transaction invoking the system
+call. The `deploy` system call is defined as follows:
+
+[#starknet_syscall_deploy]
+[source,cairo]
+----
+func deploy{syscall_ptr: felt*}(
+    class_hash: felt,
+    contract_address_salt: felt,
+    constructor_calldata_size: felt,
+    constructor_calldata: felt*,
+    deploy_from_zero: felt,
+) -> (contract_address: felt) {
+}
+----
+
+As seen above, the `deploy` syscall expects the following arguments:
+
+* `class_hash`: The class hash of the contract to deploy.
+
+* `contract_address_salt`: An arbitrary value used to determine the address of the new contract.
+Using the same salt, the same `class_hash` and the same constructor arguments from the same contract
+will result in the same address, which means that the second `deploy` will fail.
+* `constructor_calldata_size`: The size of the constructor’s arguments (calldata). Note that this may
+differ from the number of arguments in the cases where not all the arguments are felts.
+* `constructor_calldata`: A pointer to an array containing the arguments for the constructor.
+* `deploy_from_zero`: A flag determining whether the deployer’s address will affect the contract
+address or not. When equal to `TRUE`, the contract address computation will use `0` instead of the
+deployer address. When equal to `FALSE`, the actual deployer’s address will be used.
+
+The syscall returns `contract_address`: the address of the newly deployed contract.
+
+Consider the ownable contract in xref:constructors.adoc#constructors[Constructors]. The following
+contract is an example of using the `deploy` system call to deploy new instances of the ownable
+contract:
+
+[#starknet_syscall_deploy_example]
+[source,cairo]
+----
+%lang starknet
+
+from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.bool import FALSE
+from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.starknet.common.syscalls import deploy
+
+// Define a storage variable for the salt.
+@storage_var
+func salt() -> (value: felt) {
+}
+
+// Define a storage variable for the class hash of ownable_contract.
+@storage_var
+func ownable_class_hash() -> (value: felt) {
+}
+
+// An event emitted whenever deploy_ownable_contract() is called.
+@event
+func ownable_contract_deployed(contract_address: felt) {
+}
+
+@constructor
+func constructor{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(ownable_class_hash_: felt) {
+    ownable_class_hash.write(value=ownable_class_hash_);
+    return ();
+}
+
+@external
+func deploy_ownable_contract{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(owner_address: felt) {
+    let (current_salt) = salt.read();
+    let (class_hash) = ownable_class_hash.read();
+    let (contract_address) = deploy(
+        class_hash=class_hash,
+        contract_address_salt=current_salt,
+        constructor_calldata_size=1,
+        constructor_calldata=cast(new (owner_address,), felt*),
+        deploy_from_zero=FALSE,
+    );
+    salt.write(value=current_salt + 1);
+
+    ownable_contract_deployed.emit(
+        contract_address=contract_address
+    );
+    return ();
+}
+----
+
+Note that the above will work only if the desired class has been previously declared.
+
+[id="using-the-contract"]
+== Using the contract
+
+Save the new contract file as `ownable_contract_deployer.cairo`.
+
+Compile and declare the ownable contract as explained in
+xref:constructors.adoc#constructors[Constructors]. Note that you don’t need to deploy an instance of
+the contract, declaring the contract class is enough when using the `deploy` system call. See more
+details about the declare transaction in
+xref:intro.adoc#declare-the-contract-on-the-starknet-testnet[Declare the contract on the StarkNet testnet].
+
+Set an environment variable named `OWNABLE_CLASS_HASH` to the class hash of `ownable_contract.cairo`.
+
+Compile and declare `ownable_contract_deployer.cairo`:
+
+[#ownable_contract_deployer_compile_and_declare]
+[source,bash]
+----
+starknet-compile ownable_contract_deployer.cairo \
+    --output ownable_contract_deployer_compiled.json \
+    --abi ownable_contract_deployer_abi.json
+starknet declare --contract ownable_contract_deployer_compiled.json
+----
+
+Deploy the contract:
+
+[#deploy_ownable_contract_deployer]
+[source,bash]
+----
+starknet deploy --class_hash ${OWNABLE_DEPLOYER_CLASS_HASH} \
+    --inputs ${OWNABLE_CLASS_HASH}
+----
+
+where `$\{OWNABLE_DEPLOYER_CLASS_HASH\}` is the value of class_hash. Choose an arbitrary value for
+the owner address, and denote it by `OWNER_ADDRESS`. Now, invoke `deploy_ownable_contract` with
+`OWNER_ADDRESS` as the value of the `owner_address` argument. Make sure the `CONTRACT_ADDRESS`
+environment variable is set to the address you got when you deployed the contract:
+
+[#invoke_deploy_ownable_contract]
+[source,bash]
+----
+starknet invoke \
+    --address ${CONTRACT_ADDRESS} \
+    --abi ownable_contract_deployer_abi.json \
+    --function deploy_ownable_contract \
+    --inputs OWNER_ADDRESS
+----
+
+This will deploy a new `ownable_contract` with `OWNER_ADDRESS` as the owner address.
+
+The address of the contract is emitted and it is visible through the transaction receipt as explained
+in xref:events.adoc#events[Events]. The data in the events section contains the address of the
+deployed contract. The events section of the receipt should look like:
+
+[#deploy_ownable_contract_receipt]
+[source,json]
+----
+"events": [
+    {
+        "data": [
+            "0x338027db29a197a7d5dbd49f1e15c9b6702d6a16758dda905efc751bb117153"
+        ],
+        "from_address": "0x7569242709918b8929078d3178ed14588348fb5459b44a41f100eb9a67dbeb6",
+        "keys": [
+            "0x2902eb93dff1da1a2de652946319fafe27b03601628834219f8738fc9b361d7"
+        ]
+    }
+]
+----
+
+Use the following command to query the owner address. Replace `OWNABLE_CONTRACT_ADDRESS` with the
+address of the deployed `ownable_contract`:
+
+[#get_owner_call]
+[source,bash]
+----
+starknet call \
+    --address OWNABLE_CONTRACT_ADDRESS \
+    --abi ownable_abi.json \
+    --function get_owner
+----
+
+The value returned should be the `OWNER_ADDRESS` used before.
+
+[IMPORTANT]
+====
+In the future, using the `deploy` syscall will be the only way to deploy new contracts.
+====
+
