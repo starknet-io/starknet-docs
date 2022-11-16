@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          node-version: 16
 
       - name: Install Node.js
         uses: actions/setup-node@v2
@@ -38,8 +40,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
+          node-version: 16
           ref: gh-pages
-          github_token: ${{ secrets.USER_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract PR details
         id: pr
@@ -60,7 +63,7 @@ jobs:
 
       - name: PR preview details
         run:
-          echo "you can preview the PR at https://starknet-community-libs.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/documentation/"
+          echo "you can preview the PR at https://starknet-io.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/documentation/"
 
       - name: "Commit changes"
         run: |
@@ -75,13 +78,13 @@ jobs:
             echo -e "No changes found."
           fi
         env:
-          GITHUB_TOKEN: "${{ secrets.USER_TOKEN }}"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: "Send comment to PR"
         continue-on-error: true
         run: |
           set -euo pipefail
-          echo "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://starknet-community-libs.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/documentation/ ." >/tmp/comment
+          echo "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://starknet-io.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/documentation/ ." >/tmp/comment
           gh pr comment ${{ github.event.pull_request.number }} -F /tmp/comment
         env:
-          GITHUB_TOKEN: "${{ secrets.USER_TOKEN }}"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
