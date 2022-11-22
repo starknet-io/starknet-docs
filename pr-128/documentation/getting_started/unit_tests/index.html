@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Calling another contract :: StarkNet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/documentation/cairo_on_starknet/calling_contracts/">
-    <link rel="prev" href="../more_features/">
-    <link rel="next" href="../deploying_from_contracts/">
+    <title>Writing unit tests :: StarkNet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/documentation/getting_started/unit_tests/">
+    <link rel="prev" href="../default_entrypoint/">
+    <link rel="next" href="../signature_verification/">
     <meta name="generator" content="Antora 3.1.1">
     <link rel="stylesheet" href="../../../_/css/site.css">
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-129128514-2"></script>
@@ -173,7 +173,7 @@
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
-    <a class="nav-link" href="../">Cairo on StarkNet</a>
+    <a class="nav-link" href="../">Getting started</a>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <button class="nav-item-toggle"></button>
@@ -328,15 +328,15 @@
   </li>
 </ul>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <button class="nav-item-toggle"></button>
-    <a class="nav-link" href="./">Calling another contract</a>
+    <a class="nav-link" href="../calling_contracts/">Calling another contract</a>
 <ul class="nav-list">
   <li class="nav-item" data-depth="3">
-    <a class="nav-link" href="#getting-the-current-contract-s-address">Getting the current contract’s address</a>
+    <a class="nav-link" href="../calling_contracts/#getting-the-current-contract-s-address">Getting the current contract’s address</a>
   </li>
   <li class="nav-item" data-depth="3">
-    <a class="nav-link" href="#library-calls">Library calls</a>
+    <a class="nav-link" href="../calling_contracts/#library-calls">Library calls</a>
   </li>
 </ul>
   </li>
@@ -370,8 +370,8 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="../default_entrypoint/">Default entry point</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="../unit_tests/">Writing unit tests</a>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="./">Writing unit tests</a>
   </li>
   <li class="nav-item" data-depth="2">
     <button class="nav-item-toggle"></button>
@@ -471,12 +471,12 @@
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../../">StarkNet</a></li>
-    <li><a href="../">Cairo on StarkNet</a></li>
-    <li><a href="./">Calling another contract</a></li>
+    <li><a href="../">Getting started</a></li>
+    <li><a href="./">Writing unit tests</a></li>
   </ul>
 </nav>
 <!--
-  <div class="edit-this-page"><a href="https://github.com/starknet-io/starknet-docs/edit/HEAD/components/StarkNet/modules/cairo_on_starknet/pages/calling_contracts.adoc">Edit this Page</a></div>
+  <div class="edit-this-page"><a href="https://github.com/starknet-io/starknet-docs/edit/HEAD/components/StarkNet/modules/getting_started/pages/unit_tests.adoc">Edit this Page</a></div>
   -->
 </div>
   <div class="content">
@@ -484,235 +484,77 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Calling another contract</h1>
-<div id="preamble">
-<div class="sectionbody">
+<h1 class="page">Writing unit tests</h1>
 <div class="paragraph">
-<p>A contract function may invoke an external function of another contract.</p>
+<p>This page demonstrates how to write unit tests for your StarkNet contracts. The <code>cairo-lang</code> package
+provides a set of Python classes that simulates the behavior of the StarkNet system.
+We’ll use <a href="https://docs.pytest.org/en/6.2.x/">pytest</a> as the unit test infrastructure.</p>
 </div>
 <div class="paragraph">
-<p>Start by deploying the example contract in <a href="../intro/" class="xref page">Writing StarkNet contracts</a> (the
-compilation and deployment instructions can be found at
-<a href="../intro/#compile-the-contract" class="xref page">the bottom of the page</a>). Denote the address of this contract by
-<code>BALANCE_CONTRACT</code>.</p>
+<p>Start by installing pytest:</p>
 </div>
-<div class="paragraph">
-<p>In order to call this contract from another contract, define an interface by copying the declarations
-of the external functions:</p>
-</div>
-<div id="call_contract_interface" class="listingblock">
+<div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">@contract_interface
-namespace IBalanceContract {
-    func increase_balance(amount: felt) {
-    }
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">pip install pytest pytest-asyncio</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Let’s write a unit test for the contract from
+<a href="../intro/#your-first-contract" class="xref page">Your first contract</a>. Create a file named <code>contract.cairo</code> and
+copy the contract code into it.</p>
+</div>
+<div class="paragraph">
+<p>Now, copy the following code into a Python file named <code>contract_test.py</code>:</p>
+</div>
+<div id="first_contract_unit_test" class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python">import os
+import pytest
 
-    func get_balance() -&gt; (res: felt) {
-    }
-}</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Note that the body of the functions and the implicit arguments should be removed
-from the definitions.</p>
-</div>
-<div class="paragraph">
-<p>You can use <code>IBalanceContract.increase_balance()</code> and <code>IBalanceContract.get_balance()</code> to invoke
-these functions on another contract. For example:</p>
-</div>
-<div id="call_contract_code" class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">@external
-func call_increase_balance{syscall_ptr: felt*, range_check_ptr}(
-    contract_address: felt, amount: felt
-) {
-    IBalanceContract.increase_balance(
-        contract_address=contract_address, amount=amount
-    );
-    return ();
-}
+from starkware.starknet.testing.starknet import Starknet
 
-@view
-func call_get_balance{syscall_ptr: felt*, range_check_ptr}(
-    contract_address: felt
-) -&gt; (res: felt) {
-    let (res) = IBalanceContract.get_balance(
-        contract_address=contract_address
-    );
-    return (res=res);
-}</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Note that calling a function of another contract requires passing one additional argument before the
-function’s original arguments – the address of the called contract. For example,
-<code>IBalanceContract.increase_balance</code> gets two arguments: <code>contract_address</code> and <code>amount</code> (rather than
-just <code>amount</code>). In addition, the <code>syscall_ptr</code> and the <code>range_check_ptr</code> implicit arguments are
-required.</p>
-</div>
-<div class="paragraph">
-<p>Create a file named <code>proxy_contract.cairo</code> containing the interface declaration and the two functions
-<code>call_increase_balance()</code> and <code>call_get_balance()</code>, and deploy the contract. Denote the address of
-the new contract by <code>PROXY_CONTRACT</code>.</p>
-</div>
-<div class="paragraph">
-<p>Now, invoke <code>call_increase_balance</code> with <code>BALANCE_CONTRACT</code> as the value of the <code>contract_address</code>
-argument. Make sure you replace <code>PROXY_CONTRACT</code> and <code>BALANCE_CONTRACT</code> with the addresses you got
-when you deployed the two contracts:</p>
-</div>
-<div id="invoke_call_increase_balance" class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">starknet invoke \
-    --address PROXY_CONTRACT \
-    --abi proxy_contract_abi.json \
-    --function call_increase_balance \
-    --inputs BALANCE_CONTRACT 10000</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>This will increase the balance stored in <code>BALANCE_CONTRACT</code>. Note that in our case, the storage of
-<code>PROXY_CONTRACT</code> will not be affected.</p>
-</div>
-<div class="paragraph">
-<p>Wait until the transaction is added to a block, and then check the balance using the following two
-ways:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>Directly through <code>BALANCE_CONTRACT</code></p>
-<div id="calling_contracts_get_balance_a" class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">starknet call \
-    --address BALANCE_CONTRACT \
-    --abi balance_contract_abi.json \
-    --function get_balance</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>Indirectly through <code>PROXY_CONTRACT</code></p>
-<div id="calling_contracts_get_balance_b" class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">starknet call \
-    --address PROXY_CONTRACT \
-    --abi proxy_contract_abi.json \
-    --function call_get_balance \
-    --inputs BALANCE_CONTRACT</code></pre>
-</div>
-</div>
-</li>
-</ol>
-</div>
-<div class="paragraph">
-<p>Both commands should return <code>10000</code>.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="getting-the-current-contract-s-address"><a class="anchor" href="#getting-the-current-contract-s-address"></a>Getting the current contract’s address</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>You can get the current contract’s address by using the <code>get_contract_address()</code> library function.</p>
-</div>
-<div id="get_contract_address" class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">from starkware.starknet.common.syscalls import (
-    get_contract_address,
-)
+# The path to the contract source code.
+CONTRACT_FILE = os.path.join(
+    os.path.dirname(__file__), "contract.cairo")
 
-// ...
+# The testing library uses Python's asyncio. So the following
+# decorator and the ``async`` keyword are needed.
+@pytest.mark.asyncio
+async def test_increase_balance():
+    # Create a new Starknet class that simulates the StarkNet
+    # system.
+    starknet = await Starknet.empty()
 
-let (contract_address) = get_contract_address();</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The above is similar to <code>address(this)</code> in Solidity.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="library-calls"><a class="anchor" href="#library-calls"></a>Library calls</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>A library call is a way to invoke a function declared in a given contract class within the context of
-the calling contract. It is possible to invoke a function defined in any previously declared class
-(in particular, a class of any contract which is already deployed).</p>
-</div>
-<div class="paragraph">
-<p>Storage-changing operations in the invoked function will change the state of the calling contract.
-Similarly, <code>get_caller_address()</code> and <code>get_contract_address()</code> will return the same value they would
-have returned if they were called from the <strong>calling</strong> function.</p>
-</div>
-<div class="paragraph">
-<p>Note that a library call is very similar to Ethereum’s delegate call. The difference is that a
-delegate call requires a deployed contract, while a library call works with a contract class (the
-contract instance is not used in Ethereum’s delegate call anyway).</p>
-</div>
-<div class="paragraph">
-<p>To perform a library call, use the contract interface as above, but prepend <code>library_call_</code> to the
-function name and pass a class hash instead of a contract address.</p>
-</div>
-<div id="library_call_increase_balance" class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">// Define a local balance variable in our proxy contract.
-@storage_var
-func balance() -&gt; (res: felt) {
-}
+    # Deploy the contract.
+    contract = await starknet.deploy(
+        source=CONTRACT_FILE,
+    )
 
-@external
-func increase_my_balance{syscall_ptr: felt*, range_check_ptr}(
-    class_hash: felt, amount: felt
-) {
-    // Increase the local balance variable using a function from a
-    // different contract class by using a library call.
-    IBalanceContract.library_call_increase_balance(
-        class_hash=class_hash, amount=amount
-    );
-    return ();
-}</code></pre>
+    # Invoke increase_balance() twice.
+    await contract.increase_balance(amount=10).execute()
+    await contract.increase_balance(amount=20).execute()
+
+    # Check the result of get_balance().
+    execution_info = await contract.get_balance().call()
+    assert execution_info.result == (30,)</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Modify the file <code>proxy_contract.cairo</code> you created earlier by adding the code above. Recompile and
-redeploy this new version of the proxy contract, and denote its address by <code>PROXY_CONTRACT</code>.</p>
+<p>This test creates an instance of the Starknet testing class. This class allows deploying StarkNet
+contracts and interacting with them. The test deploys our contract and invokes <code>increase_balance</code>
+twice. At the end it verifies that calling the <code>get_balance()</code> method returns the expected result.</p>
 </div>
 <div class="paragraph">
-<p>Next, declare a library class, in our case – the already compiled example balance contract.</p>
+<p>Run the test using pytest:</p>
 </div>
-<div id="declare_balance_contract_class" class="listingblock">
+<div id="first_contract_unit_test_run" class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">starknet declare --contract balance_contract_compiled.json</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Denote the hash of this class by <code>BALANCE_CLASS_HASH</code>. Now, invoke <code>increase_my_balance</code>:</p>
-</div>
-<div id="invoke_increase_my_balance" class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">starknet invoke \
-    --address PROXY_CONTRACT \
-    --abi proxy_contract_abi.json \
-    --function increase_my_balance \
-    --inputs BALANCE_CLASS_HASH 12321</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>This increases the balance in the proxy contract’s storage using the <code>increase_balance()</code> function of
-the balance contract class. Unlike a regular contract call, here the balance of the calling contract
-(rather than of another contract) is modified.</p>
-</div>
-<div class="paragraph">
-<p>Note: you can use library call to invoke a function that changes a storage variable which wasn’t
-defined in the calling contract. In such a case, the new corresponding storage variable will be
-created in the calling contract, but it won’t be easily accessible (you can access it by a second
-library call, or directly using <code>storage_read()</code>).</p>
-</div>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">pytest contract_test.py</code></pre>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../more_features/">More features</a></span>
-  <span class="next"><a href="../deploying_from_contracts/">Deploying a contract by another contract</a></span>
+  <span class="prev"><a href="../default_entrypoint/">Default entry point</a></span>
+  <span class="next"><a href="../signature_verification/">Signature verification</a></span>
 </nav>
 </article>
   </div>
