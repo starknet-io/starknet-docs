@@ -1,0 +1,38 @@
+[id="validate_and_execute"]
+= `validate` and `execute`
+
+StarkNet's account smart contract includes the following two functions, which account transactions call: 
+
+* `validate`
+* `execute`
+
+Separating the `validate` and `execute` functions guarantees payment to sequencers for work completed, and protects them from Denial of Service (DoS) attacks.
+
+[id="the_validate_function"]
+== The `validate` function
+
+The `validate` function:
+
+*   Ensures that any transaction submitted is genuine and therefore will not take up unjustified resources during the execution process.
+
+Without this mechanism, a forged transaction can result in the sequencer taking a fee and charging you unfairly.
+In short, `validate` ensures that the sequencer can only charge for valid transactions.
+
+* Enables the sequencer to quickly and efficiently select valid transactions from the Starknet mempool, ensuring that sequencers can charge more accurately than in a system where `validate` and `execute` functions are bound together.
+
+[id="invalid_transactions"]
+== Invalid transactions
+
+When the `validate` function returns invalid, no fee will be taken from the account in question.
+
+[id="the_execute_function"]
+== The `execute` function
+
+The purpose of the `execute` function is to abstract away the remaining actions performed by a transaction. This is the step where the sequencer will process transactions that are to be included in a block. 
+
+[id="reverted_transactions"]
+== Reverted transactions
+
+The `execute` function reverts the transaction when the method fails for any reason. 
+
+The sequencer charges only for successful transactions that result from the successful completion of the `execute` function.
