@@ -1,36 +1,38 @@
 [id="validate_and_execute"]
 = Validate and Execute
 
-Internal to Starknet's account smart contract are two distinct functions that account transactions will call: 
-* Validate
-* Execute
+StarkNet's account smart contract includes the following two functions, which account transactions call: 
 
-These should be your focus when extending account functionality.
+* `validate`
+* `execute`
 
-Separating validate and execute ensures that sequencers are guaranteed payment for work completedand are not susceptible to Denial of Dervice (DoS) attacks.
+Separating the `validate` and `execute` functions guarantees payment to sequencers for work completed, and protects them from Denial of Service (DoS) attacks.
 
 [id="the_validate_function"]
-== The Validate function
+== The `validate` function
 
-The primary purpose of the validate function is to ensure that any transaction submitted is genuine and therefore will not take up unjustified resources during the execution process.
+The `validate` function:
 
-Without this mechanism, a forged transaction could result in the sequencer taking a fee and charging you unfairly. In short, validate ensures that the sequencer can only charge for valid transactions. 
+*   Ensures that any transaction submitted is genuine and therefore will not take up unjustified resources during the execution process.
 
-In addition to this, having a separate validate function allows the sequencer to quickly and efficiently select valid transactions from the Starknet mempool. This in turn ensures that sequencers can charge more accurately compared to a system where validate and execute functions are bound together. 
+Without this mechanism, a forged transaction can result in the sequencer taking a fee and charging you unfairly.
+In short, `validate` ensures that the sequencer can only charge for valid transactions.
+
+* Enables the sequencer to quickly and efficiently select valid transactions from the Starknet mempool, ensuring that sequencers can charge more accurately than in a system where `validate` and `execute` functions are bound together.
 
 [id="invalid_transactions"]
 == Invalid transactions
 
-If the transaction is not deemed to be genuine by the validate function then it will be returned as invalid and no fee will be taken from the account in question.
+When the `validate` function returns invalid, no fee will be taken from the account in question.
 
 [id="the_execute_function"]
-== The Execute function
+== The `execute` function
 
-The purpose of the execute function is to abstract away the remaining actions performed by a transaction. This is the step where the sequencer will process transactions that are to be included in a block. 
+The purpose of the `execute` function is to abstract away the remaining actions performed by a transaction. This is the step where the sequencer will process transactions that are to be included in a block. 
 
 [id="reverted_transactions"]
 == Reverted transactions
 
-If the transaction fails for any reason during the execute function then the transaction will be reverted. 
+The `execute` function reverts the transaction when the method fails for any reason. 
 
-Only successful transactions resulting from the completion of the execute function will be charged a fee by the sequencer. 
+The sequencer charges only for successful transactions that result from the successful completion of the `execute` function.
