@@ -1,0 +1,323 @@
+[id="adding-user-authentication"]
+= Adding user authentication
+
+[id="storage-maps"]
+== Storage maps
+
+Suppose that instead of maintaining one global variable `balance`, we would like to have a balance
+for each user (users will be identified by their STARK public keys).
+
+Our first task will be to change the `balance` storage variable to a map from public key (user) to
+balance (instead of a single value). This can be done by simply adding an argument:
+
+[#balance_map]
+[source,cairo]
+----
+// A map from user (represented by account contract address)
+// to their balance.
+@storage_var
+func balance(user: felt) -> (res: felt) {
+}
+----
+
+In fact, the `@storage_var` decorator allows you to add multiple arguments to create even more
+complicated maps. The functions `balance.read()` and `balance.write()` will now have the following
+signatures:
+
+[#read_write_signatures]
+[source,cairo]
+----
+func read{
+    syscall_ptr: felt*,
+    range_check_ptr,
+    pedersen_ptr: HashBuiltin*,
+}(user: felt) -> (res: felt) {
+}
+
+func write{
+    syscall_ptr: felt*,
+    range_check_ptr,
+    pedersen_ptr: HashBuiltin*,
+}(user: felt, value: felt) {
+}
+----
+
+Note that the default value of all the entries in the map is 0.
+
+[id="getting-the-caller-address"]
+== Getting the caller address
+
+In order to obtain the address of the account contract (or any other contract, in the case that the
+function was invoked by a contract) that invoked our function, we can use the `get_caller_address()`
+library function:
+
+[#get_caller_address]
+[source,cairo]
+----
+from starkware.starknet.common.syscalls import get_caller_address
+
+// ...
+
+let (caller_address) = get_caller_address();
+----
+
+`get_caller_address()` returns the address of the source contract that called this contract.
+It can be the address of the account contract or the address of another contract (if the function
+was invoked by another contract). When the contract is called directly (rather than through a
+contract), the function returns 0.
+
+Note that if you use `get_caller_address()` in a function `foo()` that was called by another
+function `bar()` within your contract, it will still return the address of the contract that invoked
+`bar()` (or 0 if it was invoked directly).
+
+[id="modifying-the-contract-s-functions"]
+== Modifying the contract’s functions
+
+Change the code of `increase_balance()` to:
+
+[#user_auth_increase_balance]
+[source,cairo]
+----
+from starkware.cairo.common.math import assert_nn
+
+// Increases the balance of the user by the given amount.
+@external
+func increase_balance{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(amount: felt) {
+    // Verify that the amount is positive.
+    with_attr error_message(
+            "Amount must be positive. Got: {amount}.") {
+        assert_nn(amount);
+    }
+
+    // Obtain the address of the account contract.
+    let (user) = get_caller_address();
+
+    // Read and update its balance.
+    let (res) = balance.read(user=user);
+    balance.write(user, res + amount);
+    return ();
+}
+----
+
+Note that we added a constraint that the value of `amount` must be nonnegative, by calling
+`assert_nn`. In order to obtain an indicative message in case of an error, we wrapped the function
+call with the `with_attr error_message(\...)` block.
+See xref:#retrieving-the-revert-reason[Retrieving the revert reason] for more details.
+
+Similarly, change the code of `get_balance()`. Here we chose to allow the caller to query any user
+(since StarkNet’s storage is not private anyway):
+
+[#user_auth_get_balance]
+[source,cairo]
+----
+// Returns the balance of the given user.
+@view
+func get_balance{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(user: felt) -> (res: felt) {
+    let (res) = balance.read(user=user);
+    return (res=res);
+}
+----
+
+[id="compile-and-deploy"]
+== Compile and deploy
+
+Save the new contract file as `user_auth.cairo`. You can find the full Cairo file
+link:../_static/user_auth.cairo[here].
+
+Compile and declare the contract:
+
+[#user_auth_compile_and_declare_starknet]
+[source,bash]
+----
+starknet-compile user_auth.cairo \
+    --output user_auth_compiled.json \
+    --abi user_auth_abi.json
+starknet declare --contract user_auth_compiled.json
+----
+
+Deploy the contract:
+
+[#deploy_user_auth]
+[source,bash]
+----
+starknet deploy --class_hash ${USER_AUTH_CLASS_HASH}
+----
+
+where `$\{USER_AUTH_CLASS_HASH\}` is the value of class_hash. Don’t forget to set the
+`STARKNET_NETWORK` and `STARKNET_WALLET` environment variables and
+xref:account_setup.adoc#creating-an-account[deploy an account contract] before
+running `starknet deploy`.
+
+[id="interacting-with-the-contract"]
+== Interacting with the contract
+
+Let’s update the balance:
+
+[#user-auth-increase-balance]
+[#user_auth_invoke]
+[source,bash]
+----
+starknet invoke \
+    --address ${CONTRACT_ADDRESS} \
+    --abi user_auth_abi.json \
+    --function increase_balance \
+    --inputs 4321
+----
+
+You can query the transaction status:
+
+[#user_auth_tx_status]
+[source,bash]
+----
+starknet tx_status --hash TX_HASH
+----
+
+Finally, after the transaction is executed (status `ACCEPTED_ON_L2` or `ACCEPTED_ON_L1`)
+you may query the user’s balance:
+
+[#user_auth_call]
+[source,bash]
+----
+starknet call \
+    --address ${CONTRACT_ADDRESS} \
+    --abi user_auth_abi.json \
+    --function get_balance \
+    --inputs ${ACCOUNT_ADDRESS}
+----
+
+You should get:
+
+[#user_auth_call_output]
+[source,bash]
+----
+4321
+----
+
+Note that if you want to use the xref:cli.adoc#get-storage-at[get_storage_at] CLI command to query
+the balance of a specific user, you can no longer compute the relevant key by only supplying the name
+of the storage variable. That is because the balance storage variable now requires an additional
+argument, namely, the user key. Hence, you will need to supply the additional arguments when
+acquiring the key used in `get_storage_at`. In our case, this translates to the following
+Python code:
+
+[#user_auth_balance_key]
+[source,python]
+----
+from starkware.starknet.public.abi import get_storage_var_address
+
+user = ACCOUNT_ADDRESS
+user_balance_key = get_storage_var_address('balance', user)
+print(f'Storage key for user {user}:\n{user_balance_key}')
+----
+
+[#retrieving-the-revert-reason]
+== Retrieving the revert reason
+
+Let’s try to invoke `increase_balance` with a negative amount:
+
+[#user_auth_negative_amount_with_exception]
+[source,bash]
+----
+starknet invoke \
+    --address ${CONTRACT_ADDRESS} \
+    --abi user_auth_abi.json \
+    --function increase_balance \
+    --inputs -1000
+----
+
+Because this transaction is invalid (as the amount is negative), you will get an error from the
+StarkNet gateway that contains the following:
+
+[#user_auth_negative_amount_exception]
+[source,python]
+----
+{"code": "StarknetErrorCode.TRANSACTION_FAILED", "message": "Error at pc=0:38:\nGot an exception while executing a hint.\nCairo traceback (most recent call last):\nUnknown location (pc=0:522)\nUnknown location (pc=0:484)\nUnknown location (pc=0:590)\n\nError in the called contract (0x548245153813267af2d2793c6e5d60c40cb95f34d7404f2ce75550fafabede0):\nError at pc=0:6:\nGot an exception while executing a hint.\nCairo traceback (most recent call last):\nUnknown location (pc=0:155)\nError message: Amount must be positive. Got: -1000.\nUnknown location (pc=0:129)\n\nTraceback (most recent call last):\n  File \"<hint0>\", line 3, in <module>\nAssertionError: a = 3618502788666131213697322783095070105623107215331596699973092056135872019481 is out of range."}
+----
+
+This indicates that the CLI could not estimate the transaction fee, because the transaction has
+failed. For the sake of demonstrating retrieving the revert reason, we will force the transaction to
+skip the fee estimation mechanism. To do so, add `--max_fee 100000000000000000` to the former invoke
+transaction, as follows:
+
+[#user_auth_negative_amount]
+[source,bash]
+----
+starknet invoke \
+    --address ${CONTRACT_ADDRESS} \
+    --abi user_auth_abi.json \
+    --function increase_balance \
+    --inputs -1000 \
+    --max_fee 100000000000000000
+----
+
+After this, when querying the transaction status, you should get:
+
+[#user_auth_negative_amount_output]
+[source,json]
+----
+{
+    "tx_failure_reason": {
+        "code": "TRANSACTION_FAILED",
+        "error_message": "Error at pc=0:32:\nGot an exception while executing a hint.\nCairo traceback (most recent call last):\nUnknown location (pc=0:494)\nUnknown location (pc=0:453)\nUnknown location (pc=0:510)\n\nError in the called contract (0x3632c8d1265888e0eadb518cbf4a83d071d00cd8f946ec72fd661e69eea1963):\nError at pc=0:6:\nGot an exception while executing a hint.\nCairo traceback (most recent call last):\nUnknown location (pc=0:155)\nError message: Amount must be positive. Got: -1000.\nUnknown location (pc=0:129)\n\nTraceback (most recent call last):\n  File \"<hint0>\", line 3, in <module>\nAssertionError: a = 3618502788666131213697322783095070105623107215331596699973092056135872019481 is out of range."
+    },
+    "tx_status": "REJECTED"
+}
+----
+
+Notice that the error message entry states that the error location is unknown. This is because the
+StarkNet network is not aware of the source code and debug information of a contract. To retrieve the
+error location and reconstruct the traceback, add the path to the relevant compiled contract in the
+transaction status query, using the `--contracts` argument.
+To better display the error (and only it), add the `--error_message` flag as well:
+
+[#user_auth_get_error_message]
+[source,bash]
+----
+starknet tx_status \
+    --hash TX_HASH \
+    --contracts ${CONTRACT_ADDRESS}:user_auth_compiled.json \
+    --error_message
+----
+
+The output should look like:
+
+[#user_auth_get_error_message_output]
+[source,bash]
+----
+Error at pc=0:28:
+Got an exception while executing a hint.
+Cairo traceback (most recent call last):
+Unknown location (pc=0:494)
+Unknown location (pc=0:453)
+Unknown location (pc=0:510)
+
+Error in the called contract (0x29cd5db92729052b3268471cf1b2327b61523565adeaa1d659236e806bd4b97):
+math.cairo:47:5: Error at pc=0:6:
+    a = [range_check_ptr];
+    ^*******************^
+Got an exception while executing a hint.
+Cairo traceback (most recent call last):
+user_auth.cairo:15:6
+func increase_balance{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+     ^**************^
+Error message: Amount must be positive. Got: -1000.
+user_auth.cairo:20:9
+        assert_nn(amount);
+        ^***************^
+
+Traceback (most recent call last):
+  File "<hint0>", line 3, in <module>
+AssertionError: a = 3618502788666131213697322783095070105623107215331596699973092056135872019481 is out of range.
+----
+
+You should ignore the first part (before `Error in the called contract`) – it is caused by
+the account contract.
+
