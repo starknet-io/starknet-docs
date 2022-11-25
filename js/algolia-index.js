@@ -1,81 +1,108 @@
-const algoliasearch = require('algoliasearch');
-const fs = require('fs');
-const path = require('path');
+const algoliasearch = require("algoliasearch");
+const fs = require("fs");
+const path = require("path");
+const simpleGit = require("simple-git");
+const git = simpleGit(__dirname);
 
-require('dotenv').config();
+if (process.argv.length < 5) {
+  throw new Error("Failed to find proper settings for Algolia indexing");
+}
+const algoliaAppId = process.argv[2];
+const algoliaApiKey = process.argv[3];
+const algoliaIndexNamePrefix = process.argv[4];
 
-const client = algoliasearch(process.env.ALGOLIA_APP_ID, process.env.ALGOLIA_ADMIN_API_KEY);
-const algoliaIndex = client.initIndex(process.env.ALGOLIA_INDEX_NAME);
-const commonPath = path.resolve('../', 'components');
+if (!algoliaAppId || !algoliaApiKey || !algoliaIndexNamePrefix) {
+  throw new Error("Please setup Algolia settings in GitHub Action Secrets");
+}
 
-fs.readdir(commonPath, 'utf8', (err, data) => {
-  if (err) {
-    console.error(err, 'err');
-    return;
-  }
-  
-  data.forEach((item) => {
-    const nextPath = path.join(commonPath, item, 'modules');
-    fs.readdir(nextPath, 'utf8', (error, dataNext) => {
-      if (error) {
-        console.error(error, 'error');
-        return;
-      }
-      dataNext.forEach((listItem) => {
-        const pagePathFold = path.join(nextPath, listItem, 'pages');
-        fs.readdir(pagePathFold, 'utf8', (pageError, pageData) => {
-          if (pageError) {
-            console.error(pageError, 'pageError');
-            return;
-          }
-          pageData.forEach((target) => {
-            const targetPath = path.join(pagePathFold, target);
-            const stat = fs.lstatSync(targetPath);
-            if (stat.isDirectory()) {
-              fs.readdir(targetPath, 'utf-8', (fileError, fileData) => {
-                if (fileError) {
-                  console.log(fileError, 'fileError');
-                  return;
-                }
-                fileData.forEach((targetFile) => {
-                  const targetFilePath = path.join(targetPath, targetFile);
-                  beforeUpload(targetFilePath, targetFile);
-                });
+const initBranch = async () => {
+  const status = await git.status();
+  let currentBranch = status.tracking;
+  currentBranch = currentBranch.split("/")[1];
+  console.log(`Indexing articles on branch "${currentBranch}" ...`)
+  startIndexing(currentBranch);
+};
 
-              });
+initBranch();
+
+const startIndexing = (currentBranch) => {
+  const client = algoliasearch(algoliaAppId, algoliaApiKey);
+  const algoliaIndex = client.initIndex(
+    `${algoliaIndexNamePrefix}-${currentBranch}`
+  );
+  const commonPath = path.resolve("../", "components");
+
+  fs.readdir(commonPath, "utf8", (err, data) => {
+    if (err) {
+      console.error(err, "err");
+      return;
+    }
+    data.forEach((item) => {
+      const nextPath = path.join(commonPath, item, "modules");
+      fs.readdir(nextPath, "utf8", (errNext, dataNext) => {
+        if (errNext) {
+          console.error(errNext, "err_next");
+          return;
+        }
+        dataNext.forEach((listItem) => {
+          const pagePathFold = path.join(nextPath, listItem, "pages");
+          fs.readdir(pagePathFold, "utf8", (pageErr, pageData) => {
+            if (pageErr) {
+              console.error(pageErr, "pageErr");
+              return;
             }
-            beforeUpload(targetPath, target);
+            pageData.forEach((target) => {
+              const targetPath = path.join(pagePathFold, target);
+              const stat = fs.lstatSync(targetPath);
+              if (stat.isDirectory()) {
+                fs.readdir(targetPath, "utf-8", (fileErr, fileData) => {
+                  if (fileErr) {
+                    console.log(fileErr, "fileErr");
+                    return;
+                  }
+                  fileData.forEach((targetFile) => {
+                    const targetFilePath = path.join(targetPath, targetFile);
+                    beforeUpload(targetFilePath, targetFile);
+                  });
+                });
+              }
+              beforeUpload(targetPath, target);
+            });
           });
         });
       });
     });
-  });
 
-  function beforeUpload(targetPath, target) {
-    const stat = fs.lstatSync(targetPath);
-    if (stat.isFile() && path.extname(target) === '.adoc') {
-      fs.readFile(targetPath, 'utf-8', (err, data) => {
-        if (err) {
-          console.error(err, 'beforeUpload');
-          return;
-        }
-        const title = data.split('\n')[1].split('=')[1];
-        const recode = {
-          objectID: targetPath.substring(targetPath.indexOf("modules") + 7),
-          title: title,
-          content: data
-        };
-        uploadFile(recode, target);
-      });
+    function beforeUpload(targetPath, target) {
+      const stat = fs.lstatSync(targetPath);
+      if (stat.isFile() && path.extname(target) === ".adoc") {
+        fs.readFile(targetPath, "utf-8", (err, data) => {
+          if (err) {
+            console.error(err, "beforeUpload");
+            return;
+          }
+          const title = data.split("\n")[1].split("=")[1];
+          const recode = {
+            objectID: targetPath.substring(targetPath.indexOf("modules") + 7),
+            title: title,
+            content: data,
+          };
+          uploadFile(recode, targetPath);
+        });
+      }
     }
-  }
 
-  function uploadFile(file, target) {
-    const record = {
-      url: `http://docs.starknet.io/readme`,
-      ...file,
-    };
-    algoliaIndex.saveObject(record).wait();
-    console.log('Done indexing ===>', target);
-  }
-});
+    function uploadFile(file, targetPath) {
+      const url = targetPath
+        .split("modules")[1]
+        .replace("/pages", "")
+        .replace(".adoc", "");
+      const record = {
+        url: "https://docs.starknet.io/documentation" + url,
+        ...file,
+      };
+      algoliaIndex.saveObject(record).wait();
+      console.log("Done indexing ===>", url);
+    }
+  });
+};

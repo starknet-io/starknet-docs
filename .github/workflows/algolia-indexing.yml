@@ -2,22 +2,14 @@ name: Upload Data to Algolia Index
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'version'
-        required: true
-        default: '1.0.0'
   push:
     branches:
-      #- dev
-      - algolia-indexing
+      - v1
+      - v2
 jobs:
   upload_data:
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          VERSION=${{ github.event.inputs.version }}
-          echo ::set-output name=build_args::VERSION=${VERSION}
       - name: Git Checkout
         uses: actions/checkout@v3
         with:
@@ -26,9 +18,15 @@ jobs:
       - name: Setup Node.js 16.15.x
         uses: actions/setup-node@v3
         with:
-          node-version: '16.15.x'   
+          node-version: '16.15.x'
+
       - name: Upload data to Algolia Index
+        shell: bash
+        env:
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          ALGOLIA_ADMIN_API_KEY: ${{ secrets.ALGOLIA_ADMIN_API_KEY }}
+          ALGOLIA_INDEX_NAME_PREFIX: ${{ secrets.ALGOLIA_INDEX_NAME_PREFIX }}
         working-directory: ./js # equivalent of 'cd js'
         run: |
           yarn install
-          node algolia-index.js
+          node algolia-index.js "$ALGOLIA_APP_ID" "$ALGOLIA_ADMIN_API_KEY" "$ALGOLIA_INDEX_NAME_PREFIX"
