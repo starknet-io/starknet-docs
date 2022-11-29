@@ -2,6 +2,9 @@ const algoliasearch = require("algoliasearch");
 const fs = require("fs");
 const path = require("path");
 const simpleGit = require("simple-git");
+const Asciidoctor = require('asciidoctor');
+const asciidoctor = Asciidoctor();
+const { convert } = require('html-to-text');
 const git = simpleGit(__dirname);
 
 if (process.argv.length < 5) {
@@ -19,7 +22,7 @@ const initBranch = async () => {
   const status = await git.status();
   let currentBranch = status.tracking;
   currentBranch = currentBranch.split("/")[1];
-  console.log(`Indexing articles on branch "${currentBranch}" ...`)
+  console.log(`Indexing articles on branch "${currentBranch}" ...`);
   startIndexing(currentBranch);
 };
 
@@ -82,10 +85,14 @@ const startIndexing = (currentBranch) => {
             return;
           }
           const title = data.split("\n")[1].split("=")[1];
+          const html = asciidoctor.convertFile(targetPath, { to_file: false, standalone: true });
+          const text = convert(html, {
+            wordwrap: 130
+          });
           const recode = {
             objectID: targetPath.substring(targetPath.indexOf("modules") + 7),
             title: title,
-            content: data,
+            content: text,
           };
           uploadFile(recode, targetPath);
         });
