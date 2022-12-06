@@ -1,0 +1,118 @@
+[id="events"]
+= Events
+
+The StarkNet event mechanism allows a contract to output information during its execution that can
+later be used outside of StarkNet. For example, consider a token contract that allows transfers of
+tokens between users. By only querying StarkNet storage, a user can only see how many tokens they
+have, and not who transferred those tokens. An event, emitted by the contract whenever funds are
+transferred, can be used to allow the user to get this information.
+
+Consider the contract described in xref:user_auth.adoc[Adding User Authentication]. Let’s add an
+event whenever the `increase_balance()` function is called.
+
+Start by defining the event:
+
+[#events_event_def]
+[source,cairo]
+----
+// An event emitted whenever increase_balance() is called.
+// current_balance is the balance before it was increased.
+@event
+func increase_balance_called(
+    current_balance: felt, amount: felt
+) {
+}
+----
+
+Add the following lines before the `return()` statement in `increase_balance()`:
+
+[#events_emit]
+[source,cairo]
+----
+// Emit the event.
+increase_balance_called.emit(current_balance=res, amount=amount);
+----
+
+Save the new contract file as `events.cairo`. You can find the full contract
+link:../_static/events.cairo[here].
+
+Compile and declare the contract:
+
+[#events_compile_and_declare_starknet]
+[source,bash]
+----
+starknet-compile events.cairo \
+    --output events_compiled.json \
+    --abi events_abi.json
+starknet declare --contract events_compiled.json
+----
+
+Deploy the contract:
+
+[#deploy_events_contract]
+[source,bash]
+----
+starknet deploy --class_hash ${EVENTS_CLASS_HASH}
+----
+
+where `$\{EVENTS_CLASS_HASH\}` is the value of class_hash. Invoke `increase_balance()`:
+
+[#events_invoke]
+[source,bash]
+----
+starknet invoke \
+    --address ${CONTRACT_ADDRESS} \
+    --abi events_abi.json \
+    --function increase_balance \
+    --inputs 4321
+----
+
+Wait for the transaction to be accepted (when its status is `PENDING` at least) and run the following
+line to see the emitted event (replace `$\{TRANSACTION_HASH\}` with the transaction hash you got from
+the last command):
+
+[#events_get_tx_receipt]
+[source,bash]
+----
+starknet get_transaction_receipt --hash ${TRANSACTION_HASH}
+----
+
+Consider the `events` section of the output. It should resemble:
+
+[#events_get_tx_receipt_output]
+[source,json]
+----
+"events": [
+    {
+        "data": [
+            "0x0",
+            "0x10e1"
+        ],
+        "from_address": "0x14acf3b7e92f97adee4d5359a7de3d673582f0ce03d33879cdbdbf03ec7fa5d",
+        "keys": [
+            "0x3db3da4221c078e78bd987e54e1cc24570d89a7002cefa33e548d6c72c73f9d"
+        ]
+    }
+]
+----
+
+The result contains the following fields:
+
+* `from_address` – The address of the contract emitting the event.
+* `data` – The arguments passed to `increase_balance_called.emit`: the balance before (`0`) and the
+amount (`4321==0x10e1`).
+* `key` – The event’s key, which is derived from the name of the event (`increase_balance_called`).
+If your contract emits more than one type of event, you can use this field to distinguish between
+them. You can use Python to get the event key from its name:
++
+[#events_key_from_name]
+[source,python]
+----
+from starkware.starknet.compiler.compile import \
+    get_selector_from_name
+
+print(hex(get_selector_from_name('increase_balance_called')))
+----
+
+Note that StarkNet currently does not have an API to fetch all events from a given contract.
+
