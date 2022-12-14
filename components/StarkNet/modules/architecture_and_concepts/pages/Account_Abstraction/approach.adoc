@@ -1,10 +1,10 @@
 [id="validate_and_execute_functions"]
-== `validate` and `execute` functions
+== __validate__ and __execute__ functions
 
 A StarkNet account contract must include the following two functions:
 
-* validate
-* execute
+* __validate__
+* __execute__
 
 These serve distinct purposes to ensure that only the account owner can initiate transactions and that fair fees are charged for the resources they use.
 
@@ -25,7 +25,7 @@ Social recovery:: A process where if you lose your wallet, you are able to retri
 Operating your account via facial recognition:: With signature abstraction, you can use your phone's native hardware to sign transactions, making it practically impossible to take control of another user's account (even in the case of the phone itself being stolen).
 
 [id="replay_protection"]
-== Replay Protection
+== Replay protection
 
 In StarkNet, similar to Ethereum, every contract has a nonce. This nonce is sequential; when a transaction is sent from an account, its nonce must match the account's nonce, and it's incremented after the transaction is executed (whether or not it was reverted). Note that, similar to Ethereum, only the nonce of account contracts (that is, those adhering to the above structure) can be non-zero.
 
@@ -37,3 +37,16 @@ A nonce serves two important roles:
 As seen above, StarkNet currently determines the nonce structure (sequential) at the protocol level. In the future, we may consider a more flexible design, extending account abstraction to nonce management (what we previously referred to as "nonce abstraction").
 
 While not mandatory at the protocol level, a richer standard interface for accounts was developed by the community. This standard was developed by OpenZeppelin, in a close collaboration with wallet teams and other Core StarkNet developers. You can see the IAccount interface https://github.com/OpenZeppelin/cairo-contracts/blob/main/src/openzeppelin/account/IAccount.cairo[here].
+
+[id="validate_limitations"]
+== Validate limitations
+
+There are some limitations set on the __validate__ function. The purpose of these limitations is twofold:
+
+*   We want to avoid the sequencer having to do a lot of work only to discover that the validation failed and he's not eligible to charge a fee (if this is possible, he'd be completely exposed to DOS attacks). Validation, while now abstract and in control of the account owner rather than the protocol, should still be a simple operation. This is why in the future, we will place max steps limitation upon the __validate__ function.
+
+*   Even if the validation is simple, we could still face the following attack: an attacker fills the mempool with transactions that are valid at time T. A sequencer may start executing them, thinking that at the time he will produce his block, they will still be valid. However, shortly after, at time T', the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it's included before the sequencer gets to publish his block (the attacker may do this by offering higher fees for this one transaction). 
+
+As a concrete example, think of many __validate__ functions checking that the value of some storage slot is 1, and the attacker's transaction later sets it to 0. To handle this issue, we add some further limitations. Currently, StarkNet enforces that __validate__ does not call external contracts.
+
+NOTE: The property that we achieve with the above restrictions is that a single storage update may only invalidate transactions from a single account (and this is the best we can do, an account can always invalidate its own past transactions by changing its keys). Thus, the price (in fees) required to invalidate transactions in the mempool is linear in the number of unique accounts that we want to invalidate.
