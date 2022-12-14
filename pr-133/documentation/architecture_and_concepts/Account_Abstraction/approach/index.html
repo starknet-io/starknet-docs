@@ -506,7 +506,7 @@
 </aside>
 <article class="doc">
 <div class="sect1">
-<h2 id="validate_and_execute_functions"><a class="anchor" href="#validate_and_execute_functions"></a><code>validate</code> and <code>execute</code> functions</h2>
+<h2 id="validate_and_execute_functions"><a class="anchor" href="#validate_and_execute_functions"></a><em>validate</em> and <em>execute</em> functions</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>A StarkNet account contract must include the following two functions:</p>
@@ -514,10 +514,10 @@
 <div class="ulist">
 <ul>
 <li>
-<p>validate</p>
+<p><em>validate</em></p>
 </li>
 <li>
-<p>execute</p>
+<p><em>execute</em></p>
 </li>
 </ul>
 </div>
@@ -554,7 +554,7 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="replay_protection"><a class="anchor" href="#replay_protection"></a>Replay Protection</h2>
+<h2 id="replay_protection"><a class="anchor" href="#replay_protection"></a>Replay protection</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>In StarkNet, similar to Ethereum, every contract has a nonce. This nonce is sequential; when a transaction is sent from an account, its nonce must match the account&#8217;s nonce, and it&#8217;s incremented after the transaction is executed (whether or not it was reverted). Note that, similar to Ethereum, only the nonce of account contracts (that is, those adhering to the above structure) can be non-zero.</p>
@@ -577,6 +577,39 @@
 </div>
 <div class="paragraph">
 <p>While not mandatory at the protocol level, a richer standard interface for accounts was developed by the community. This standard was developed by OpenZeppelin, in a close collaboration with wallet teams and other Core StarkNet developers. You can see the IAccount interface <a href="https://github.com/OpenZeppelin/cairo-contracts/blob/main/src/openzeppelin/account/IAccount.cairo">here</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="validate_limitations"><a class="anchor" href="#validate_limitations"></a>Validate limitations</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>There are some limitations set on the <em>validate</em> function. The purpose of these limitations is twofold:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>We want to avoid the sequencer having to do a lot of work only to discover that the validation failed and he&#8217;s not eligible to charge a fee (if this is possible, he&#8217;d be completely exposed to DOS attacks). Validation, while now abstract and in control of the account owner rather than the protocol, should still be a simple operation. This is why in the future, we will place max steps limitation upon the <em>validate</em> function.</p>
+</li>
+<li>
+<p>Even if the validation is simple, we could still face the following attack: an attacker fills the mempool with transactions that are valid at time T. A sequencer may start executing them, thinking that at the time he will produce his block, they will still be valid. However, shortly after, at time T', the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it&#8217;s included before the sequencer gets to publish his block (the attacker may do this by offering higher fees for this one transaction).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>As a concrete example, think of many <em>validate</em> functions checking that the value of some storage slot is 1, and the attacker&#8217;s transaction later sets it to 0. To handle this issue, we add some further limitations. Currently, StarkNet enforces that <em>validate</em> does not call external contracts.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The property that we achieve with the above restrictions is that a single storage update may only invalidate transactions from a single account (and this is the best we can do, an account can always invalidate its own past transactions by changing its keys). Thus, the price (in fees) required to invalidate transactions in the mempool is linear in the number of unique accounts that we want to invalidate.
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
