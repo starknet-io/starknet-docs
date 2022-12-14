@@ -530,7 +530,7 @@ send_message_to_l1(to_address=to_address, payload_size=1, payload=message_payloa
 </div>
 </div>
 <div class="paragraph">
-<p>After the state update that included this transaction is proved and the L1 state is updated, the hash of the message is stored on L1 in the StarkNet Core Contract (and the relevant counter is increased), and the <code>LogMessageToL1</code> event (which contains the message parameters) is emitted.</p>
+<p>After the state update that included this transaction is proved and the L1 state is updated, the message is stored on L1 in the StarkNet Core Contract (and the relevant counter is increased), and the <code>LogMessageToL1</code> event (which contains the message parameters) is emitted.</p>
 </div>
 <div class="paragraph">
 <p>Later, the recipient address on L1 can access and consume the message as part of an L1 transaction by re-supplying the message parameters. This is done by calling <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119"><code>consumeMessageFromL2</code></a> in the StarkNet Core Contract, who verifies that the hash corresponds to a stored message and that the caller is indeed the recipient on L1. In such a case, the reference count of the message hash in the StarkNet Core Contract decreases by 1.</p>
@@ -584,6 +584,18 @@ send_message_to_l1(to_address=to_address, payload_size=1, payload=message_payloa
     )
 );</code></pre>
 </div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+As the hash of the message being sent needs to be written to L1 storage (in the StarkNet Core contract) there is always a fixed 20k gas cost associated with sending an L2 to L1 message.
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -735,7 +747,25 @@ sent to L2. It is used to avoid hash collisions between different L1 handler tra
 </tr>
 </tbody>
 </table>
+<div class="paragraph">
+<p>The hash of the message is computed on L1 as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">keccak256(
+    abi.encodePacked(
+        uint256(FromAddress),
+        ToAddress,
+        Nonce,
+        Selector,
+        Payload.length,
+        Payload
+    )
+);</code></pre>
+</div>
+</div>
 <table class="tableblock frame-all grid-all fit-content">
+<caption class="title">Table 3. L1 handler transaction</caption>
 <colgroup>
 <col>
 <col>
@@ -758,30 +788,13 @@ sent to L2. It is used to avoid hash collisions between different L1 handler tra
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>List<FieldElement></code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>List<FieldElement></code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
 <td class="tableblock halign-left valign-top"></td>
 </tr>
 </tbody>
 </table>
-<div class="paragraph">
-<p>The hash of the message is computed on L1 as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">keccak256(
-    abi.encodePacked(
-        uint256(FromAddress),
-        ToAddress,
-        Nonce,
-        Selector,
-        Payload.length,
-        Payload
-    )
-);</code></pre>
-</div>
-</div>
 <div class="paragraph">
 <p>The hash of the corresponding L1 handler transaction on L2 is computed as follows:</p>
 </div>
