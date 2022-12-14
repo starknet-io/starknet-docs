@@ -535,13 +535,13 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Ensures that any transaction submitted is genuine and therefore will not take up unjustified resources during the execution process.</p>
+<p>Ensures that any transaction submitted was indeed initiated by the account owner and therefore will not take up unjustified resources during the execution process.</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>Without this mechanism, a forged transaction can result in the sequencer taking a fee and charging you unfairly.
-In short, <code>validate</code> ensures that the sequencer can only charge for valid transactions.</p>
+<p>Without this mechanism, a forged transaction can result in the sequencer stealing the user&#8217;s funds.
+In short, <code>validate</code> ensures that the sequencer may only include transactions that were approved by the account owner.</p>
 </div>
 <div class="ulist">
 <ul>
@@ -556,7 +556,7 @@ In short, <code>validate</code> ensures that the sequencer can only charge for v
 <h2 id="invalid_transactions"><a class="anchor" href="#invalid_transactions"></a>Invalid transactions</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>When the <code>validate</code> function returns invalid, no fee will be taken from the account in question.</p>
+<p>When the <code>validate</code> function fails, no fee will be taken from the account in question.</p>
 </div>
 </div>
 </div>
@@ -564,7 +564,10 @@ In short, <code>validate</code> ensures that the sequencer can only charge for v
 <h2 id="the_execute_function"><a class="anchor" href="#the_execute_function"></a>The <code>execute</code> function</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The purpose of the <code>execute</code> function is to abstract away the remaining actions performed by a transaction. This is the step where the sequencer will process transactions that are to be included in a block.</p>
+<p>The purpose of the <code>execute</code> function is to abstract away the remaining actions performed by a transaction.</p>
+</div>
+<div class="paragraph">
+<p>In Ethereum, a transaction is necessary a call to a specific function in a smart contract. With the execute abstraction, the account designer controls the flow of the transaction. For example, multicalls can be natively supported in your account, saving the need to send multiple transactions (in practice, this is even harder to manage without multicalls due to nonces).</p>
 </div>
 </div>
 </div>
@@ -572,7 +575,7 @@ In short, <code>validate</code> ensures that the sequencer can only charge for v
 <h2 id="reverted_transactions"><a class="anchor" href="#reverted_transactions"></a>Reverted transactions</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The <code>execute</code> function reverts the transaction when the method fails for any reason.</p>
+<p>A transaction is considered reverted when the <em>execute</em> function failed. Today, reverted transactions are not included in blocks, but in the future, they will be, and the sequencer will be eligible to charge a fee for the work done up to the point of failure, similarly to Ethereum.</p>
 </div>
 <div class="paragraph">
 <p>The sequencer charges only for successful transactions that result from the successful completion of the <code>execute</code> function.</p>
