@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Transaction Lifecycle :: StarkNet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Blocks/transaction-life-cycle/">
-    <link rel="prev" href="../header/">
-    <link rel="next" href="../transactions/">
+    <title>Simplified transaction flow :: StarkNet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Account_Abstraction/simplified_transaction_flow/">
+    <link rel="prev" href="../validate_and_execute/">
+    <link rel="next" href="../../Data_Availability/on-chain-data/">
     <meta name="generator" content="Antora 3.1.1">
     <link rel="stylesheet" href="../../../../_/css/site.css">
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-129128514-2"></script>
@@ -91,19 +91,19 @@
     <span class="nav-text">Blocks and transactions</span>
 <ul class="nav-list">
       <li class="nav-item " data-depth="3">
-    <a class="nav-link" href="../header/">Block structure</a>
-
-
-
-  </li>
-      <li class="nav-item is-current-page " data-depth="3">
-    <a class="nav-link" href="./">Transaction lifecycle</a>
+    <a class="nav-link" href="../../Blocks/header/">Block structure</a>
 
 
 
   </li>
       <li class="nav-item " data-depth="3">
-    <a class="nav-link" href="../transactions/">Transaction structure</a>
+    <a class="nav-link" href="../../Blocks/transaction-life-cycle/">Transaction lifecycle</a>
+
+
+
+  </li>
+      <li class="nav-item " data-depth="3">
+    <a class="nav-link" href="../../Blocks/transactions/">Transaction structure</a>
 
 
 
@@ -163,25 +163,25 @@
     <span class="nav-text">Account abstraction</span>
 <ul class="nav-list">
       <li class="nav-item " data-depth="3">
-    <a class="nav-link" href="../../Account_Abstraction/introduction/">Introduction to account abstraction</a>
+    <a class="nav-link" href="../introduction/">Introduction to account abstraction</a>
 
 
 
   </li>
       <li class="nav-item " data-depth="3">
-    <a class="nav-link" href="../../Account_Abstraction/approach/">StarkNet account structure</a>
+    <a class="nav-link" href="../approach/">StarkNet account structure</a>
 
 
 
   </li>
       <li class="nav-item " data-depth="3">
-    <a class="nav-link" href="../../Account_Abstraction/validate_and_execute/">Validate and execute</a>
+    <a class="nav-link" href="../validate_and_execute/">Validate and execute</a>
 
 
 
   </li>
-      <li class="nav-item " data-depth="3">
-    <a class="nav-link" href="../../Account_Abstraction/simplified_transaction_flow/">Simplified transaction flow</a>
+      <li class="nav-item is-current-page " data-depth="3">
+    <a class="nav-link" href="./">Simplified transaction flow</a>
 
 
 
@@ -825,12 +825,12 @@
   <ul>
     <li><a href="../../../">StarkNet</a></li>
     <li>Architecture and concepts</li>
-    <li>Blocks and transactions</li>
-    <li><a href="./">Transaction lifecycle</a></li>
+    <li>Account abstraction</li>
+    <li><a href="./">Simplified transaction flow</a></li>
   </ul>
 </nav>
 <!--
-  <div class="edit-this-page"><a href="https://github.com/starknet-io/starknet-docs/edit/HEAD/components/StarkNet/modules/architecture_and_concepts/pages/Blocks/transaction-life-cycle.adoc">Edit this Page</a></div>
+  <div class="edit-this-page"><a href="https://github.com/starknet-io/starknet-docs/edit/HEAD/components/StarkNet/modules/architecture_and_concepts/pages/Account_Abstraction/simplified_transaction_flow.adoc">Edit this Page</a></div>
   -->
 </div>
   <div class="content">
@@ -838,133 +838,41 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Transaction Lifecycle</h1>
+<h1 class="page">Simplified transaction flow</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following are the possible statuses of a transaction from the moment it&#8217;s sent by the user to the moment it&#8217;s validated by L1.</p>
+<p>The key stages of transaction lifetime are:</p>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="transaction_status"><a class="anchor" href="#transaction_status"></a>Transaction status</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="not_received"><a class="anchor" href="#not_received"></a>NOT_RECEIVED</h3>
-<div class="paragraph">
-<p>Transaction is not yet known to the sequencer</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="received"><a class="anchor" href="#received"></a>RECEIVED</h3>
-<div class="paragraph">
-<p>Transaction was received by the sequencer.
-Transaction will now either execute successfully or be rejected.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="pending"><a class="anchor" href="#pending"></a>PENDING</h3>
-<div class="paragraph">
-<p>Transaction executed successfully and entered the <a href="#the-pending-block">pending block</a>.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="rejected"><a class="anchor" href="#rejected"></a>REJECTED</h3>
-<div class="paragraph">
-<p>Transaction executed unsuccessfully and thus was skipped (applies both to a pending and an actual created block).
-Possible reasons for transaction rejection:</p>
-</div>
-<div class="ulist">
-<ul>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p>An assertion failed during the execution of the transaction (in StarkNet, unlike in Ethereum, transaction executions do not always succeed).</p>
+<p>The sequencer selects a transaction from the mempool and executes <code>&lowbar;&lowbar;validate&lowbar;&lowbar;</code></p>
 </li>
 <li>
-<p>The block may be rejected on L1, thus changing the transaction status to <code>REJECTED</code></p>
+<p>If the transaction was valid, the <code>&lowbar;&lowbar;execute&lowbar;&lowbar;</code> function is called</p>
 </li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="accepted_on_l2"><a class="anchor" href="#accepted_on_l2"></a>ACCEPTED_ON_L2</h3>
-<div class="paragraph">
-<p>Transaction passed validation and entered an actual created block on L2.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="accepted_on_l1"><a class="anchor" href="#accepted_on_l1"></a>ACCEPTED_ON_L1</h3>
-<div class="paragraph">
-<p>Transaction was accepted on-chain.</p>
-</div>
+<li>
+<p>If <code>&lowbar;&lowbar;execute&lowbar;&lowbar;</code> ran successfully, the sequencer includes the transaction in the block, charges the fee and proceeds to work on the next transaction (once the block is concluded, it will be sent to the prover)</p>
+</li>
+</ol>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="the_pending_block"><a class="anchor" href="#the_pending_block"></a>The pending block</h2>
+<h2 id="a_payment_mechanism"><a class="anchor" href="#a_payment_mechanism"></a>The payment mechanism</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Today, StarkNet supports querying the new block before its construction is complete. This feature improves the responsiveness of the system prior to the decentralization phase, but will probably become obsolete once the system is decentralized, as full nodes will only propagate finalized blocks through the network.</p>
+<p>The sequencer receives fees in ETH in return for including transactions in a block.</p>
 </div>
 <div class="paragraph">
-<p>During the construction of the block, as it is accumulating new transactions, the block&#8217;s status is <code>PENDING</code>. While status is <code>PENDING</code>, new transactions are dynamically added to the block. Once the sequencer decides to <code>close</code> the block, it becomes <code>ACCEPTED_ON_L2</code> and its hash is computed.</p>
-</div>
-<div class="paragraph">
-<p>The following example is a query for the pending mainnet block:</p>
-</div>
-<div class="paragraph">
-<p><a href="https://alpha-mainnet.starknet.io/feeder_gateway/get_block?blockNumber=pending" class="bare">https://alpha-mainnet.starknet.io/feeder_gateway/get_block?blockNumber=pending</a></p>
-</div>
-<div class="paragraph">
-<p>See the CLI section on how to call the gateway with respect to the pending block.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="transaction_receipt"><a class="anchor" href="#transaction_receipt"></a>Transaction receipt</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The transaction receipt contains basic transaction details (block identifiers and the index within the block),
-a summary of the execution resources used by the transaction, the events emitted, a list of messages sent to L1,
-and a consumed L1 message (in case the transaction invokes an L1 handler). The following is an example of a receipt:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
-  "execution_resources": {
-    "builtin_instance_counter": {
-      "pedersen_builtin": 0,
-      "range_check_builtin": 0,
-      "bitwise_builtin": 0,
-      "output_builtin": 0,
-      "ecdsa_builtin": 0,
-      "ec_op_builtin": 0
-    },
-    "n_steps": 178,
-    "n_memory_holes": 0
-  },
-  "block_number": 6807,
-  "transaction_index": 0,
-  "transaction_hash": "0x3f187b7522320f1c87271772fedd6ad119f62595e2d9208824367463df94a5d",
-  "status": "PENDING",
-  "block_hash": "0x23173d4e2d5c0ecc1376b8dbe345c028aa424048c67f68812a9a83873a2d87f",
-  "l2_to_l1_messages": [],
-  "events": [
-    {
-      "data": ["0", "4321"],
-      "from_address": "0x14acf3b7e92f97adee4d5359a7de3d673582f0ce03d33879cdbdbf03ec7fa5d",
-      "keys": [
-        "1744303484486821561902174603220722448499782664094942993128426674277214273437"
-      ]
-    }
-  ]
-}</code></pre>
-</div>
+<p>For more details on how the transaction fee is computed, see <a href="../../Fees/fee-mechanism/" class="xref page">the fees section</a></p>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../header/">Block structure</a></span>
-  <span class="next"><a href="../transactions/">Transaction structure</a></span>
+  <span class="prev"><a href="../validate_and_execute/">Validate and execute</a></span>
+  <span class="next"><a href="../../Data_Availability/on-chain-data/">On-chain data</a></span>
 </nav>
 </article>
   </div>
