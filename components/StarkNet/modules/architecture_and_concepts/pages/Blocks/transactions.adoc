@@ -3,11 +3,15 @@
 
 StarkNet supports the following types of transactions:
 
-* _deploy_ transaction
 * _invoke_ transaction
 * _declare_ transaction
 
 This topic describes the available fields for these transaction types and how each transaction hash is calculated.
+
+[IMPORTANT]
+====
+The deploy transaction has now been removed in the current release of StarkNet. To deploy new contract instances, you can use the `deploy` syscall.
+====
 
 [id="transaction_versioning"]
 == Transaction versioning
@@ -19,29 +23,6 @@ When the fields that comprise a transaction change, either with the addition of 
 Do not submit a transaction that uses an unsupported transaction type, because it cannot be included in a proof, and so cannot become part of a StarkNet block.
 
 [id="deploy_transaction"]
-== Deploy transaction
-
-[IMPORTANT]
-====
-The deploy transaction is deprecated and will be removed in a future release of StarkNet. To deploy new contract instances, you can use the `deploy` syscall. For more information, see xref:../Contracts/contract-classes.adoc[contract classes].
-====
-
-A deploy transaction is a transaction type used to deploy contracts to StarkNet.
-
-A deploy transaction has the following fields:
-
-[%autowidth]
-|===
-| Name | Type | Description
-
-| `contract_address_salt` | `FieldElement`       | A random number used to distinguish between different instances of the contract.
-| `contract_definition`   | `ContractClass`      | The object that defines the contract's functionality.
-| `constructor_calldata`  | `List<FieldElement>` | The arguments passed to the constructor during deployment.
-| `caller_address`        | `FieldElement`       | Who invoked the deployment. Set to 0 (in future: the deploying account contract).
-| `version`               | `FieldElement`       | The transaction's version. Possible values are 1 or 0.
-
-When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of StarkNet.
-|===
 
 === Calculating the hash of a deploy transaction
 
@@ -211,13 +192,14 @@ stem:[g_x=8747394510780077664574649897743220836492786075332494811513824810728688
 [id="chain-id"]
 == Chain-Id
 
-StarkNet currently supports two chain IDs. Chain IDs are given as numbers, representing the ASCII encoding of specific constant strings, as illustrated by the following Python snippet:
+StarkNet currently supports three chain IDs. Chain IDs are given as numbers, representing the ASCII encoding of specific constant strings, as illustrated by the following Python snippet:
 
 [source,python]
 ----
 chain_id = int.from_bytes(value, byteorder="big", signed=False)
 ----
-Two constants are currently used:
+Three constants are currently used:
 
 * `SN_MAIN` for StarkNet's main network.
-* `SN_GOERLI` for StarkNet's testnet.
+* `SN_GOERLI` for StarkNet's public testnet.
+* `SN_GOERLI2` for StarkNet developers.
