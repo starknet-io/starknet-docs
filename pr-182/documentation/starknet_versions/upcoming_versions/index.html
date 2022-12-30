@@ -1014,7 +1014,7 @@
 <p>Upon receiving a <code>DECLARE v2</code> transaction, the sequencer will compile the contract class to Casm and ensure that the resulting compiled class hash equals the given <code>compiled_class_hash</code>; otherwise, the transaction is dropped.</p>
 </div>
 <div class="paragraph">
-<p>The sequencer then proceeds to run <code><em>validate_declare</em>_</code> (similarly to version 1), and in case the transaction is found valid, it stores the given class in its DB and updates the state commitment with the <code>(class_hash, compiled_class_hash)</code> pair (see the [state commitment](<a href="https://www.notion.so/StarkNet-0-11-0-28e94791d4d147ec8ca478b8bebc3b88" class="bare">https://www.notion.so/StarkNet-0-11-0-28e94791d4d147ec8ca478b8bebc3b88</a>) section for more details).</p>
+<p>The sequencer then proceeds to run <code><em>validate_declare</em>_</code> (similarly to version 1), and in case the transaction is found valid, it stores the given class in its DB and updates the state commitment with the <code>(class_hash, compiled_class_hash)</code> pair.</p>
 </div>
 </div>
 <div class="sect2">
@@ -1033,7 +1033,7 @@
 <h2 id="version_0_removal"><a class="anchor" href="#version_0_removal"></a>Version 0 Removal</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>💡 <code>INVOKE</code> and <code>DECLARE</code> transactions of version 0 will no longer be supported in StarkNet Alpha v0.11.0</p>
+<p><code>INVOKE</code> and <code>DECLARE</code> transactions of version 0 will no longer be supported in StarkNet Alpha v0.11.0</p>
 </div>
 </div>
 </div>
@@ -1054,16 +1054,13 @@
 <div class="paragraph">
 <p><code>replace_class(class_hash: felt)</code></p>
 </div>
-<div class="paragraph">
-<p>For more details about the exact semantics of this syscall, see [the docs](<a href="https://www.notion.so/89f2e2884caf4f1a84edbe86e8d42628" class="bare">https://www.notion.so/89f2e2884caf4f1a84edbe86e8d42628</a>).</p>
-</div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="on_chain_data"><a class="anchor" href="#on_chain_data"></a>On-Chain Data</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The data published on L1 should allow everyone to construct the StarkNet state locally. The introduction of the <code>replace_class</code> system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our [on chain data format](<a href="https://docs.starknet.io/documentation/architecture_and_concepts/Data_Availability/on-chain-data/#format" class="bare">https://docs.starknet.io/documentation/architecture_and_concepts/Data_Availability/on-chain-data/#format</a>):</p>
+<p>The data published on L1 should allow everyone to construct the StarkNet state locally. The introduction of the <code>replace_class</code> system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our on chain data format:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -1074,9 +1071,12 @@
 <p>The first word will be the number of contracts affected by the block (this includes storage updates, nonce updates, class updates, or deployments).</p>
 </li>
 <li>
-<p>For each affected contract, the first word will encode the new nonce and number of storage updates. Additionally, it will use one bit to determine whether or not the contract was deployed or if its class was updated. The specific encoding is given by:</p>
+<p>For each affected contract, the first word will encode the new nonce and number of storage updates. Additionally, it will use one bit to determine whether or not the contract was deployed or if its class was updated.</p>
 </li>
 </ul>
+</div>
+<div class="paragraph">
+<p>The specific encoding is given by:</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -1099,6 +1099,86 @@
 </tr>
 </tbody>
 </table>
+<div class="ulist">
+<ul>
+<li>
+<p>If the above flag is turned on, then the next word is the new contract class (whether it was just deployed or replaced). Otherwise, you can skip to the next bullet.</p>
+</li>
+<li>
+<p>For each storage update, we send to L1 the key and the new value (this part remains unchanged)</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="api_changes"><a class="anchor" href="#api_changes"></a>API Changes</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="feeder_gateway"><a class="anchor" href="#feeder_gateway"></a>Feeder Gateway</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>New endpoint: <strong><code>get_compiled_class</code>.</strong> The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution.</p>
+</li>
+<li>
+<p><code><strong>get_class_by_hash</strong></code> - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0.</p>
+</li>
+<li>
+<p><code><strong>get_full_contract</strong></code> - same as above</p>
+</li>
+<li>
+<p><code><strong>get_state_update</code></strong></p>
+</li>
+<li>
+<p>added <code>replaced_classes</code> section</p>
+</li>
+<li>
+<p><code>declared_contracts</code> is split into <code>old_declared_contracts</code> and <code>declared_contracts</code></p>
+</li>
+<li>
+<p><code>old_declared_contracts</code> is a list of class hashes</p>
+</li>
+<li>
+<p><code>declared_classes</code> is a dictionary that maps <code>class_hash</code> to <code>compiled_class_hash</code></p>
+</li>
+<li>
+<p><code><strong>get_block</strong></code></p>
+</li>
+<li>
+<p>the <code>transactions</code> field is subject to the same changes in <code>get_transaction</code></p>
+</li>
+<li>
+<p><code>state_root</code> is renamed to <code>state_commitment</code></p>
+</li>
+<li>
+<p><code><strong>get_transaciton</strong></code></p>
+</li>
+<li>
+<p><code>contract_address</code> is changed to <code>sender_address</code> in invoke transactions</p>
+</li>
+<li>
+<p>Declare v2 transaction may be returned</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="gateway"><a class="anchor" href="#gateway"></a>Gateway</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><code><strong>add_transaction</strong></code></p>
+</li>
+<li>
+<p>can now take a Declare v2 transaction</p>
+</li>
+<li>
+<p><code>contract_address</code> is changed to <code>sender_address</code> in Invoke transactions</p>
+</li>
+</ul>
+</div>
+</div>
 </div>
 </div>
 <nav class="pagination">
