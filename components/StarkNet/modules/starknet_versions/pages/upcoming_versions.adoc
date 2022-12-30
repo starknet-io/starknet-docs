@@ -63,7 +63,7 @@ The following is an example of the new version of the `DECLARE` transaction:
 
 Upon receiving a `DECLARE v2` transaction, the sequencer will compile the contract class to Casm and ensure that the resulting compiled class hash equals the given `compiled_class_hash`; otherwise, the transaction is dropped.
 
-The sequencer then proceeds to run `__validate_declare___` (similarly to version 1), and in case the transaction is found valid, it stores the given class in its DB and updates the state commitment with the `(class_hash, compiled_class_hash)` pair (see the [state commitment](https://www.notion.so/StarkNet-0-11-0-28e94791d4d147ec8ca478b8bebc3b88) section for more details).
+The sequencer then proceeds to run `__validate_declare___` (similarly to version 1), and in case the transaction is found valid, it stores the given class in its DB and updates the state commitment with the `(class_hash, compiled_class_hash)` pair.
 
 ### Deploy and library_call
 
@@ -73,7 +73,7 @@ After the class was declared, it can be used either in deploying new instances o
 
 ## Version 0 Removal
 
-💡 `INVOKE` and `DECLARE` transactions of version 0 will no longer be supported in StarkNet Alpha v0.11.0
+`INVOKE` and `DECLARE` transactions of version 0 will no longer be supported in StarkNet Alpha v0.11.0
 
 
 ## State Commitment
@@ -86,22 +86,22 @@ We add a new system call that allows changing a contract’s class to a Cairo 1.
 
 `replace_class(class_hash: felt)`
 
-For more details about the exact semantics of this syscall, see [the docs](https://www.notion.so/89f2e2884caf4f1a84edbe86e8d42628).
-
 ## On-Chain Data
 
-The data published on L1 should allow everyone to construct the StarkNet state locally. The introduction of the `replace_class` system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our [on chain data format](https://docs.starknet.io/documentation/architecture_and_concepts/Data_Availability/on-chain-data/#format):
+The data published on L1 should allow everyone to construct the StarkNet state locally. The introduction of the `replace_class` system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our on chain data format:
 
 - The deployment info section is removed
 - The first word will be the number of contracts affected by the block (this includes storage updates, nonce updates, class updates, or deployments).
-- For each affected contract, the first word will encode the new nonce and number of storage updates. Additionally, it will use one bit to determine whether or not the contract was deployed or if its class was updated. The specific encoding is given by:
+- For each affected contract, the first word will encode the new nonce and number of storage updates. Additionally, it will use one bit to determine whether or not the contract was deployed or if its class was updated.
+
+The specific encoding is given by:
 
 
 |===
 |flag|new nonce|n_updates
 
 | 1 bit | 64 bits   | 64 bits   |
-
+|===
 
 - If the above flag is turned on, then the next word is the new contract class (whether it was just deployed or replaced). Otherwise, you can skip to the next bullet.
 - For each storage update, we send to L1 the key and the new value (this part remains unchanged)
@@ -111,7 +111,7 @@ The data published on L1 should allow everyone to construct the StarkNet state l
 ### Feeder Gateway
 
 - New endpoint: **`get_compiled_class`.** The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution.
-- `**get_class_by_hash**` - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0. You can find an example of the new class structure [here](https://github.com/starkware-libs/cairo/blob/main/crates/starknet/test_data/hello_starknet.json).
+- `**get_class_by_hash**` - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0.
 - `**get_full_contract**` - same as above
 - `**get_state_update`**
 - added `replaced_classes` section
