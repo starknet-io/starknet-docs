@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Upcoming StarkNet versions :: StarkNet documentation</title>
+    <title>StarkNet v0.11.0 :: StarkNet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/starknet_versions/upcoming_versions/">
     <link rel="prev" href="../../">
     <link rel="next" href="../version_notes/">
@@ -911,8 +911,196 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Upcoming StarkNet versions</h1>
+<h1 class="page">StarkNet v0.11.0</h1>
+<div class="sect1">
+<h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>StarkNet Alpha 0.11.0 introduces Cairo 1.0 smart contracts. Until regenesis, old and new contracts will co-exist and will be able to interact with each other. On the regenesis, classes (and contracts that are instances of those classes) written in older Cairo versions will no longer be supported.</p>
+</div>
+<div class="paragraph">
+<p>In StarkNet v0.11.0, you can declare, deploy and run Cairo 1.0 smart contracts. We also introduce a new system call that allows a smooth transitioning of existing contracts to a Cairo 1.0 implementation.</p>
+</div>
+<div class="paragraph">
+<p>So far, contract classes have been defined in terms of Cairo assembly, or Casm for short (the class definition also included more information needed for execution, e.g., hint data). The novelty of Cairo 1.0 is the introduction of Sierra (Safe Intermediate Representation), an intermediate layer between Cairo 1.0 and Casm.</p>
+</div>
+<div class="paragraph">
+<p>The role of Sierra is to guarantee that every contract execution can be proven. With Cairo 0, one may write contracts that fail ungracefully, e.g., via an <code>assert</code> instruction, which will result in unprovable transactions.</p>
+</div>
+<div class="paragraph">
+<p>In such cases, it is impossible to trustlessly charge a fee for the failed transaction, which creates a potential DOS vector on StarkNet sequencers. On the other hander, Sierra is guaranteed to compile to “safe Casm,” i.e., a subset of Casm that cannot fail (the simplest example that illustrates the restrictions of safe Casm is the usage of if/else instructions rather than asserts).</p>
+</div>
+<div class="paragraph">
+<p>To guarantee that all classes in the system originated from Sierra, users will send a new contract class structure (one that corresponds to Sierra), and the StarkNet sequencer will compile it to Casm.</p>
+</div>
+<div class="paragraph">
+<p>In the future, this compilation step will be proven inside the StarkNet OS. In the meantime, users have to perform this compilation and produce the Casm hash locally in order to sign it in the <code>DECLARE</code> transaction. Note that the user’s approval here is vital; if the compilation to Casm is not verified, nothing enforces the generated Casm to correspond to the (Sierra) contract class.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>💡 Note that essentially, Cairo is only required for proving. In order to prove the validity of blocks, we need to be able to represent every contract execution in Cairo.</p>
+</div>
+<div class="paragraph">
+<p>For sequencers, who are responsible for block production, proving may be out of scope. Thus, the compilation of the contract class to Casm may not be important for them. In the future, one can imagine a Sierra VM or compilation from Sierra to different CPU architectures, e.g., x86).</p>
+</div>
+<div class="paragraph">
+<p>However, for the time being, different components in the ecosystem (the sequencer, full nodes, etc.) will keep using the generated Casm for contract execution.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>The introduction of Cairo 1.0 and Sierra has several effects on the system. Below we list the effects on each component; of particular note are:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A new version of the <code>DECLARE</code> transaction, which allows sending the new class structure</p>
+</li>
+<li>
+<p>The state commitment will now include contract classes</p>
+</li>
+<li>
+<p>Changes to the on-chain data format</p>
+</li>
+<li>
+<p>New system call - <code>replace_class</code></p>
+</li>
+<li>
+<p>StarkNet API (feeder gateway/gateway) and JSON-RPC updates</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="declare_v2"><a class="anchor" href="#declare_v2"></a>Declare v2</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="transaction_structure"><a class="anchor" href="#transaction_structure"></a>Transaction structure</h3>
+<div class="paragraph">
+<p>The following is an example of the new version of the <code>DECLARE</code> transaction:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+	"version": "0x2",
+	"max_fee": "0xf99ee42792c",
+	"signature": [
+		"0x1e3207935d3ab611b30bf486915b3d2f7ddb5eaa00c1fca2ec73343babbe434",
+		"0x418a33a22ccba3c743d0a097bd61d749527f4d460bd3317e904762d91eebc05"
+	],
+	"nonce": "0x1",
+	"contract_class": {
+		...
+	},
+	"compiled_class_hash": "0x418a33a22ccba3c743d0a097bd61d749527f4d460bd3317e904762d91eebc05"
+	"sender_address": "0x706064eb9da21c692ef9a6b9f19d671b718e3bea99926ba6b6ad938c049fcbe",
+	"type": "DECLARE"
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="transaction_flow"><a class="anchor" href="#transaction_flow"></a>Transaction flow</h3>
+<div class="paragraph">
+<p>Upon receiving a <code>DECLARE v2</code> transaction, the sequencer will compile the contract class to Casm and ensure that the resulting compiled class hash equals the given <code>compiled_class_hash</code>; otherwise, the transaction is dropped.</p>
+</div>
+<div class="paragraph">
+<p>The sequencer then proceeds to run <code><em>validate_declare</em>_</code> (similarly to version 1), and in case the transaction is found valid, it stores the given class in its DB and updates the state commitment with the <code>(class_hash, compiled_class_hash)</code> pair (see the [state commitment](<a href="https://www.notion.so/StarkNet-0-11-0-28e94791d4d147ec8ca478b8bebc3b88" class="bare">https://www.notion.so/StarkNet-0-11-0-28e94791d4d147ec8ca478b8bebc3b88</a>) section for more details).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="deploy_and_library_call"><a class="anchor" href="#deploy_and_library_call"></a>Deploy and library_call</h3>
+<div class="paragraph">
+<p>After the class was declared, it can be used either in deploying new instances or via library calls. Note that to specify the class (either for deploy or library_call), one has to send <code>class_hash</code> and <strong>NOT</strong> <code>compiled_class_hash</code>. The sequencer and full nodes may internally maintain a mapping between the two, but a reference to a declared class has to be via its class hash.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="transaction_hash"><a class="anchor" href="#transaction_hash"></a>Transaction hash</h3>
 
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="version_0_removal"><a class="anchor" href="#version_0_removal"></a>Version 0 Removal</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>💡 <code>INVOKE</code> and <code>DECLARE</code> transactions of version 0 will no longer be supported in StarkNet Alpha v0.11.0</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State Commitment</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>New classes declared by v2 Declare transactions will be included in the state commitment. To this end, we change the state commitment from <code>global_tree_root</code> to <code>h(global_tree_root, classes_root)</code>, where <code>classes_root</code> is a height 251 Patricia tree constructed from the key-value pairs <code>(class_hash, compiled_class_hash)</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="replace_class_syscall"><a class="anchor" href="#replace_class_syscall"></a>Replace Class Syscall</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>We add a new system call that allows changing a contract’s class to a Cairo 1.0 class:</p>
+</div>
+<div class="paragraph">
+<p><code>replace_class(class_hash: felt)</code></p>
+</div>
+<div class="paragraph">
+<p>For more details about the exact semantics of this syscall, see [the docs](<a href="https://www.notion.so/89f2e2884caf4f1a84edbe86e8d42628" class="bare">https://www.notion.so/89f2e2884caf4f1a84edbe86e8d42628</a>).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="on_chain_data"><a class="anchor" href="#on_chain_data"></a>On-Chain Data</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The data published on L1 should allow everyone to construct the StarkNet state locally. The introduction of the <code>replace_class</code> system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our [on chain data format](<a href="https://docs.starknet.io/documentation/architecture_and_concepts/Data_Availability/on-chain-data/#format" class="bare">https://docs.starknet.io/documentation/architecture_and_concepts/Data_Availability/on-chain-data/#format</a>):</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The deployment info section is removed</p>
+</li>
+<li>
+<p>The first word will be the number of contracts affected by the block (this includes storage updates, nonce updates, class updates, or deployments).</p>
+</li>
+<li>
+<p>For each affected contract, the first word will encode the new nonce and number of storage updates. Additionally, it will use one bit to determine whether or not the contract was deployed or if its class was updated. The specific encoding is given by:</p>
+</li>
+</ul>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">flag</th>
+<th class="tableblock halign-left valign-top">new nonce</th>
+<th class="tableblock halign-left valign-top">n_updates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1 bit</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">64 bits</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">64 bits</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
 <nav class="pagination">
   <span class="prev"><a href="../../">Introduction</a></span>
   <span class="next"><a href="../version_notes/">StarkNet version notes</a></span>
