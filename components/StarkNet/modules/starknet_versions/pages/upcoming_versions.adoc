@@ -42,9 +42,9 @@ The introduction of Cairo 1.0 and Sierra has several effects on the system. Belo
 - New system call - `replace_class`
 - StarkNet API (feeder gateway/gateway) and JSON-RPC updates
 
-### Declare v2
+## Declare v2
 
-#### Transaction structure
+### Transaction structure
 
 The following is an example of the new version of the `DECLARE` transaction:
 
@@ -66,32 +66,32 @@ The following is an example of the new version of the `DECLARE` transaction:
 }
 ```
 
-#### Transaction flow
+### Transaction flow
 
 Upon receiving a `DECLARE v2` transaction, the sequencer will compile the contract class to Casm and ensure that the resulting compiled class hash equals the given `compiled_class_hash`; otherwise, the transaction is dropped.
 
 The sequencer then proceeds to run `__validate_declare___` (similarly to version 1), and in case the transaction is found valid, it stores the given class in its DB and updates the state commitment with the `(class_hash, compiled_class_hash)` pair.
 
-#### Deploy and library_call
+### Deploy and library_call
 
 After the class was declared, it can be used either in deploying new instances or via library calls. Note that to specify the class (either for deploy or library_call), one has to send `class_hash` and **NOT** `compiled_class_hash`. The sequencer and full nodes may internally maintain a mapping between the two, but a reference to a declared class has to be via its class hash.
 
-### Version 0 Removal
+## Version 0 Removal
 
 `INVOKE` and `DECLARE` transactions of version 0 will no longer be supported in StarkNet Alpha v0.11.0
 
 
-### State commitment
+## State commitment
 
 New classes declared by v2 Declare transactions will be included in the state commitment. To this end, we change the state commitment from `global_tree_root` to `h(global_tree_root, classes_root)`, where `classes_root` is a height 251 Patricia tree constructed from the key-value pairs `(class_hash, compiled_class_hash)`.
 
-### Replace class syscall
+## Replace class syscall
 
 We add a new system call that allows changing a contract’s class to a Cairo 1.0 class:
 
 `replace_class(class_hash: felt)`
 
-### On-Chain data
+## On-Chain data
 
 The data published on L1 should allow everyone to construct the StarkNet state locally. The introduction of the `replace_class` system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our on chain data format:
 
@@ -110,9 +110,9 @@ The specific encoding is given by:
 - If the above flag is turned on, then the next word is the new contract class (whether it was just deployed or replaced). Otherwise, you can skip to the next bullet.
 - For each storage update, we send to L1 the key and the new value (this part remains unchanged)
 
-### API changes
+## API changes
 
-#### Feeder gateway
+### Feeder gateway
 
 * New endpoint: **`get_compiled_class`.** The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution.
 * `**get_class_by_hash**` - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0.
@@ -131,18 +131,18 @@ The specific encoding is given by:
 * `**estimate_fee**`
 ** Can now take an additional `skip_validate` flag in the URL. If set to true, then `&lowbar;&lowbar;validate&lowbar;&lowbar;` execution will be skipped. This can assist hardware wallets in not having to sign for fee estimations.
 
-#### Gateway
+### Gateway
 
 * `**add_transaction**`
 ** Can now take a Declare v2 transaction
 ** `contract_address` is changed to `sender_address` in Invoke transactions
 
 
-### JSON-RPC changes
+## JSON-RPC changes
 
 The new class structure and Declare V2 are added to the JSON-RPC. You can track the changes in this https://github.com/starkware-libs/starknet-specs/pull/65/[pull request].
 
 
-### Mandatory message fees
+## Mandatory message fees
 
 As of this version, L1→L2 https://docs.starknet.io/documentation/architecture_and_concepts/L1-L2_Communication/messaging-mechanism/#l1-l2_message_fees[message fees] will become mandatory, i.e., the sequencer will no longer process messages sent with zero ETH.
