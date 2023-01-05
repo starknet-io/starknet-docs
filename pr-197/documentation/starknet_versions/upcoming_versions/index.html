@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>StarkNet v0.11.0 :: StarkNet documentation</title>
+    <title>StarkNet Alpha v0.11.0 :: StarkNet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/starknet_versions/upcoming_versions/">
     <link rel="prev" href="../../">
     <link rel="next" href="../version_notes/">
@@ -905,7 +905,7 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">StarkNet v0.11.0</h1>
+<h1 class="page">StarkNet Alpha v0.11.0</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
@@ -922,19 +922,20 @@
 </div>
 </div>
 </div>
-<div class="sect2">
-<h3 id="what_to_expect"><a class="anchor" href="#what_to_expect"></a>What to expect</h3>
+<div class="sect1">
+<h2 id="what_to_expect"><a class="anchor" href="#what_to_expect"></a>What to expect</h2>
+<div class="sectionbody">
 <div class="paragraph">
 <p>In StarkNet v0.11.0, you can declare, deploy and run Cairo 1.0 smart contracts. We also introduce a new system call that allows a smooth transitioning of existing contracts to a Cairo 1.0 implementation.</p>
 </div>
 <div class="paragraph">
-<p>So far, contract classes have been defined in terms of Cairo assembly, or Casm for short (the class definition also included more information needed for execution, e.g., hint data). The novelty of Cairo 1.0 is the introduction of Sierra (Safe Intermediate Representation), an intermediate layer between Cairo 1.0 and Casm.</p>
+<p>Historically, contract classes have been defined in terms of Cairo assembly, or Casm for short (the class definition also included more information needed for execution, e.g., hint data). The novelty of Cairo 1.0 is the introduction of Sierra (Safe Intermediate Representation), an intermediate layer between Cairo 1.0 and Casm.</p>
 </div>
 <div class="paragraph">
-<p>The role of Sierra is to guarantee that every contract execution can be proven. With Cairo 0, one may write contracts that fail ungracefully, e.g., via an <code>assert</code> instruction, which will result in unprovable transactions.</p>
+<p>The role of Sierra is to guarantee that every contract execution can be proven. With Cairo 0, you may write contracts that fail ungracefully, e.g., via an <code>assert</code> instruction, which will result in unprovable transactions.</p>
 </div>
 <div class="paragraph">
-<p>In such cases, it is impossible to trustlessly charge a fee for the failed transaction, which creates a potential DOS vector on StarkNet sequencers. On the other hander, Sierra is guaranteed to compile to “safe Casm,” i.e., a subset of Casm that cannot fail (the simplest example that illustrates the restrictions of safe Casm is the usage of if/else instructions rather than asserts).</p>
+<p>In such cases, it is impossible to trustlessly charge a fee for the failed transaction, which creates a potential DOS vector on StarkNet sequencers. Conversely, Sierra is guaranteed to compile to “safe Casm,” i.e., a subset of Casm that cannot fail (the simplest example that illustrates the restrictions of safe Casm is the usage of if/else instructions rather than asserts).</p>
 </div>
 <div class="paragraph">
 <p>To guarantee that all classes in the system originated from Sierra, users will send a new contract class structure (one that corresponds to Sierra), and the StarkNet sequencer will compile it to Casm.</p>
@@ -953,7 +954,7 @@
 <p>Cairo is only required for proving. In order to prove the validity of blocks, we need to be able to represent every contract execution in Cairo.</p>
 </div>
 <div class="paragraph">
-<p>For sequencers, who are responsible for block production, proving may be out of scope. Thus, the compilation of the contract class to Casm may not be important for them. In the future, one can imagine a Sierra VM or compilation from Sierra to different CPU architectures, e.g., x86).</p>
+<p>For sequencers, that are responsible for block production, proving may be out of scope. Thus, the compilation of the contract class to Casm may not be important for them. In the future, one can imagine a Sierra VM or compilation from Sierra to different CPU architectures, e.g., x86).</p>
 </div>
 <div class="paragraph">
 <p>However, for the time being, different components in the ecosystem (the sequencer, full nodes, etc.) will keep using the generated Casm for contract execution.</p>
@@ -962,6 +963,11 @@
 </tr>
 </table>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="notable_changes"><a class="anchor" href="#notable_changes"></a>Notable changes</h2>
+<div class="sectionbody">
 <div class="paragraph">
 <p>The introduction of Cairo 1.0 and Sierra has several effects on the system. Below we list the effects on each component; of particular note are:</p>
 </div>
@@ -984,12 +990,10 @@
 </li>
 </ul>
 </div>
-</div>
-<div class="sect1">
-<h2 id="declare_v2"><a class="anchor" href="#declare_v2"></a>Declare v2</h2>
-<div class="sectionbody">
 <div class="sect2">
-<h3 id="transaction_structure"><a class="anchor" href="#transaction_structure"></a>Transaction structure</h3>
+<h3 id="declare_v2"><a class="anchor" href="#declare_v2"></a>Declare v2</h3>
+<div class="sect3">
+<h4 id="transaction_structure"><a class="anchor" href="#transaction_structure"></a>Transaction structure</h4>
 <div class="paragraph">
 <p>The following is an example of the new version of the <code>DECLARE</code> transaction:</p>
 </div>
@@ -1013,8 +1017,8 @@
 </div>
 </div>
 </div>
-<div class="sect2">
-<h3 id="transaction_flow"><a class="anchor" href="#transaction_flow"></a>Transaction flow</h3>
+<div class="sect3">
+<h4 id="transaction_flow"><a class="anchor" href="#transaction_flow"></a>Transaction flow</h4>
 <div class="paragraph">
 <p>Upon receiving a <code>DECLARE v2</code> transaction, the sequencer will compile the contract class to Casm and ensure that the resulting compiled class hash equals the given <code>compiled_class_hash</code>; otherwise, the transaction is dropped.</p>
 </div>
@@ -1022,33 +1026,27 @@
 <p>The sequencer then proceeds to run <code><em>validate_declare</em>_</code> (similarly to version 1), and in case the transaction is found valid, it stores the given class in its DB and updates the state commitment with the <code>(class_hash, compiled_class_hash)</code> pair.</p>
 </div>
 </div>
-<div class="sect2">
-<h3 id="deploy_and_library_call"><a class="anchor" href="#deploy_and_library_call"></a>Deploy and library_call</h3>
+<div class="sect3">
+<h4 id="deploy_and_library_call"><a class="anchor" href="#deploy_and_library_call"></a>Deploy and library_call</h4>
 <div class="paragraph">
 <p>After the class was declared, it can be used either in deploying new instances or via library calls. Note that to specify the class (either for deploy or library_call), one has to send <code>class_hash</code> and <strong>NOT</strong> <code>compiled_class_hash</code>. The sequencer and full nodes may internally maintain a mapping between the two, but a reference to a declared class has to be via its class hash.</p>
 </div>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="version_0_removal"><a class="anchor" href="#version_0_removal"></a>Version 0 Removal</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="version_0_removal"><a class="anchor" href="#version_0_removal"></a>Version 0 Removal</h3>
 <div class="paragraph">
 <p><code>INVOKE</code> and <code>DECLARE</code> transactions of version 0 will no longer be supported in StarkNet Alpha v0.11.0</p>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State commitment</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State commitment</h3>
 <div class="paragraph">
 <p>New classes declared by v2 Declare transactions will be included in the state commitment. To this end, we change the state commitment from <code>global_tree_root</code> to <code>h(global_tree_root, classes_root)</code>, where <code>classes_root</code> is a height 251 Patricia tree constructed from the key-value pairs <code>(class_hash, compiled_class_hash)</code>.</p>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="replace_class_syscall"><a class="anchor" href="#replace_class_syscall"></a>Replace class syscall</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="replace_class_syscall"><a class="anchor" href="#replace_class_syscall"></a>Replace class syscall</h3>
 <div class="paragraph">
 <p>We add a new system call that allows changing a contract’s class to a Cairo 1.0 class:</p>
 </div>
@@ -1056,10 +1054,8 @@
 <p><code>replace_class(class_hash: felt)</code></p>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="on_chain_data"><a class="anchor" href="#on_chain_data"></a>On-Chain data</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="on_chain_data"><a class="anchor" href="#on_chain_data"></a>On-Chain data</h3>
 <div class="paragraph">
 <p>The data published on L1 should allow everyone to construct the StarkNet state locally. The introduction of the <code>replace_class</code> system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our on chain data format:</p>
 </div>
@@ -1096,12 +1092,10 @@
 </ul>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="api_changes"><a class="anchor" href="#api_changes"></a>API changes</h2>
-<div class="sectionbody">
 <div class="sect2">
-<h3 id="feeder_gateway"><a class="anchor" href="#feeder_gateway"></a>Feeder gateway</h3>
+<h3 id="api_changes"><a class="anchor" href="#api_changes"></a>API changes</h3>
+<div class="sect3">
+<h4 id="feeder_gateway"><a class="anchor" href="#feeder_gateway"></a>Feeder gateway</h4>
 <div class="ulist">
 <ul>
 <li>
@@ -1171,8 +1165,8 @@
 </ul>
 </div>
 </div>
-<div class="sect2">
-<h3 id="gateway"><a class="anchor" href="#gateway"></a>Gateway</h3>
+<div class="sect3">
+<h4 id="gateway"><a class="anchor" href="#gateway"></a>Gateway</h4>
 <div class="ulist">
 <ul>
 <li>
@@ -1192,20 +1186,17 @@
 </div>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="json_rpc_changes"><a class="anchor" href="#json_rpc_changes"></a>JSON-RPC changes</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="json_rpc_changes"><a class="anchor" href="#json_rpc_changes"></a>JSON-RPC changes</h3>
 <div class="paragraph">
 <p>The new class structure and Declare V2 are added to the JSON-RPC. You can track the changes in this <a href="https://github.com/starkware-libs/starknet-specs/pull/65/">pull request</a>.</p>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="mandatory_message_fees"><a class="anchor" href="#mandatory_message_fees"></a>Mandatory message fees</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="mandatory_message_fees"><a class="anchor" href="#mandatory_message_fees"></a>Mandatory message fees</h3>
 <div class="paragraph">
 <p>As of this version, L1→L2 <a href="https://docs.starknet.io/documentation/architecture_and_concepts/L1-L2_Communication/messaging-mechanism/#l1-l2_message_fees">message fees</a> will become mandatory, i.e., the sequencer will no longer process messages sent with zero ETH.</p>
+</div>
 </div>
 </div>
 </div>
