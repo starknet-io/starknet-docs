@@ -1,7 +1,11 @@
 [id="upcoming_versions"]
 # StarkNet v0.11.0
 
-StarkNet Alpha 0.11.0 introduces Cairo 1.0 smart contracts. Until regenesis, old and new contracts will co-exist and will be able to interact with each other. On the regenesis, classes (and contracts that are instances of those classes) written in older Cairo versions will no longer be supported.
+StarkNet Alpha 0.11.0 introduces Cairo 1.0 smart contracts.
+
+Until regenesis, old and new contracts will co-exist and will be able to interact with each other. On the regenesis, classes (and contracts that are instances of those classes) written in older Cairo versions will no longer be supported.
+
+image::../../../../../ui/supplemental_ui/img/regenesis.png[]
 
 [NOTE]
 ====
@@ -9,7 +13,6 @@ Mandatory Message Fees
 
 As of this version, L1→L2 https://docs.starknet.io/documentation/architecture_and_concepts/L1-L2_Communication/messaging-mechanism/#l1-l2_message_fees[message fees] will become mandatory, i.e., the sequencer will no longer process messages sent with zero ETH.
 ====
-
 
 In StarkNet v0.11.0, you can declare, deploy and run Cairo 1.0 smart contracts. We also introduce a new system call that allows a smooth transitioning of existing contracts to a Cairo 1.0 implementation.
 
@@ -100,11 +103,10 @@ The data published on L1 should allow everyone to construct the StarkNet state l
 The specific encoding is given by:
 
 
-|===
-|flag|new nonce|n_updates
-
-| 1 bit | 64 bits   | 64 bits   |
-|===
+[stem]
+++++
+\underbrace{0\cdots0}_{\text{127 bits}} |\underbrace{\text{flag}}_{\text{1 bit}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |\underbrace\text{# of storage updates}_{\text{64 bits}}_{\text{LSB}}
+++++
 
 - If the above flag is turned on, then the next word is the new contract class (whether it was just deployed or replaced). Otherwise, you can skip to the next bullet.
 - For each storage update, we send to L1 the key and the new value (this part remains unchanged)
@@ -135,3 +137,8 @@ The specific encoding is given by:
 * `**add_transaction**`
 ** Can now take a Declare v2 transaction
 ** `contract_address` is changed to `sender_address` in Invoke transactions
+
+
+## JSON-RPC Changes
+
+The new class structure and Declare V2 are added to the JSON-RPC. You can track the changes in this https://github.com/starkware-libs/starknet-specs/pull/65/[pull request].
