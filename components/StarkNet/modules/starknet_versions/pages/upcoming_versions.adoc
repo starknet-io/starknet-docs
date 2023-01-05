@@ -5,15 +5,12 @@ StarkNet Alpha 0.11.0 introduces Cairo 1.0 smart contracts.
 
 Until regenesis, old and new contracts will co-exist and will be able to interact with each other. On the regenesis, classes (and contracts that are instances of those classes) written in older Cairo versions will no longer be supported.
 
-image::../../../../../ui/supplemental_ui/img/regenesis.png[]
+[caption=]
+.The path to regenesis
+image::https://docs.starknet.io/_/img/regenesis.png[]
 
-[NOTE]
-====
-Mandatory Message Fees
 
-As of this version, L1→L2 https://docs.starknet.io/documentation/architecture_and_concepts/L1-L2_Communication/messaging-mechanism/#l1-l2_message_fees[message fees] will become mandatory, i.e., the sequencer will no longer process messages sent with zero ETH.
-====
-
+### What to expect
 In StarkNet v0.11.0, you can declare, deploy and run Cairo 1.0 smart contracts. We also introduce a new system call that allows a smooth transitioning of existing contracts to a Cairo 1.0 implementation.
 
 So far, contract classes have been defined in terms of Cairo assembly, or Casm for short (the class definition also included more information needed for execution, e.g., hint data). The novelty of Cairo 1.0 is the introduction of Sierra (Safe Intermediate Representation), an intermediate layer between Cairo 1.0 and Casm.
@@ -82,17 +79,17 @@ After the class was declared, it can be used either in deploying new instances o
 `INVOKE` and `DECLARE` transactions of version 0 will no longer be supported in StarkNet Alpha v0.11.0
 
 
-## State Commitment
+## State commitment
 
 New classes declared by v2 Declare transactions will be included in the state commitment. To this end, we change the state commitment from `global_tree_root` to `h(global_tree_root, classes_root)`, where `classes_root` is a height 251 Patricia tree constructed from the key-value pairs `(class_hash, compiled_class_hash)`.
 
-## Replace Class Syscall
+## Replace class syscall
 
 We add a new system call that allows changing a contract’s class to a Cairo 1.0 class:
 
 `replace_class(class_hash: felt)`
 
-## On-Chain Data
+## On-Chain data
 
 The data published on L1 should allow everyone to construct the StarkNet state locally. The introduction of the `replace_class` system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our on chain data format:
 
@@ -111,9 +108,9 @@ The specific encoding is given by:
 - If the above flag is turned on, then the next word is the new contract class (whether it was just deployed or replaced). Otherwise, you can skip to the next bullet.
 - For each storage update, we send to L1 the key and the new value (this part remains unchanged)
 
-## API Changes
+## API changes
 
-### Feeder Gateway
+### Feeder gateway
 
 * New endpoint: **`get_compiled_class`.** The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution.
 * `**get_class_by_hash**` - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0.
@@ -139,6 +136,11 @@ The specific encoding is given by:
 ** `contract_address` is changed to `sender_address` in Invoke transactions
 
 
-## JSON-RPC Changes
+## JSON-RPC changes
 
 The new class structure and Declare V2 are added to the JSON-RPC. You can track the changes in this https://github.com/starkware-libs/starknet-specs/pull/65/[pull request].
+
+
+## Mandatory message fees
+
+As of this version, L1→L2 https://docs.starknet.io/documentation/architecture_and_concepts/L1-L2_Communication/messaging-mechanism/#l1-l2_message_fees[message fees] will become mandatory, i.e., the sequencer will no longer process messages sent with zero ETH.
