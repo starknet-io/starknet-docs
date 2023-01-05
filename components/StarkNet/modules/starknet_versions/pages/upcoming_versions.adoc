@@ -1,10 +1,15 @@
 [id="upcoming_versions"]
 # StarkNet v0.11.0
 
-
-## Introduction
-
 StarkNet Alpha 0.11.0 introduces Cairo 1.0 smart contracts. Until regenesis, old and new contracts will co-exist and will be able to interact with each other. On the regenesis, classes (and contracts that are instances of those classes) written in older Cairo versions will no longer be supported.
+
+[NOTE]
+====
+Mandatory Message Fees
+
+As of this version, L1→L2 https://docs.starknet.io/documentation/architecture_and_concepts/L1-L2_Communication/messaging-mechanism/#l1-l2_message_fees[message fees] will become mandatory, i.e., the sequencer will no longer process messages sent with zero ETH.
+====
+
 
 In StarkNet v0.11.0, you can declare, deploy and run Cairo 1.0 smart contracts. We also introduce a new system call that allows a smooth transitioning of existing contracts to a Cairo 1.0 implementation.
 
@@ -20,7 +25,7 @@ In the future, this compilation step will be proven inside the StarkNet OS. In t
 
 [NOTE]
 ====
-💡 Note that essentially, Cairo is only required for proving. In order to prove the validity of blocks, we need to be able to represent every contract execution in Cairo.
+Cairo is only required for proving. In order to prove the validity of blocks, we need to be able to represent every contract execution in Cairo.
 
 For sequencers, who are responsible for block production, proving may be out of scope. Thus, the compilation of the contract class to Casm may not be important for them. In the future, one can imagine a Sierra VM or compilation from Sierra to different CPU architectures, e.g., x86).
 
@@ -69,8 +74,6 @@ The sequencer then proceeds to run `__validate_declare___` (similarly to version
 
 After the class was declared, it can be used either in deploying new instances or via library calls. Note that to specify the class (either for deploy or library_call), one has to send `class_hash` and **NOT** `compiled_class_hash`. The sequencer and full nodes may internally maintain a mapping between the two, but a reference to a declared class has to be via its class hash.
 
-### Transaction hash
-
 ## Version 0 Removal
 
 `INVOKE` and `DECLARE` transactions of version 0 will no longer be supported in StarkNet Alpha v0.11.0
@@ -110,23 +113,25 @@ The specific encoding is given by:
 
 ### Feeder Gateway
 
-- New endpoint: **`get_compiled_class`.** The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution.
-- `**get_class_by_hash**` - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0.
-- `**get_full_contract**` - same as above
-- `**get_state_update`**
-- added `replaced_classes` section
-- `declared_contracts` is split into `old_declared_contracts` and `declared_contracts`
-- `old_declared_contracts` is a list of class hashes
-- `declared_classes` is a dictionary that maps `class_hash` to `compiled_class_hash`
-- `**get_block**`
-- the `transactions` field is subject to the same changes in `get_transaction`
-- `state_root` is renamed to `state_commitment`
-- `**get_transaciton**`
-- `contract_address` is changed to `sender_address` in invoke transactions
-- Declare v2 transaction may be returned
+* New endpoint: **`get_compiled_class`.** The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution.
+* `**get_class_by_hash**` - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0.
+* `**get_full_contract**` - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0.
+* `**get_state_update`**
+** added `replaced_classes` section
+** `declared_contracts` is split into `old_declared_contracts` and `declared_contracts`
+** `old_declared_contracts` is a list of class hashes
+** `declared_classes` is a dictionary that maps `class_hash` to `compiled_class_hash`
+* `**get_block**`
+** The `transactions` field is subject to the same changes in `get_transaction`
+** `state_root` is renamed to `state_commitment`
+* `**get_transaciton**`
+** `contract_address` is changed to `sender_address` in invoke transactions
+** Declare v2 transaction may be returned
+* `**estimate_fee**`
+** Can now take an additional `skip_validate` flag in the URL. If set to true, then `&lowbar;&lowbar;validate&lowbar;&lowbar;` execution will be skipped. This can assist hardware wallets in not having to sign for fee estimations.
 
 ### Gateway
 
-- `**add_transaction**`
-- can now take a Declare v2 transaction
-- `contract_address` is changed to `sender_address` in Invoke transactions
+* `**add_transaction**`
+** Can now take a Declare v2 transaction
+** `contract_address` is changed to `sender_address` in Invoke transactions
