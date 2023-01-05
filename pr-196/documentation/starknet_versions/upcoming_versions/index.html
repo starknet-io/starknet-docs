@@ -912,11 +912,27 @@
 </aside>
 <article class="doc">
 <h1 class="page">StarkNet v0.11.0</h1>
-<div class="sect1">
-<h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
 <p>StarkNet Alpha 0.11.0 introduces Cairo 1.0 smart contracts. Until regenesis, old and new contracts will co-exist and will be able to interact with each other. On the regenesis, classes (and contracts that are instances of those classes) written in older Cairo versions will no longer be supported.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Mandatory Message Fees</p>
+</div>
+<div class="paragraph">
+<p>As of this version, L1→L2 <a href="https://docs.starknet.io/documentation/architecture_and_concepts/L1-L2_Communication/messaging-mechanism/#l1-l2_message_fees">message fees</a> will become mandatory, i.e., the sequencer will no longer process messages sent with zero ETH.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>In StarkNet v0.11.0, you can declare, deploy and run Cairo 1.0 smart contracts. We also introduce a new system call that allows a smooth transitioning of existing contracts to a Cairo 1.0 implementation.</p>
@@ -944,7 +960,7 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>💡 Note that essentially, Cairo is only required for proving. In order to prove the validity of blocks, we need to be able to represent every contract execution in Cairo.</p>
+<p>Cairo is only required for proving. In order to prove the validity of blocks, we need to be able to represent every contract execution in Cairo.</p>
 </div>
 <div class="paragraph">
 <p>For sequencers, who are responsible for block production, proving may be out of scope. Thus, the compilation of the contract class to Casm may not be important for them. In the future, one can imagine a Sierra VM or compilation from Sierra to different CPU architectures, e.g., x86).</p>
@@ -1022,10 +1038,6 @@
 <div class="paragraph">
 <p>After the class was declared, it can be used either in deploying new instances or via library calls. Note that to specify the class (either for deploy or library_call), one has to send <code>class_hash</code> and <strong>NOT</strong> <code>compiled_class_hash</code>. The sequencer and full nodes may internally maintain a mapping between the two, but a reference to a declared class has to be via its class hash.</p>
 </div>
-</div>
-<div class="sect2">
-<h3 id="transaction_hash"><a class="anchor" href="#transaction_hash"></a>Transaction hash</h3>
-
 </div>
 </div>
 </div>
@@ -1125,11 +1137,12 @@
 <p><code><strong>get_class_by_hash</strong></code> - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0.</p>
 </li>
 <li>
-<p><code><strong>get_full_contract</strong></code> - same as above</p>
+<p><code><strong>get_full_contract</strong></code> - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0.</p>
 </li>
 <li>
 <p><code><strong>get_state_update</code></strong></p>
-</li>
+<div class="ulist">
+<ul>
 <li>
 <p>added <code>replaced_classes</code> section</p>
 </li>
@@ -1142,23 +1155,44 @@
 <li>
 <p><code>declared_classes</code> is a dictionary that maps <code>class_hash</code> to <code>compiled_class_hash</code></p>
 </li>
-<li>
-<p><code><strong>get_block</strong></code></p>
+</ul>
+</div>
 </li>
 <li>
-<p>the <code>transactions</code> field is subject to the same changes in <code>get_transaction</code></p>
+<p><code><strong>get_block</strong></code></p>
+<div class="ulist">
+<ul>
+<li>
+<p>The <code>transactions</code> field is subject to the same changes in <code>get_transaction</code></p>
 </li>
 <li>
 <p><code>state_root</code> is renamed to <code>state_commitment</code></p>
 </li>
+</ul>
+</div>
+</li>
 <li>
 <p><code><strong>get_transaciton</strong></code></p>
-</li>
+<div class="ulist">
+<ul>
 <li>
 <p><code>contract_address</code> is changed to <code>sender_address</code> in invoke transactions</p>
 </li>
 <li>
 <p>Declare v2 transaction may be returned</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><code><strong>estimate_fee</strong></code></p>
+<div class="ulist">
+<ul>
+<li>
+<p>Can now take an additional <code>skip_validate</code> flag in the URL. If set to true, then <code>&lowbar;&lowbar;validate&lowbar;&lowbar;</code> execution will be skipped. This can assist hardware wallets in not having to sign for fee estimations.</p>
+</li>
+</ul>
+</div>
 </li>
 </ul>
 </div>
@@ -1169,12 +1203,16 @@
 <ul>
 <li>
 <p><code><strong>add_transaction</strong></code></p>
-</li>
+<div class="ulist">
+<ul>
 <li>
-<p>can now take a Declare v2 transaction</p>
+<p>Can now take a Declare v2 transaction</p>
 </li>
 <li>
 <p><code>contract_address</code> is changed to <code>sender_address</code> in Invoke transactions</p>
+</li>
+</ul>
+</div>
 </li>
 </ul>
 </div>
