@@ -1,4 +1,137 @@
 [id="pathfinder"]
 = Pathfinder versions
+# Pathfinder
 
-Pathfinder
+## v0.4.5 (latest)
+Hotfix for a bug introduced in the previous version v0.4.4, which prevented a new node from syncing on blocks near genesis.
+
+### Added
+Added Newton FAQ links to readme (thanks @SecurityQQ)
+
+### Fixed
+Node fails to sync old blocks
+
+### New contributors
+@SecurityQQ made their first contribution in #799
+
+
+## v0.4.4
+This minor release contains some nice performance improvements for `starknet_call` and `starknet_estimateFee` as well as some minor bug fixes.
+
+Also included is a major new feature: storage proofs - big thanks @pscott for his hard work on this feature! This is available via the `pathfinder_getProof` method which is served from both the pathfinder and StarkNet endpoints for convenience:
+
+[source]
+<node-url>/rpc/pathfinder/v0.1/pathfinder_getProof
+<node-url>/rpc/v0.2/pathfinder_getProof
+
+The method is specified here.
+
+Its results can be used to formally verify what a contract's storage values are without trusting the pathfinder node.
+
+This is achieved by validating the merkle-proof that pathfinder returns and confirming that it correctly matches the known StarkNet state root.
+
+### Added
+storage proofs via pathfinder_getProof by @pscott
+
+### Fixed
+starknet_getEvents returns all events when from_block="latest"
+v0.1 starknet_getStateUpdate does not contain nonces
+
+### Changed
+improved performance for `starknet_call` and `starknet_estimateFee` by caching classes
+improved performance for `starknet_call` and `starknet_estimateFee` by using Rust for hashing
+
+### New contributors
+@pscott made their first contribution in #726
+
+
+## v0.4.3
+The primary purpose of this release is to properly support testnet2 after the xref:starknet_versions:version_notes.adoc#version0.10.3[StarkNet v0.10.3] update.
+
+The v0.10.3 update changed the testnet2 chain ID which impacts transaction signatures which in turn meant that `starknet_estimateFee` would fail for any signed transaction.
+
+This release updates pathfinder to use the correct chain ID.
+
+### Fixed
+testnet2 and integration flags are ignored
+`starknet_estimateFee` uses wrong chain ID for testnet2
+
+### Changed
+updated to cairo-lang 0.10.3
+
+
+## v0.4.2
+Contains several bug fixes, mostly hotfixes for bugs introduced in v0.4.1.
+
+### Added
+document that `--chain-id` expects text as input
+
+### Fixed
+* Testnet2 and integration L1 addresses are swopped (bug introduced in v0.4.1)
+* Proxy network setups can't sync historical blocks (bug introduced in v0.4.1)
+* ABI serialization for `starknet_estimateFee` for declare transactions
+
+
+## v0.4.1
+
+### Highlights
+* Soft deprecation of some configuration options
+* Support custom StarkNet gateways
+* Pathfinder RPC extensions at `/rpc/pathfinder/` with `pathfinder_version` method
+* `starknet_events` optimisations
+* fix block timestamp in pending calls
+* Custom StarkNet gateway support
+
+This release introduces support for custom StarkNets. You can select this network by setting `--network` custom and specifying the `--gateway-url` and `--feeder-gateway-url` options.
+
+#### Configuration option deprecation
+Several configuration options have been soft deprecated. This means using them will continue to work as before (no breaking change), but they will emit a warning when used. They will be removed in a future version, so please migrate to the newer options.
+
+To re-emphasize: your current configuration setup will continue to work as is.
+
+#### Network selection
+`--testnet2` and `--integration` have been deprecated in favor of `--network` testnet2 and `--network` integration.
+
+#### Gateway proxy
+`--sequencer-url` has been deprecated in favor of `--network` custom along with `--gateway-url`, `--feeder-gateway-url` and `--chain-id`. In addition, you will need to rename your existing database file to custom.sqlite as this will be the expected filename for custom networks.
+
+#### Configuration file
+`--config` has been deprecated and will not be supported in the future. The utility this provided was valuable. Unfortunately it is starting to severely hinder how fast we can implement configuration changes and we decided to remove it.
+
+We suggest using environment variable along with environment files to configure pathfinder in a similar fashion.
+
+### Changed
+The following configuration options are now marked as deprecated: `--testnet2`, `--integration`, `--config`, `--sequencer-url`
+Optimised starknet_events for queries with both a block range and a from address
+
+### Fixed
+block timestamps for pending in `starknet_call` and `starknet_estimateFee` were using the latest timestamp instead of the pending one. This meant contracts relying on accurate timestamps could sometimes fail unexpectedly.
+
+### Added
+* Custom StarkNet support
+* Pathfinder specific RPC extensions hosted at `<rpc-url>/rpc/pathfinder/v0.1`. Currently, this only contains `pathfinder_version` which returns the pathfinder version of the node.
+* The API specification can be found here
+
+## v0.4.0- (breaking release)
+This release contains a breaking change, and also adds support for xref:documentation:starknet_versions:version_notes.adoc#version0.10.2[StarkNet v0.10.2].
+
+The changes themselves are quite simple, but please read through each section as there are some caveats which might impact you when you apply this update.
+
+###  Default RPC version change
+This release changes the version of the RPC that is served at the root route, from v0.1 to v0.2 of the RPC specification. Version v0.1 is still available at the `/rpc/v0.1/` endpoint. This is the only breaking change in this release.
+
+Here is a summary of what routes are currently available, and what's changed:
+
+* `/` serves v0.2 (changed from v0.1)
+* `/rpc/v0.1` serves v0.1 (no change)
+* `/rpc/v0.2` serves v0.2 (no change)
+
+If possible, we recommend that you use the version specific routes as this will prevent such breaking changes from impacting you.
+
+### Starknet v0.10.2 support
+This release includes an update to the cairo-vm embedded in pathfinder in order to support the upcoming v0.10.2 StarkNet release. This bundled vm is a pre-release and may therefore contain differences to the final version used once StarkNet updates testnet and mainnet. We will of course issue a new release if / when there is a new vm.
+
+### Please take note of the following
+Since these changes are not yet live on testnet nor mainnet, this means upgrading to this release will cause deviations between what pathfinder outputs and what can be expected on the network. More specifically, `starknet_estimateFee` will compute different fees until the network has upgraded to xref:documentation:starknet_versions:version_notes.adoc#version0.10.2[StarkNet v0.10.2].
+
+If you don't need the RPC route changes, it may be pertinent to delay updating until closer to the xref:documentation:starknet_versions:version_notes.adoc#version0.10.2[v0.10.2] release dates on testnet and mainnet. The expected timeline for these upgrades is ~17/11 for testnets and ~24/11 for mainnet.
