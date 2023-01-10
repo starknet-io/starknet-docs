@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.46](https://github.com/starknet-io/starknet-docs/compare/v0.1.45...v0.1.46) (2023-01-06)
+
+### [0.1.45](https://github.com/starknet-io/starknet-docs/compare/v0.1.44...v0.1.45) (2023-01-06)
+
+### [0.1.44](https://github.com/starknet-io/starknet-docs/compare/v0.1.43...v0.1.44) (2023-01-06)
+
+### [0.1.43](https://github.com/starknet-io/starknet-docs/compare/v0.1.42...v0.1.43) (2023-01-04)
+
+### [0.1.42](https://github.com/starknet-io/starknet-docs/compare/v0.1.41...v0.1.42) (2023-01-04)
+
+### [0.1.41](https://github.com/starknet-io/starknet-docs/compare/v0.1.40...v0.1.41) (2023-01-04)
+
+### [0.1.40](https://github.com/starknet-io/starknet-docs/compare/v0.1.39...v0.1.40) (2023-01-03)
+
+### [0.1.39](https://github.com/starknet-io/starknet-docs/compare/v0.1.38...v0.1.39) (2023-01-03)
+
+### [0.1.38](https://github.com/starknet-io/starknet-docs/compare/v0.1.37...v0.1.38) (2023-01-03)
+
+### [0.1.37](https://github.com/starknet-io/starknet-docs/compare/v0.1.36...v0.1.37) (2022-12-28)
+
+### [0.1.36](https://github.com/starknet-io/starknet-docs/compare/v0.1.35...v0.1.36) (2022-12-28)
+
+### [0.1.35](https://github.com/starknet-io/starknet-docs/compare/v0.1.34...v0.1.35) (2022-12-28)
+
+### [0.1.34](https://github.com/starknet-io/starknet-docs/compare/v0.1.33...v0.1.34) (2022-12-23)
+
+### [0.1.33](https://github.com/starknet-io/starknet-docs/compare/v0.1.32...v0.1.33) (2022-12-23)
+
+### [0.1.32](https://github.com/starknet-io/starknet-docs/compare/v0.1.31...v0.1.32) (2022-12-23)
+
 ### [0.1.31](https://github.com/starknet-io/starknet-docs/compare/v0.1.30...v0.1.31) (2022-12-23)
 
 ### [0.1.30](https://github.com/starknet-io/starknet-docs/compare/v0.1.29...v0.1.30) (2022-12-21)
