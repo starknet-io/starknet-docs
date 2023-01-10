@@ -19,14 +19,14 @@ The selector is an identifier through which the function is callable in transact
 Array of https://www.cairo-lang.org/docs/hello_starknet/l1l2.html#receiving-a-message-from-l1[L1 handlers] entry points::
 Array of constructors entry points:: Currently, the compiler allows only one constructor.
 Array of used builtin names:: An ASCII-encode array, ordered by declaration.
-Program hash:: The xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak], of the class's program. The class's program is the `.json` file that the StarkNet compiler outputs when you run the following command:
+Program hash:: The xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak], of the class's program. The class's program is the abi and program part of the `.json` file that the StarkNet compiler outputs when you run the following command:
 +
 [source,shell]
 ----
 $ starknet-compile --no_debug_info
 ----
 +
-To see the exact computation of this field, see https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contract_hash.py#L116[contract_hash.py^].
+The compiler outputs abi, entrypoint selectors and the program. For program hash, starknet_keccak of only abi and program needs to be calculated. To see the exact computation of this field, see https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contract_hash.py#L116[contract_hash.py^].
 Bytecode:: Represented by an array of field elements.
 
 == How the class hash is computed
@@ -34,7 +34,7 @@ Bytecode:: Represented by an array of field elements.
 The hash of the class is the chain hash, that is, the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen hash], of the above, computed as follows:
 
 . Start with stem:[$h(0,\text{api_version})$].
-. For every line in the above, excluding the first, compute stem:[$h(h(previous\_line), new\_line)$], where the hash of an array is defined as xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak].
+. For every line in the above, excluding the first, compute stem:[$h(h(previous\_line), new\_line)$], where the hash of an array is defined as xref:../Hashing/hash-functions.adoc#array_hashing[Array Hashing].
 . Let stem:[$c$] denote the cumulative hash that results from applying the above process; the class's hash is then stem:[$h(c, \textrm{number_of_lines})$], where stem:[$\text{number_of_lines}$] is 7.
 
 For more details, see the https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contracts.cairo#L47[Cairo implementation].
