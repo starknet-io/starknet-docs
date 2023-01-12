@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>What is an account? :: StarkNet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Account_Abstraction/introduction/">
-    <link rel="prev" href="../../Contracts/system-calls/">
-    <link rel="next" href="../approach/">
+    <title>Deploying new accounts :: StarkNet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Account_Abstraction/deploying_new_accounts/">
+    <link rel="prev" href="../validate_and_execute/">
+    <link rel="next" href="../simplified_transaction_flow/">
     <meta name="generator" content="Antora 3.1.1">
     <link rel="stylesheet" href="../../../../_/css/site.css">
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-129128514-2"></script>
@@ -184,8 +184,8 @@
     <button class="nav-item-toggle"></button>
     <span class="nav-text">Account abstraction</span>
 <ul class="nav-list">
-      <li class="nav-item is-current-page " data-depth="3">
-    <a class="nav-link" href="./">Introduction to account abstraction</a>
+      <li class="nav-item " data-depth="3">
+    <a class="nav-link" href="../introduction/">Introduction to account abstraction</a>
 
 
 
@@ -202,8 +202,8 @@
 
 
   </li>
-      <li class="nav-item " data-depth="3">
-    <a class="nav-link" href="../deploying_new_accounts/">deploying_new_accounts</a>
+      <li class="nav-item is-current-page " data-depth="3">
+    <a class="nav-link" href="./">deploying_new_accounts</a>
 
 
 
@@ -867,11 +867,11 @@
     <li><a href="../../../">StarkNet</a></li>
     <li>Architecture and concepts</li>
     <li>Account abstraction</li>
-    <li><a href="./">Introduction to account abstraction</a></li>
+    <li><a href="./">deploying_new_accounts</a></li>
   </ul>
 </nav>
 <!--
-  <div class="edit-this-page"><a href="https://github.com/starknet-io/starknet-docs/edit/HEAD/components/StarkNet/modules/architecture_and_concepts/pages/Account_Abstraction/introduction.adoc">Edit this Page</a></div>
+  <div class="edit-this-page"><a href="https://github.com/starknet-io/starknet-docs/edit/HEAD/components/StarkNet/modules/architecture_and_concepts/pages/Account_Abstraction/deploying_new_accounts.adoc">Edit this Page</a></div>
   -->
 </div>
   <div class="content">
@@ -879,90 +879,181 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">What is an account?</h1>
+<h1 class="page">Deploying new accounts</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>An account is a user&#8217;s representation on-chain and the way of interacting with the blockchain.</p>
-</div>
-<div class="paragraph">
-<p>Through an account, you may send transactions and interact with other contracts. To "own" an on-chain asset (e.g. ERC20 token or an NFT), it has to be associated with your account address.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="ethereum_account_structure"><a class="anchor" href="#ethereum_account_structure"></a>Ethereum account structure</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Within Ethereum individual user accounts are known as Externally Owned Accounts (EOAs).</p>
-</div>
-<div class="paragraph">
-<p>EOAs differ from smart contracts in that they are not controlled by code. An EOA is determined by a pair of private and public keys.</p>
-</div>
-<div class="paragraph">
-<p>The account&#8217;s address is derived from those keys and only by possessing the private key can you initiate transactions from an account. While Ethereum contracts are "passive", i.e., they can only change if they were called inside a transaction, EOAs can initiate transactions.</p>
-</div>
-<div class="paragraph">
-<p>While simple, EOAs have a major drawback i.e there&#8217;s no flexibility in the account behavior, the Ethereum protocol dictates what it means for a transaction initiated by an EOA to be valid (the signature scheme is fixed). In particular, control over the public key gives complete control over the account. Although this is theoretically a secure method of account management, in practice it has some drawbacks, such as requiring you to keep your seed phrase secure yet accessible to you and limited flexibility surrounding wallet functionality.</p>
-</div>
-<div class="paragraph">
-<p>EIP-4337, a design proposal for Ethereum outlines <em>account abstraction</em> whereby all accounts are managed via a dedicated smart contract on the Ethereum network, as a way to increase flexibility and usability. You can add custom logic on top of the basic EOA functionality, thereby bringing account abstraction into Ethereum.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="account_abstraction"><a class="anchor" href="#account_abstraction"></a>What is Account Abstraction?</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The idea behind account abstraction is to allow more flexibility in the management of accounts rather than have their behavior determined at the protocol level. This can be achieved by introducing account contracts - smart contracts with programmable logic that determines the user&#8217;s account.</p>
-</div>
-<div class="paragraph">
-<p>Using account abstraction you can now program how your account functions.</p>
-</div>
-<div class="paragraph">
-<p>For example, you can:</p>
+<p>In versions of StarkNet prior to version 0.11.0 it was possible for a <code>deploy_account</code> transaction to be manipulated in two undesirable ways:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Determine what it means for a signature to be valid or what contracts your account is allowed to interact with. This is known as "signature abstraction"</p>
+<p>Sequencers having the ability to charge arbitrarily high fees, thus potentially draining user funds from a prefunded account</p>
 </li>
 <li>
-<p>Pay transaction fees in different tokens - this is sometimes known as "fee abstraction"</p>
-</li>
-<li>
-<p>Design your own replay protection mechanism and allow sending multiple uncoupled transactions in parallel. Compare this to the sequential nonce solution used in Ethereum, which results in transactions being inherently sequential, i.e., even if you want to send two transactions in parallel, you must wait for some confirmation on the first before sending the second. Otherwise, the second transaction may be rejected due to an invalid nonce. With account abstraction, one can discuss different solutions that bypass the need for a sequential nonce. This is known as "nonce abstraction"</p>
+<p>A bad actor having the ability to carry out a sequencer DOS attack by sending multiple, invalid <code>deploy_account</code> transactions. This would result in the sequencer not being compensated for work completed.</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>Today, StarkNet offers signature abstraction. In the future, we will enrich the current account abstraction design (see e.g. the <a href="https://community.starknet.io/t/starknet-account-abstraction-model-part-1/781">paymaster proposal</a> for fee abstraction).</p>
+<p>To prevent the above scenarios, <code>&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;</code> has been introduced.</p>
+</div>
+<div class="paragraph">
+<p>This  enforces some limitations on <code>deploy_account</code> transactions, via validation/constructor execution namely:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Limited # of Cairo steps</p>
+</li>
+<li>
+<p>Limited # of builtin applications</p>
+</li>
+<li>
+<p>No external contract calls (library calls and self-calls are allowed)</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="examples"><a class="anchor" href="#examples"></a>Examples of customizing account functionality</h2>
+<h2 id="validate_deploy"><a class="anchor" href="#validate_deploy"></a>Validate deploy</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Two examples of how you might program an account to function using account abstraction are:</p>
+<p>A new validation entrypoint has been added to avoid being able to drain funds from a pre-funded address.</p>
 </div>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">Social recovery</dt>
-<dd>
-<p>A process where if you lose your wallet, you are able to retrieve it via a selected social network, vastly improving the typical experience of wallet recovery.</p>
-</dd>
-<dt class="hdlist1">Operating your account via facial recognition</dt>
-<dd>
-<p>With signature abstraction, you can use your phone&#8217;s native hardware to sign transactions, making it practically impossible to take control of another user&#8217;s account (even in the case of the phone itself being stolen).</p>
-</dd>
-</dl>
+<div class="paragraph">
+<p>To see why this is important, consider the following example scenario:</p>
+</div>
+<div class="paragraph">
+<p>Suppose that StarkNet has gas metering and that a sequencer may include a <code>deploy_account</code> transaction that charges the user according to the gas consumed in the constructor execution.</p>
+</div>
+<div class="paragraph">
+<p>While the sequencer does not have the power to deploy a different contract for the user, the address is <a href="../../Contracts/contract-address/" class="xref page">bound</a> to the class hash and constructor arguments, the sequencer does have the power to manipulate the price.</p>
+</div>
+<div class="paragraph">
+<p>If the user does not sign a price (gas price, or in the present version of StarkNet, <code>max_fee</code>), then we must resort to schemes in the spirit of <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md">EIP1559</a>, to determine the deployment cost.</p>
+</div>
+<div class="paragraph">
+<p>In this case, the sequencer can manipulate the block in order to charge an arbitrarily high fee and drain the user’s funds.</p>
+</div>
+<div class="paragraph">
+<p><code>&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;</code> expects the following arguments:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>class hash</p>
+</li>
+<li>
+<p>contract address salt</p>
+</li>
+<li>
+<p>constructor arguments - the arguments expected by the contract’s constructor (this will be enforced in the compiler).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Consider an account with the following constructor signature:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">@constructor
+func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _public_key: felt
+)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then the signature of <code>&lowbar;&lowbar;validate_deploy</code>&lowbar;&lowbar; must be:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">func __validate_deploy__{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
+}(class_hash: felt, contract_address_salt: felt, _public_key: felt)</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The transaction hash and <code>max_fee</code> are accessible through the <code>get_tx_info</code> system call.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="potential_attacks_and_mitigations"><a class="anchor" href="#potential_attacks_and_mitigations"></a>Potential attacks and mitigations</h3>
+<div class="paragraph">
+<p>We identify two major risks with the introduction of <code>deploy_account</code>:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Sequencer DOS:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>If the account was not successfully created (constructor execution failed), then we can’t compensate the sequencer. We can’t simply take funds from the address as this introduces an easy attack on the user. To handle this issue, we will limit the execution of the constructor in the same manner that we limit the different validation entry points (<code>&lowbar;&lowbar;validate&lowbar;&lowbar;</code>, <code>&lowbar;&lowbar;validate_declare&lowbar;&lowbar;</code>, <code>&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;</code>).</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>These limits do not apply to regular constructor executions (i.e. those that are induced by the <code>deploy</code> system call).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Draining the User’s funds:
+We need to make sure that if a user pre-funded their account, then there is no way to drain those funds. Additionally, they must approve the amount they&#8217;re willing to pay for the deployment. This is solved by the introduction of <code>&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;</code>.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The limitations on validation/constructor execution involve:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Limited # of Cairo steps</p>
+</li>
+<li>
+<p>Limited # of builtin applications</p>
+</li>
+<li>
+<p>No external contract calls (library calls and self-calls are allowed)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The precise limits are still being researched internally and will be shared in the future. In particular, we may block additional system calls that introduce the risk of validation being time-dependent, e.g. <code>get_block_timestamp</code> or <code>get_block_number</code>.</p>
+</div>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../../Contracts/system-calls/">System calls</a></span>
-  <span class="next"><a href="../approach/">StarkNet account structure</a></span>
+  <span class="prev"><a href="../validate_and_execute/">Validate and execute</a></span>
+  <span class="next"><a href="../simplified_transaction_flow/">Simplified transaction flow</a></span>
 </nav>
 </article>
   </div>
