@@ -1,0 +1,80 @@
+[id="deploying_new_accounts"]
+= Deploying new accounts
+
+In versions of StarkNet prior to version 0.11.0 it was possible for a `deploy_account` transaction to be manipulated in two undesirable ways:
+
+* Sequencers having the ability to charge arbitrarily high fees, thus potentially draining user funds from a prefunded account
+* A bad actor having the ability to carry out a sequencer DOS attack by sending multiple, invalid `deploy_account` transactions. This would result in the sequencer not being compensated for work completed.
+
+To prevent the above scenarios, `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;` has been introduced.
+
+This  enforces some limitations on `deploy_account` transactions, via validation/constructor execution namely:
+
+* Limited # of Cairo steps
+* Limited # of builtin applications
+* No external contract calls (library calls and self-calls are allowed)
+
+## Validate deploy
+
+A new validation entrypoint has been added to avoid being able to drain funds from a pre-funded address.
+
+To see why this is important, consider the following example scenario:
+
+Suppose that StarkNet has gas metering and that a sequencer may include a `deploy_account` transaction that charges the user according to the gas consumed in the constructor execution.
+
+While the sequencer does not have the power to deploy a different contract for the user, the address is xref:Contracts/contract-address.adoc[bound] to the class hash and constructor arguments, the sequencer does have the power to manipulate the price.
+
+If the user does not sign a price (gas price, or in the present version of StarkNet, `max_fee`), then we must resort to schemes in the spirit of https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md[EIP1559], to determine the deployment cost.
+
+In this case, the sequencer can manipulate the block in order to charge an arbitrarily high fee and drain the user’s funds.
+
+`&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;` expects the following arguments:
+
+* class hash
+* contract address salt
+* constructor arguments - the arguments expected by the contract’s constructor (this will be enforced in the compiler).
+
+Consider an account with the following constructor signature:
+
+```json
+@constructor
+func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _public_key: felt
+)
+```
+
+Then the signature of `&lowbar;&lowbar;validate_deploy`&lowbar;&lowbar; must be:
+
+```json
+func __validate_deploy__{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
+}(class_hash: felt, contract_address_salt: felt, _public_key: felt)
+```
+
+[NOTE]
+====
+The transaction hash and `max_fee` are accessible through the `get_tx_info` system call.
+====
+
+### Potential attacks and mitigations
+
+We identify two major risks with the introduction of `deploy_account`:
+
+* Sequencer DOS:
+** If the account was not successfully created (constructor execution failed), then we can’t compensate the sequencer. We can’t simply take funds from the address as this introduces an easy attack on the user. To handle this issue, we will limit the execution of the constructor in the same manner that we limit the different validation entry points (`&lowbar;&lowbar;validate&lowbar;&lowbar;`, `&lowbar;&lowbar;validate_declare&lowbar;&lowbar;`, `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;`).
+
+[NOTE]
+====
+These limits do not apply to regular constructor executions (i.e. those that are induced by the `deploy` system call).
+====
+
+** Draining the User’s funds:
+We need to make sure that if a user pre-funded their account, then there is no way to drain those funds. Additionally, they must approve the amount they're willing to pay for the deployment. This is solved by the introduction of `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;`.
+
+The limitations on validation/constructor execution involve:
+
+* Limited # of Cairo steps
+* Limited # of builtin applications
+* No external contract calls (library calls and self-calls are allowed)
+
+The precise limits are still being researched internally and will be shared in the future. In particular, we may block additional system calls that introduce the risk of validation being time-dependent, e.g. `get_block_timestamp` or `get_block_number`.
