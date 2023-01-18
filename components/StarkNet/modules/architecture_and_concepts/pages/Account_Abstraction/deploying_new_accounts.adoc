@@ -1,22 +1,43 @@
 [id="deploying_new_accounts"]
 = Deploying new accounts
 
-Prior to xref:documentation:starknet_versions:version_notes.adoc#version0.10.1[StarkNet version 0.10.1] it was possible for a `deploy_account` transaction to be manipulated in two undesirable ways:
+// Todo add flow here
+
+Since xref:documentation:starknet_versions:version_notes.adoc#version0.10.3[StarkNet version 0.10.3] the historical method of deploying accounts on StarkNet (sending a `deploy` transaction) has been removed.
+
+It has been replaced with a new flow, `deploy_account` which accommodates existing accounts to deploy an account and also pay fees for the deployment.
+
+The `deploy_account` transaction solves the problem of paying for deployment while not having an account.
+
+This involves deciding on the account type (that is, class_hash) you want to deploy, computing your would-be account address off-chain, and sending funds to this address.
+
+Once the address has enough funds to pay for the deployment, the user can send a `deploy_account` transaction.
+
+
+## Issues with legacy deploy transaction
+
+There were several issues that we aim to resolve by introducing the `deploy_account` transaction:
 
 * Sequencers having the ability to charge arbitrarily high fees, thus potentially draining user funds from a pre-funded account
 * A bad actor having the ability to carry out a sequencer DOS attack by sending multiple, invalid `deploy_account` transactions. This would result in the sequencer not being compensated for work completed.
 
+## The solution
 To prevent the above scenarios, `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;` was introduced.
 
-This enforces some limitations on `deploy_account` transactions, via validation/constructor execution namely:
+This enforces some limitations on `deploy_account` transactions, via validation execution namely:
 
 * Limited # of Cairo steps
 * Limited # of builtin applications
 * No external contract calls (library calls and self-calls are allowed)
 
+In future versions these same limitations will be introduced to the constructor as well.
+
 ## Validate deploy
 
-A new validation entrypoint has been added to avoid being able to drain funds from a pre-funded address.
+A new, optional validation entrypoint: `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;`, has been added to avoid being able to drain funds from a pre-funded address.
+
+This entrypoint should be included in any accounts or contracts that wish to allow this updated flow.
+
 
 To see why this is important, consider the following example scenario:
 
@@ -60,25 +81,4 @@ func __validate_deploy__{
 The transaction hash and `max_fee` are accessible through the `get_tx_info` system call.
 ====
 
-### Potential attacks and mitigations
-
-We identify two major risks with the introduction of `deploy_account`:
-
-* Sequencer DOS:
-** If the account was not successfully created (constructor execution failed), then we can’t compensate the sequencer. We can’t simply take funds from the address as this introduces an easy attack on the user. To handle this issue, we will limit the execution of the constructor in the same manner that we limit the different validation entry points (`&lowbar;&lowbar;validate&lowbar;&lowbar;`, `&lowbar;&lowbar;validate_declare&lowbar;&lowbar;`, `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;`).
-
-[NOTE]
-====
-These limits do not apply to regular constructor executions (i.e. those that are induced by the `deploy` system call).
-====
-
-** Draining the User’s funds:
-We need to make sure that if a user pre-funded their account, then there is no way to drain those funds. Additionally, they must approve the amount they're willing to pay for the deployment. This is solved by the introduction of `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;`.
-
-The limitations on validation/constructor execution involve:
-
-* Limited # of Cairo steps
-* Limited # of builtin applications
-* No external contract calls (library calls and self-calls are allowed)
-
-The precise limits are still being researched internally and will be shared in the future. In particular, we may block additional system calls that introduce the risk of validation being time-dependent, e.g. `get_block_timestamp` or `get_block_number`.
+ill being researched internally and will be shared in the future. In particular, we may block additional system calls that introduce the risk of validation being time-dependent, e.g. `get_block_timestamp` or `get_block_number`.
