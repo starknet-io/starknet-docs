@@ -1,26 +1,29 @@
 [id="deploying_new_accounts"]
 = Deploying new accounts
 
-// Todo add flow here
+Since StarkNet xref:documentation:starknet_versions:version_notes.adoc#version0.10.1[version 0.10.1] the historical method of deploying accounts on StarkNet, the `deploy` transaction has been removed.
 
-Since xref:documentation:starknet_versions:version_notes.adoc#version0.10.3[version 0.10.3] the historical method of deploying accounts on StarkNet, the `deploy` transaction has been removed.
+It has now been replaced with the `deploy_account` transaction which allows you to deploy an account and additionally be charged fairly for the deployment.
 
-It has now been replaced with `deploy_account` which allows you to deploy an account and additionally pay fees for the deployment.
+## Deploy account
 
-This involves deciding on the account type you want to deploy, computing your would-be account address off-chain, and sending funds to this address.
+In order to deploy a new account on StarkNet you need to complete the following steps:
 
-Once the address has enough funds to pay for the deployment, the user can send a `deploy_account` transaction.
+* Decide on the account type you want to deploy
+* Compute your would-be account address off-chain
+* Send funds to this address
 
+Once the address has enough funds to pay for the deployment, you can then send a `deploy_account` transaction.
 
-## Issues with legacy deploy transaction
+### Validation
 
-There were several issues that we aim to resolve by introducing the `deploy_account` transaction:
+There are two potential issues that arise from sending a `deploy_account` transaction without any extra validation:
 
 * Sequencers having the ability to charge arbitrarily high fees, thus potentially draining user funds from a pre-funded account
 * A bad actor having the ability to carry out a sequencer DOS attack by sending multiple, invalid `deploy_account` transactions. This would result in the sequencer not being compensated for work completed.
 
-## The solution
-To prevent the above scenarios, `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;` was introduced.
+
+To prevent the above scenarios, a new optional validation entrypoint is provided: `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;`.
 
 This enforces some limitations on `deploy_account` transactions, via validation execution namely:
 
@@ -28,24 +31,11 @@ This enforces some limitations on `deploy_account` transactions, via validation 
 * Limited # of builtin applications
 * No external contract calls (library calls and self-calls are allowed)
 
-In future versions these same limitations will be introduced to the constructor as well.
-
-## Validate deploy
-
-A new, optional validation entrypoint: `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;`, has been added to avoid being able to drain funds from a pre-funded address.
-
 This entrypoint should be included in any accounts or contracts that wish to allow this updated flow.
 
+In future versions these same limitations will be introduced to the constructor as well.
 
-To see why this is important, consider the following example scenario:
-
-Suppose that StarkNet has gas metering and that a sequencer may include a `deploy_account` transaction that charges the user according to the gas consumed in the constructor execution.
-
-While the sequencer does not have the power to deploy a different contract for the user, the address is xref:Contracts/contract-address.adoc[bound] to the class hash and constructor arguments, the sequencer does have the power to manipulate the price.
-
-If the user does not sign a price (gas price, or in the present version of StarkNet, `max_fee`), then we must resort to schemes in the spirit of https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md[EIP1559], to determine the deployment cost.
-
-In this case, the sequencer can manipulate the block in order to charge an arbitrarily high fee and drain the user’s funds.
+### Using validate_deploy
 
 `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;` expects the following arguments:
 
