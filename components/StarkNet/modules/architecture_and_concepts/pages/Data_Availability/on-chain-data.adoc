@@ -15,14 +15,18 @@ The state diffs contain information on every contract whose storage was updated 
 
 * Number of contracts whose storage is updated
 * For each such contract, we have:
- ** `contract_address` - the xref:../Contracts/contract-address.adoc[address] of the contract
+
+** `contract_address` - the xref:../Contracts/contract-address.adoc[address] of the contract
+    ** `flag`
+        *** 0 = Storage updates only
+        *** 1 = Deployed or replaced
  ** `num_of_storage_updates` - number of storage updates
  ** `nonce, num_of_storage_updates ` - a uint256 value that encodes both the number of storage updates for that contract and the updated nonce:
 +
 [stem]
 ++++
-\underbrace{0\cdots1}_{\text{127 bits}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |
-{\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}
+\underbrace{0\cdots0}_{\text{127 bits}} |\underbrace{\text{flag}}_{\text{1 bit}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |
+\underbrace{\text{# of storage updates}}_{\text{64 bits}}
 ++++
  ** For each storage update:
   *** `key` - the address inside the contract's storage where the value is updated
@@ -38,7 +42,6 @@ Below we show an example of on chain data which was extracted from L1, and proce
 [
   5,
   2019172390095051323869047481075102003731246132997057518965927979101413600827,
-  18446744073709551617, 5, 102,
   2111158214429736260101797453815341265658516118421387314850625535905115418634,
   2,
   619473939880410191267127038055308002651079521370507951329266275707625062498,
@@ -74,11 +77,9 @@ Below we show an example of on chain data which was extracted from L1, and proce
 2019172390095051323869047481075102003731246132997057518965927979101413600827
 ----
 
-** One update (indicated by the cell at index 8):
- **  Following the above contract address, we have `18446744073709551617` (index 8 in the array), which is stem:[$2^{64}+1$], thus:
+ ** One update (indicated by the cell at index 8):
   *** The new contract nonce is 1
   *** One storage key is updated
-  *** The value at key 5 was changed to 102.
 
 The next 4 contracts storage updates are interpreted in the same manner.
 
