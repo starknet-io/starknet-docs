@@ -9,7 +9,7 @@ It has now been replaced with the `deploy_account` transaction which allows you 
 
 In order to deploy a new account on StarkNet you need to complete the following steps:
 
-* Decide on the account type you want to deploy
+* Decide on the account contract that you want to deploy
 * Compute your would-be account address off-chain
 * Send funds to this address
 
@@ -36,15 +36,13 @@ There are two potential issues that arise from sending a `deploy_account` transa
 
 To prevent the above scenarios, a new optional validation entrypoint is provided: `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;`.
 
-This enforces some limitations on `deploy_account` transactions, via validation execution namely:
+This enforces some limitations on `deploy_account` transactions and the constructor via validation execution, namely:
 
 * Limited # of Cairo steps
 * Limited # of builtin applications
 * No external contract calls (library calls and self-calls are allowed)
 
 This entrypoint should be included in any accounts or contracts that wish to allow this updated flow.
-
-In future versions these same limitations will be introduced to the constructor as well.
 
 ### Using validate deploy
 
@@ -79,11 +77,3 @@ func __validate_deploy__{
 ====
 The transaction hash and `max_fee` are accessible through the `get_tx_info` system call.
 ====
-
-## API changes
-
-In addition to the new transaction type, the following minor API changes apply since xref:documentation:starknet_versions:version_notes.adoc#version0.10.1[StarkNet version 0.10.1]:
-
-* Renaming `contract_address` to `sender_address` in version 1 invoke transactions.
-* The `entry_point_type` field is removed from invoke transactions (this affects the `get_block` and `get_transaction` feeder gateway endpoints). Note that this information is now reflected by the transaction type, hence the field is redundant.
-* The `entry_point_selector` field is removed from version 1 invoke transactions.
