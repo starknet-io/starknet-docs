@@ -4,11 +4,13 @@
   var SECT_CLASS_RX = /^sect(\d)$/
 
   var navContainer = document.querySelector('.nav-container')
+  var themeToggle = document.querySelector('.theme-toggle')
   // var navToggle = document.querySelector('.nav-toggle')
   var navToggle = document.querySelector('.navbar-burger')
 
   navToggle.addEventListener('click', showNav)
   navContainer.addEventListener('click', trapEvent)
+  themeToggle.addEventListener('click', trapEvent)
 
   var menuPanel = navContainer.querySelector('[data-panel=menu]')
   if (!menuPanel) return
