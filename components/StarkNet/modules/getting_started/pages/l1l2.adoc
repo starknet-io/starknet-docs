@@ -5,10 +5,10 @@
 == Background
 
 One important property of a good L2 system is the ability to interact with the L1 system it’s built
-on (since otherwise the system is, in fact, isolated). In this section we describe how StarkNet
+on (since otherwise the system is, in fact, isolated). In this section we describe how Starknet
 contracts can interact with Ethereum L1 contracts.
 
-Every StarkNet contract may send and receive messages to/from any L1 contract. Usually, it’s
+Every Starknet contract may send and receive messages to/from any L1 contract. Usually, it’s
 recommended to design a pair of contracts: an L2 contract and its L1 contract counterpart (for
 example, written in Solidity) and decide on the message protocol between the two contracts.
 
@@ -17,15 +17,15 @@ example, written in Solidity) and decide on the message protocol between the two
 
 Messages from L2 to L1 work as follows:
 
-. The StarkNet (L2) contract function calls the library function `send_message_to_l1()` in order to
+. The Starknet (L2) contract function calls the library function `send_message_to_l1()` in order to
 send the message. It specifies:
 .. The destination L1 contract (_to_).
 .. The data to send (_payload_).
 +
-The StarkNet OS adds the _from_ address, which is the L2 address of the contract sending the message.
+The Starknet OS adds the _from_ address, which is the L2 address of the contract sending the message.
 . Once a state update containing the L2 transaction is accepted on-chain, the message is stored on
-the L1 StarkNet core contract, waiting to be consumed.
-. The L1 contract specified by the _to_ address invokes the `consumeMessageFromL2()` of the StarkNet
+the L1 Starknet core contract, waiting to be consumed.
+. The L1 contract specified by the _to_ address invokes the `consumeMessageFromL2()` of the Starknet
 core contract.
 
 *Note*: Since any L2 contract can send messages to any L1 contract it is recommended that the L1
@@ -38,11 +38,11 @@ Below we will show how one can use this mechanism to implement a withdrawal tran
 
 The other direction is similar:
 
-. The L1 contract calls (on L1) the `send_message()` function of the StarkNet core contract with a
+. The L1 contract calls (on L1) the `send_message()` function of the Starknet core contract with a
 message and a fee. The core contract stores the message and the fee. In this case the message
 includes an additional field - the _selector_, which determines what function to call in the
 corresponding L2 contract.
-. Assuming the fee is sufficient, the StarkNet Sequencer automatically consumes the message and
+. Assuming the fee is sufficient, the Starknet Sequencer automatically consumes the message and
 invokes the requested L2 function of the contract designated by the “to” address.
 
 This direction is useful, for example, for _deposit_ transactions.
@@ -53,9 +53,9 @@ designing the message protocol between the two contracts.
 
 [IMPORTANT]
 ====
-The StarkNet Alpha system is still under development, and therefore from time to time the state of
+The Starknet Alpha system is still under development, and therefore from time to time the state of
 the system will reset and all contracts will be removed. This means that you shouldn’t move valuable
-assets to the StarkNet system, unless you have a way to withdraw them given the removal of the L2
+assets to the Starknet system, unless you have a way to withdraw them given the removal of the L2
 contract.
 ====
 
@@ -175,7 +175,7 @@ func withdraw{
 ----
 
 Note that a new implicit argument was added – the system call pointer (`syscall_ptr`). This argument
-allows us to invoke some functions of the StarkNet OS, including the “send message” function.
+allows us to invoke some functions of the Starknet OS, including the “send message” function.
 
 Sending a message is done at the end of `withdraw()` by calling `send_message_to_l1()`, which gets
 the L1 contract address, the size of the message and the message itself (as a `felt*`). Note that the
@@ -220,8 +220,8 @@ func deposit{
 }
 ----
 
-An L1 handler is called by the StarkNet OS in order to process a message sent from an L1 contract.
-A StarkNet contract may define a few L1 handlers, and they are identified by an integer value called
+An L1 handler is called by the Starknet OS in order to process a message sent from an L1 contract.
+A Starknet contract may define a few L1 handlers, and they are identified by an integer value called
 the _selector_. You can compute the selector based on the L1 handler name using the following Python
 code:
 
@@ -243,14 +243,14 @@ You should get:
 ----
 
 When an L1 contract wants to send a message, it calls the `sendMessageToL2()` function of the
-StarkNet Core contract specifying the L2 contract address, the selector for the handler to be invoked
+Starknet Core contract specifying the L2 contract address, the selector for the handler to be invoked
 and the message payload. The message fee is paid in ETH and needs to be sent with the call.
 See the deposit function in the link:../_static/L1L2Example.sol[example L1 contract] for an example.
 
 [id="using-the-contract"]
 === Using the contract
 
-Save the new StarkNet contract file as `l1l2.cairo`. You can find the full Cairo file
+Save the new Starknet contract file as `l1l2.cairo`. You can find the full Cairo file
 link:../_static/l1l2.cairo[here].
 
 Compile and declare the contract:
@@ -354,7 +354,7 @@ After your `withdraw()` transaction is accepted on-chain, you can deposit some o
 back to L2. Call the `deposit()` function of the example contract with the following arguments:
 `CONTRACT_ADDRESS, USERID, 600` and pay the message fee in ETH. For the Goerli testnet, you can use a
 message fee of `0.01` ETH. (Note that the ‘value’ to pay in ETH is displayed as `payableAmount` in
-Etherscan.) It may take some time until StarkNet processes the incoming message and calls the L1
+Etherscan.) It may take some time until Starknet processes the incoming message and calls the L1
 handler (for example, the system waits for a few blockchain confirmations). But after that time,
 you’ll be able to see the updated balance of the user by invoking `starknet call` for `get_balance`
 again. The new balances should be: L1 balance – `400` and L2 balance – `2933`.
