@@ -19,7 +19,15 @@
     <script type="text/javascript" id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="e4db29b5-cd94-4bcf-87e4-04f4ca564240" data-blockingmode="manual"></script>
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
 
-<link rel="icon" href="../../../../_/img/favicon/favicon.ico" type="image/x-icon">
+    <script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js"></script>
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/algoliasearch@4.14.3/dist/algoliasearch-lite.umd.js"
+        integrity="sha256-dyJcbGuYfdzNfifkHxYVd/rzeR6SLLcDFYEidcybldM="
+        crossorigin="anonymous"
+    ></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-plugin-query-suggestions"></script><link rel="icon" href="../../../../_/img/favicon/favicon.ico" type="image/x-icon">
 
 <!-- For all browsers -->
 <link rel="icon" type="image/png" sizes="32x32" href="../../../../_/img/favicon-32x32.png">
@@ -42,6 +50,7 @@
         <a href="../../../.." class="docs-logo desktop-only">Docs</a>
       </div>
       <!--<a class="navbar-item" href="https://docs.starknet.io">StarkNet documentation</a>-->
+      <div id="autocomplete" class="autocomplete-root"></div>
       <div class="header-right">
         <div class="theme-toggle-container mobile-only">
           <button onclick="switch_style('toggle')" id="theme-toggle" class="theme-toggle"></button>
@@ -74,6 +83,7 @@
   <span></span>
   <span></span>
   <a href="../../../" class="home-link"></a>
+  <div id="mobile-autocomplete" class="mobile-only"></div>
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../../../">StarkNet</a></li>
@@ -963,5 +973,75 @@
 <script async src="../../../../_/js/vendor/swagger-ui.js"></script>
 <script async src="../../../../_/js/vendor/component-versions.js"></script>
 <script src="../../../../_/js/vendor/custom.js"></script>
-  </body>
+
+<script>
+    const { algoliasearch } = window;
+    const { autocomplete, getAlgoliaResults, getAlgoliaFacets} = window["@algolia/autocomplete-js"]
+    const { createQuerySuggestionsPlugin } = window['@algolia/autocomplete-plugin-query-suggestions'];
+
+
+    const appId = "VHYJO45TI4";
+    const apiKey = "9d5f273e78238a8c505526e481c857f7";
+    const searchClient = algoliasearch(appId, apiKey);
+
+    function getSources({ query, state }) {
+        if (!query) {
+          return [];
+        }
+
+        return [
+          {
+            sourceId: "docs",
+            getItems() {
+              return getAlgoliaResults({
+                searchClient,
+                queries: [
+                  {
+                    indexName: "starknet-docs-dev",
+                    query,
+                    params: {
+                      attributesToSnippet: ["title:10", "content:10"],
+                      snippetEllipsisText: "…",
+                    }
+                  }
+                ]
+              });
+            },
+            templates: {
+              header({html}) {
+                return (
+                  html`<span class="aa-SourceHeaderTitle">Documentation</span>`
+                );
+              },
+              item({ item: hit, components, html, ...rest }) {
+                return (html`
+                    <a href=${hit.url} target="_blank" class="aa-ItemLink">
+                      <div class="aa-ItemContent">
+                        <div class="hit-title">
+                          ${components.Highlight({ attribute: 'title', hit })}
+                        </div>
+                        <div class="hit-desc">
+                          ${components.Highlight({ attribute: 'content', hit })}
+                        </div>
+                      </div>
+                    </a>
+                  `)
+              },
+              noResults() {
+                return "No docs for this query.";
+              }
+            }
+          }
+        ];
+    };
+
+    autocomplete({
+      container: "#autocomplete",
+      placeholder: "Search",
+      openOnFocus: true,
+      detachedMediaQuery: "",
+      getSources
+    });
+
+</script>  </body>
 </html>
