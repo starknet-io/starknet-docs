@@ -32,7 +32,7 @@
 
 console.log(uiRootPath);
 
-function switch_style ( css_title )
+function switch_style (css_title)
 {
   var i, link_tag ;
   if (css_title == 'toggle') {
@@ -42,7 +42,7 @@ function switch_style ( css_title )
       css_title = 'Default';
     }
   }
-  for (i = 0, link_tag = document.getElementsByTagName("link") ;
+  for (i = 0, link_tag = document.getElementsByTagName("link");
        i < link_tag.length ; i++ ) {
     if ((link_tag[i].rel.indexOf( "stylesheet" ) != -1) &&
       link_tag[i].title) {
@@ -53,6 +53,9 @@ function switch_style ( css_title )
     }
     set_localstorage( css_title);
   }
+
+  let themeName = css_title === 'Dark' ? 'dark': 'light'
+  document.documentElement.setAttribute('data-theme', themeName)
 };
 
 function set_style_from_localstorage(css_title)
