@@ -27,6 +27,8 @@
         crossorigin="anonymous"
     ></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-plugin-recent-searches"></script>
+
 <link rel="icon" href="../../../../_/img/favicon/favicon.ico" type="image/x-icon">
 
 <!-- For all browsers -->
@@ -836,11 +838,83 @@
 <script>
     const { algoliasearch } = window;
     const { autocomplete, getAlgoliaResults, getAlgoliaFacets} = window["@algolia/autocomplete-js"]
-
+    const { createLocalStorageRecentSearchesPlugin, search } = window['@algolia/autocomplete-plugin-recent-searches'];
 
     const appId = "VHYJO45TI4";
     const apiKey = "9d5f273e78238a8c505526e481c857f7";
     const searchClient = algoliasearch(appId, apiKey);
+
+    function createLocalStorageRecentlyViewedItems(params) {
+      const {
+        onReset,
+        onSubmit,
+        subscribe,
+        ...plugin
+      } = createLocalStorageRecentSearchesPlugin({
+        ...params,
+        search(params) {
+          if (params.query) {
+            return [];
+          }
+
+          return search(params);
+        },
+        transformSource({ source, onRemove, state }) {
+          const transformedSource = params.transformSource
+            ? params.transformSource({ source, onRemove, state })
+            : source;
+
+          return {
+            ...transformedSource,
+            getItemUrl({ item }) {
+              return item.url;
+            },
+            templates: {
+              ...transformedSource.templates,
+              header({html}) {
+                return (html`
+                  <div>
+                    <span class="aa-SourceHeaderTitle">Recently viewed</span>
+                  </div>
+                `);
+              },
+              item({ item, components, html }) {
+
+               function removeRecent(event){
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onRemove(item.id);
+                }
+
+                return (html`
+                  <a class="aa-ItemLink" href=${item.url}>
+                    <div class="aa-ItemContent">
+                      <div class="aa-ItemIcon aa-ItemIcon--noBorder">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12.516 6.984v5.25l4.5 2.672-0.75 1.266-5.25-3.188v-6h1.5zM12 20.016q3.281 0 5.648-2.367t2.367-5.648-2.367-5.648-5.648-2.367-5.648 2.367-2.367 5.648 2.367 5.648 5.648 2.367zM12 2.016q4.125 0 7.055 2.93t2.93 7.055-2.93 7.055-7.055 2.93-7.055-2.93-2.93-7.055 2.93-7.055 7.055-2.93z" />
+                        </svg>
+                      </div>
+                      <div class="aa-ItemContentBody">
+                        <div class="aa-ItemContentTitle">
+                          ${components.Highlight({ attribute: 'title', hit: item })}
+                        </div>
+                      </div>
+                    </div>
+                  </a>
+                `);
+              }
+            }
+          };
+        }
+      });
+
+      const { getAlgoliaSearchParams, ...data } = plugin.data;
+
+      return {
+        ...plugin,
+        data
+      };
+    }
 
     function getSources({ query, state }) {
         if (!query) {
@@ -865,6 +939,13 @@
                 ]
               });
             },
+            onSelect({ item }) {
+              recentlyViewedItems.data.addItem({
+                id: item.objectID,
+                title: item.title || item.content,
+                url: item.url
+              });
+            },
             templates: {
               header({html}) {
                 return (
@@ -873,8 +954,8 @@
               },
               item({ item: hit, components, html, ...rest }) {
                 return (html`
-                    <a href=${hit.url} target="_blank" class="aa-ItemLink">
-                      <div class="aa-ItemContent">
+                    <a href=${hit.url} class="aa-ItemLink">
+                      <div class="aa-ItemContent aa-ItemContentFlex">
                         <div class="hit-title">
                           ${components.Highlight({ attribute: 'title', hit })}
                         </div>
@@ -893,12 +974,18 @@
         ];
     };
 
+    const recentlyViewedItems = createLocalStorageRecentlyViewedItems({
+      key: "RECENTLY_VIEWED",
+      limit: 5
+    });
+
     autocomplete({
       container: "#autocomplete",
       placeholder: "Search",
       openOnFocus: true,
       detachedMediaQuery: "",
-      getSources
+      getSources,
+      plugins: [recentlyViewedItems]
     });
 
 </script>
