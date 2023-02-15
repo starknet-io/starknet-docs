@@ -885,8 +885,22 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="definition_of_a_class"><a class="anchor" href="#definition_of_a_class"></a>Definition of a class</h2>
+<h2 id="definition_of_a_cairo_0_class"><a class="anchor" href="#definition_of_a_cairo_0_class"></a>Definition of a (Cairo 0) class</h2>
 <div class="sectionbody">
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Cairo 0 classes are deprecated, and will no longer be supported after regenesis</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
 <p>The elements that define a class are:</p>
 </div>
@@ -928,8 +942,14 @@ Array of external functions entry points
 </tr>
 <tr>
 <td class="hdlist1">
-Array of <a href="https://www.cairo-lang.org/docs/hello_starknet/l1l2.html#receiving-a-message-from-l1">L1 handlers</a> entry points
-<br>
+Array of <a href="#../L1-L2_Communication/messaging-mechanism.adoc/.adoc#l1-l2_messages" class="xref unresolved">L1 handlers</a> entry points 
+</td>
+<td class="hdlist2">
+<p>-</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
 Array of constructors entry points
 </td>
 <td class="hdlist2">
@@ -949,7 +969,7 @@ Array of used builtin names
 Program hash
 </td>
 <td class="hdlist2">
-<p>The <a href="../../Hashing/hash-functions/#starknet-keccak" class="xref page">starknet_keccak</a> of the class&#8217;s program. The class&#8217;s program is the abi and program part of the <code>.json</code> file that the Starknet compiler outputs when you run the following command:</p>
+<p>The <a href="../../Hashing/hash-functions/#starknet-keccak" class="xref page">starknet_keccak</a> of the class&#8217;s program. The class&#8217;s program is the abi and program part of the <code>.json</code> file that the StarkNet compiler outputs when you run the following command:</p>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">$ starknet-compile --no_debug_info</code></pre>
@@ -973,15 +993,118 @@ Bytecode
 </div>
 </div>
 <div class="sect1">
-<h2 id="how_the_class_hash_is_computed"><a class="anchor" href="#how_the_class_hash_is_computed"></a>How the class hash is computed</h2>
+<h2 id="definition_of_a_cairo_1_class"><a class="anchor" href="#definition_of_a_cairo_1_class"></a>Definition of a (Cairo 1) class</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The hash of the class is the chain hash, that is, the <a href="../../Hashing/hash-functions/#pedersen-hash" class="xref page">Pedersen hash</a>, of the above, computed as follows:</p>
+<p>Classes that were written in Cairo 1 are defined by their Sierra code (
+resulting from the compilation of the Cairo code into Sierra, see xref:[here] for more details).</p>
+</div>
+<div class="paragraph">
+<p>The elements that define a class are:</p>
+</div>
+<div class="hdlist">
+<table>
+<colgroup>
+<col style="width: 35%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+Sierra version
+</td>
+<td class="hdlist2">
+<p>the Sierra version in which the class is written</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Array of external functions entry points
+</td>
+<td class="hdlist2">
+<p>An entry point is a pair <code>(<em>selector</em>, <em>function_idx</em>)</code>, where <code><em>function_idx</em></code> is the index of the function inside the Sierra program.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The selector is an identifier through which the function is callable in transactions or in other classes. The selector is the <a href="../../Hashing/hash-functions/#starknet-keccak" class="xref page">starknet_keccak</a> hash of the function name, encoded in ASCII.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Array of <a href="#../L1-L2_Communication/messaging-mechanism.adoc/.adoc#l1-l2_messages" class="xref unresolved">L1 handlers</a> entry points 
+</td>
+<td class="hdlist2">
+<p>-</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Array of constructors entry points 
+</td>
+<td class="hdlist2">
+<p>Currently, the compiler allows only one constructor.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+ABI
+</td>
+<td class="hdlist2">
+<p>A string representing the ABI of the class. The ABI hash (which affects the class hash) is given by:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python">starknet_keccak(bytes(ABI, "UTF-8"))</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This string is supplied by the user declaring the class (and is signed on as part of the <code>DECLARE</code> transaction), and is not enforced to be the true ABI of the associated class.
+Without seeing the underlying source code (i.e. the Cairo code generating the class&#8217;s Sierra), this ABI should be treated as the "intended" ABI by the declaring party, which may be incorrect (intentionally or otherwise).
+The "honest" string would be the json serialization of the contract&#8217;s ABI as produced by the Cairo 1 compiler.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Sierra program 
+</td>
+<td class="hdlist2">
+<p>An array of field elements representing the Sierra instructions.</p>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="computing_the_class_hash"><a class="anchor" href="#computing_the_class_hash"></a>Computing the class hash</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The hash of the class is the chain hash of its components, computed as follows:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Start with \(h(0,\text{api_version})\).</p>
+<p>Start with \(h(0,\text{sierra_version})\), or \(h(0,\text{api_version})\) or  for Cairo 0 classes.</p>
 </li>
 <li>
 <p>For every line in the above, excluding the first, compute \(h(h(previous\_line), new\_line)\), where the hash of an array is defined as <a href="../../Hashing/hash-functions/#array_hashing" class="xref page">Array Hashing</a>.</p>
@@ -990,6 +1113,20 @@ Bytecode
 <p>Let \(c\) denote the cumulative hash that results from applying the above process; the class&#8217;s hash is then \(h(c, \textrm{number_of_lines})\), where \(\text{number_of_lines}\) is 7.</p>
 </li>
 </ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>For Cairo 1 classes, \(h\) is the Poseidon hash function, while for Cairo 0 classes the Pedersen hash is used.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>For more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contracts.cairo#L47">Cairo implementation</a>.</p>
