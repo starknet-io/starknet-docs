@@ -1012,7 +1012,11 @@ If the validation was success and the compilation resulted in a matching compile
 <div class="sectionbody">
 <div class="paragraph">
 <p>New classes declared by v2 Declare transactions will be included in the state commitment.
-To this end, we change the state commitment from <code>global_tree_root</code> to <code>h(global_tree_root, classes_root)</code>, where <code>classes_root</code> is a height 251 Patricia tree constructed from the key-value pairs <code>(class_hash, compiled_class_hash)</code>.</p>
+To this end, we change the state commitment from <code>global_tree_root</code> to <code>h(global_tree_root, classes_root, commitment_version)</code>, where:
+* <code>global_tree_root</code> is the usual contracts tree
+* <code>classes_root</code> is a height 251 Patricia tree constructed from the key-value pairs <code>(class_hash, h(compiled_class_hash, leaf_version))</code>
+* <code>commitment_version</code> and <code>leaf_version</code> are news field added to allow forward compatability and are currently set to 0
+* <code>h</code> is the link:Poseidon hash function</p>
 </div>
 <div class="paragraph">
 <p>New class hash computation will migrate from Pedersen to Poseidon hash functions in this version.</p>
@@ -1129,7 +1133,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <div class="ulist">
 <ul>
 <li>
-<p>You will only be able to use it in order to transition to Cairo 1.0 classes.</p>
+<p>Yes</p>
 </li>
 </ul>
 </div>
@@ -1139,7 +1143,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <div class="ulist">
 <ul>
 <li>
-<p>No, we will not enforce anything about the contents of the old/new class, other than the new class being Cairo 1.0 compatible.</p>
+<p>No, we will not enforce anything about the contents of the old/new class</p>
 </li>
 </ul>
 </div>
@@ -1217,6 +1221,13 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 </li>
 </ul>
 </div>
+<div class="paragraph">
+<p>Following the updated contracts section, we have a section of newly declared classes (only Cairo 1 classed declared via a declare v2 transactions, as old classes don&#8217;t affect the commitment):
+* The first word in this section is the number of declared classes
+* For every newly declared class, two felts will be posted:
+  <strong> The class hash
+  </strong> The compiled class hash</p>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -1227,7 +1238,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <div class="ulist">
 <ul>
 <li>
-<p>New endpoint: <strong><code>get_compiled_class</code>.</strong> The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution. You can find an example of the relevant structure <a href="https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.casm">here</a></p>
+<p>New endpoint: <strong><code>get_compiled_class_by_class_hash</code>.</strong> The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution. You can find an example of the relevant structure <a href="https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.casm">here</a></p>
 </li>
 <li>
 <p><code><strong>get_class_by_hash</strong></code> - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0. You can find an example of the new class structure <a href="https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.json">here</a>.</p>
@@ -1249,7 +1260,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <p><code>old_declared_classes</code> is a list of class hashes</p>
 </li>
 <li>
-<p><code>declared_classes</code> is a dictionary that maps <code>class_hash</code> to <code>compiled_class_hash</code></p>
+<p><code>declared_classes</code> is a list of <code>(class_hash,compiled_class_hash)</code> pairs</p>
 </li>
 </ul>
 </div>
@@ -1260,9 +1271,6 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <ul>
 <li>
 <p>The <code>transactions</code> field is subject to the same changes in <code>get_transaction</code></p>
-</li>
-<li>
-<p><code>state_root</code> is renamed to <code>state_commitment</code></p>
 </li>
 </ul>
 </div>
@@ -1340,13 +1348,13 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 </div>
 </div>
 <div class="sect1">
-<h2 id="0_11_0_changelog"><a class="anchor" href="#0_11_0_changelog"></a>0.11.0 changelog</h2>
+<h2 id="document_changelog"><a class="anchor" href="#document_changelog"></a>Document changelog</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>In this section we will cover design changes up to the Testnet/Mainnet deployment.</p>
+<p>In this section we will cover the changes in the above document up to the release to Testnet/Mainnet. If this is your first time encountering the document, then you can ignore this section.</p>
 </div>
 <div class="sect2">
-<h3 id="update_15022021"><a class="anchor" href="#update_15022021"></a>update (15/02/2021)</h3>
+<h3 id="update_16022021"><a class="anchor" href="#update_16022021"></a>update (16/02/2021)</h3>
 <div class="sect3">
 <h4 id="replace_class_syscall_2"><a class="anchor" href="#replace_class_syscall_2"></a>Replace class syscall</h4>
 <div class="paragraph">
@@ -1372,13 +1380,13 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 </ul>
 </div>
 <div class="paragraph">
-<p>You can find the specification of our Poseidon hash function <a href="https://github.com/starkware-industries/poseidon">here</a>.</p>
+<p>You can find the specification of the Poseidon hash function that will be used in Starknet <a href="https://github.com/starkware-industries/poseidon">here</a>.</p>
 </div>
 </div>
 <div class="sect3">
 <h4 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State commitment</h4>
 <div class="paragraph">
-<p>The changes elaborated <a href="#commitment">above</a> will be slightly modified as follows:</p>
+<p>The changes in the <a href="#commitment">commitment scheme</a> has been slightly modified as follows:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -1389,7 +1397,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <p>The leaves in the classes tree will be <code>h(compiled_class_hash, leaf_version)</code> where <code>leaf_version</code> is a field added to allow forward compatability and is currently set to 0</p>
 </li>
 <li>
-<p>If the classes tree is none empty, the commitment will be computed by <code>h(global_tree_root, classes_root, commitment_version)</code> where <code>h</code>
+<p>If the classes tree is none empty, the state commitment will be computed by <code>h(global_tree_root, classes_root, commitment_version)</code> where <code>h</code>
 is the <strong>Poseidon</strong> hash function and <code>commitment_version</code> is a field added to allow forward compatability and is currently set to 0</p>
 </li>
 </ul>
@@ -1398,7 +1406,10 @@ is the <strong>Poseidon</strong> hash function and <code>commitment_version</cod
 <div class="sect3">
 <h4 id="on_chain_data"><a class="anchor" href="#on_chain_data"></a>On-Chain data</h4>
 <div class="paragraph">
-<p>In addition to the changes explained <a href="#ocd">here</a>, we will have an additional section for the newly declared (Cairo 1) classes in the block. This section will contain:</p>
+<p>The changes in the <a href="#ocd">on chain data format</a> have been slightly modified as follows:</p>
+</div>
+<div class="paragraph">
+<p>We will have an additional section for the newly declared (Cairo 1) classes in the block. This section will contain:</p>
 </div>
 <div class="ulist">
 <ul>
