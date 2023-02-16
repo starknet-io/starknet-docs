@@ -17,19 +17,7 @@
     <script>var uiRootPath = '../../../_'</script>
     <script src="../../../_/js/vendor/medium-zoom.js"></script>
     <script type="text/javascript" id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="e4db29b5-cd94-4bcf-87e4-04f4ca564240" data-blockingmode="manual"></script>
-    <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js"></script>
-
-    <script
-        src="https://cdn.jsdelivr.net/npm/algoliasearch@4.14.3/dist/algoliasearch-lite.umd.js"
-        integrity="sha256-dyJcbGuYfdzNfifkHxYVd/rzeR6SLLcDFYEidcybldM="
-        crossorigin="anonymous"
-    ></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-plugin-recent-searches"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-plugin-query-suggestions"></script><link rel="icon" href="../../../_/img/favicon/favicon.ico" type="image/x-icon">
+    <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script><link rel="icon" href="../../../_/img/favicon/favicon.ico" type="image/x-icon">
 
 <!-- For all browsers -->
 <link rel="icon" type="image/png" sizes="32x32" href="../../../_/img/favicon-32x32.png">
@@ -903,11 +891,15 @@ If the validation was success and the compilation resulted in a matching compile
 </div>
 </div>
 <div class="sect1">
-<h2 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State commitment</h2>
+<h2 id="commitment"><a class="anchor" href="#commitment"></a>State commitment</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>New classes declared by v2 Declare transactions will be included in the state commitment.
-To this end, we change the state commitment from <code>global_tree_root</code> to <code>h(global_tree_root, classes_root)</code>, where <code>classes_root</code> is a height 251 Patricia tree constructed from the key-value pairs <code>(class_hash, compiled_class_hash)</code>.</p>
+To this end, we change the state commitment from <code>global_tree_root</code> to <code>h(global_tree_root, classes_root, commitment_version)</code>, where:
+* <code>global_tree_root</code> is the usual contracts tree
+* <code>classes_root</code> is a height 251 Patricia tree constructed from the key-value pairs <code>(class_hash, h(compiled_class_hash, leaf_version))</code>
+* <code>commitment_version</code> and <code>leaf_version</code> are news field added to allow forward compatability and are currently set to 0
+* <code>h</code> is the link:Poseidon hash function</p>
 </div>
 <div class="paragraph">
 <p>New class hash computation will migrate from Pedersen to Poseidon hash functions in this version.</p>
@@ -1024,7 +1016,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <div class="ulist">
 <ul>
 <li>
-<p>You will only be able to use it in order to transition to Cairo 1.0 classes.</p>
+<p>Yes</p>
 </li>
 </ul>
 </div>
@@ -1034,7 +1026,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <div class="ulist">
 <ul>
 <li>
-<p>No, we will not enforce anything about the contents of the old/new class, other than the new class being Cairo 1.0 compatible.</p>
+<p>No, we will not enforce anything about the contents of the old/new class</p>
 </li>
 </ul>
 </div>
@@ -1075,7 +1067,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 </div>
 </div>
 <div class="sect1">
-<h2 id="on_chain_data"><a class="anchor" href="#on_chain_data"></a>On-Chain data</h2>
+<h2 id="ocd"><a class="anchor" href="#ocd"></a>On-Chain data</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The data published on L1 should allow everyone to construct the Starknet state locally. The introduction of the <code>replace_class</code> system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our on chain data format:</p>
@@ -1112,6 +1104,29 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 </li>
 </ul>
 </div>
+<div class="paragraph">
+<p>Following the updated contracts section, we have a section of newly declared classes (only Cairo 1 classed declared via a declare v2 transactions, as old classes don&#8217;t affect the commitment):</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The first word in this section is the number of declared classes</p>
+</li>
+<li>
+<p>For every newly declared class, two felts will be posted:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The class hash</p>
+</li>
+<li>
+<p>The compiled class hash</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -1122,7 +1137,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <div class="ulist">
 <ul>
 <li>
-<p>New endpoint: <strong><code>get_compiled_class</code>.</strong> The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution. You can find an example of the relevant structure <a href="https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.casm">here</a></p>
+<p>New endpoint: <strong><code>get_compiled_class_by_class_hash</code>.</strong> The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution. You can find an example of the relevant structure <a href="https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.casm">here</a></p>
 </li>
 <li>
 <p><code><strong>get_class_by_hash</strong></code> - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0. You can find an example of the new class structure <a href="https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.json">here</a>.</p>
@@ -1138,13 +1153,13 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <p>added <code>replaced_classes</code> section</p>
 </li>
 <li>
-<p><code>declared_contracts</code> is split into <code>old_declared_contracts</code> and <code>declared_contracts</code></p>
+<p><code>declared_classes</code> is split into <code>old_declared_classes</code> and <code>declared_classes</code></p>
 </li>
 <li>
-<p><code>old_declared_contracts</code> is a list of class hashes</p>
+<p><code>old_declared_classes</code> is a list of class hashes</p>
 </li>
 <li>
-<p><code>declared_classes</code> is a dictionary that maps <code>class_hash</code> to <code>compiled_class_hash</code></p>
+<p><code>declared_classes</code> is a list of <code>(class_hash,compiled_class_hash)</code> pairs</p>
 </li>
 </ul>
 </div>
@@ -1155,9 +1170,6 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <ul>
 <li>
 <p>The <code>transactions</code> field is subject to the same changes in <code>get_transaction</code></p>
-</li>
-<li>
-<p><code>state_root</code> is renamed to <code>state_commitment</code></p>
 </li>
 </ul>
 </div>
@@ -1234,6 +1246,113 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="document_changelog"><a class="anchor" href="#document_changelog"></a>Document changelog</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In this section we will cover the changes in the above document up to the release to Testnet/Mainnet. If this is your first time encountering the document, then you can ignore this section.</p>
+</div>
+<div class="sect2">
+<h3 id="update_16022021"><a class="anchor" href="#update_16022021"></a>update (16/02/2021)</h3>
+<div class="sect3">
+<h4 id="replace_class_syscall_2"><a class="anchor" href="#replace_class_syscall_2"></a>Replace class syscall</h4>
+<div class="paragraph">
+<p>Nothing will be enforced regarding the old/new class. In partiular, it can be used even with Cairo 0 target classes (note that such classes will no longer be supported after regenesis).</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="poseidon_hash"><a class="anchor" href="#poseidon_hash"></a>Poseidon hash</h4>
+<div class="paragraph">
+<p>In Starknet v0.11.0 we will start using the Poseidon hash function, which can be proven much more effeciently than Pedersen due to its algebaric nature. We will start by using Poseidon in the following places:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>class_hash (only new Cairo 1.0 classes will be hashed with Poseidon, Cairo 0 class hashes will continue to use Pedersen)</p>
+</li>
+<li>
+<p>compiled class hash (see <a href="#declare_v2">declare v2</a> for more details)</p>
+</li>
+<li>
+<p>classes commitment tree (see the <a href="#commitment">state commitment updates</a> for more details)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>You can find the specification of the Poseidon hash function that will be used in Starknet <a href="https://github.com/starkware-industries/poseidon">here</a>.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State commitment</h4>
+<div class="paragraph">
+<p>The changes in the <a href="#commitment">commitment scheme</a> has been slightly modified as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The classes tree will be computed with the Poseidon hash function, while the global state tree will continue to use Pedersen</p>
+</li>
+<li>
+<p>The leaves in the classes tree will be <code>h(compiled_class_hash, leaf_version)</code> where <code>leaf_version</code> is a field added to allow forward compatability and is currently set to 0</p>
+</li>
+<li>
+<p>If the classes tree is none empty, the state commitment will be computed by <code>h(global_tree_root, classes_root, commitment_version)</code> where <code>h</code>
+is the <strong>Poseidon</strong> hash function and <code>commitment_version</code> is a field added to allow forward compatability and is currently set to 0</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="on_chain_data"><a class="anchor" href="#on_chain_data"></a>On-Chain data</h4>
+<div class="paragraph">
+<p>The changes in the <a href="#ocd">on chain data format</a> have been slightly modified as follows:</p>
+</div>
+<div class="paragraph">
+<p>We will have an additional section for the newly declared (Cairo 1) classes in the block. This section will contain:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The number of declared (Cairo 1) classes</p>
+</li>
+<li>
+<p>For every newly declared class, two felts will be posted:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The class hash</p>
+</li>
+<li>
+<p>The compiled class hash</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="api_changes_2"><a class="anchor" href="#api_changes_2"></a>API changes</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>To avoid ambiguity, <code>get_compiled_class</code> will be renamed to <code>get_compiled_class_by_class_hash</code></p>
+</li>
+<li>
+<p>Starknet blocks will still have the <code>state_root</code> field (it will not be renamed to state commitment at this time)</p>
+</li>
+<li>
+<p><code>declared_classes</code> inside the state update response will be a list of pairs (class hash and compiled class hash) rather than a dictionary</p>
+</li>
+<li>
+<p>The gateway will expect the <code>sierra_program</code> field of declare v2 transactions in a compressed form, in the same manner as done today for declare v1 transactions</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
 <nav class="pagination">
   <span class="prev"><a href="../version_notes/">Starknet version notes</a></span>
   <span class="next"><a href="../pathfinder_versions/">Pathfinder version notes</a></span>
@@ -1276,81 +1395,24 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 <script async src="../../../_/js/vendor/tabs-block-behaviour.js"></script>
 <script async src="../../../_/js/vendor/swagger-ui.js"></script>
 <script async src="../../../_/js/vendor/component-versions.js"></script>
-<script src="../../../_/js/vendor/custom.js"></script>
+<script src="../../../_/js/vendor/custom.js"></script><script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/algoliasearch@4.14.3/dist/algoliasearch-lite.umd.js"
+    integrity="sha256-dyJcbGuYfdzNfifkHxYVd/rzeR6SLLcDFYEidcybldM="
+    crossorigin="anonymous"
+></script>
+<script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-plugin-recent-searches"></script>
+<script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-plugin-query-suggestions"></script>
 
 <script>
-    const { algoliasearch } = window;
-    const { autocomplete, getAlgoliaResults, getAlgoliaFacets} = window["@algolia/autocomplete-js"]
-    const { createLocalStorageRecentSearchesPlugin, search } = window['@algolia/autocomplete-plugin-recent-searches'];
-    const { createQuerySuggestionsPlugin } = window['@algolia/autocomplete-plugin-query-suggestions'];
+  const { createQuerySuggestionsPlugin } = window['@algolia/autocomplete-plugin-query-suggestions'];
+  const { createLocalStorageRecentSearchesPlugin, search } = window['@algolia/autocomplete-plugin-recent-searches'];
+  const { algoliasearch } = window;
+  const { autocomplete, getAlgoliaResults, getAlgoliaFacets} = window["@algolia/autocomplete-js"]
+</script>
 
-    const appId = "VHYJO45TI4";
-    const apiKey = "9d5f273e78238a8c505526e481c857f7";
-    const searchClient = algoliasearch(appId, apiKey);
-
-    const querySuggestionsPlugin = createQuerySuggestionsPlugin({
-      searchClient,
-      indexName: 'web_query_suggestions_dev',
-      getSearchParams({ state }) {
-        return { hitsPerPage: 3 };
-      },
-      transformSource({ source, onTapAhead }) {
-
-        const onSelectSuggestion = (event, item) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onTapAhead(item)
-        };
-
-        return {
-          ...source,
-          templates: {
-            ...source.templates,
-            header({ state, html }) {
-              if (state.query) {
-                return null;
-              }
-
-              return (html`
-                <div>
-                  <span className="aa-SourceHeaderTitle">Popular searches</span>
-                </div>
-              `);
-            },
-            item({html, item}){
-
-              
-              return (html`
-                <div class="aa-ItemWrapper" onclick=${event => onSelectSuggestion(event, item)}>
-                  <div class="aa-ItemContent">
-                    <div class="aa-ItemIcon aa-ItemIcon--noBorder">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M16.041 15.856c-0.034 0.026-0.067 0.055-0.099 0.087s-0.060 0.064-0.087 0.099c-1.258 1.213-2.969 1.958-4.855 1.958-1.933 0-3.682-0.782-4.95-2.050s-2.050-3.017-2.050-4.95 0.782-3.682 2.050-4.95 3.017-2.050 4.95-2.050 3.682 0.782 4.95 2.050 2.050 3.017 2.050 4.95c0 1.886-0.745 3.597-1.959 4.856zM21.707 20.293l-3.675-3.675c1.231-1.54 1.968-3.493 1.968-5.618 0-2.485-1.008-4.736-2.636-6.364s-3.879-2.636-6.364-2.636-4.736 1.008-6.364 2.636-2.636 3.879-2.636 6.364 1.008 4.736 2.636 6.364 3.879 2.636 6.364 2.636c2.125 0 4.078-0.737 5.618-1.968l3.675 3.675c0.391 0.391 1.024 0.391 1.414 0s0.391-1.024 0-1.414z"></path>
-                        </svg>
-                    </div>
-                    <div class="aa-ItemContentBody">
-                        <div class="aa-ItemContentTitle">${item.query}</div>
-                    </div>
-                  </div>
-                  <div class="aa-ItemActions">
-                    <button class="aa-ItemActionButton" title=${`Fill query with "${item.query}"`}>
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M8 17v-7.586l8.293 8.293c0.391 0.391 1.024 0.391 1.414 0s0.391-1.024 0-1.414l-8.293-8.293h7.586c0.552 0 1-0.448 1-1s-0.448-1-1-1h-10c-0.552 0-1 0.448-1 1v10c0 0.552 0.448 1 1 1s1-0.448 1-1z"></path>
-                        </svg>
-                    </button>
-                  </div>
-                </div>
-              `)
-            }
-          },
-          onSelect({event, item, setIsOpen, itemInputValue, setQuery, refresh, ...rest}) {
-            setIsOpen(true);
-          },
-        };
-      },
-    });
-
-    function createLocalStorageRecentlyViewedItems(params) {
+<script>
+  function createLocalStorageRecentlyViewedItems(params) {
       const {
         onReset,
         onSubmit,
@@ -1437,6 +1499,79 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
         data
       };
     }
+</script>
+
+<script>  
+  function createMostPopularSearchesPlugin(){
+    const popularSearchers = createQuerySuggestionsPlugin({
+      searchClient,
+      indexName: 'web_query_suggestions_dev',
+      getSearchParams({ state }) {
+        return { hitsPerPage: 3 };
+      },
+      transformSource({ source, onTapAhead }) {
+        const onSelectSuggestion = (event, item) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onTapAhead(item)
+        };
+
+        return {
+          ...source,
+          templates: {
+            ...source.templates,
+            header({ state, html }) {
+              if (state.query) {
+                return null;
+              }
+
+              return (html`
+                <div>
+                  <span className="aa-SourceHeaderTitle">Popular searches</span>
+                </div>
+              `);
+            },
+            item({html, item}){
+
+              
+              return (html`
+                <div class="aa-ItemWrapper" onclick=${event => onSelectSuggestion(event, item)}>
+                  <div class="aa-ItemContent">
+                    <div class="aa-ItemIcon aa-ItemIcon--noBorder">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M16.041 15.856c-0.034 0.026-0.067 0.055-0.099 0.087s-0.060 0.064-0.087 0.099c-1.258 1.213-2.969 1.958-4.855 1.958-1.933 0-3.682-0.782-4.95-2.050s-2.050-3.017-2.050-4.95 0.782-3.682 2.050-4.95 3.017-2.050 4.95-2.050 3.682 0.782 4.95 2.050 2.050 3.017 2.050 4.95c0 1.886-0.745 3.597-1.959 4.856zM21.707 20.293l-3.675-3.675c1.231-1.54 1.968-3.493 1.968-5.618 0-2.485-1.008-4.736-2.636-6.364s-3.879-2.636-6.364-2.636-4.736 1.008-6.364 2.636-2.636 3.879-2.636 6.364 1.008 4.736 2.636 6.364 3.879 2.636 6.364 2.636c2.125 0 4.078-0.737 5.618-1.968l3.675 3.675c0.391 0.391 1.024 0.391 1.414 0s0.391-1.024 0-1.414z"></path>
+                        </svg>
+                    </div>
+                    <div class="aa-ItemContentBody">
+                        <div class="aa-ItemContentTitle">${item.query}</div>
+                    </div>
+                  </div>
+                  <div class="aa-ItemActions">
+                    <button class="aa-ItemActionButton" title=${`Fill query with "${item.query}"`}>
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 17v-7.586l8.293 8.293c0.391 0.391 1.024 0.391 1.414 0s0.391-1.024 0-1.414l-8.293-8.293h7.586c0.552 0 1-0.448 1-1s-0.448-1-1-1h-10c-0.552 0-1 0.448-1 1v10c0 0.552 0.448 1 1 1s1-0.448 1-1z"></path>
+                        </svg>
+                    </button>
+                  </div>
+                </div>
+              `)
+            }
+          },
+          onSelect({event, item, setIsOpen, itemInputValue, setQuery, refresh, ...rest}) {
+            setIsOpen(true);
+          },
+        };
+      },
+    })
+
+    return popularSearchers
+  }
+</script>
+
+<script>
+    const appId = "VHYJO45TI4";
+    const apiKey = "9d5f273e78238a8c505526e481c857f7";
+    const searchClient = algoliasearch(appId, apiKey);
 
     function getSources({ query, state }) {
         if (!query) {
@@ -1454,7 +1589,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
                     indexName: "starknet-docs-dev",
                     query,
                     params: {
-                      attributesToSnippet: ["title:10", "content:10"],
+                      attributesToSnippet: ["title:8", "content:10"],
                       snippetEllipsisText: "…",
                     }
                   }
@@ -1478,6 +1613,7 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
                 );
               },
               item({ item: hit, components, html, ...rest }) {
+                console.log('hit', hit)
                 return (html`
                     <a href=${hit.url} class="aa-ItemLink">
                       <div class="aa-ItemContent">
@@ -1487,11 +1623,11 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
                           </svg>
                         </div>
                         <div class="aa-ItemContentBody">
-                          <div class="hit-title">
-                            ${components.Highlight({ attribute: 'title', hit })}
-                          </div>
                           <div class="hit-desc">
-                            ${components.Highlight({ attribute: 'content', hit })}
+                            ${components.Highlight({ attribute: 'value', hit: hit['_snippetResult'].content })}
+                          </div>
+                          <div class="hit-title">
+                            ${components.Highlight({ attribute: 'value', hit: hit['_snippetResult'].title })}
                           </div>
                         </div>
                       </div>
@@ -1523,15 +1659,16 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
       limit: 5
     });
 
+    const mostPopulerSearches = createMostPopularSearchesPlugin()
+
     autocomplete({
       container: "#autocomplete",
       placeholder: "Search",
       openOnFocus: true,
       detachedMediaQuery: "",
       getSources,
-      plugins: [recentlyViewedItems, querySuggestionsPlugin]
+      plugins: [recentlyViewedItems, mostPopulerSearches]
     });
-
 </script>
 
 <script> 
