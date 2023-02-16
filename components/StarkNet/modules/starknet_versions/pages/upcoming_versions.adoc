@@ -78,10 +78,15 @@ If the validation was success and the compilation resulted in a matching compile
 
 After the class was declared, it can be used either in deploying new instances or via library calls. Note that to specify the class (either for deploy or library_call), one has to send `class_hash` and **NOT** `compiled_class_hash`. The sequencer and full nodes may internally maintain a mapping between the two, but a reference to a declared class has to be via its class hash.
 
+[#commitment]
 ## State commitment
 
 New classes declared by v2 Declare transactions will be included in the state commitment.
-To this end, we change the state commitment from `global_tree_root` to `h(global_tree_root, classes_root)`, where `classes_root` is a height 251 Patricia tree constructed from the key-value pairs `(class_hash, compiled_class_hash)`.
+To this end, we change the state commitment from `global_tree_root` to `h(global_tree_root, classes_root, commitment_version)`, where:
+* `global_tree_root` is the usual contracts tree
+* `classes_root` is a height 251 Patricia tree constructed from the key-value pairs `(class_hash, h(compiled_class_hash, leaf_version))`
+* `commitment_version` and `leaf_version` are news field added to allow forward compatability and are currently set to 0
+* `h` is the link:Poseidon hash function
 
 New class hash computation will migrate from Pedersen to Poseidon hash functions in this version.
 
@@ -149,9 +154,9 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 ### FAQ
 
 * Will I be able to replace the class to any previously declared class?
-	** You will only be able to use it in order to transition to Cairo 1.0 classes.
+	** Yes
 * Can I only use it for proxy contracts?
-    ** No, we will not enforce anything about the contents of the old/new class, other than the new class being Cairo 1.0 compatible.
+    ** No, we will not enforce anything about the contents of the old/new class
 * How much will replacing the class cost?
     ** The dominant cost of this system call is sending two words as calldata, which is ~1.2k gas
 * How do I declare Cairo 1.0 classes?
@@ -159,13 +164,14 @@ To migrate it to Cairo 1.0 and keep the same address and state, you can do the f
 * What happens if I use call_contract (on the feeder gateway / Json RPC) and `replace_class` is called?
     ** The effect of the replacement will only last throughout the call (the Starknet state remains untouched, like in any other call)
 
+[#ocd]
 ## On-Chain data
 
 The data published on L1 should allow everyone to construct the Starknet state locally. The introduction of the `replace_class` system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our on chain data format:
 
-- The deployment info section is removed
-- The first word will be the number of contracts affected by the block (this includes storage updates, nonce updates, class updates, or deployments).
-- For each affected contract, the first word will encode the new nonce and number of storage updates. Additionally, it will use one bit to determine whether or not the contract was deployed or if its class was updated.
+* The deployment info section is removed
+* The first word will be the number of contracts affected by the block (this includes storage updates, nonce updates, class updates, or deployments).
+* For each affected contract, the first word will encode the new nonce and number of storage updates. Additionally, it will use one bit to determine whether or not the contract was deployed or if its class was updated.
 
 The specific encoding is given by:
 
@@ -178,21 +184,27 @@ The specific encoding is given by:
 - If the above flag is turned on, then the next word is the new contract class (whether it was just deployed or replaced). Otherwise, you can skip to the next bullet.
 - For each storage update, we send to L1 the key and the new value (this part remains unchanged)
 
+Following the updated contracts section, we have a section of newly declared classes (only Cairo 1 classed declared via a declare v2 transactions, as old classes don't affect the commitment):
+
+* The first word in this section is the number of declared classes
+* For every newly declared class, two felts will be posted:
+  ** The class hash
+  ** The compiled class hash
+
 ## API changes
 
 ### Feeder gateway
 
-* New endpoint: **`get_compiled_class`.** The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution. You can find an example of the relevant structure link:https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.casm[here]
+* New endpoint: **`get_compiled_class_by_class_hash`.** The purpose of this endpoint is to return the Cairo assembly associated with the Class. This is the data needed for contract execution. You can find an example of the relevant structure link:https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.casm[here]
 * `**get_class_by_hash**` - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0. You can find an example of the new class structure link:https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.json[here].
 * `**get_full_contract**` - same as above
 * `**get_state_update`**
 ** added `replaced_classes` section
-** `declared_contracts` is split into `old_declared_contracts` and `declared_contracts`
-** `old_declared_contracts` is a list of class hashes
-** `declared_classes` is a dictionary that maps `class_hash` to `compiled_class_hash`
+** `declared_classes` is split into `old_declared_classes` and `declared_classes`
+** `old_declared_classes` is a list of class hashes
+** `declared_classes` is a list of `(class_hash,compiled_class_hash)` pairs
 * `**get_block**`
 ** The `transactions` field is subject to the same changes in `get_transaction`
-** `state_root` is renamed to `state_commitment`
 * `**get_transaciton**`
 ** `contract_address` is changed to `sender_address` in invoke transactions
 ** Declare v2 transaction may be returned
@@ -217,3 +229,53 @@ The new class structure and Declare V2 are added to the JSON-RPC. You can track 
 ## Mandatory message fees
 
 As of this version, L1→L2 https://docs.starknet.io/documentation/architecture_and_concepts/L1-L2_Communication/messaging-mechanism/#l1-l2_message_fees[message fees] will become mandatory, i.e., the sequencer will no longer process messages sent with zero ETH.
+
+## Document changelog
+
+In this section we will cover the changes in the above document up to the release to Testnet/Mainnet. If this is your first time encountering the document, then you can ignore this section.
+
+### update (16/02/2021)
+
+#### Replace class syscall
+
+Nothing will be enforced regarding the old/new class. In partiular, it can be used even with Cairo 0 target classes (note that such classes will no longer be supported after regenesis).
+
+#### Poseidon hash
+
+In Starknet v0.11.0 we will start using the Poseidon hash function, which can be proven much more effeciently than Pedersen due to its algebaric nature. We will start by using Poseidon in the following places:
+
+* class_hash (only new Cairo 1.0 classes will be hashed with Poseidon, Cairo 0 class hashes will continue to use Pedersen)
+* compiled class hash (see xref:#declare_v2[declare v2] for more details)
+* classes commitment tree (see the xref:#commitment[state commitment updates] for more details)
+
+You can find the specification of the Poseidon hash function that will be used in Starknet https://github.com/starkware-industries/poseidon[here].
+
+#### State commitment
+
+The changes in the xref:#commitment[commitment scheme] has been slightly modified as follows:
+
+* The classes tree will be computed with the Poseidon hash function, while the global state tree will continue to use Pedersen
+* The leaves in the classes tree will be `h(compiled_class_hash, leaf_version)` where `leaf_version` is a field added to allow forward compatability and is currently set to 0
+* If the classes tree is none empty, the state commitment will be computed by `h(global_tree_root, classes_root, commitment_version)` where `h`
+ is the *Poseidon* hash function and `commitment_version` is a field added to allow forward compatability and is currently set to 0
+
+
+#### On-Chain data
+
+The changes in the xref:#ocd[on chain data format] have been slightly modified as follows:
+
+We will have an additional section for the newly declared (Cairo 1) classes in the block. This section will contain:
+
+* The number of declared (Cairo 1) classes
+* For every newly declared class, two felts will be posted:
+  ** The class hash
+  ** The compiled class hash
+
+#### API changes
+
+* To avoid ambiguity, `get_compiled_class` will be renamed to `get_compiled_class_by_class_hash`
+* Starknet blocks will still have the `state_root` field (it will not be renamed to state commitment at this time)
+* `declared_classes` inside the state update response will be a list of pairs (class hash and compiled class hash) rather than a dictionary
+* The gateway will expect the `sierra_program` field of declare v2 transactions in a compressed form, in the same manner as done today for declare v1 transactions
+
+
