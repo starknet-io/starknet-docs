@@ -30,8 +30,6 @@
   }
 })()
 
-console.log(uiRootPath);
-
 function switch_style (css_title)
 {
   var i, link_tag ;
