@@ -13,12 +13,14 @@ This data allows anyone that observes Ethereum to reconstruct the current state 
 
 The state diffs contain information on every contract whose storage was updated and additional information on contract deployments.
 
-Those differences are sent as `uint256[]` array as part of the calldata, and are encoded as follows:
 
-* Number of contracts whose state is updated
-* flag...
-* nonce...
-≈num of storage updates
+* Number of contracts whose storage is updated
+* For each such contract, we have:
+** `flag`
+*** 0 = Storage updates only
+*** 1 = Deployed or replaced
+** `num_of_storage_updates` - number of storage updates
+** `nonce, num_of_storage_updates ` - a uint256 value that encodes both the number of storage updates for that contract and the updated nonce:
 +
 [stem]
 ++++
@@ -26,13 +28,9 @@ Those differences are sent as `uint256[]` array as part of the calldata, and are
 \underbrace{\text{new nonce}}_{\text{64 bits}} |
 \underbrace{\text{# of storage updates}}_{\text{64 bits}}
 ++++
-
-Next, we have information about newly declared classes:
-
-* The # of (Cairo 1.0) classes that were declared in the block
-* For each class we have:
-* The class hash
-* xref:starknet_versions:upcoming_versions.adoc[The compiled class hash]
+** For each storage update:
+*** `key` - the address inside the contract's storage where the value is updated
+*** `value` - the new value
 
 [id="example"]
 == Example
@@ -73,24 +71,15 @@ Below we show an example of on chain data which was extracted from L1, and proce
 ----
 
 * The first element, `5` (index 6 in the array), is the number of contracts whose storage was updated. We will take only the first contract as an example.
-
-* The next two elements describe a single contract deployment with the following parameters:
-** The word encoding the flag
-** Updated nonce
-** Number of storage updates
+** `contract_address`:
 +
 ----
-18446744073709551617
+2019172390095051323869047481075102003731246132997057518965927979101413600827
 ----
 
-One update (indicated by the cell at index 8):
-which is stem:[$2^{64}+1$], thus:
-
-* flag = 0, so the contract class isn't replaced, nor was the contract just deployed, i.e. there
-is no need to specify the class hash
-* The new contract nonce is 1
-* One storage key is updated:
-** The value at key 5 was changed to 102.
+** One update (indicated by the cell at index 8):
+*** The new contract nonce is 1
+*** One storage key is updated
 
 The next 4 contracts storage updates are interpreted in the same manner.
 
