@@ -1,0 +1,85 @@
+[id="deploying_new_accounts"]
+= Deploying new accounts
+
+Since xref:documentation:starknet_versions:version_notes.adoc#version0.10.1[StarkNet version 0.10
+.1] the historical method of deploying accounts on StarkNet, the `deploy` transaction, has been removed.
+
+It has now been replaced with the `deploy_account` transaction which allows you to deploy an account and pay fees from a pre-funded address (thus solving the issue of how to pay fees while not yet having a deployed account).
+
+## Deploy account transaction
+
+In order to deploy a new account on StarkNet you need to complete the following steps:
+
+* Decide on the account contract that you want to deploy
+* Compute your would-be account address off-chain
+* Send funds to this address
+
+Once the address has enough funds to pay for the deployment, you can then send a `deploy_account` transaction.
+
+## Transaction flow
+
+Upon receiving a `deploy_account` transaction, the sequencer will:
+
+* Verify that the address has funds to pay for the deployment
+* Execute the constructor with the given arguments
+* Execute the `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;` entry point (See below)
+* Charge fee from the new account address
+* Advance the nonce to 1
+
+## Validate deploy
+
+There are two potential issues that arise from sending a `deploy_account` transaction without any extra validation:
+
+* Sequencers having the ability to charge arbitrarily high fees, thus potentially draining user funds from a pre-funded account
+* A bad actor having the ability to carry out a sequencer DOS attack by sending multiple, invalid `deploy_account` transactions. This would result in the sequencer not being compensated for work completed.
+
+
+To prevent the scenario described in the first point, a new optional validation entrypoint is provided: `&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;`.
+
+To prevent the potential DOS attack from the second point, we introduce some limitations on the constructor and __validate_deploy_
+_ executions, namely:
+
+* Limited # of Cairo steps
+* Limited # of builtin applications
+* No external contract calls (library calls and self-calls are allowed)
+
+This entrypoint should be included in any accounts or contracts that wish to allow this new deployment flow.
+
+### Using validate deploy
+
+`&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;` expects the following arguments:
+
+* class hash
+* contract address salt
+* constructor arguments - the arguments expected by the contract’s constructor (this will be enforced in the compiler).
+
+[NOTE]
+====
+In determining the contract address, deployer address 0 will be used.
+====
+
+Consider an account with the following constructor signature:
+
+[#constructor_signature]
+[source,cairo]
+----
+@constructor
+func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _public_key: felt
+)
+----
+
+Then the signature of `&lowbar;&lowbar;validate_deploy`&lowbar;&lowbar; must be:
+
+[#call_validate_deploy]
+[source,cairo]
+----
+func __validate_deploy__{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
+}(class_hash: felt, contract_address_salt: felt, _public_key: felt)
+----
+
+[NOTE]
+====
+The transaction hash and `max_fee` are accessible through the `get_tx_info` system call.
+====
