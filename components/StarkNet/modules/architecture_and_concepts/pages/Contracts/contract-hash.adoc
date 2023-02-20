@@ -1,10 +1,15 @@
-[id="contract_hash"]
+[id="class_hash"]
 = Class hash
 :stem: latexmath
 
 The class hash is a hash chain of the definition of the class.
 
-== Definition of a class
+== Definition of a (Cairo 0) class
+
+[IMPORTANT]
+====
+Cairo 0 classes are deprecated, and will no longer be supported after regenesis
+====
 
 The elements that define a class are:
 
@@ -16,10 +21,10 @@ Array of external functions entry points:: An entry point is a pair `(_selector_
 ====
 The selector is an identifier through which the function is callable in transactions or in other classes. The selector is the xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak] hash of the function name, encoded in ASCII.
 ====
-Array of https://www.cairo-lang.org/docs/hello_starknet/l1l2.html#receiving-a-message-from-l1[L1 handlers] entry points::
+Array of xref:../L1-L2_Communication/messaging-mechanism.adoc/#l1-l2_messages[L1 handlers] entry points :: -
 Array of constructors entry points:: Currently, the compiler allows only one constructor.
 Array of used builtin names:: An ASCII-encode array, ordered by declaration.
-Program hash:: The xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak] of the class's program. The class's program is the abi and program part of the `.json` file that the Starknet compiler outputs when you run the following command:
+Program hash:: The xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak] of the class's program. The class's program is the abi and program part of the `.json` file that the StarkNet compiler outputs when you run the following command:
 +
 [source,shell]
 ----
@@ -29,12 +34,49 @@ $ starknet-compile --no_debug_info
 The compiler outputs abi, entrypoint selectors and the program. For program hash, `starknet_keccak` of only abi and program needs to be calculated. To see the exact computation of this field, see https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contract_hash.py#L116[contract_hash.py^].
 Bytecode:: Represented by an array of field elements.
 
-== How the class hash is computed
+== Definition of a (Cairo 1) class
 
-The hash of the class is the chain hash, that is, the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen hash], of the above, computed as follows:
+Classes that were written in Cairo 1 are defined by their Sierra code (
+resulting from the compilation of the Cairo code into Sierra, see xref:[here] for more details).
 
-. Start with stem:[$h(0,\text{api_version})$].
+The elements that define a class are:
+
+[horizontal,labelwidth=35]
+Sierra version:: the Sierra version in which the class is written
+Array of external functions entry points:: An entry point is a pair `(_selector_, _function_idx_)`, where `_function_idx_` is the index of the function inside the Sierra program.
++
+[NOTE]
+====
+The selector is an identifier through which the function is callable in transactions or in other classes. The selector is the xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak] hash of the function name, encoded in ASCII.
+====
+Array of xref:../L1-L2_Communication/messaging-mechanism.adoc/#l1-l2_messages[L1 handlers] entry points :: -
+Array of constructors entry points :: Currently, the compiler allows only one constructor.
+ABI:: A string representing the ABI of the class. The ABI hash (which affects the class hash) is given by:
++
+[source,python]
+----
+starknet_keccak(bytes(ABI, "UTF-8"))
+----
++
+[NOTE]
+====
+This string is supplied by the user declaring the class (and is signed on as part of the `DECLARE` transaction), and is not enforced to be the true ABI of the associated class.
+Without seeing the underlying source code (i.e. the Cairo code generating the class's Sierra), this ABI should be treated as the "intended" ABI by the declaring party, which may be incorrect (intentionally or otherwise).
+The "honest" string would be the json serialization of the contract's ABI as produced by the Cairo 1 compiler.
+====
+Sierra program :: An array of field elements representing the Sierra instructions.
+
+== Computing the class hash
+
+The hash of the class is the chain hash of its components, computed as follows:
+
+. Start with stem:[$h(0,\text{sierra_version})$], or stem:[$h(0,\text{api_version})$] or  for Cairo 0 classes.
 . For every line in the above, excluding the first, compute stem:[$h(h(previous\_line), new\_line)$], where the hash of an array is defined as xref:../Hashing/hash-functions.adoc#array_hashing[Array Hashing].
 . Let stem:[$c$] denote the cumulative hash that results from applying the above process; the class's hash is then stem:[$h(c, \textrm{number_of_lines})$], where stem:[$\text{number_of_lines}$] is 7.
+
+[NOTE]
+====
+For Cairo 1 classes, stem:[$h$] is the Poseidon hash function, while for Cairo 0 classes the Pedersen hash is used.
+====
 
 For more details, see the https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contracts.cairo#L47[Cairo implementation].
