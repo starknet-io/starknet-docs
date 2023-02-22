@@ -157,7 +157,9 @@ The hash of a v1 declare transaction is computed as follows:
 Where:
 
 * stem:[\text{declare}] is a constant prefix string, encoded in ASCII.
-* stem:[\text{class_hash}] is the hash of the xref:../Contracts/contract-classes.adoc[contract class]. See xref:../Contracts/contract-hash.adoc[Contract Hash] for details about how the hash is computed.
+* stem:[\text{class_hash}] is the hash of the xref:../Contracts/contract-classes.adoc[contract
+class]. See xref:../Contracts/class-hash.adoc[Class Hash] for details about how the hash is
+computed.
 * The placeholder zero is used to align the hash computation for the different types of transactions.
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
@@ -177,9 +179,40 @@ Where:
 
 * stem:[\text{declare}] is a constant prefix string, encoded in ASCII.
 * The placeholder zeros are used to align the hash computation for the different types of transactions.
-* stem:[\text{class_hash}] is the hash of the xref:../Contracts/contract-classes.adoc[contract class]. See xref:../Contracts/contract-hash.adoc[Contract Hash] for details about how the hash is computed.
+* stem:[\text{class_hash}] is the hash of the xref:../Contracts/contract-classes.adoc[contract
+class]. See xref:../Contracts/class-hash.adoc[Class Hash] for details about how the hash is
+computed.
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
+
+## Deploy account transaction
+
+Since xref:starknet_versions:version_notes.adoc#version0.10.1[StarkNet v0.10.1] the `deploy_account`
+transaction replaces the `deploy` transaction
+for deploying account contracts.
+
+To use it, you should first pre-fund your would-be account address so that you could pay the
+transaction fee (see xref:Account_Abstraction/deploying_new_accounts.adoc[here] for more details)
+. You can then send the `deploy_account`
+transaction.
+
+A `deploy_account` transaction has the following fields:
+
+.Deploy account fields
+
+[%autowidth]
+|===
+| Name | Type | Description
+
+| `class_hash` | `FieldElement` | The hash of the desired account class.
+| `constructor_calldata` | `List<FieldElement>` | The arguments to the account constructor.
+| `contract_address_salt` | `FieldElement` | A random salt that determines the xref:Contracts/contract-address.adoc[account address].
+| `signature` | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.
+| `max_fee` | `FieldElement` | The maximum fee that the sender is willing to pay for the transaction
+| `nonce` | `FieldElement` | The transaction nonce.
+| `version` | `FieldElement` | The transaction's version. The value is 1. +
+
+|===
 
 == Signature
 
@@ -190,7 +223,7 @@ The generator used in the ECDSA algorithm is stem:[G=\left(g_x, g_y\right)] wher
 stem:[g_x=874739451078007766457464989774322083649278607533249481151382481072868806602] stem:[g_y=152666792071518830868575557812948353041420400780739481342941381225525861407]
 
 [id="chain-id"]
-== Chain-Id
+== Chain-id
 
 Starknet currently supports three chain IDs. Chain IDs are given as numbers, representing the ASCII encoding of specific constant strings, as illustrated by the following Python snippet:
 
