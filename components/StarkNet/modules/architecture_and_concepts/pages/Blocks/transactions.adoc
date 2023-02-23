@@ -128,7 +128,49 @@ Where:
 
 The declare transaction is used to introduce new classes into the state of Starknet, enabling other contracts to deploy instances of those classes or using them in a library call. For more information, see xref:../Contracts/contract-classes.adoc[contract classes].
 
-A declare transaction has the following fields:
+[NOTE]
+====
+New Cairo 1.0 classes can only be declared via the declare v2 transaction.
+====
+
+=== Declare transaction version 2
+
+.Transaction fields
+
+[%autowidth]
+|===
+| Name | Type | Description
+
+| `contract_class` | `ContractClass` | The (Cairo 1.0) xref:Contracts/class-hash.adoc#definition_of_a_cairo_1_class[class].
+| `compiled_class_hash` | `FieldElement` | The hash of the compiled class (see xref:documentation:starknet_versions:upcoming_versions.adoc#what_to_expect[here] for more information)
+| `sender_address` | `FieldElement` | The address of the account initiating the transaction.
+| `max_fee` | `FieldElement` | The maximum fee that the sender is willing to pay for the transaction.
+| `signature` | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.
+| `nonce` | `FieldElement` | The transaction nonce.
+| `version` | `FieldElement` | The transaction's version. The value is 1. +
+When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of Starknet.
+|===
+
+=== Calculating the hash of a v2 declare transaction
+
+The hash of a v2 declare transaction is computed as follows:
+
+[stem]
+++++
+\begin{aligned}
+\text{declare_v2_tx_hash} = h( & \text{"declare"}, \text{version}, \text{sender_address}, 0, \text{class_hash}, \text{max_fee}, \text{chain_id}, \\
+& \text{nonce}, \text{compiled_class_hash})
+\end{aligned}
+++++
+
+=== Declare transaction versions 0,1
+
+[IMPORTANT]
+====
+These old versions used to declare Cairo 0 classes are deprecated and will be removed in a future Starknet version.
+====
+
+.Transaction fields
 
 [%autowidth]
 |===
@@ -213,6 +255,19 @@ A `deploy_account` transaction has the following fields:
 | `version` | `FieldElement` | The transaction's version. The value is 1. +
 
 |===
+
+=== Calculating the hash of a deploy account transaction
+
+The hash of a `deploy_account` transaction is computed as follows:
+
+[stem]
+++++
+\begin{aligned}
+\text{deploy_account_tx_hash} = h( & \text{"deploy_account"}, \text{version}, \text{contract_address}, 0, \\ &
+h(\text{constructor_calldata}, \text{class_hash}, \text{contract_address_salt}), \\ &
+\text{max_fee}, \text{chain_id}, \text{nonce})
+\end{aligned}
+++++
 
 == Signature
 
