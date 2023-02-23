@@ -7,8 +7,8 @@
 Contracts on L2 can interact asynchronously with contracts on L1 via the L2→L1 messaging protocol.
 
 During the execution of a Starknet transaction, a contract on Starknet sends an L2→L1 message by calling the https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/common/messages.cairo#L4[`send_message_to_L1`] syscall. The message parameters (which contain the recipient contract on L1 and the relevant data) are then attached to the relevant state update that includes this syscall invocation.
-
-For example:
+////
+ For example:
 
 [source,js]
 ----
@@ -20,7 +20,7 @@ assert_lt_felt(to_address, ETH_ADDRESS_BOUND)
 assert_not_zero(to_address)
 send_message_to_l1(to_address=to_address, payload_size=1, payload=message_payload)
 ----
-
+////
 After the state update that included this transaction is proved and the L1 state is updated, the message is stored on L1 in the Starknet Core Contract (and the relevant counter is increased), and the `LogMessageToL1` event (which contains the message parameters) is emitted.
 
 Later, the recipient address on L1 can access and consume the message as part of an L1 transaction by re-supplying the message parameters. This is done by calling https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119[`consumeMessageFromL2`] in the Starknet Core Contract, who verifies that the hash corresponds to a stored message and that the caller is indeed the recipient on L1. In such a case, the reference count of the message hash in the Starknet Core Contract decreases by 1.
