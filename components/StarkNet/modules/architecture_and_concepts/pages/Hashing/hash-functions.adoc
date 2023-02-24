@@ -3,14 +3,15 @@
 :stem: latexmath
 
 [id="domain_and_range"]
-== domain and range
+== Domain and range
 
 All hashes outputs are eventually mapped to elements in stem:[$\mathbb{F}_p$] with stem:[$p=2^{251}+17\cdot 2^{192}+1$].
 
 There are two hash functions used throughout Starknet's specifications:
 
 * stem:[$sn\_keccak: \{0,1\}^* \rightarrow \mathbb{F}_p$]
-* stem:[$pedersen: \mathbb{F}_p\times\mathbb{F}_p\rightarrow\mathbb{F}_p$]
+* stem:[$pedersen: \mathbb{F}_p^2\rightarrow\mathbb{F}_p$]
+* stem:[$poseidon: \mathbb{F}_p^3\rightarrow \mathbb{F}_p^3$]
 
 [id="starknet_keccak"]
 == Starknet Keccak
@@ -49,8 +50,37 @@ h(a,b) = \left[shift\_point + a_{low} \cdot P_0 + a_{high} \cdot P1 + b_{low} \c
 
 where the values of the constants stem:[$shift\_point, P_0, P_1, P_2, P_3$] can be found in link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/crypto/signature/fast_pedersen_hash.py[fast_pedersen_hash.py^], and stem:[$[P\]_x$] denotes the stem:[$x$] coordinate of the point stem:[$P$].
 
+[id="poseidon_hash"]
+== Poseidon hash
+
+link:https://www.poseidon-hash.info/[Poseidon] is a family of hash functions designed for being very efficient as algebraic circuits. As such, they may be very useful in ZK proving systems such as STARKs and others.
+
+Since Starknet's version of Poseidon operates on a three element state, while Poseidion used to
+operate on two elements, we also define:
+
+[stem]
+++++
+poseidon(x) := \left[poseidon(x,0,1)\right]_0
+++++
+
+
+[stem]
+++++
+poseidon(x,y) := \left[poseidon(x,y,2)\right]_0
+++++
+
+Where latexmath:[[\cdot\]_j] denotes taking the j'th coordinate of a tuple
+
+Useful resources:
+
+* The exact link:https://github.com/starkware-industries/poseidon/blob/main/poseidon3.txt[parameters] defining the version of Poseidon used in Starknet
+* A link:https://github.com/CryptoExperts/poseidon[reference implementation] (in c and assembly) of the above by CryptoExperts
+
+
 [id="array_hashing"]
-=== Array hashing
+== Array hashing
+
+=== Pedersen
 
 Let stem:[$h$] denote the pedersen hash function, then given an array stem:[$a_1,...,a_n$] of stem:[$n$] field elements
 we define stem:[$h(a_1,...,a_n)$] to be:
@@ -59,3 +89,20 @@ we define stem:[$h(a_1,...,a_n)$] to be:
 ++++
 h(...h(h(0, a_1),a_2),...,a_n),n)
 ++++
+
+=== Poseidon
+
+Let stem:[$p:\mathbb{F}_p^3\rightarrow\mathbb{F}_p^3$] denote the Poseidon hash function, then given an array stem:[$a_1,...,a_n$] of stem:[$n$] field elements
+we define stem:[$p(a_1,...,a_n)$] to be the first coordinate of stem:[$H(a_1,...,a_n;0,0,0)$], where:
+
+[stem]
+++++
+H(a_1,...,a_n;s_1,s_2,s_3)=\begin{cases}
+H\big(a_3,...,a_n;p(s_1+a_1, s_2+a_2, s_3)\big), & \text{if  } n\ge 2 \\
+p(s_1+a_1,s_2+1,s_3), & \text{if  } n=1 \\
+p(s_1+1,s_2,s_3), & \text{if  } n=0 \\
+\end{cases}
+++++
+
+You can find an implementation of the above in Python link:https://github.com/starkware-libs/cairo-lang/blob/12ca9e91bbdc8a423c63280949c7e34382792067/src/starkware/cairo/common/poseidon_hash.py#L46[here],
+and an equivalent Cairo implementation link:https://github.com/starkware-libs/cairo-lang/blob/12ca9e91bbdc8a423c63280949c7e34382792067/src/starkware/cairo/common/builtin_poseidon/poseidon.cairo#L28[here].
