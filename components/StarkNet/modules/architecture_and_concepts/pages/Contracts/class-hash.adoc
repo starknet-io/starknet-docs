@@ -34,6 +34,24 @@ $ starknet-compile --no_debug_info
 The compiler outputs abi, entrypoint selectors and the program. For program hash, `starknet_keccak` of only abi and program needs to be calculated. To see the exact computation of this field, see https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contract_hash.py#L116[contract_hash.py^].
 Bytecode:: Represented by an array of field elements.
 
+=== Computing the (Cairo 0) class hash
+
+[stem]
+++++
+\begin{aligned}
+\text{class_hash} = h( & \text{api_version}, \text{external_entry_points}, \\&
+\text{l1_handler_entry_points}, \text{constructor_entry_points}, \\ & \text{builtin_names}, \text{program_hash}, \text{bytecode_hash})
+\end{aligned}
+++++
+
+Where
+
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen_hash[Pedersen] hash function
+* the Pedersen hash of an array is defined xref:../Hashing/hash-functions.adoc#pedersen_array_hash[here]
+* the hash of an entry point array stem:[$(\text{selector},\text{offset})_{i=1}^n$] is given by stem:[$h(\text{selector}_1,\text{offset}_1,...,\text{selector}_n,\text{offset}_n)$]
+* the `program_hash` is the `starknet_keccak` of the json described above
+* the `bytecode_hash` is simply the xref:../Hashing/hash-functions.adoc#pedersen_array_hash[hash] of the bytecode array
+
 == Definition of a (Cairo 1) class
 
 Classes that were written in Cairo 1 are defined by their Sierra code (
@@ -51,9 +69,6 @@ Array of external functions entry points:: An entry point is a pair `(_selector_
 The selector is an identifier through which the function is callable in transactions or in other classes. The selector is the xref:../Hashing/hash-functions.adoc#starknet-keccak[starknet_keccak] hash of the function name, encoded in ASCII.
 ====
 Array of xref:documentation:architecture_and_concepts:L1-L2_Communication/messaging-mechanism.adoc#l1-l2_message_fees[L1 handlers] entry points :: -
-
-
-
 Array of constructors entry points :: Currently, the compiler allows only one constructor.
 ABI:: A string representing the ABI of the class. The ABI hash (which affects the class hash) is given by:
 +
@@ -70,17 +85,23 @@ The "honest" string would be the json serialization of the contract's ABI as pro
 ====
 Sierra program :: An array of field elements representing the Sierra instructions.
 
-== Computing the class hash
+=== Computing the (Cairo 1) class hash
 
 The hash of the class is the chain hash of its components, computed as follows:
 
-. Start with stem:[$h(0,\text{sierra_version})$], or stem:[$h(0,\text{api_version})$] or  for Cairo 0 classes.
-. For every line in the above, excluding the first, compute stem:[$h(h(previous\_line), new\_line)$], where the hash of an array is defined as xref:../Hashing/hash-functions.adoc#array_hashing[Array Hashing].
-. Let stem:[$c$] denote the cumulative hash that results from applying the above process; the class's hash is then stem:[$h(c, \textrm{number_of_lines})$], where stem:[$\text{number_of_lines}$] is 7.
+[stem]
+++++
+\begin{aligned}
+\text{class_hash} = h( & \text{contract_class_version}, \text{external_entry_points}, \\&
+\text{l1_handler_entry_points}, \text{constructor_entry_points}, \\ & \text{abi_hash}, \text{sierra_program_hash})
+\end{aligned}
+++++
 
-[NOTE]
-====
-For Cairo 1 classes, stem:[$h$] is the Poseidon hash function, while for Cairo 0 classes the Pedersen hash is used.
-====
+Where
+
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#poseidon_hash[Poseidon] hash function
+* the Poseidon hash of an array is defined xref:../Hashing/hash-functions.adoc#poseidon_array_hash[here]
+* the hash of an entry point array stem:[$(selector,index)_{i=1}^n$] is given by stem:[$h(\text{selector}_1,\text{index}_1,...,\text{selector}_n,\text{index}_n)$]
+* the `sierra_program_hash` is simply the xref:../Hashing/hash-functions.adoc#poseidon_array_hash[hash] of the bytecode array
 
 For more details, see the https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contracts.cairo#L47[Cairo implementation].
