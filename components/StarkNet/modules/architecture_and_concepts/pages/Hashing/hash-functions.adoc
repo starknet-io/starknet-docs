@@ -11,7 +11,7 @@ There are two hash functions used throughout Starknet's specifications:
 
 * stem:[$sn\_keccak: \{0,1\}^* \rightarrow \mathbb{F}_p$]
 * stem:[$pedersen: \mathbb{F}_p^2\rightarrow\mathbb{F}_p$]
-* stem:[$poseidon: \mathbb{F}_p^3\rightarrow \mathbb{F}_p^3$]
+* stem:[$poseidon: \mathbb{F}_p^*\rightarrow \mathbb{F}_p$]
 
 [id="starknet_keccak"]
 == Starknet Keccak
@@ -25,7 +25,7 @@ in order to fit into a field element).
 [id="stark_curve"]
 === STARK curve
 
-Pedersen hash makes use of the following STARK friendly elliptic curve over stem:[$\mathbb{F}_p^2$]:
+Pedersen hash makes use of the following STARK friendly elliptic curve over stem:[$\mathbb{F}_p$]:
 
 [stem]
 ++++
@@ -55,25 +55,26 @@ where the values of the constants stem:[$shift\_point, P_0, P_1, P_2, P_3$] can 
 
 link:https://www.poseidon-hash.info/[Poseidon] is a family of hash functions designed for being very efficient as algebraic circuits. As such, they may be very useful in ZK proving systems such as STARKs and others.
 
-Since Starknet's version of Poseidon operates on a three element state, while Poseidion used to
-operate on two elements, we also define:
+Poseidon is a sponge construction based on the Hades permutation. Starknet's version of Poseidon is based on a three element state permutation (see exact parameters below).
+
+We define the Poseidon hash of up to 2 elements below, see xref:#poseidon_array_hash[below] the arbitrary number of inputs version.
 
 [stem]
 ++++
-poseidon(x) := \left[poseidon(x,0,1)\right]_0
+poseidon_1(x) := \left[\text{hades_permutation}(x,0,1)\right]_0
 ++++
 
 
 [stem]
 ++++
-poseidon(x,y) := \left[poseidon(x,y,2)\right]_0
+poseidon_2(x,y) := \left[\text{hades_permutation}(x,y,2)\right]_0
 ++++
 
 Where latexmath:[[\cdot\]_j] denotes taking the j'th coordinate of a tuple
 
 Useful resources:
 
-* The exact link:https://github.com/starkware-industries/poseidon/blob/main/poseidon3.txt[parameters] defining the version of Poseidon used in Starknet
+* The exact link:https://github.com/starkware-industries/poseidon/blob/main/poseidon3.txt[parameters] defining the permutation used in Starknet
 * A link:https://github.com/CryptoExperts/poseidon[reference implementation] (in c and assembly) of the above by CryptoExperts
 
 
@@ -94,15 +95,15 @@ h(...h(h(0, a_1),a_2),...,a_n),n)
 [id="poseidon_array_hash"]
 === Poseidon
 
-Let stem:[$p:\mathbb{F}_p^3\rightarrow\mathbb{F}_p^3$] denote the Poseidon hash function, then given an array stem:[$a_1,...,a_n$] of stem:[$n$] field elements
-we define stem:[$p(a_1,...,a_n)$] to be the first coordinate of stem:[$H(a_1,...,a_n;0,0,0)$], where:
+Let stem:[$\text{hades}:\mathbb{F}_p^3\rightarrow\mathbb{F}_p^3$] denote the Hades permutation (with Starknet's parameters), then given an array stem:[$a_1,...,a_n$] of stem:[$n$] field elements
+we define stem:[$poseidon(a_1,...,a_n)$] to be the first coordinate of stem:[$H(a_1,...,a_n;0,0,0)$], where:
 
 [stem]
 ++++
 H(a_1,...,a_n;s_1,s_2,s_3)=\begin{cases}
-H\big(a_3,...,a_n;p(s_1+a_1, s_2+a_2, s_3)\big), & \text{if  } n\ge 2 \\
-p(s_1+a_1,s_2+1,s_3), & \text{if  } n=1 \\
-p(s_1+1,s_2,s_3), & \text{if  } n=0 \\
+H\big(a_3,...,a_n;\text{hades}(s_1+a_1, s_2+a_2, s_3)\big), & \text{if  } n\ge 2 \\
+\text{hades}(s_1+a_1,s_2+1,s_3), & \text{if  } n=1 \\
+\text{hades}(s_1+1,s_2,s_3), & \text{if  } n=0 \\
 \end{cases}
 ++++
 
