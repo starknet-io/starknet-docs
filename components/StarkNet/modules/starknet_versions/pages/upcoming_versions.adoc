@@ -82,10 +82,11 @@ After the class was declared, it can be used either in deploying new instances o
 ## State commitment
 
 New classes declared by v2 Declare transactions will be included in the state commitment.
-To this end, we change the state commitment from `global_tree_root` to `h(global_tree_root, classes_root, commitment_version)`, where:
+To this end, we change the state commitment from `global_tree_root` to `h(commitment_version, global_tree_root, classes_root)`, where:
 * `global_tree_root` is the usual contracts tree
 * `classes_root` is a height 251 Patricia tree constructed from the key-value pairs `(class_hash, h(compiled_class_hash, leaf_version))`
-* `commitment_version` and `leaf_version` are news field added to allow forward compatability and are currently set to 0
+* `commitment_version` and `leaf_version` are news field added to allow forward compatability and are currently set to the
+ASCII encodings of `STARKNET_STATE_V0` and `CONTRACT_CLASS_LEAF_V0` correspondingly.
 * `h` is the Poseidon hash function
 
 [NOTE]
@@ -232,7 +233,7 @@ As of this version, L1→L2 https://docs.starknet.io/documentation/architecture_
 
 In this section we will cover the changes in the above document up to the release to Testnet/Mainnet. If this is your first time encountering the document, then you can ignore this section.
 
-### update (16/02/2021)
+### update I (16/02/2021)
 
 #### Replace class syscall
 
@@ -276,4 +277,16 @@ We will have an additional section for the newly declared (Cairo 1) classes in t
 * `declared_classes` inside the state update response will be a list of pairs (class hash and compiled class hash) rather than a dictionary
 * The gateway will expect the `sierra_program` field of declare v2 transactions in a compressed form, in the same manner as done today for declare v1 transactions
 
+### update II (28/02/2021)
+
+#### Poseidon hash
+
+The precise definition of the hash being used now appears on the xref:documentation:architecture_and_concepts:Hashing/hash-functions.adoc#poseidon_hash[hash functions] page.
+For the specific sponge construction used in Starknet to hash multiple elements, see xref:documentation:architecture_and_concepts:Hashing/hash-functions.adoc#poseidon_array_hash[here].
+
+#### State commitment
+
+* The `leaf_version` used for the leaves contents in the classes tree is currently set to the ASCII encoding of `CONTRACT_CLASS_LEAF_V0`, and not 0 as stated in the previous update.
+* The `commitment_version` used for in the new commitment computation is currently set to the ASCII encoding of `STARKNET_STATE_V0`, and not 0 as stated in the previous update.
+* `commitment_version` is moved to the beginning of the hash input in the state commitment computation
 
