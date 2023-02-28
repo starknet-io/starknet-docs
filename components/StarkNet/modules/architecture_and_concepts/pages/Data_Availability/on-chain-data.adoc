@@ -127,7 +127,8 @@ For each affected contract, we have:
 * A single word that encodes:
 
 ** class information flag (0 = Storage updates only / 1 = contract was deployed or replaced in
-this state update)
+this state update). When this flag is on, we will have an additional word before the storage
+updates section, which contains the new class hash
 ** nonce
 ** num_of_storage_updates
 
@@ -136,7 +137,7 @@ See below for the expected format:
 
 [stem]
 ++++
-\underbrace{0\cdots1}_{\text{127 bits}} |\underbrace{\text{class information flag}}_{\text{1 bit}} |
+\underbrace{0}_{\text{127 bits}} |\underbrace{\text{class information flag}}_{\text{1 bit}} |
 \underbrace{\text{new nonce}}_{\text{64 bits}} |
 \underbrace{\text{# of storage updates}}_{\text{64 bits}}
 ++++
@@ -176,14 +177,16 @@ according to the xref:documentation:architecture_and_concepts:Data_Availability/
 
 * The first element, `1`, is the number of contract whose state was updated
 * The second element, `2019172390095051323869047481075102003731246132997057518965927979101413600827`, is the address of the first (and only) contract whose state changed
-* The third element, `18446744073709551617`, which is stem:[$2^{64}+1$] encodes the following:
+* The third element, `18446744073709551617`, which is stem:[$2^{64}+1$], encodes the following:
 ** flag = 0, that is, the contract was not just deployed or replaced, so we shouldn't treat the next word as the class hash
 ** the new nonce is `1`
 ** one storage cell was updated
 * The next two elements, `100` and `200` encode the storage update (the value of key `100` was set
 to `200`)
 * Next we have the new declare section: `1`
-means the we had a single xref:documentation:architecture_and_concepts:Blocks/transactions.adoc#_declare_transaction_version_2[declare v2] in this state update, and the next two elements
+means that we had a single xref:documentation:architecture_and_concepts:Blocks/transactions
+.adoc#_declare_transaction_version_2
+[declare v2] in this state update, and the next two elements
 encode
 xref:documentation:architecture_and_concepts:Contracts/class-hash.adoc[the class hash] and
 xref:starknet_versions:upcoming_versions.adoc#_what_to_expect[compiled class hash] of the declared
