@@ -808,8 +808,10 @@ on the transactions or particular changes that this update caused. Consequently,
 </div>
 </div>
 <div class="sect1">
-<h2 id="format"><a class="anchor" href="#format"></a>Format</h2>
+<h2 id="on_chain_data_pre_v0_11_0"><a class="anchor" href="#on_chain_data_pre_v0_11_0"></a>On-chain data: pre v0.11.0</h2>
 <div class="sectionbody">
+<div class="sect2">
+<h3 id="pre_v0.11.0_format"><a class="anchor" href="#pre_v0.11.0_format"></a>Pre v0.11.0 Format</h3>
 <div class="paragraph">
 <p>The state diffs contain information on every contract whose storage was updated and additional information on contract deployments. Those differences are sent as <code>uint256[]</code> array as part of the calldata, and are encoded as follows:</p>
 </div>
@@ -872,10 +874,8 @@ on the transactions or particular changes that this update caused. Consequently,
 </ul>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="example"><a class="anchor" href="#example"></a>Example</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="pre_v0.11.0_example"><a class="anchor" href="#pre_v0.11.0_example"></a>Pre v0.11.0 Example</h3>
 <div class="paragraph">
 <p>Below we show an example of on chain data which was extracted from L1, and proceed to decode it according to the above format.</p>
 </div>
@@ -982,6 +982,150 @@ on the transactions or particular changes that this update caused. Consequently,
 </div>
 <div class="paragraph">
 <p>The next 4 contracts storage updates are interpreted in the same manner.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="on_chain_data_post_v0_11_0"><a class="anchor" href="#on_chain_data_post_v0_11_0"></a>On-chain data: post v0.11.0</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="v0.11.0_format"><a class="anchor" href="#v0.11.0_format"></a>v0.11.0 Format</h3>
+<div class="paragraph">
+<p>The state diffs contain information on every contract whose storage was updated and additional information on contract deployments.</p>
+</div>
+<div class="paragraph">
+<p>For each affected contract, we have:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The contract adddress</p>
+</li>
+<li>
+<p>A single word that encodes:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>class information flag (0 = Storage updates only / 1 = contract was deployed or replaced in
+this state update). When this flag is on, we will have an additional word before the storage
+updates section, which contains the new class hash</p>
+</li>
+<li>
+<p>nonce</p>
+</li>
+<li>
+<p>num_of_storage_updates</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>See below for the expected format:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{127 bits}}|
+\underbrace{\text{class information flag}}_{\text{1 bit}}|
+\underbrace{\text{new nonce}}_{\text{64 bits}}|{
+\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}\]
+</div>
+</div>
+<div class="paragraph">
+<p>For each storage update:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>key - the address inside the contract’s storage where the value is updated</p>
+</li>
+<li>
+<p>value - the new value</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Next, we have information about newly declared classes:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The # of (Cairo 1.0) classes that were declared in the block</p>
+</li>
+<li>
+<p>For each class we have:</p>
+</li>
+<li>
+<p>The class hash</p>
+</li>
+<li>
+<p><a href="../../../starknet_versions/upcoming_versions/" class="xref page">The compiled class hash</a></p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="v0.11.0_example"><a class="anchor" href="#v0.11.0_example"></a>v0.11.0 Example</h3>
+<div class="paragraph">
+<p>Below we show an example of on chain data which was extracted from L1, and proceed to decode it
+according to the <a href="#v0.11.0format
+">above format</a>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">[
+  1,
+  2019172390095051323869047481075102003731246132997057518965927979101413600827,
+  18446744073709551617,
+  100,
+  200,
+  1,
+  1351148242645005540004162531550805076995747746087542030095186557536641755046,
+  558404273560404778508455254030458021013656352466216690688595011803280448032
+]</code></pre>
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The first element, <code>1</code>, is the number of contract whose state was updated</p>
+</li>
+<li>
+<p>The second element, <code>2019172390095051323869047481075102003731246132997057518965927979101413600827</code>, is the address of the first (and only) contract whose state changed</p>
+</li>
+<li>
+<p>The third element, <code>18446744073709551617</code>, which is \(2^{64}+1\), encodes the following:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>flag = 0, that is, the contract was not just deployed or replaced, so we shouldn&#8217;t treat the next word as the class hash</p>
+</li>
+<li>
+<p>the new nonce is <code>1</code></p>
+</li>
+<li>
+<p>one storage cell was updated</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>The next two elements, <code>100</code> and <code>200</code> encode the storage update (the value of key <code>100</code> was set
+to <code>200</code>)</p>
+</li>
+<li>
+<p>Next we have the new declare section: <code>1</code>
+means that we had a single
+<a href="../../Blocks/transactions/#declare_transaction_version_2" class="xref page">declare v2</a> in this state update, and the next two elements
+encode
+<a href="../../Contracts/class-hash/" class="xref page">the class hash</a> and
+<a href="../../../starknet_versions/upcoming_versions/#_what_to_expect" class="xref page">compiled class hash</a> of the declared
+class</p>
+</li>
+</ul>
+</div>
 </div>
 </div>
 </div>
