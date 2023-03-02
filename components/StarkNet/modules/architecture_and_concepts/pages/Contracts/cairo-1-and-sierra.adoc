@@ -1,0 +1,55 @@
+[id="sierra"]
+= Cairo 1.0 and Sierra
+
+Up until xref:documentation:starknet_versions:upcoming_versions.adoc[Starknet Alpha v0.11.0] users would write contracts in Cairo 0 and compile them locally to Cairo assembly (or Casm for short).
+Next, the user would submit the compilation output (the xref:documentation:architecture_and_concepts:Contracts/contract-classes.adoc[contract class]) to the Starknet sequencer via a declare transaction.
+
+With Cairo 1.0, the contract class resulting from link:[compiling Cairo 1.0] does not include Casm. Instead of Casm, it includes instructions in an intermediate representation called Sierra (Safe Intermediate Representation).
+This new contract class is then compiled by the sequencer, via the Sierra &rarr; Casm compiler, to generate the Cairo assembly associated with this class.
+
+== Why do we need Casm?
+
+Starknet is a validity rollup, which means that the execution inside every block needs to be proven, and this is where STARKs come in handy.
+However, STARK proofs can discuss statements that are formulated in the language of polynomial constraints, and knows nothing about smart contract execution.
+To overcome this gap, we developed link:https://github.com/starknet-io/starknet-stack-resources/blob/main/Cairo/Cairo%20%E2%80%93%20a%20Turing-complete%20STARK-friendly%20CPU%20architecture.pdf[Cairo].
+Cairo instructions (which we referred to previously by Casm) are translated to polynomial constraints that enforce the correct execution of a program (according to the Cairo semantics defined in the paper).
+
+Thanks to Cairo, we can formulate the statement "this Starknet block is valid" in a way that we can prove.
+Note that we can only prove things about Casm, that is, regardless of what the user is sending to the Starknet sequencer, what will be proven is the correcct Casm execution.
+This means that we need a way to translate Sierra into Casm, and this is happenning with the Sierra &rarr; Casm compiler.
+
+
+== Why do we need Sierra?
+
+To understand why we chose to add an additional layer between the code that the user is writing (Cairo 1.0) and the code that is being proven (Casm),
+we need to consider more components in the system, and the limitations of Cairo.
+
+=== Reverted transctions, unsatasfiable AIRs, and DOS attacks
+
+A crucial property of every decentralized L2 is that the sequencers are guranteed to be componsated for work that they have done.
+The notion of reverted transactions is a good example, even if the user's transaction failed mid execution, the sequencer should be able to include it in a block and charge execution fees up to the point of failure.
+If the sequencer cannot charge for such transactions, then sending transactions that will eventually fail (after a lot of computation steps) are an obvious DOS attack on the sequencer.
+The sequencer cannot look at a transaction and conclude that it will fail without actually doing the work (this is equivalent to solving the halting problem).
+
+
+The obvious solution to the above predicament is to include such transactions in the block, similarly to Ethereum. Howver, this may not be as simple to do in a validity rollup.
+With Cairo 0, there is no separating layer between user code and what is being proven. This means that users can write code which is unprovable in some cases. In fact, such code is very easy to write, e.g. 'assert 0=1' is a valid
+Cairo instruction that cannot be proven, as it translates to polynomial constraints that are not satisfiable. Any Casm execution that contains this instruction cannot be proven.
+Sierra is the layer between user code and the proven statement that allows us to make sure that all transactions are eventually provable.
+
+[NOTE]
+====
+other approaches
+====
+
+=== Safe Casm
+
+The method by which Sierra gurantess the user code is always provable is by compiling Sierra instructions to a subset of Casm, which we call "safe Casm".
+The important property that we require from safe Casm is that it will be provable for all inputs. A canonical example for safe Casm is using `if/else` instructions instead of `asserts`, that is, making sure all failures are
+graceful.
+
+== Hints in Cairo 1.0
+
+
+
+== compiled class
