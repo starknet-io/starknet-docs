@@ -807,7 +807,9 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The deploy transaction has now been removed in the current release of Starknet. To deploy new contract instances, you can use the <code>deploy</code> syscall.</p>
+<p>The <code>deploy</code> transaction has now been removed in the current release of Starknet. To deploy new
+contract instances, you can use the
+<a href="../../Contracts/system-calls/#deploy" class="xref page">deploy syscall</a>.</p>
 </div>
 </td>
 </tr>
@@ -824,11 +826,22 @@
 <div class="paragraph">
 <p>When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.</p>
 </div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
 <div class="paragraph">
 <p>Do not submit a transaction that uses an unsupported transaction type, because it cannot be included in a proof, and so cannot become part of a Starknet block.</p>
 </div>
+</td>
+</tr>
+</table>
+</div>
 <div class="sect2">
-<h3 id="deploy_transaction"><a class="anchor" href="#deploy_transaction"></a>Calculating the hash of a deploy transaction</h3>
+<h3 id="deploy_transaction"><a class="anchor" href="#deploy_transaction"></a>Deploy transaction hash calculation</h3>
 <div class="paragraph">
 <p>In order to calculate the transaction hash, we first need to obtain the deployed contract address. The Deploy transaction&#8217;s hash is calculated as follows:</p>
 </div>
@@ -852,7 +865,8 @@
 <p>“deploy” and “constructor” are constant strings encoded in ASCII.</p>
 </li>
 <li>
-<p>\(h\) is the <a href="../../Hashing/hash-functions/#pedersen-hash" class="xref page">Pedersen</a> hash and \(sn\_keccak\) is <a href="../../Hashing/hash-functions/#starknet-keccak" class="xref page">Starknet Keccak</a></p>
+<p>\(h\) is the <a href="../../Hashing/hash-functions/#pedersen-hash" class="xref page">Pedersen</a> hash and
+\(sn\_keccak\) is <a href="../../Hashing/hash-functions/#Starknet-keccak" class="xref page">Starknet Keccak</a>.</p>
 </li>
 <li>
 <p><code>chain_id</code> is a constant value that specifies the network to which this transaction is sent. See <a href="#chain-id">Chain-Id</a>.</p>
@@ -879,14 +893,14 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Transaction version 0 is deprecated and will be removed in a future release of Starknet.</p>
+<p>Invoke transaction version 0 is deprecated and will be removed in a future release of Starknet.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="sect2">
-<h3 id="invoke_transaction_version_1"><a class="anchor" href="#invoke_transaction_version_1"></a>Invoke transaction version 1</h3>
+<h3 id="invoke_transaction_v1"><a class="anchor" href="#invoke_transaction_v1"></a>Invoke transaction V1</h3>
 <table class="tableblock frame-all grid-all fit-content">
 <caption class="title">Table 1. Transaction fields</caption>
 <colgroup>
@@ -937,7 +951,41 @@ When the fields that comprise a transaction change, either with the addition of 
 </table>
 </div>
 <div class="sect2">
-<h3 id="invoke_transaction_version_0"><a class="anchor" href="#invoke_transaction_version_0"></a>Invoke transaction version 0</h3>
+<h3 id="v1_hash_calculation"><a class="anchor" href="#v1_hash_calculation"></a>V1 hash calculation</h3>
+<div class="paragraph">
+<p>The <code>invoke</code> v1 transaction hash is calculated as a hash over the given transaction elements,
+specifically:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[\begin{aligned}
+\text{invoke_v1_tx_hash} = h( &amp; ``\text{invoke"}, \text{version}, \text{sender_address}, 0, h(\text{calldata}), \\
+&amp; \text{max_fee}, \text{chain_id}, \text{nonce})
+\end{aligned}\]
+</div>
+</div>
+<div class="paragraph">
+<p>Where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(\text{invoke}\) is a constant prefix string, encoded in ASCII.</p>
+</li>
+<li>
+<p>The placeholder zero is used to align the hash computation for the different types of transactions.</p>
+</li>
+<li>
+<p>\(\text{chain_id}\) is a constant value that specifies the network to which this transaction is sent. See <a href="#chain-id">Chain-Id</a>.</p>
+</li>
+<li>
+<p>\(h\) is the <a href="../../Hashing/hash-functions/#pedersen-hash" class="xref page">Pedersen</a> hash</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="invoke_transaction_v0"><a class="anchor" href="#invoke_transaction_v0"></a>Invoke transaction V0</h3>
 <table class="tableblock frame-all grid-all fit-content">
 <caption class="title">Table 2. Transaction fields</caption>
 <colgroup>
@@ -989,40 +1037,7 @@ When the fields that comprise a transaction change, either with the addition of 
 </table>
 </div>
 <div class="sect2">
-<h3 id="calculating_the_hash_of_a_v1_invoke_transaction"><a class="anchor" href="#calculating_the_hash_of_a_v1_invoke_transaction"></a>Calculating the hash of a v1 invoke transaction</h3>
-<div class="paragraph">
-<p>The invoke transaction hash is calculated as a hash over the given transaction elements, specifically:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[\begin{aligned}
-\text{invoke_v1_tx_hash} = h( &amp; \text{"invoke"}, \text{version}, \text{sender_address}, 0, h(\text{calldata}), \\
-&amp; \text{max_fee}, \text{chain_id}, \text{nonce})
-\end{aligned}\]
-</div>
-</div>
-<div class="paragraph">
-<p>Where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(\text{invoke}\) is a constant prefix string, encoded in ASCII.</p>
-</li>
-<li>
-<p>The placeholder zero is used to align the hash computation for the different types of transactions.</p>
-</li>
-<li>
-<p>\(\text{chain_id}\) is a constant value that specifies the network to which this transaction is sent. See <a href="#chain-id">Chain-Id</a>.</p>
-</li>
-<li>
-<p>\(h\) is the <a href="../../Hashing/hash-functions/#pedersen-hash" class="xref page">Pedersen</a> hash</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="calculating_the_hash_of_a_v0_invoke_transaction"><a class="anchor" href="#calculating_the_hash_of_a_v0_invoke_transaction"></a>Calculating the hash of a v0 invoke transaction</h3>
+<h3 id="v0_hash_calculation"><a class="anchor" href="#v0_hash_calculation"></a>V0 hash calculation</h3>
 <div class="paragraph">
 <p>The hash of a v0 invoke transaction is computed as follows:</p>
 </div>
@@ -1059,13 +1074,17 @@ When the fields that comprise a transaction change, either with the addition of 
 <div class="paragraph">
 <p>The declare transaction is used to introduce new classes into the state of Starknet, enabling other contracts to deploy instances of those classes or using them in a library call. For more information, see <a href="../../Contracts/contract-classes/" class="xref page">contract classes</a>.</p>
 </div>
-<div class="admonitionblock note">
+<div class="admonitionblock important">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-note" title="Note"></i>
+<i class="fa icon-important" title="Important"></i>
 </td>
 <td class="content">
+<div class="paragraph">
+<p>Declare v0 and v1 used to declare Cairo 0 classes are deprecated and will be removed in a future
+Starknet version.</p>
+</div>
 <div class="paragraph">
 <p>New Cairo 1.0 classes can only be declared via the declare v2 transaction.</p>
 </div>
@@ -1074,7 +1093,7 @@ When the fields that comprise a transaction change, either with the addition of 
 </table>
 </div>
 <div class="sect2">
-<h3 id="declare_transaction_version_2"><a class="anchor" href="#declare_transaction_version_2"></a>Declare transaction version 2</h3>
+<h3 id="declare_v2_cairo_1_0"><a class="anchor" href="#declare_v2_cairo_1_0"></a>Declare v2 - Cairo 1.0</h3>
 <table class="tableblock frame-all grid-all fit-content">
 <caption class="title">Table 3. Transaction fields</caption>
 <colgroup>
@@ -1130,7 +1149,7 @@ When the fields that comprise a transaction change, either with the addition of 
 </table>
 </div>
 <div class="sect2">
-<h3 id="calculating_the_hash_of_a_v2_declare_transaction"><a class="anchor" href="#calculating_the_hash_of_a_v2_declare_transaction"></a>Calculating the hash of a v2 declare transaction</h3>
+<h3 id="v2_hash_calculation"><a class="anchor" href="#v2_hash_calculation"></a>V2 hash calculation</h3>
 <div class="paragraph">
 <p>The hash of a v2 declare transaction is computed as follows:</p>
 </div>
@@ -1142,9 +1161,28 @@ When the fields that comprise a transaction change, either with the addition of 
 \end{aligned}\]
 </div>
 </div>
+<div class="paragraph">
+<p>Where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(h\) is the <a href="../../Hashing/hash-functions/#poseidon_array_hash" class="xref page">Poseidon hash function</a></p>
+</li>
+<li>
+<p><code>class_hash</code> is the hash of the contract class. See <a href="../../Contracts/class-hash/#computing_the_cairo_1_class_hash" class="xref page">Class Hash</a>
+for details about how the
+hash is computed</p>
+</li>
+<li>
+<p><code>compiled_class_hash</code> is the hash of the <a href="../../../starknet_versions/upcoming_versions/#_what_to_expect" class="xref page">compiled class</a>
+generated by the Sierra&#8594;Casm compiler which is currently used in Starknet</p>
+</li>
+</ul>
+</div>
 </div>
 <div class="sect2">
-<h3 id="declare_transaction_versions_01"><a class="anchor" href="#declare_transaction_versions_01"></a>Declare transaction versions 0,1</h3>
+<h3 id="declare_v0_and_v1"><a class="anchor" href="#declare_v0_and_v1"></a>Declare v0 and v1</h3>
 <div class="admonitionblock important">
 <table>
 <tr>
@@ -1209,7 +1247,7 @@ When the fields that comprise a transaction change, either with the addition of 
 </table>
 </div>
 <div class="sect2">
-<h3 id="calculating_the_hash_of_a_v1_declare_transaction"><a class="anchor" href="#calculating_the_hash_of_a_v1_declare_transaction"></a>Calculating the hash of a v1 declare transaction</h3>
+<h3 id="v1_hash_calculation_2"><a class="anchor" href="#v1_hash_calculation_2"></a>v1 hash calculation</h3>
 <div class="paragraph">
 <p>The hash of a v1 declare transaction is computed as follows:</p>
 </div>
@@ -1246,7 +1284,7 @@ computed.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="calculating_the_hash_of_a_v0_declare_transaction"><a class="anchor" href="#calculating_the_hash_of_a_v0_declare_transaction"></a>Calculating the hash of a v0 declare transaction</h3>
+<h3 id="v0_hash_calculation_2"><a class="anchor" href="#v0_hash_calculation_2"></a>v0 hash calculation</h3>
 <div class="paragraph">
 <p>The hash of a v0 declare transaction is computed as follows:</p>
 </div>
@@ -1354,7 +1392,7 @@ transaction.</p>
 </tbody>
 </table>
 <div class="sect2">
-<h3 id="calculating_the_hash_of_a_deploy_account_transaction"><a class="anchor" href="#calculating_the_hash_of_a_deploy_account_transaction"></a>Calculating the hash of a deploy account transaction</h3>
+<h3 id="deploy_account_hash_calculation"><a class="anchor" href="#deploy_account_hash_calculation"></a>Deploy account hash calculation</h3>
 <div class="paragraph">
 <p>The hash of a <code>deploy_account</code> transaction is computed as follows:</p>
 </div>
@@ -1385,7 +1423,7 @@ h(\text{constructor_calldata}, \text{class_hash}, \text{contract_address_salt}),
 </div>
 </div>
 <div class="sect1">
-<h2 id="chain-id"><a class="anchor" href="#chain-id"></a>Chain-id</h2>
+<h2 id="chain-id"><a class="anchor" href="#chain-id"></a>Chain-Id</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Starknet currently supports three chain IDs. Chain IDs are given as numbers, representing the ASCII encoding of specific constant strings, as illustrated by the following Python snippet:</p>
