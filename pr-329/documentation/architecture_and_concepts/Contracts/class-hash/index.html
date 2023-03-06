@@ -895,6 +895,39 @@ Bytecode
 </tr>
 </table>
 </div>
+<div class="sect2">
+<h3 id="computing_the_cairo_0_class_hash"><a class="anchor" href="#computing_the_cairo_0_class_hash"></a>Computing the (Cairo 0) class hash</h3>
+<div class="stemblock">
+<div class="content">
+\[\begin{aligned}
+\text{class_hash} = h( &amp; \text{api_version}, \\&amp; \text{external_entry_points}, \\&amp;
+\text{l1_handler_entry_points}, \\&amp; \text{constructor_entry_points}, \\ &amp; \text{builtin_names}, \\&amp; \text{program_hash}, \\&amp; \text{bytecode_hash})
+\end{aligned}\]
+</div>
+</div>
+<div class="paragraph">
+<p>Where</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(h\) is the <a href="../../Hashing/hash-functions/#pedersen_hash" class="xref page">Pedersen</a> hash function</p>
+</li>
+<li>
+<p>the Pedersen hash of an array is defined <a href="../../Hashing/hash-functions/#pedersen_array_hash" class="xref page">here</a></p>
+</li>
+<li>
+<p>the hash of an entry point array \((\text{selector},\text{offset})_{i=1}^n\) is given by \(h(\text{selector}_1,\text{offset}_1,...,\text{selector}_n,\text{offset}_n)\)</p>
+</li>
+<li>
+<p>the <code>program_hash</code> is the <code>starknet_keccak</code> of the json described above</p>
+</li>
+<li>
+<p>the <code>bytecode_hash</code> is simply the <a href="../../Hashing/hash-functions/#pedersen_array_hash" class="xref page">hash</a> of the bytecode array</p>
+</li>
+</ul>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -919,7 +952,7 @@ contract_class_version
 </td>
 <td class="hdlist2">
 <p>The version of the contract class object. Currently, the Starknet OS
-supports version 1</p>
+supports version 0.1.0</p>
 </td>
 </tr>
 <tr>
@@ -999,26 +1032,37 @@ Sierra program
 </tr>
 </table>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="computing_the_class_hash"><a class="anchor" href="#computing_the_class_hash"></a>Computing the class hash</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="computing_the_cairo_1_class_hash"><a class="anchor" href="#computing_the_cairo_1_class_hash"></a>Computing the (Cairo 1) class hash</h3>
 <div class="paragraph">
 <p>The hash of the class is the chain hash of its components, computed as follows:</p>
 </div>
-<div class="olist arabic">
-<ol class="arabic">
+<div class="stemblock">
+<div class="content">
+\[\begin{aligned}
+\text{class_hash} = h( &amp; \text{contract_class_version}, \\&amp; \text{external_entry_points}, \\&amp;
+\text{l1_handler_entry_points}, \\&amp; \text{constructor_entry_points}, \\ &amp; \text{abi_hash}, \\&amp;\text{sierra_program_hash})
+\end{aligned}\]
+</div>
+</div>
+<div class="paragraph">
+<p>Where</p>
+</div>
+<div class="ulist">
+<ul>
 <li>
-<p>Start with \(h(0,\text{sierra_version})\), or \(h(0,\text{api_version})\) or  for Cairo 0 classes.</p>
+<p>\(h\) is the <a href="../../Hashing/hash-functions/#poseidon_hash" class="xref page">Poseidon</a> hash function</p>
 </li>
 <li>
-<p>For every line in the above, excluding the first, compute \(h(h(previous\_line), new\_line)\), where the hash of an array is defined as <a href="../../Hashing/hash-functions/#array_hashing" class="xref page">Array Hashing</a>.</p>
+<p>the Poseidon hash of an array is defined <a href="../../Hashing/hash-functions/#poseidon_array_hash" class="xref page">here</a></p>
 </li>
 <li>
-<p>Let \(c\) denote the cumulative hash that results from applying the above process; the class&#8217;s hash is then \(h(c, \textrm{number_of_lines})\), where \(\text{number_of_lines}\) is 7.</p>
+<p>the hash of an entry point array \((selector,index)_{i=1}^n\) is given by \(h(\text{selector}_1,\text{index}_1,...,\text{selector}_n,\text{index}_n)\)</p>
 </li>
-</ol>
+<li>
+<p>the <code>sierra_program_hash</code> is simply the <a href="../../Hashing/hash-functions/#poseidon_array_hash" class="xref page">hash</a> of the bytecode array</p>
+</li>
+</ul>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -1028,7 +1072,8 @@ Sierra program
 </td>
 <td class="content">
 <div class="paragraph">
-<p>For Cairo 1 classes, \(h\) is the Poseidon hash function, while for Cairo 0 classes the Pedersen hash is used.</p>
+<p>The Starknet OS currently supports contract class version 0.1.0, which is represented in the above hash computation as the ASCII encoding of the string <code>CONTRACT_CLASS_V0.1.0</code> (hashing the version in this manner gives us domain separation between
+the hashes of classes and other objects).</p>
 </div>
 </td>
 </tr>
@@ -1036,6 +1081,7 @@ Sierra program
 </div>
 <div class="paragraph">
 <p>For more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contracts.cairo#L47">Cairo implementation</a>.</p>
+</div>
 </div>
 </div>
 </div>
