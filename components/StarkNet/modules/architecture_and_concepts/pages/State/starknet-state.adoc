@@ -34,7 +34,27 @@ With the above definition, we can provide a brief sketch of Starknet's transitio
 [id="state_commitment"]
 == State Commitment
 
-The state commitment is a digest which uniquely (up to hash collisions) encodes the state. In Starknet, the commitment is the root of a binary Merkle-Patricia tree of height 251. Like Ethereum, this is a 2-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is:
+The state commitment is a digest which uniquely (up to hash collisions) encodes the state.
+In Starknet, the commitment combines the roots of two binary Merkle-Patricia trees of height 251 in the following manner:
+
+[stem]
+++++
+\begin{aligned}
+\text{state_commitment}=h( & \text{"STARKNET_STATE_V0"}, \\& \text{contracts_tree_root}, \\& \text{classes_tree_root})
+\end{aligned}
+++++
+
+Where:
+
+* `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
+* `contracts_tree_root` is the root of the Merkle-Patricia tree whose leaves are the contracts states, see xref:#contracts_tree[below]
+* `classes_tree_root` is the root of the Merkle-Patricia tree whose leaves are the compiled class hashes, see xref:#classes_tree[below]
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#poseidon_array_hash[Poseidon] hash function
+
+[id="contracts_tree"]
+=== The contracts tree
+
+Like Ethereum, this is a 2-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is:
 
 [stem]
 ++++
@@ -46,17 +66,41 @@ Where:
 * stem:[$\text{class_hash}$] is the hash of the contract's definition discussed xref:documentation:architecture_and_concepts:Contracts/class-hash.adoc[here]
 * stem:[$\text{storage_root}$] is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract's storage
 * stem:[$\text{nonce}$] is the current nonce of the contract
-* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash function.
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen_array_hash[Pedersen] hash function.
+
+[id="classes_tree"]
+=== The classes tree
+
+The classes tree encodes the information about the existing xref:../Contracts/contract-classes.adoc#[classes] in the state of Starknet. It maps (Cairo 1.0) xref:../Contracts/class-hash.adoc#cairo1_class[class hashes] to their
+compiled class hashes. The value of a leaf at a path corresponding to some class hash is given by:
+
+[stem]
+++++
+h(\text{CONTRACT_CLASS_LEAF_V0}, \text{compiled_class_hash})
+++++
+
+Where:
+
+* `CONTRACT_CLASS_LEAF_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
+* `compiled_class_hash` is the hash of the Cairo assembly resulting from compiling the given class via the Sierra&rarr;Casm compiler
+* stem:[$h$] is stem:[$poseidon_2$] defined xref:../Hashing/hash-functions.adoc#poseidon_hash[here]
 
 [NOTE]
 ====
-The commitment does not include class information. This will be added in future versions.
+*compiled classes*
+
+Cairo 1.0 classes that are part of the commitment are defined with Sierra, an intermediate representation between Cairo 1.0 and Cairo assembly (see xref:starknet_versions:upcoming_versions.adoc#_what_to_expect[here] for more information).
+However, the prover only deals with Cairo assembly.
+This means that unless we want the compilation from Sierra to Casm to be part of every block in which the class is used, the commitment must have some information about the assoicated Cairo assembly.
+
+Today, the user signs the `compiled_class_hash` as part of a xref:../Blocks/transactions.adoc#declare_v2[declare v2] transaction. If the transaction was included in a block, then this `compiled_class_hash` becomes part of the commitment.
+In the future, when Sierra&rarr;Casm compilation becomes part of the Starknet OS, this value may be updated via a proof of the Sierra&rarr;Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.
 ====
 
-[discrete#merkle_patricia_tree]
+[merkle_patricia_tree]
 === Merkle-Patricia tree
 
-[discrete#specifications]
+[specifications]
 ==== Specifications
 
 As mentioned above, our commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$]. The actual data is placed in the leaves, and a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes (leaves or internal) are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
