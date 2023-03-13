@@ -6,10 +6,19 @@
 
 In the current stage of the Alpha, Starknet operates in a ZK-Rollup mode. This means that upon the acceptance of a state update on-chain, the state diff between the previous and new state is sent as calldata to Ethereum.
 
-This data allows anyone that observes Ethereum to reconstruct the current state of Starknet. Note that to update the Starknet state on L1, it suffices to send a valid proof -- without information on the transactions or particular changes that this update caused. Consequently, more information must be provided in order to allow other parties to locally track Starknet's state.
+This data allows anyone that observes Ethereum to reconstruct the current state of Starknet.
 
-[id="format"]
-== Format
+
+[NOTE]
+====
+To update the Starknet state on L1, it suffices to send a valid proof -- without information
+on the transactions or particular changes that this update caused. Consequently, more information must be provided in order to allow other parties to locally track Starknet's state.
+====
+
+== On-chain data: pre v0.11.0
+
+[id="pre_v0.11.0_format"]
+=== Pre v0.11.0 Format
 
 The state diffs contain information on every contract whose storage was updated and additional information on contract deployments.
 
@@ -38,8 +47,8 @@ Next, we have information about newly declared classes:
 * The class hash
 * xref:starknet_versions:upcoming_versions.adoc[The compiled class hash]
 
-[id="example"]
-== Example
+[id="pre_v0.11.0_example"]
+===  Pre v0.11.0 Example
 
 Below we show an example of on chain data which was extracted from L1, and proceed to decode it according to the above format.
 
@@ -98,6 +107,85 @@ is no need to specify the class hash
 ** The value at key 5 was changed to 102.
 
 The next 4 contracts storage updates are interpreted in the same manner.
+
+
+== On-chain data: post v0.11.0
+
+
+[id="v0.11.0_format"]
+=== v0.11.0 Format
+
+The state diffs contain information on every contract whose storage was updated and additional information on contract deployments.
+
+For each affected contract, we have:
+
+* The contract adddress
+* A single word that encodes:
+
+** class information flag (0 = Storage updates only / 1 = contract was deployed or replaced in
+this state update). When this flag is on, we will have an additional word before the storage
+updates section, which contains the new class hash
+** nonce
+** num_of_storage_updates
+
+See below for the expected format:
+
+[stem]
+++++
+\underbrace{0\cdots0}_{\text{127 bits}}|
+\underbrace{\text{class information flag}}_{\text{1 bit}}|
+\underbrace{\text{new nonce}}_{\text{64 bits}}|{
+\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}
+++++
+
+For each storage update:
+
+* key - the address inside the contract’s storage where the value is updated
+* value - the new value
+
+Next, we have information about newly declared classes:
+
+* The # of (Cairo 1.0) classes that were declared in the block
+* For each class we have:
+* The class hash
+* xref:starknet_versions:upcoming_versions.adoc[The compiled class hash]
+
+[id="v0.11.0_example"]
+=== v0.11.0 Example
+
+Below we show an example of on chain data which was extracted from L1, and proceed to decode it
+according to the xref:documentation:architecture_and_concepts:Data_Availability/on-chain-data.adoc#v0.11.0format
+[above format].
+
+[source,json]
+----
+[
+  1,
+  2019172390095051323869047481075102003731246132997057518965927979101413600827,
+  18446744073709551617,
+  100,
+  200,
+  1,
+  1351148242645005540004162531550805076995747746087542030095186557536641755046,
+  558404273560404778508455254030458021013656352466216690688595011803280448032
+]
+----
+
+* The first element, `1`, is the number of contract whose state was updated
+* The second element, `2019172390095051323869047481075102003731246132997057518965927979101413600827`, is the address of the first (and only) contract whose state changed
+* The third element, `18446744073709551617`, which is stem:[$2^{64}+1$], encodes the following:
+** flag = 0, that is, the contract was not just deployed or replaced, so we shouldn't treat the next word as the class hash
+** the new nonce is `1`
+** one storage cell was updated
+* The next two elements, `100` and `200` encode the storage update (the value of key `100` was set
+to `200`)
+* Next we have the new declare section: `1`
+means that we had a single
+xref:documentation:architecture_and_concepts:Blocks/transactions.adoc#declare_transaction_version_2[declare v2] in this state update, and the next two elements
+encode
+xref:documentation:architecture_and_concepts:Contracts/class-hash.adoc[the class hash] and
+xref:starknet_versions:upcoming_versions.adoc#_what_to_expect[compiled class hash] of the declared
+class
 
 [id="extract_from_ethereum"]
 == Extract from Ethereum
