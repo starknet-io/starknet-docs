@@ -5,12 +5,15 @@ Starknet supports the following types of transactions:
 
 * _invoke_ transaction
 * _declare_ transaction
+* _deploy_account_ transaction
 
 This topic describes the available fields for these transaction types and how each transaction hash is calculated.
 
 [IMPORTANT]
 ====
-The deploy transaction has now been removed in the current release of Starknet. To deploy new contract instances, you can use the `deploy` syscall.
+The `deploy` transaction has now been removed in the current release of Starknet. To deploy new
+contract instances, you can use the
+xref:documentation:architecture_and_concepts:Contracts/system-calls.adoc#deploy[deploy syscall].
 ====
 
 [id="transaction_versioning"]
@@ -20,11 +23,14 @@ Starknet supports the transaction versions described here.
 
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 
+[WARNING]
+====
 Do not submit a transaction that uses an unsupported transaction type, because it cannot be included in a proof, and so cannot become part of a Starknet block.
+====
 
 [id="deploy_transaction"]
 
-=== Calculating the hash of a deploy transaction
+=== Deploy transaction hash calculation
 
 In order to calculate the transaction hash, we first need to obtain the deployed contract address. The Deploy transaction's hash is calculated as follows:
 
@@ -40,7 +46,8 @@ Where:
 
 * The placeholder zero is used to align the hash computation for the different types of transactions.
 * “deploy” and “constructor” are constant strings encoded in ASCII.
-* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash and stem:[$sn\_keccak$] is xref:../Hashing/hash-functions.adoc#starknet-keccak[Starknet Keccak]
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash and
+stem:[$sn\_keccak$] is xref:../Hashing/hash-functions.adoc#Starknet-keccak[Starknet Keccak].
 * `chain_id` is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * `contract_address` is calculated as described xref:../Contracts/contract-address.adoc[here].
 
@@ -50,10 +57,10 @@ The invoke transaction is the main transaction type used to invoke contract func
 
 [IMPORTANT]
 ====
-Transaction version 0 is deprecated and will be removed in a future release of Starknet.
+Invoke transaction version 0 is deprecated and will be removed in a future release of Starknet.
 ====
 
-=== Invoke transaction version 1
+=== Invoke transaction V1
 
 .Transaction fields
 
@@ -70,7 +77,28 @@ Transaction version 0 is deprecated and will be removed in a future release of S
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 |===
 
-=== Invoke transaction version 0
+=== V1 hash calculation
+
+The `invoke` v1 transaction hash is calculated as a hash over the given transaction elements,
+specifically:
+
+[stem]
+++++
+\begin{aligned}
+\text{invoke_v1_tx_hash} = h( & ``\text{invoke"}, \text{version}, \text{sender_address}, 0, h(\text{calldata}), \\
+& \text{max_fee}, \text{chain_id}, \text{nonce})
+\end{aligned}
+++++
+
+Where:
+
+* stem:[\text{invoke}] is a constant prefix string, encoded in ASCII.
+* The placeholder zero is used to align the hash computation for the different types of transactions.
+* stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
+
+
+=== Invoke transaction V0
 
 .Transaction fields
 [%autowidth]
@@ -87,26 +115,8 @@ Transaction version 0 is deprecated and will be removed in a future version of S
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 |===
 
-=== Calculating the hash of a v1 invoke transaction
+=== V0 hash calculation
 
-The invoke transaction hash is calculated as a hash over the given transaction elements, specifically:
-
-[stem]
-++++
-\begin{aligned}
-\text{invoke_v1_tx_hash} = h( & \text{"invoke"}, \text{version}, \text{sender_address}, 0, h(\text{calldata}), \\
-& \text{max_fee}, \text{chain_id}, \text{nonce})
-\end{aligned}
-++++
-
-Where:
-
-* stem:[\text{invoke}] is a constant prefix string, encoded in ASCII.
-* The placeholder zero is used to align the hash computation for the different types of transactions.
-* stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
-* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
-
-=== Calculating the hash of a v0 invoke transaction
 
 The hash of a v0 invoke transaction is computed as follows:
 
@@ -124,16 +134,21 @@ Where:
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
 
+
 == Declare transaction
 
 The declare transaction is used to introduce new classes into the state of Starknet, enabling other contracts to deploy instances of those classes or using them in a library call. For more information, see xref:../Contracts/contract-classes.adoc[contract classes].
 
-[NOTE]
+[IMPORTANT]
 ====
+Declare v0 and v1 used to declare Cairo 0 classes are deprecated and will be removed in a future
+Starknet version.
+
 New Cairo 1.0 classes can only be declared via the declare v2 transaction.
 ====
 
-=== Declare transaction version 2
+[id="declare_v2"]
+=== Declare v2 - Cairo 1.0
 
 .Transaction fields
 
@@ -151,7 +166,7 @@ New Cairo 1.0 classes can only be declared via the declare v2 transaction.
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of Starknet.
 |===
 
-=== Calculating the hash of a v2 declare transaction
+=== V2 hash calculation
 
 The hash of a v2 declare transaction is computed as follows:
 
@@ -163,7 +178,16 @@ The hash of a v2 declare transaction is computed as follows:
 \end{aligned}
 ++++
 
-=== Declare transaction versions 0,1
+Where:
+
+* stem:[$h$] is the xref:documentation:architecture_and_concepts:Hashing/hash-functions.adoc#poseidon_array_hash[Poseidon hash function]
+* `class_hash` is the hash of the contract class. See xref:Contracts/class-hash.adoc#computing_the_cairo_1_class_hash[Class Hash]
+for details about how the
+hash is computed
+* `compiled_class_hash` is the hash of the xref:starknet_versions:upcoming_versions.adoc#_what_to_expect[compiled class]
+generated by the Sierra->Casm compiler which is currently used in Starknet
+
+=== Declare v0 and v1
 
 [IMPORTANT]
 ====
@@ -185,7 +209,8 @@ These old versions used to declare Cairo 0 classes are deprecated and will be re
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of Starknet.
 |===
 
-=== Calculating the hash of a v1 declare transaction
+
+=== v1 hash calculation
 
 The hash of a v1 declare transaction is computed as follows:
 
@@ -202,11 +227,13 @@ Where:
 * stem:[\text{class_hash}] is the hash of the xref:../Contracts/contract-classes.adoc[contract
 class]. See xref:../Contracts/class-hash.adoc[Class Hash] for details about how the hash is
 computed.
+
 * The placeholder zero is used to align the hash computation for the different types of transactions.
 * stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen-hash[Pedersen] hash
 
-=== Calculating the hash of a v0 declare transaction
+
+=== v0 hash calculation
 
 The hash of a v0 declare transaction is computed as follows:
 
@@ -256,7 +283,7 @@ A `deploy_account` transaction has the following fields:
 
 |===
 
-=== Calculating the hash of a deploy account transaction
+=== Deploy account hash calculation
 
 The hash of a `deploy_account` transaction is computed as follows:
 
@@ -278,7 +305,7 @@ The generator used in the ECDSA algorithm is stem:[G=\left(g_x, g_y\right)] wher
 stem:[g_x=874739451078007766457464989774322083649278607533249481151382481072868806602] stem:[g_y=152666792071518830868575557812948353041420400780739481342941381225525861407]
 
 [id="chain-id"]
-== Chain-id
+== Chain-Id
 
 Starknet currently supports three chain IDs. Chain IDs are given as numbers, representing the ASCII encoding of specific constant strings, as illustrated by the following Python snippet:
 
