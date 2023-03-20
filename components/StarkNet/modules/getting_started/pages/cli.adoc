@@ -1,0 +1,774 @@
+[id="more-cli-commands"]
+= More CLI commands
+
+[#get-transaction]
+[id="get-transaction"]
+== get_transaction
+
+To get transaction information run the following:
+
+[#starknet_get_transaction]
+[source,bash]
+----
+starknet get_transaction --hash TRANSACTION_HASH
+----
+
+The output should resemble:
+
+[#starknet_get_transaction_output]
+[source,json]
+----
+{
+    "block_hash": "0x0",
+    "block_number": 0,
+    "status": "ACCEPTED_ON_L2",
+    "transaction": {
+        "calldata": [
+            "0x1",
+            "$[INTRO_CONTRACT_ADDRESS_TRIMMED]",
+            "0x362398bec32bc0ebb411203221a35a0301193a96f317ebe5e40be9f60d15320",
+            "0x0",
+            "0x1",
+            "0x1",
+            "0x4d2"
+        ],
+        "contract_address": "$[ACCOUNT_ADDRESS_TRIMMED]",
+        "max_fee": "0x0",
+        "nonce": "0x3",
+        "signature": [
+            "0x26ee1f973def2e6d5c7f32aaad96c84dab32df6a62ee0e8b530a72bc5478fe6",
+            "0x502b15e440cc2a8a1966f0c973015096715e366fde36a4659c56f84249688e"
+        ],
+        "transaction_hash": "0x69d743891f69d758928e163eff1e3d7256752f549f134974d4aa8d26d5d7da8",
+        "type": "INVOKE_FUNCTION",
+        "version": "0x1"
+    },
+    "transaction_index": 1
+}
+----
+
+The result contains:
+
+* `transaction_hash` – The hash of the transaction.
+* `status` – The status of the transaction. For a detailed list of supported transaction statuses,
+refer to the xref:intro.adoc#tx-status[tx_status] usage example.
+* `transaction` – The transaction data.
+
+It may also include each of the following optional fields (according to the transaction’s status):
+
+* `block_hash` – The hash of the block containing the transaction.
+* `block_number` – The sequence number of the block containing the transaction.
+* `transaction_index` – The index of the transaction within the block containing it.
+* `transaction_failure_reason` – The reason for the transaction failure.
+
+[#get-transaction-receipt]
+[id="get-transaction-receipt"]
+== get_transaction_receipt
+
+Transaction receipt contains execution information, such as L1\<\->L2 interaction and consumed
+resources, in addition to its block information, similar to `get_transaction`. To get the
+transaction’s receipt, run the following:
+
+[#starknet_get_transaction_receipt]
+[source,bash]
+----
+starknet get_transaction_receipt --hash TRANSACTION_HASH
+----
+
+The output should resemble:
+
+[#starknet_get_transaction_receipt_output]
+[source,json]
+----
+{
+    "actual_fee": "0x0",
+    "block_hash": "0x0",
+    "block_number": 0,
+    "events": [],
+    "execution_resources": {
+        "builtin_instance_counter": {
+            "pedersen_builtin": 2,
+            "range_check_builtin": 10
+        },
+        "n_memory_holes": 25,
+        "n_steps": 309
+    },
+    "l2_to_l1_messages": [
+        {
+            "from_address": "0x7dacca7a41e893630664a61f4d8ec05550ca1a212849c62417cb3ecf4bad863",
+            "payload": [
+                "0x0",
+                "0xbc614e",
+                "0x3e8"
+            ],
+            "to_address": "0x9E4c14403d7d9A8A782044E86a93CAE09D7B2ac9"
+        }
+    ],
+    "status": "ACCEPTED_ON_L2",
+    "transaction_hash": "0x7797c6673a1a0aeebbcb1c726702e263e5138123124ddef7edd85cd925b11ec",
+    "transaction_index": 2
+}
+----
+
+The result contains (in addition to `get_transaction` fields):
+
+* `l2_to_l1_messages` – Messages sent from L2 to L1.
+* `l1_to_l2_consumed_message` – The consumed message, in case the transaction was sent from L1.
+* `execution_resources` – Resources consumed by the transaction execution.
+
+[#get-transaction-trace]
+[id="get-transaction-trace"]
+== get_transaction_trace
+
+Transaction trace contains execution information in a nested structure of calls; every call, starting
+from the external transaction, contains a list of inner calls, ordered chronologically. For each such
+call, the trace holds the following: caller/callee addresses, selector, calldata along with execution
+information such as its return value, emitted events, and sent messages.
+
+To get the transaction’s trace, run the following:
+
+[#starknet_get_transaction_trace]
+[source,bash]
+----
+starknet get_transaction_trace --hash TRANSACTION_HASH
+----
+
+The output should resemble:
+
+[#starknet_get_transaction_trace_output]
+[source,json]
+----
+{
+    "function_invocation": {
+        "call_type": "CALL",
+        "calldata": [
+            "0x1",
+            "$[INTRO_CONTRACT_ADDRESS_TRIMMED]",
+            "0x15511cc3694f64379908437d6d64458dc76d02482052bfb8a5b33a72c054c77",
+            "0x0",
+            "0x2",
+            "0x2",
+            "0xbc614e",
+            "0x3e8"
+        ],
+        "caller_address": "0x0",
+        "class_hash": "0x74acbf20e655c80c4fa16e3574489073e0093fd8b386d9614ab2d6cf5b866bf",
+        "contract_address": "0x78d796e87cfa496bffad27be9ed42f2709bd6e32a6366f842fdf38664a1412d",
+        "entry_point_type": "EXTERNAL",
+        "events": [],
+        "execution_resources": {
+            "builtin_instance_counter": {
+                "pedersen_builtin": 2,
+                "range_check_builtin": 10
+            },
+            "n_memory_holes": 25,
+            "n_steps": 309
+        },
+        "internal_calls": [
+            ...
+        ],
+        "messages": [],
+        "result": [],
+        "selector": "0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad"
+    },
+    "signature": [
+        "0x6e4606a3c0f3bd0eac37ddfbf2645f62c04474e5eac51a2f6225ee7702996a",
+        "0x389d0bae9be71ceb3b6092dda9b76279543bc2bfe271c3d05a812c3dbeffeb7"
+    ],
+    "validate_invocation": {
+        "call_type": "CALL",
+        "calldata": [
+            "0x1",
+            "0x39564c4f6d9f45a963a6dc8cf32737f0d51a08e446304626173fd838bd70e1c",
+            "0x15511cc3694f64379908437d6d64458dc76d02482052bfb8a5b33a72c054c77",
+            "0x0",
+            "0x2",
+            "0x2",
+            "0xbc614e",
+            "0x3e8"
+        ],
+        "caller_address": "0x0",
+        "class_hash": "0x74acbf20e655c80c4fa16e3574489073e0093fd8b386d9614ab2d6cf5b866bf",
+        "contract_address": "0x78d796e87cfa496bffad27be9ed42f2709bd6e32a6366f842fdf38664a1412d",
+        "entry_point_type": "EXTERNAL",
+        "events": [],
+        "execution_resources": {
+            "builtin_instance_counter": {
+                "ecdsa_builtin": 1,
+                "range_check_builtin": 2
+            },
+            "n_memory_holes": 0,
+            "n_steps": 89
+        },
+        "internal_calls": [],
+        "messages": [],
+        "result": [],
+        "selector": "0x162da33a4585851fe8d3af3c2a9c60b557814e221e0d4f30ff0b2189d9c7775"
+    }
+}
+----
+
+[id="estimate-fee"]
+== Estimate fee
+
+You can estimate the fee of a given transaction before executing it by adding the `--estimate_fee`
+flag to the `invoke` or `declare` commands. This will simulate the transaction and return the
+estimated fee associated with it.
+You can read more about the fee mechanism
+https://starknet.io/documentation/fee-mechanism/[here]. The result is presented in WEI and ETH,
+as shown below.
+
+Note that with the `--estimate_fee` flag, the state of the contracts does not change. For example,
+the following code will not affect the balance stored in `BALANCE_CONTRACT`.
+
+To estimate the fee of a given transaction run the following:
+
+[#starknet_estimate_fee]
+[source,bash]
+----
+starknet invoke \
+    --address ${CONTRACT_ADDRESS} \
+    --abi contract_abi.json \
+    --function increase_balance \
+    --inputs 1234 \
+    --estimate_fee
+----
+
+The output should resemble:
+
+[#starknet_estimate_fee_output]
+[source,bash]
+----
+The estimated fee is: 756800000000000 WEI (0.000757 ETH).
+Gas usage: 7568
+Gas price: 100000000000 WEI
+----
+
+[id="simulate-transaction"]
+== Simulate transaction
+
+The `--simulate` flag is similar to `--estimate_fee`, except that it also returns the trace produced
+by executing the transaction.
+
+Note that with the `--simulate` flag, as with `--estimate_fee`, the state of the contracts does not
+change. For example, the command below will not affect the balance stored in `BALANCE_CONTRACT`.
+
+To simulate the execution of a given transaction run the following:
+
+[#starknet_invoke]
+[source,bash]
+----
+starknet invoke \
+    --address ${CONTRACT_ADDRESS} \
+    --abi contract_abi.json \
+    --function increase_balance \
+    --inputs 1234 \
+    --simulate
+----
+
+The output should resemble:
+
+[#starknet_simulate_transaction_output]
+[source,json]
+----
+The estimated fee is: 756800000000000 WEI (0.000757 ETH).
+Gas usage: 7568
+Gas price: 100000000000 WEI
+
+{
+    "function_invocation": {
+        "call_type": "CALL",
+        "calldata": [
+            "0x1",
+            "$[INTRO_CONTRACT_ADDRESS_TRIMMED]",
+            "0x362398bec32bc0ebb411203221a35a0301193a96f317ebe5e40be9f60d15320",
+            "0x0",
+            "0x1",
+            "0x1",
+            "0x4d2"
+        ],
+        "caller_address": "0x0",
+        "class_hash": "$[ACCOUNT_CLASS_HASH]",
+        "contract_address": "$[ACCOUNT_ADDRESS_TRIMMED]",
+        "entry_point_type": "EXTERNAL",
+        "events": [],
+        "execution_resources": {
+            "builtin_instance_counter": {
+                "range_check_builtin": 2
+            },
+            "n_memory_holes": 3,
+            "n_steps": 206
+        },
+        "internal_calls": [
+            ...
+        ],
+        "messages": [],
+        "result": [],
+        "selector": "0x15d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad"
+    },
+    "signature": [
+        "0x6501fcc88705e138910cf5d8f88cedbc7b6ffde47da5562a94dbc834ce92f4e",
+        "0x52371924f8c82221dd895d705eac391f7faefb57b9c55293ede92990355e086"
+    ],
+    "validate_invocation": {
+        "call_type": "CALL",
+        "calldata": [
+            "0x1",
+            "$[INTRO_CONTRACT_ADDRESS_TRIMMED]",
+            "0x362398bec32bc0ebb411203221a35a0301193a96f317ebe5e40be9f60d15320",
+            "0x0",
+            "0x1",
+            "0x1",
+            "0x4d2"
+        ],
+        "caller_address": "0x0",
+        "class_hash": "$[ACCOUNT_CLASS_HASH]",
+        "contract_address": "$[ACCOUNT_ADDRESS_TRIMMED]",
+        "entry_point_type": "EXTERNAL",
+        "events": [],
+        "execution_resources": {
+            "builtin_instance_counter": {
+                "ecdsa_builtin": 1,
+                "range_check_builtin": 2
+            },
+            "n_memory_holes": 0,
+            "n_steps": 89
+        },
+        "internal_calls": [],
+        "messages": [],
+        "result": [],
+        "selector": "0x162da33a4585851fe8d3af3c2a9c60b557814e221e0d4f30ff0b2189d9c7775"
+    }
+}
+----
+
+[#get-code]
+[id="get-code"]
+== get_code
+
+Once the `deploy` transaction is accepted on-chain, you will be able to see the code of the contract
+you have just deployed. The output consists of a list of bytecodes, rather than the source code. This
+is because the Starknet network gets the contract after compilation.
+
+To get the contract at a specific address, run the following command:
+
+[#starknet_get_code]
+[source,bash]
+----
+starknet get_code --contract_address ${CONTRACT_ADDRESS}
+----
+
+The output should resemble:
+
+[#starknet_get_code_output]
+[source,json]
+----
+{
+    "abi": [
+        {
+            "inputs": [
+                {
+                    "name": "amount",
+                    "type": "felt"
+                }
+            ],
+            "name": "increase_balance",
+            "outputs": [],
+            "type": "function"
+        },
+
+        ...
+
+        "0x48127ffb7fff8000",
+        "0x48127ffb7fff8000",
+        "0x48127ffb7fff8000",
+        "0x208b7fff7fff7ffe"
+    ]
+}
+----
+
+[#get-class-by-hash]
+[id="get-class-by-hash"]
+== get_class_by_hash
+
+To get the full class compatible with a specific hash, run the following command:
+
+[#starknet_get_class_by_hash]
+[source,bash]
+----
+starknet get_class_by_hash --class_hash CLASS_HASH
+----
+
+The output should resemble:
+
+[#starknet_get_class_by_hash_output]
+[source,json]
+----
+{
+    "abi": [
+        {
+            "inputs": [
+                {
+                    "name": "amount",
+                    "type": "felt"
+                }
+            ],
+            "name": "increase_balance",
+            "outputs": [],
+            "type": "function"
+        },
+
+        ...
+
+    }
+}
+----
+
+[#get-full-contract]
+[id="get-full-contract"]
+== get_full_contract
+
+To get the full contract class of a contract at a specific address, run the following command:
+
+[#starknet_get_full_contract]
+[source,bash]
+----
+starknet get_full_contract --contract_address ${CONTRACT_ADDRESS}
+----
+
+The output should resemble:
+
+[#starknet_get_full_contract_output]
+[source,json]
+----
+{
+    "abi": [
+        {
+            "inputs": [
+                {
+                    "name": "amount",
+                    "type": "felt"
+                }
+            ],
+            "name": "increase_balance",
+            "outputs": [],
+            "type": "function"
+        },
+
+        ...
+
+    }
+}
+----
+
+[#get-class-hash-at]
+[id="get-class-hash-at"]
+== get_class_hash_at
+
+To get the hash of a contract at a specific address, run the following command:
+
+[#starknet_get_class_hash_at]
+[source,bash]
+----
+starknet get_class_hash_at --contract_address ${CONTRACT_ADDRESS}
+----
+
+The output should resemble:
+
+[#starknet_get_class_hash_at_output]
+[source,bash]
+----
+0x2951dd06d31f492e8ed1e91da115dbcd3ffd7c688f39b4878db99d86995e4c
+----
+
+[#get-block]
+[id="get-block"]
+== get_block
+
+Instead of querying a specific contract or transaction, you may want to query an entire block and
+examine the transactions contained within it. To do this, run the following:
+
+[#starknet_get_block]
+[source,bash]
+----
+starknet get_block --number BLOCK_NUMBER
+----
+
+The output should resemble:
+
+[#starknet_get_block_output]
+[source,json]
+----
+{
+    "block_hash": "0x15344d9ce0bd1aa5d7577885c0bef948494ac926a9b7080c45ef2754bb2a59a",
+    "block_number": 0,
+    "gas_price": "0x174876e800",
+    "parent_block_hash": "0x19bbfaf06c332eda3d6a0f3bf45583d4312707435e8df265a02524853c7491e",
+    "sequencer_address": "0x310959e4d55cfe4712291a5f9787893fb392d1ffb96905aba549b21e91e9fc9",
+    "starknet_version": "$[VERSION]",
+    "state_root": "079354de0075c5c1f2a6af40c7dd70a92dc93c68b54ecc327b61c8426fea177c",
+    "status": "ACCEPTED_ON_L2",
+    "timestamp": 105,
+    "transaction_receipts": [
+        {
+            "actual_fee": "0x0",
+            "events": [],
+            "execution_resources": {
+                "builtin_instance_counter": {},
+                "n_memory_holes": 0,
+                "n_steps": 41
+            },
+            "l2_to_l1_messages": [],
+            "transaction_hash": "0x7f00beb6bd9ee1cb5bc6eaf824d0be2f2d5b3580955085c99ff0fc7228dcc07",
+            "transaction_index": 0
+        }
+    ],
+    "transactions": [
+        {
+            "class_hash": "0x1fac3074c9d5282f0acc5c69a4781a1c711efea5e73c550c5d9fb253cf7fd3d",
+            "constructor_calldata": [
+                "0x5e797f7945a9a34ad6ab316302b5e752645e07e6d9dcc494fd4bb05da849520"
+            ],
+            "contract_address": "0x4c16242a45b33e2bf7517a2b757ceba7021d31d0f18b675e3670163ebbafec",
+            "contract_address_salt": "0x5d0a87ee7d3b7c70f8683a9f13c12f2fa36c83bbe2b0fa85f6dc9256faf6a",
+            "max_fee": "0x0",
+            "nonce": "0x0",
+            "signature": [
+                "0x3216167b64f5daf104c820d7dfe5df93df158464b10cf5537ed898b2c5ddee7",
+                "0x76a7d396f5ac4275c97461763e4737829d81ce767aa4cf16d53f0a9ee89bcfc"
+            ],
+            "transaction_hash": "0x7f00beb6bd9ee1cb5bc6eaf824d0be2f2d5b3580955085c99ff0fc7228dcc07",
+            "type": "DEPLOY_ACCOUNT",
+            "version": "0x1"
+        }
+    ]
+}
+----
+
+The result contains:
+
+* `block_hash` – The block hash, a unique identifier of the block.
+* `parent_block_hash` – The block hash of the parent block.
+* `block_number` – The sequence number of the block, which is the number of blocks prior to this
+block.
+* `state_root` – The root of a commitment tree representing the Starknet’s state after the given
+block.
+* `status` – The status of the block (for example, `ACCEPTED_ON_L2`, which means that the block was
+created but has not been accepted on-chain yet).
+* `timestamp` – A timestamp representing the time this block was created.
+* `transaction_receipts` – Information about the transaction status and the corresponding L1\<\->L2
+interaction, for every transaction included in the block.
+* `transactions` – A mapping of the transactions included in the block, according to their
+transaction hashes. Note that these are the same hashes used in the `transaction_receipts` mapping.
+
+To query the pending block, simply pass `--number=pending`. To query a block by hash, use `--hash`
+instead. Note that at most one of these arguments can be given.
+
+[#get-nonce]
+[id="get-nonce"]
+== get_nonce
+
+You can retrieve the nonce of a contract (usually, an account contract) using the following command:
+
+[#starknet_get_nonce]
+[source,bash]
+----
+starknet get_nonce --contract_address ${ACCOUNT_ADDRESS}
+----
+
+Note that the nonce returned by this command is advanced only once the transaction reaches the
+pending (or later) state.
+
+[#get-block-traces]
+[id="get-block-traces"]
+== get_block_traces
+
+Instead of querying a specific transaction, you may want to query an entire block and examine the
+traces of all the transactions contained within it (see `get_transaction_trace` above). To do this,
+run the following:
+
+[#starknet_get_block_traces]
+[source,bash]
+----
+starknet get_block_traces --number BLOCK_NUMBER
+----
+
+The output should resemble:
+
+[#starknet_get_block_traces_output]
+[source,json]
+----
+{
+    "traces": [
+        {
+            "function_invocation": {
+                "call_type": "CALL",
+                "calldata": [
+                    "0x7a9e2c42b232648a4f974495cad18734c7d06c70b28f257715bf1d051d7ef38"
+                ],
+                "caller_address": "0x0",
+                "class_hash": "0x1fac3074c9d5282f0acc5c69a4781a1c711efea5e73c550c5d9fb253cf7fd3d",
+                "contract_address": "0x1271fa9e5d66cfb372e81591ccfa7107d6adfd4eea65a0023ced14be367a5d2",
+                "entry_point_type": "CONSTRUCTOR",
+                "events": [],
+                "execution_resources": {
+                    "builtin_instance_counter": {},
+                    "n_memory_holes": 0,
+                    "n_steps": 41
+                },
+                "internal_calls": [],
+                "messages": [],
+                "result": [],
+                "selector": "0x28ffe4ff0f226a9107253e17a904099aa4f63a02a5621de0576e5aa71bc5194"
+            },
+            "signature": [
+                "0x3216167b64f5daf104c820d7dfe5df93df158464b10cf5537ed898b2c5ddee7",
+                "0x76a7d396f5ac4275c97461763e4737829d81ce767aa4cf16d53f0a9ee89bcfc"
+            ],
+            "transaction_hash": "0x43507ba264f550a20f1957b0e63a8f55bff2648ced17e46f9724ef47c26472e",
+            "validate_invocation": {
+                "call_type": "CALL",
+                "calldata": [
+                    "0x1fac3074c9d5282f0acc5c69a4781a1c711efea5e73c550c5d9fb253cf7fd3d",
+                    "0x4f508479b71268536367e6225a9afbba484c753706df0c00bd11b2380e8ce9f",
+                    "0xf00de10171648ba2d82921388340bf47c83fe18921a7e71f4ded556099b5a5"
+                ],
+                "caller_address": "0x0",
+                "class_hash": "0x1fac3074c9d5282f0acc5c69a4781a1c711efea5e73c550c5d9fb253cf7fd3d",
+                "contract_address": "0x65fced1e7b6b3cf219cda7611966f72068780ad9b514d9bc4e60226f3c30d28",
+                "entry_point_type": "EXTERNAL",
+                "events": [],
+                "execution_resources": {
+                    "builtin_instance_counter": {
+                        "ecdsa_builtin": 1
+                    },
+                    "n_memory_holes": 0,
+                    "n_steps": 75
+                },
+                "internal_calls": [],
+                "messages": [],
+                "result": [],
+                "selector": "0x36fcbf06cd96843058359e1a75928beacfac10727dab22a3972f0af8aa92895"
+            }
+        }
+    ]
+}
+----
+
+[#get-state-update]
+[id="get-state-update"]
+== get_state_update
+
+You can use the following command to get the state changes in a specific block (for example, what
+storage cells have changed):
+
+[#starknet_get_state_update]
+[source,bash]
+----
+starknet get_state_update --block_number BLOCK_NUMBER
+----
+
+The output should resemble:
+
+[#starknet_get_state_update_output]
+[source,json]
+----
+{
+    "block_hash": "0x703fad93522cd338891ce4e009ca3d71ff742a31fcf87c46d8a5f644e77fbe3",
+    "new_root": "0714e01d3a891f71aeaea0dc1af25958fdb71aa0566773e9e208c8ea1adfd3ab",
+    "old_root": "02e5810fb9ecbb8d561bcb54b03cfcc3f1b88eda7043148291e2eb974e5ba16c",
+    "state_diff": {
+        "declared_contracts": [],
+        "deployed_contracts": [
+            {
+                "address": "0x3a0c6f9001e69edf3c5750475455010ad36eecc6084ebe9ed2c0aa45d029281",
+                "class_hash": "0x1fac3074c9d5282f0acc5c69a4781a1c711efea5e73c550c5d9fb253cf7fd3d"
+            }
+        ],
+        "nonces": {},
+        "storage_diffs": {
+            "0x304a44f9c5a902743a96071794c89959bf2435bd8ebb24ee88bf55ed2b02c04": [
+                {
+                    "key": "0x3b28019ccfdbd30ffc65951d94bb85c9e2b8434111a000b5afd533ce65f57a4",
+                    "value": "0x64e10e4399a5760d8db27ea20311380c2cb02063dbd34da731a083b3074c34e"
+                }
+            ]
+        }
+    }
+}
+----
+
+The result contains:
+
+* `block_hash` – The block hash, a unique identifier of the block.
+* `new_root` – The root of a commitment tree representing the Starknet’s state after the given block.
+* `old_root` – The root of a commitment tree representing the Starknet’s state before the given
+block.
+* `state_diff` – The changes in the state applied in this block, given as a mapping of addresses to
+the new values and/or new contracts.
+
+To query the last block, simply remove the `--block_number` argument. To query a block by hash,
+use `--block_hash` instead. Note that at most one of these arguments can be given.
+
+[id="get-storage-at"]
+== get_storage_at
+
+Other than querying the contract’s code, you may also want to query the contract’s storage at a
+specific key. To do so, you first need to understand which key is of interest to you. As you saw
+before, Starknet introduces a new primitive, which is xref:intro.adoc#storage-var[storage variables].
+Each storage variable is mapped to a storage key (a field element). To compute this key, run the
+following Python code:
+
+[#get_variable_key]
+[source,python]
+----
+from starkware.starknet.public.abi import get_storage_var_address
+
+balance_key = get_storage_var_address('balance')
+print(f'Balance key: {balance_key}')
+----
+
+You should get:
+
+[#get_variable_key_output]
+[source,python]
+----
+Balance key: 916907772491729262376534102982219947830828984996257231353398618781993312401
+----
+
+Now, you can query the balance using:
+
+[#starknet_get_storage_at]
+[source,bash]
+----
+starknet get_storage_at \
+    --contract_address ${CONTRACT_ADDRESS} \
+    --key 916907772491729262376534102982219947830828984996257231353398618781993312401
+----
+
+Using the same contract we have used so far, you should get:
+
+[#starknet_get_storage_at_output]
+[source,bash]
+----
+0x4d2
+----
+
+Note that this is the same result obtained by the call to `get_balance`.
+
+Later on, at the xref:user_auth.adoc[user authentication] section,
+you will see xref:user_auth.adoc#storage-maps[a generalization of storage variables],
+which allows, for example, having a balance variable for each user. This will require minor
+adjustments to the code above, which we will review in the relevant section.
+
+[id="block-specific-queries"]
+=== Block-specific queries
+
+Some of the aforementioned CLI functions have an additional argument, `--block_hash`, which applies
+the given query to a specific block. For example, you may want to query the balance variable at some
+specific point in time.
+
+To find out whether a CLI function can be executed as a block-specific query, simply use the `--help`
+argument to see if `--block_hash` is part of the optional arguments for that function. In case you do
+not use the `--block_hash` argument, the query will be applied to the last block.
+
