@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Upcoming Starknet versions :: Starknet documentation</title>
+    <title>Starknet Alpha v0.11.0 :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/starknet_versions/upcoming_versions/">
     <link rel="prev" href="../version_notes/">
     <link rel="next" href="../pathfinder_versions/">
@@ -424,113 +424,649 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Upcoming Starknet versions</h1>
-<div class="sect1">
-<h2 id="starknet_regenesis"><a class="anchor" href="#starknet_regenesis"></a>Starknet regenesis</h2>
+<h1 class="page">Starknet Alpha v0.11.0</h1>
+<div id="preamble">
 <div class="sectionbody">
-<div class="imageblock">
-<div class="content">
-<img src="https://docs.starknet.io/_/img/roadmap.png" alt="roadmap">
-</div>
-</div>
 <div class="paragraph">
-<p>The next two upgrades happening to Starknet prior to the regenesis event are:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>v0.12.0</p>
-</li>
-<li>
-<p>v0.13.0</p>
-</li>
-</ul>
+<p>Starknet Alpha 0.11.0 introduces Cairo 1.0 smart contracts.</p>
 </div>
 <div class="paragraph">
 <p>Until regenesis, old and new contracts will co-exist and will be able to interact with each other. On the regenesis, classes (and contracts that are instances of those classes) written in older Cairo versions will no longer be supported.</p>
 </div>
+<div class="imageblock">
+<div class="content">
+<img src="https://docs.starknet.io/_/img/regenesis.png" alt="regenesis">
 </div>
-</div>
-<div class="sect1">
-<h2 id="starknet_alpha_v0_12_0"><a class="anchor" href="#starknet_alpha_v0_12_0"></a>Starknet Alpha v0.12.0</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="what_to_expect"><a class="anchor" href="#what_to_expect"></a>What to expect</h3>
-<div class="paragraph">
-<p>Performance improvements</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="notable_changes"><a class="anchor" href="#notable_changes"></a>Notable changes</h3>
-<div class="ulist">
-<ul>
-<li>
-<p>A new sequencer</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Under Apache 2.0 license</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>Will include a three fold improvement</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Block execution logic</p>
-</li>
-<li>
-<p>Cairo VM in Rust</p>
-</li>
-<li>
-<p>State management - Papyrus</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
+<div class="title">The path to regenesis</div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="starknet_alpha_v0_13_0"><a class="anchor" href="#starknet_alpha_v0_13_0"></a>Starknet Alpha v0.13.0</h2>
+<h2 id="what_to_expect"><a class="anchor" href="#what_to_expect"></a>What to expect</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In Starknet v0.11.0, you can declare, deploy and run Cairo 1.0 smart contracts. We also introduce a new system call that allows a smooth transitioning of existing contracts to a Cairo 1.0 implementation.</p>
+</div>
+<div class="paragraph">
+<p>Historically, contract classes have been defined in terms of Cairo assembly, or Casm for short (the class definition also included more information needed for execution, e.g., hint data). The novelty of Cairo 1.0 is the introduction of Sierra (Safe Intermediate Representation), an intermediate layer between Cairo 1.0 and Casm.</p>
+</div>
+<div class="paragraph">
+<p>The role of Sierra is to guarantee that every contract execution can be proven. With Cairo 0, you may write contracts that fail ungracefully, e.g., via an <code>assert</code> instruction, which will result in unprovable transactions.</p>
+</div>
+<div class="paragraph">
+<p>In such cases, it is impossible to trustlessly charge a fee for the failed transaction, which creates a potential DOS vector on Starknet sequencers. Conversely, Sierra is guaranteed to compile to “safe Casm,” i.e., a subset of Casm that cannot fail (the simplest example that illustrates the restrictions of safe Casm is the usage of if/else instructions rather than asserts).</p>
+</div>
+<div class="paragraph">
+<p>To guarantee that all classes in the system originated from Sierra, users will send a new contract class structure (one that corresponds to Sierra), and the Starknet sequencer will compile it to Casm.</p>
+</div>
+<div class="paragraph">
+<p>In the future, this compilation step will be proven inside the Starknet OS. In the meantime, users have to perform this compilation and produce the Casm hash locally in order to sign it in the <code>DECLARE</code> transaction. Note that the user’s approval here is vital; if the compilation to Casm is not verified, nothing enforces the generated Casm to correspond to the (Sierra) contract class.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Cairo is only required for proving. In order to prove the validity of blocks, we need to be able to represent every contract execution in Cairo.</p>
+</div>
+<div class="paragraph">
+<p>For sequencers, that are responsible for block production, proving may be out of scope. Thus, the compilation of the contract class to Casm may not be important for them. In the future, one can imagine a Sierra VM or compilation from Sierra to different CPU architectures, e.g., x86).</p>
+</div>
+<div class="paragraph">
+<p>However, for the time being, different components in the ecosystem (the sequencer, full nodes, etc.) will keep using the generated Casm for contract execution.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="notable_changes"><a class="anchor" href="#notable_changes"></a>Notable changes</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The introduction of Cairo 1.0 and Sierra has several effects on the system. Below we list the effects on each component; of particular note are:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A new version of the <code>DECLARE</code> transaction, which allows sending the new class structure</p>
+</li>
+<li>
+<p>The state commitment will now include contract classes</p>
+</li>
+<li>
+<p>Changes to the on-chain data format</p>
+</li>
+<li>
+<p>New system call - <code>replace_class</code></p>
+</li>
+<li>
+<p>Starknet API (feeder gateway/gateway) and JSON-RPC updates</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="declare_v2"><a class="anchor" href="#declare_v2"></a>Declare v2</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="what_to_expect_2"><a class="anchor" href="#what_to_expect_2"></a>What to expect</h3>
+<h3 id="transaction_structure"><a class="anchor" href="#transaction_structure"></a>Transaction structure</h3>
 <div class="paragraph">
-<p>Off-chain data, volition and cost reduction</p>
+<p>The following is an example of the new version of the <code>DECLARE</code> transaction:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+	"version": "0x2",
+	"max_fee": "0xf99ee42792c",
+	"signature": [
+		"0x1e3207935d3ab611b30bf486915b3d2f7ddb5eaa00c1fca2ec73343babbe434",
+		"0x418a33a22ccba3c743d0a097bd61d749527f4d460bd3317e904762d91eebc05"
+	],
+	"nonce": "0x1",
+	"contract_class": {
+		...
+	},
+	"compiled_class_hash": "0x418a33a22ccba3c743d0a097bd61d749527f4d460bd3317e904762d91eebc05",
+	"sender_address": "0x706064eb9da21c692ef9a6b9f19d671b718e3bea99926ba6b6ad938c049fcbe",
+	"type": "DECLARE"
+}</code></pre>
+</div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="notable_changes_2"><a class="anchor" href="#notable_changes_2"></a>Notable changes</h3>
+<h3 id="transaction_flow"><a class="anchor" href="#transaction_flow"></a>Transaction flow</h3>
+<div class="paragraph">
+<p>Upon receiving a <code>DECLARE v2</code> transaction, the sequencer will run <code>&lowbar;&lowbar;validate&lowbar;declare&lowbar;&lowbar;</code> (similarly to version 1).
+If the transaction is found valid, the sequencer will compile the contract class to Casm and ensure that the resulting compiled class hash equals the given <code>compiled_class_hash</code>.
+If the hashes do not match, the sequencer is elligible to charge a fee for the transaction (this is necessary to prevent a potential DOS on the sequencer).
+If the validation was success and the compilation resulted in a matching compiled class hash, the sequencer proceeds to store the given class in its DB and updates the classes tree with the <code>(class_hash, compiled_class_hash)</code> pair.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="deploy_and_library_call"><a class="anchor" href="#deploy_and_library_call"></a>Deploy and library_call</h3>
+<div class="paragraph">
+<p>After the class was declared, it can be used either in deploying new instances or via library calls. Note that to specify the class (either for deploy or library_call), one has to send <code>class_hash</code> and <strong>NOT</strong> <code>compiled_class_hash</code>. The sequencer and full nodes may internally maintain a mapping between the two, but a reference to a declared class has to be via its class hash.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="commitment"><a class="anchor" href="#commitment"></a>State commitment</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>New classes declared by v2 Declare transactions will be included in the state commitment.</p>
+</div>
+<div class="paragraph">
+<p>To this end, we change the state commitment from <code>global_tree_root</code> to <code>h(global_tree_root, classes_root, commitment_version)</code>, where:</p>
+</div>
 <div class="ulist">
 <ul>
 <li>
-<p>Introducing Volition to Starknet</p>
+<p><code>global_tree_root</code> is the usual contracts tree</p>
 </li>
 <li>
-<p>Introduce off-chain data availability</p>
+<p><code>classes_root</code> is a height 251 Patricia tree constructed from the key-value pairs <code>(class_hash, h(compiled_class_hash, leaf_version))</code></p>
+</li>
+<li>
+<p><code>commitment_version</code> and <code>leaf_version</code> are news field added to allow forward compatability and are currently set to the
+ASCII encodings of <code>STARKNET_STATE_V0</code> and <code>CONTRACT_CLASS_LEAF_V0</code> correspondingly.</p>
+</li>
+<li>
+<p><code>h</code> is the Poseidon hash function</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Old classes, or new ones declared via a <code>DECLARE</code> v1 transaction, do not affect the state commitment.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="replace_class_syscall"><a class="anchor" href="#replace_class_syscall"></a>Replace class syscall</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>We add a new system call that allows changing a contract’s class to a Cairo 1.0 class:</p>
+</div>
+<div class="paragraph">
+<p><code>replace_class(class_hash: felt)</code></p>
+</div>
+<div class="sect2">
+<h3 id="semantics_of_the_new_system_call"><a class="anchor" href="#semantics_of_the_new_system_call"></a>Semantics of the new system call</h3>
+<div class="paragraph">
+<p>Once <code>replace_class</code> is called, the class of the calling contract
+(i.e. the contract whose address is returned by <code>get_contract_address</code> at the time the syscall is called)
+will be replaced by class whose hash is given by the <code>class_hash</code> argument (this class must be previously declared).
+<strong>This change will not affect the currently running function</strong>, i.e. the execution of the calling function will continue as usual with the old code.
+However, <code>call_contract</code> will now use the new class.</p>
+</div>
+<div class="paragraph">
+<p>Consider the following example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">@external
+swap(assetA: felt, assetB: felt)
+	let get_price_selector = 0x...
+	let address = get_contract_address()
+
+	let pA = get_price(assetA)
+	replace_class(new_class_hash)
+	let pA = get_price(assetA)
+
+	let calldata = alloc()
+	calldate[0] = assetB
+	let pB = call_contract(address, get_price_selector, 1, calldata)
+
+@external
+get_price(assetId: felt)
+	...</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>swap</code> function calls <code>get_price</code> three times:</p>
+</div>
 <div class="ulist">
 <ul>
 <li>
-<p>Allow the definition of Data availability mode in the storage cell level</p>
+<p>In the first call, the original implementation is used, as expected.</p>
 </li>
 <li>
-<p>Modularity for multiple DA solutions</p>
+<p>In the second call, after <code>replace_class</code>, we also use the original implementation since we continue the current execution with the existing code.</p>
 </li>
 <li>
-<p>Hybrid ERC-20 - Wallet and bank</p>
+<p>In the third call, pB will use <code>get_price</code> from the new class (if it exists, otherwise the call will fail).</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="replace_class_flow"><a class="anchor" href="#replace_class_flow"></a>Replace class flow</h3>
+<div class="paragraph">
+<p>The following flow is only applicable to upgradable contracts.
+If your contract is upgradable, then upgrading the implementation class to Cairo 1.0 doesn’t require anything new,
+and can be done with a regular transaction which upgrades the implementation.</p>
+</div>
+<div class="paragraph">
+<p>The problem is thus “upgrading” the proxy itself to the Cairo 1.0 implementation.
+Suppose that you have an account proxy, or a DeFi app proxy, that you want to migrate to Cairo 1.0.
+To migrate it to Cairo 1.0 and keep the same address and state, you can do the following:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Declare your new Cairo 1.0 proxy class (if not already declared, as can be the case with standard implementations).</p>
+</li>
+<li>
+<p>Upgrade the implementation to add a function that uses the new <code>replace_class</code> system call.</p>
+</li>
+<li>
+<p>Call the new function from the previous step. Now, <code>replace_class(new_class_hash)</code> is called, where <code>new_class_hash</code> is the class hash of the new Cairo 1.0 proxy class.</p>
+</li>
+<li>
+<p>Starting from the next transaction, the class of the calling contract is now replaced (with the old one having no effect).</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="faq"><a class="anchor" href="#faq"></a>FAQ</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Will I be able to replace the class to any previously declared class?</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Yes</p>
 </li>
 </ul>
 </div>
 </li>
 <li>
-<p>Starting from 10x cost reduction</p>
+<p>Can I only use it for proxy contracts?</p>
+<div class="ulist">
+<ul>
+<li>
+<p>No, we will not enforce anything about the contents of the old/new class</p>
 </li>
 </ul>
+</div>
+</li>
+<li>
+<p>How much will replacing the class cost?</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The dominant cost of this system call is sending two words as calldata, which is ~1.2k gas</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>How do I declare Cairo 1.0 classes?</p>
+<div class="ulist">
+<ul>
+<li>
+<p>In Starknet v0.11.0 we will introduce declare v2 transactions, that are used for this purpose. For more details, see <a href="#declare_v2">here</a>.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>What happens if I use call_contract (on the feeder gateway / Json RPC) and <code>replace_class</code> is called?</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The effect of the replacement will only last throughout the call (the Starknet state remains untouched, like in any other call)</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="ocd"><a class="anchor" href="#ocd"></a>On-Chain data</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The data published on L1 should allow everyone to construct the Starknet state locally. The introduction of the <code>replace_class</code> system call and the separation between classes (Sierra) and compiled classes (Casm) induces some changes to our on chain data format:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The deployment info section is removed</p>
+</li>
+<li>
+<p>The first word will be the number of contracts affected by the block (this includes storage updates, nonce updates, class updates, or deployments).</p>
+</li>
+<li>
+<p>For each affected contract, the first word will encode the new nonce and number of storage updates. Additionally, it will use one bit to determine whether or not the contract was deployed or if its class was updated.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The specific encoding is given by:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{127 bits}} |\underbrace{\text{flag}}_{\text{1 bit}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |
+\underbrace{\text{# of storage updates}}_{\text{64 bits}}\]
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>If the above flag is turned on, then the next word is the new contract class (whether it was just deployed or replaced). Otherwise, you can skip to the next bullet.</p>
+</li>
+<li>
+<p>For each storage update, we send to L1 the key and the new value (this part remains unchanged)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Following the updated contracts section, we have a section of newly declared classes (only Cairo 1 classed declared via a declare v2 transactions, as old classes don&#8217;t affect the commitment):</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The first word in this section is the number of declared classes</p>
+</li>
+<li>
+<p>For every newly declared class, two felts will be posted:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The class hash</p>
+</li>
+<li>
+<p>The compiled class hash</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="api_changes"><a class="anchor" href="#api_changes"></a>API changes</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="feeder_gateway"><a class="anchor" href="#feeder_gateway"></a>Feeder gateway</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>New endpoint: <strong><code>get_compiled_class_by_class_hash</code>.</strong> The purpose of this endpoint is to return the Cairo assembly generated by compiling the given Cairo 1 class. This is the data needed for contract execution.
+You can find an example of the relevant structure <a href="https://external.integration.starknet.io/feeder_gateway/get_compiled_class_by_class_hash?classHash=0x4e70b19333ae94bd958625f7b61ce9eec631653597e68645e13780061b2136c">here</a></p>
+</li>
+<li>
+<p><code><strong>get_class_by_hash</strong></code> - the structure of the returned class will depend on whether or not it is a new type of class, compiled from Cairo 1.0. You can find an example of the new class structure <a href="https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.json">here</a>.</p>
+</li>
+<li>
+<p><code><strong>get_full_contract</strong></code> - same as above</p>
+</li>
+<li>
+<p><code><strong>get_state_update</code></strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p>added <code>replaced_classes</code> section</p>
+</li>
+<li>
+<p><code>declared_classes</code> is split into <code>old_declared_classes</code> and <code>declared_classes</code></p>
+</li>
+<li>
+<p><code>old_declared_classes</code> is a list of class hashes</p>
+</li>
+<li>
+<p><code>declared_classes</code> is a list of <code>(class_hash,compiled_class_hash)</code> pairs</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><code><strong>get_block</strong></code></p>
+<div class="ulist">
+<ul>
+<li>
+<p>The <code>transactions</code> field is subject to the same changes in <code>get_transaction</code></p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><code><strong>get_transaciton</strong></code></p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>contract_address</code> is changed to <code>sender_address</code> in invoke transactions</p>
+</li>
+<li>
+<p>Declare v2 transaction may be returned</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><code><strong>estimate_fee</strong></code></p>
+<div class="ulist">
+<ul>
+<li>
+<p>Can now take an additional <code>skip_validate</code> flag in the URL. If set to true, then <code>&lowbar;&lowbar;validate&lowbar;&lowbar;</code> execution will be skipped. This can assist hardware wallets in not having to sign for fee estimations.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="gateway"><a class="anchor" href="#gateway"></a>Gateway</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><code><strong>add_transaction</strong></code></p>
+<div class="ulist">
+<ul>
+<li>
+<p>Can now take a Declare v2 transaction</p>
+</li>
+<li>
+<p><code>contract_address</code> is changed to <code>sender_address</code> in Invoke transactions</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="json_rpc_changes"><a class="anchor" href="#json_rpc_changes"></a>JSON-RPC changes</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The new class structure and Declare V2 are added to the JSON-RPC. You can track the changes in this <a href="https://github.com/starkware-libs/starknet-specs/pull/65/">pull request</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="version_0_removal"><a class="anchor" href="#version_0_removal"></a>Version 0 Removal</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>INVOKE</code> and <code>DECLARE</code> transactions of version 0 will no longer be supported in Starknet Alpha v0.11.0</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="mandatory_message_fees"><a class="anchor" href="#mandatory_message_fees"></a>Mandatory message fees</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>As of this version, L1→L2 <a href="https://docs.starknet.io/documentation/architecture_and_concepts/L1-L2_Communication/messaging-mechanism/#l1-l2_message_fees">message fees</a> will become mandatory, i.e., the sequencer will no longer process messages sent with zero ETH.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="document_changelog"><a class="anchor" href="#document_changelog"></a>Document changelog</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In this section we will cover the changes in the above document up to the release to Testnet/Mainnet. If this is your first time encountering the document, then you can ignore this section.</p>
+</div>
+<div class="sect2">
+<h3 id="update_i_16022023"><a class="anchor" href="#update_i_16022023"></a>update I (16/02/2023)</h3>
+<div class="sect3">
+<h4 id="replace_class_syscall_2"><a class="anchor" href="#replace_class_syscall_2"></a>Replace class syscall</h4>
+<div class="paragraph">
+<p>Nothing will be enforced regarding the old/new class. In partiular, it can be used even with Cairo 0 target classes (note that such classes will no longer be supported after regenesis).</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="poseidon_hash"><a class="anchor" href="#poseidon_hash"></a>Poseidon hash</h4>
+<div class="paragraph">
+<p>In Starknet v0.11.0 we will start using the Poseidon hash function, which can be proven much more effeciently than Pedersen due to its algebaric nature. We will start by using Poseidon in the following places:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>class_hash (only new Cairo 1.0 classes will be hashed with Poseidon, Cairo 0 class hashes will continue to use Pedersen)</p>
+</li>
+<li>
+<p>compiled class hash (see <a href="#declare_v2">declare v2</a> for more details)</p>
+</li>
+<li>
+<p>classes commitment tree (see the <a href="#commitment">state commitment updates</a> for more details)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>You can find the specification of the Poseidon hash function that will be used in Starknet <a href="https://github.com/starkware-industries/poseidon">here</a>.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State commitment</h4>
+<div class="paragraph">
+<p>The changes in the <a href="#commitment">commitment scheme</a> has been slightly modified as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The classes tree will be computed with the Poseidon hash function, while the global state tree will continue to use Pedersen</p>
+</li>
+<li>
+<p>The leaves in the classes tree will be <code>h(compiled_class_hash, leaf_version)</code> where <code>leaf_version</code> is a field added to allow forward compatability and is currently set to 0</p>
+</li>
+<li>
+<p>If the classes tree is none empty, the state commitment will be computed by <code>h(global_tree_root, classes_root, commitment_version)</code> where <code>h</code>
+is the <strong>Poseidon</strong> hash function and <code>commitment_version</code> is a field added to allow forward compatability and is currently set to 0</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="on_chain_data"><a class="anchor" href="#on_chain_data"></a>On-Chain data</h4>
+<div class="paragraph">
+<p>The changes in the <a href="#ocd">on chain data format</a> have been slightly modified as follows:</p>
+</div>
+<div class="paragraph">
+<p>We will have an additional section for the newly declared (Cairo 1) classes in the block. This section will contain:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The number of declared (Cairo 1) classes</p>
+</li>
+<li>
+<p>For every newly declared class, two felts will be posted:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The class hash</p>
+</li>
+<li>
+<p>The compiled class hash</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="api_changes_2"><a class="anchor" href="#api_changes_2"></a>API changes</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>To avoid ambiguity, <code>get_compiled_class</code> will be renamed to <code>get_compiled_class_by_class_hash</code></p>
+</li>
+<li>
+<p>Starknet blocks will still have the <code>state_root</code> field (it will not be renamed to state commitment at this time)</p>
+</li>
+<li>
+<p><code>declared_classes</code> inside the state update response will be a list of pairs (class hash and compiled class hash) rather than a dictionary</p>
+</li>
+<li>
+<p>The gateway will expect the <code>sierra_program</code> field of declare v2 transactions in a compressed form, in the same manner as done today for declare v1 transactions</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="update_ii_01032023"><a class="anchor" href="#update_ii_01032023"></a>update II (01/03/2023)</h3>
+<div class="sect3">
+<h4 id="poseidon_hash_2"><a class="anchor" href="#poseidon_hash_2"></a>Poseidon hash</h4>
+<div class="paragraph">
+<p>The precise definition of the hash being used now appears on the <a href="../../architecture_and_concepts/Hashing/hash-functions/#poseidon_hash" class="xref page">hash functions</a> page.
+For the specific sponge construction used in Starknet to hash multiple elements, see <a href="../../architecture_and_concepts/Hashing/hash-functions/#poseidon_array_hash" class="xref page">here</a>.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="state_commitment_2"><a class="anchor" href="#state_commitment_2"></a>State commitment</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>The <code>leaf_version</code> used for the leaves contents in the classes tree is currently set to the ASCII encoding of <code>CONTRACT_CLASS_LEAF_V0</code>, and not 0 as stated in the previous update.</p>
+</li>
+<li>
+<p>The <code>commitment_version</code> used for in the new commitment computation is currently set to the ASCII encoding of <code>STARKNET_STATE_V0</code>, and not 0 as stated in the previous update.</p>
+</li>
+<li>
+<p><code>commitment_version</code> is moved to the beginning of the hash input in the state commitment computation</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="api_changes_3"><a class="anchor" href="#api_changes_3"></a>API changes</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>the <code>get_compiled_class_by_class_hash</code> endpoint only works for Cairo 1 classes, declared via declare v2 (when given a class hash of a Cairo 0 class, it will not be found).</p>
+</li>
+<li>
+<p>the <code>get_compiled_class_by_class_hash</code> returns a <a href="https://external.integration.starknet.io/feeder_gateway/get_compiled_class_by_class_hash?classHash=0x4e70b19333ae94bd958625f7b61ce9eec631653597e68645e13780061b2136c">structure</a> that is slightly different than the <a href="https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/test_data/hello_starknet.casm">Casm</a> output generated by the compiler (specifically, the hints and bytecode lie inside the <code>program</code> property)</p>
+</li>
+</ul>
+</div>
 </div>
 </div>
 </div>
