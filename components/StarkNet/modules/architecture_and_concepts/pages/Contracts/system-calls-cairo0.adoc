@@ -4,12 +4,10 @@ Starknet smart contracts are written in Cairo. However, Cairo is a general purpo
 
 So writing smart contracts requires some operations, such as calling another contract or accessing the contract's storage, that standalone programs do not require.
 
-The Starknet contract language supports these operations by using system calls. System calls enable a contract to require services from the Starknet OS.
-
-You can use system calls in a function to get information that depends on the broader state of Starknet, which would otherwise be inaccessible, rather than local variables that appear in the function's scope.
+The Starknet contract language supports these operations by using system calls. System calls enable a contract to require services from the Starknet OS. You can use system calls in a function to get information that depends on the broader state of Starknet, which would otherwise be inaccessible, rather than local variables that appear in the function's scope.
 
 [id="getters"]
-== getters (Cairo 0)
+== getters
 
 Below we describe the collection of system calls that can be used to get information regarding the block, transaction or execution context during runtime (e.g. block number, account address, and caller address).
 
@@ -188,37 +186,6 @@ None.
 
 link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412b2b5babd04bb4e7/src/starkware/starknet/common/syscalls.cairo#L301[`syscalls.cairo`^]
 
-
-== getters (Cairo 1.0)
-
-In Cairo 1.0, all block/transaction/execution context getters are batched into a single system call: `get_execution_info`.
-
-[id="get_execution_info"]
-=== `get_execution_info`
-
-.Syntax
-
-[source,cairo,subs="+quotes,+macros"]
-----
-extern fn get_execution_info_syscall() -> SyscallResult<Box<starknet::info::ExecutionInfo>> implicits(
-    GasBuiltin, System
-) nopanic;
-----
-
-.Description
-
-Gets information about the original transaction.
-
-.Arguments
-
-None.
-
-.Return values
-
-[horizontal,labelwidth=35]
-`_ExecutionInfo_`:: A link:https://github.com/starkware-libs/cairo/blob/efbf69d4e93a60faa6e1363fd0152b8fcedbb00a/corelib/src/starknet/info.cairo#L8[struct] containing the execution info
-
-
 [id="call_contract"]
 == `call_contract`
 
@@ -228,25 +195,12 @@ Calls a given contract. This system call expects the address of the called contr
 
 .Syntax
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo,subs="+quotes,+macros"]
 ----
 func call_contract{syscall_ptr : felt*}(
     __contract_address__ : felt, __function_selector__ : felt, __calldata_size__ : felt, __calldata__ : felt*
 ) -> (__retdata_size__ : felt, __retdata__ : felt*)
 ----
-Cairo 1.0::
-+
-[source,cairo,subs="+quotes,+macros"]
-----
-extern fn call_contract_syscall(
-    address: ContractAddress, entry_point_selector: felt252, calldata: Span<felt252>
-) -> SyscallResult<Span<felt252>> implicits(GasBuiltin, System) nopanic;
-----
-====
 
 .Arguments
 
@@ -280,10 +234,6 @@ contract is available, then you can use a more straightforward syntax.
 
 .Syntax
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo,subs="+quotes,+macros"]
 ----
 func deploy{syscall_ptr : felt*}(
@@ -294,18 +244,6 @@ func deploy{syscall_ptr : felt*}(
     __deploy_from_zero__: felt,
 ) -> (__contract_address__ : felt)
 ----
-Cairo 1.0::
-+
-[source,cairo,subs="+quotes,+macros"]
-----
-extern fn deploy_syscall(
-    class_hash: ClassHash,
-    contract_address_salt: felt252,
-    calldata: Span<felt252>,
-    deploy_from_zero: bool,
-) -> SyscallResult<(ContractAddress, Span::<felt252>)> implicits(GasBuiltin, System) nopanic;
-----
-====
 
 .Description
 
@@ -335,23 +273,10 @@ link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/star
 
 .Syntax
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo,subs="+quotes,+macros"]
 ----
 func emit_event{syscall_ptr : felt*}(__keys_len__ : felt, __keys__ : felt*, __data_len__ : felt, __data__ : felt*)
 ----
-Cairo 1.0::
-+
-[source,cairo,subs="+quotes,+macros"]
-----
-extern fn emit_event_syscall(
-    keys: Span<felt252>, data: Span<felt252>
-) -> SyscallResult<()> implicits(GasBuiltin, System) nopanic;
-----
-====
 
 .Description
 
@@ -379,10 +304,6 @@ link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412
 
 The following example emits an event with two keys, the https://www.cairo-lang.org/docs/how_cairo_works/consts.html#short-string-literals[strings] `status` and `deposit` and three data elements: `1`, `2`, and `3`.
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo]
 ----
 let (keys : felt*) = alloc()
@@ -394,45 +315,18 @@ assert data[1] = 2
 assert data[2] = 3
 emit_event(2, keys, 3, data)
 ----
-Cairo 1::
-+
-[source,cairo]
-----
-let keys = ArrayTrait::new();
-keys.append('key');
-keys.append('deposit');
-let values = ArrayTrait::new();
-values.append(1);
-values.append(2);
-values.append(3);
-emit_event_syscall(keys, values).unwrap_syscall();
-----
-====
 
 [id="library_call"]
 == `library_call`
 
 .Syntax
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo,subs="+quotes,+macros"]
 ----
 func library_call{syscall_ptr : felt*}(
     __class_hash__ : felt, __function_selector__ : felt, __calldata_size__ : felt, __calldata__ : felt*
 ) -> (__retdata_size__ : felt, __retdata__ : felt*)
 ----
-Cairo 1.0::
-+
-[source,cairo,subs="+quotes,+macros"]
-----
-extern fn library_call_syscall(
-    class_hash: ClassHash, function_selector: felt252, calldata: Span<felt252>
-) -> SyscallResult<Span<felt252>> implicits(GasBuiltin, System) nopanic;
-----
-====
 
 .Description
 
@@ -518,25 +412,12 @@ link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/star
 
 .Syntax
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo,subs="+quotes,+macros"]
 ----
 func send_message_to_l1{syscall_ptr : felt*}(
     __to_address__ : felt, __payload_size__ : felt, __payload__ : felt*
 )
 ----
-Cairo 1.0::
-+
-[source,cairo,subs="+quotes,+macros"]
-----
-extern fn send_message_to_l1_syscall(
-    to_address: felt252, payload: Span<felt252>
-) -> SyscallResult<()> implicits(GasBuiltin, System) nopanic;
-----
-====
 
 .Description
 
@@ -565,10 +446,6 @@ link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/star
 
 The following example sends a message whose content is `(1,2)` to the L1 contract whose address is `3423542542364363`.
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo,subs="+quotes,+macros"]
 ----
 let payload = alloc()
@@ -576,39 +453,16 @@ payload[0] = 1
 payload[1] = 2
 send_message_to_l1(3423542542364363,2,payload)
 ----
-Cairo 1::
-+
-[source,cairo,subs="+quotes,+macros"]
-----
-let payload = ArrayTrait::new();
-payload.append(1);
-payload.append(2);
-send_message_to_l1_syscall(payload).unwrap_syscall();
-----
-====
 
 [id="replace_class"]
 == `replace_class`
 
 .Syntax
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo,subs="+quotes,+macros"]
 ----
 replace_class(class_hash: felt)
 ----
-Cairo 1.0::
-+
-[source,cairo,subs="+quotes,+macros"]
-----
-extern fn replace_class_syscall(
-    class_hash: ClassHash
-) -> SyscallResult<()> implicits(GasBuiltin, System) nopanic;
-----
-====
 
 .Description
 Once `replace_class` is called, the class of the calling contract (i.e. the contract whose
@@ -642,23 +496,10 @@ link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/star
 
 .Syntax
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo,subs="+quotes,+macros"]
 ----
 func storage_read{syscall_ptr : felt*}(__address__ : felt) -> (__value__ : felt)
 ----
-Cairo 1.0::
-+
-[source,cairo,subs="+quotes,+macros"]
-----
-extern fn storage_read_syscall(
-    address_domain: u32, address: StorageAddress,
-) -> SyscallResult<felt252> implicits(GasBuiltin, System) nopanic;
-----
-====
 
 .Description
 
@@ -684,26 +525,10 @@ link:https://github.com/starkware-libs/cairo-lang/blob/2abd303e1808612b724bc1412
 
 .Example
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo,subs="+quotes,+macros"]
 ----
 let value = storage_read(3534535754756246375475423547453)
 ----
-Cairo 1.0::
-+
-[source,cairo,subs="+quotes,+macros"]
-----
-use starknet::storage_access::storage_base_address_from_felt252;
-
-...
-
-let storage_address = storage_base_address_from_felt252(3534535754756246375475423547453)
-storage_read_syscall(0, storage_address).unwrap_syscall()
-----
-====
 
 [id="storage_write"]
 == `storage_write`
@@ -712,23 +537,10 @@ Sets the value of a key in the storage of the calling contract.
 
 .Syntax
 
-[tabs]
-====
-Cairo 0::
-+
 [source,cairo,subs="+quotes,+macros"]
 ----
 func storage_write{syscall_ptr : felt*}(__address__ : felt, __value__ : felt)
 ----
-Cairo 1.0::
-+
-[source,cairo,subs="+quotes,+macros"]
-----
-extern fn storage_write_syscall(
-    address_domain: u32, address: StorageAddress, value: felt252
-) -> SyscallResult<()> implicits(GasBuiltin, System) nopanic;
-----
-====
 
 .Description
 

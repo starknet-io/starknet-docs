@@ -103,9 +103,13 @@ In the future, when Sierra&rarr;Casm compilation becomes part of the Starknet OS
 [specifications]
 ==== Specifications
 
-As mentioned above, our commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$]. The actual data is placed in the leaves, and a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes (leaves or internal) are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
+As mentioned above, our commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$].
 
-stem:[$path$] is an integer in stem:[$[0, 2^{length}-1\]$], and the binary expansion of stem:[$path$] indicates how should we proceed along the tree, where the first step is indicated by the most significant bit, and stem:[$0,1$] are interpreted as left, right correspondingly. Note that the reason that length is specified and cannot be deduced from stem:[$path$] is that we're dealing with field elements of fixed size (251 bits each). For a node with stem:[$length>0$], following stem:[$path$] leads the highest node whose both right and left child are none empty.
+The actual data is placed in the leaves, and a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes (leaves or internal) are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
+
+stem:[$path$] is an integer in stem:[$[0, 2^{length}-1\]$], and the binary expansion of stem:[$path$] indicates how should we proceed along the tree, where the first step is indicated by the most significant bit, and stem:[$0,1$] are interpreted as left, right correspondingly.
+
+Note that the reason that length is specified and cannot be deduced from stem:[$path$] is that we're dealing with field elements of fixed size (251 bits each). For a node with stem:[$length>0$], following stem:[$path$] leads the highest node whose both right and left child are none empty.
 
 The following rules specify how the tree is constructed from a given set of leaves:
 
@@ -144,4 +148,6 @@ image::trie.png[trie]
 
 Where stem:[$r=h(H(2,2,1),H((2,1,1))$]. Note that in our example there is no skipping from the root (length is zero), so the final commitment to the tree will be stem:[$H((0,0,r))=r$].
 
-Suppose that we want to prove, with respect to the commitment we have just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle tree, the proof would have consisted of data from three nodes (siblings along the path to the root). Here, since the tree is sparse, we only need to send the two children of the root stem:[$(2,2,1), (2,1,1)$]. This suffices to reproduce the commitment stem:[$r$], and since the height of the tree, stem:[$3$], is known and fixed, we know that the path stem:[$01$] of length stem:[$2$] specified by the right child stem:[$(2,1,1)$] leads us to the desired leaf.
+Suppose that we want to prove, with respect to the commitment we have just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle tree, the proof would have consisted of data from three nodes (siblings along the path to the root).
+
+Here, since the tree is sparse, we only need to send the two children of the root stem:[$(2,2,1), (2,1,1)$]. This suffices to reproduce the commitment stem:[$r$], and since the height of the tree, stem:[$3$], is known and fixed, we know that the path stem:[$01$] of length stem:[$2$] specified by the right child stem:[$(2,1,1)$] leads us to the desired leaf.

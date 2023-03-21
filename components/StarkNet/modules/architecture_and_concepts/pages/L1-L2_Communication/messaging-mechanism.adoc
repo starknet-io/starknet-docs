@@ -1,5 +1,5 @@
 [id="messaging_mechanism"]
-= Messaging Mechanism
+= L1-L2 messaging
 
 [id="l2-l1_messages"]
 == L2 → L1 Messages
@@ -23,7 +23,9 @@ send_message_to_l1(to_address=to_address, payload_size=1, payload=message_payloa
 
 After the state update that included this transaction is proved and the L1 state is updated, the message is stored on L1 in the Starknet Core Contract (and the relevant counter is increased), and the `LogMessageToL1` event (which contains the message parameters) is emitted.
 
-Later, the recipient address on L1 can access and consume the message as part of an L1 transaction by re-supplying the message parameters. This is done by calling https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119[`consumeMessageFromL2`] in the Starknet Core Contract, who verifies that the hash corresponds to a stored message and that the caller is indeed the recipient on L1. In such a case, the reference count of the message hash in the Starknet Core Contract decreases by 1.
+Later, the recipient address on L1 can access and consume the message as part of an L1 transaction by re-supplying the message parameters.
+
+This is done by calling https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119[`consumeMessageFromL2`] in the Starknet Core Contract, who verifies that the hash corresponds to a stored message and that the caller is indeed the recipient on L1. In such a case, the reference count of the message hash in the Starknet Core Contract decreases by 1.
 
 The above flow is illustrated in the following diagram:
 
@@ -98,14 +100,22 @@ sent to L2. It is used to avoid hash collisions between different L1 handler tra
 
 Imagine a scenario where a user transfers an asset from L1 to L2. The flow starts with the user sending the asset to a Starknet bridge and the corresponding L1→L2 message generation. Now, imagine that the L2 message consumption doesn't function (this might happen due to a bug in the dApps's Cairo contract). This could result in the user losing custody over their asset forever.
 
-To mitigate this risk, we allow the contract that initiated the L1→L2 message to cancel it -- after declaring the intent and waiting a suitable amount of time. The user starts by calling https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L134[`startL1ToL2MessageCancellation`] with the relevant message parameters in the Starknet Core Contract. Then, after a five days delay, the user can finalize the cancellation by calling https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L147[`cancelL1ToL2Message`]. The reason for the delay is to protect the sequencer from a DOS attack in the form of repeatedly sending and canceling a message -- before it is included in L1, rendering the L2 block which contains the activation of the corresponding L1 handler invalid. Note that this flow should only be used in edge cases such as bugs on the Layer 2 contract preventing message consumption.
+To mitigate this risk, we allow the contract that initiated the L1→L2 message to cancel it -- after declaring the intent and waiting a suitable amount of time.
+
+The user starts by calling https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L134[`startL1ToL2MessageCancellation`] with the relevant message parameters in the Starknet Core Contract. Then, after a five days delay, the user can finalize the cancellation by calling https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L147[`cancelL1ToL2Message`].
+
+The reason for the delay is to protect the sequencer from a DOS attack in the form of repeatedly sending and canceling a message -- before it is included in L1, rendering the L2 block which contains the activation of the corresponding L1 handler invalid.
+
+Note that this flow should only be used in edge cases such as bugs on the Layer 2 contract preventing message consumption.
 
 [id="l1-l2_message_fees"]
 === L1 → L2 Message Fees
 
 An L1 → L2 message induces a transaction on L2, which, unlike regular transactions, is not sent by an account. This calls for a different mechanism for paying the transaction's fee, for otherwise the sequencer has no incentive of including L1 handler transactions inside a block.
 
-To avoid having to interact with both L1 and L2 when sending a message, L1 → L2 messages are payable on L1, by sending ETH with the call to the payable function `sendMessageToL2` on the Starknet Core contract. The sequencer takes this fee in exchange for handling the message. The sequencer charges the fee in full upon updating the L1 state with the consumption of this message.
+To avoid having to interact with both L1 and L2 when sending a message, L1 → L2 messages are payable on L1, by sending ETH with the call to the payable function `sendMessageToL2` on the Starknet Core contract.
+
+The sequencer takes this fee in exchange for handling the message. The sequencer charges the fee in full upon updating the L1 state with the consumption of this message.
 
 The fee itself is calculated in the xref:../Fees/fee-mechanism.adoc#overall-fee[same manner] as "regular" L2 transactions. You can use the xref:tools:CLI/commands.adoc#starknet_estimate_fee[CLI] to get an estimate of an L1 → L2 message fee.
 
