@@ -58,8 +58,13 @@ Another basic function is used for getting the storage address, this function is
 
 The most common way for interacting with a contract's storage is through storage variables.
 
-The `@storage_var` decorator declares a variable that will be kept as part of the contract storage. The variable can consist of a single felt, or it can be a mapping from multiple arguments to a tuple of felts or structs. To use this variable, the `var.read(args)`, `var.write(args, value)` and `var.addr(args)` functions are automatically created by the `@storage_var` decorator, for reading the storage value, writing the storage value and getting the storage address, respectively.
-The Starknet contract compiler generates the Cairo code that maps the storage variable's name and argument values to an address -- so that it can be part of the generated proof. The address of a storage variable is computed as follows:
+The `@storage_var` decorator declares a variable that will be kept as part of the contract storage. The variable can consist of a single felt, or it can be a mapping from multiple arguments to a tuple of felts or structs.
+
+To use this variable, the `var.read(args)`, `var.write(args, value)` and `var.addr(args)` functions are automatically created by the `@storage_var` decorator, for reading the storage value, writing the storage value and getting the storage address, respectively.
+
+The Starknet contract compiler generates the Cairo code that maps the storage variable's name and argument values to an address -- so that it can be part of the generated proof.
+
+The address of a storage variable is computed as follows:
 
 * If it is a single value, then the address is `sn_keccak(variable_name)`, where variable_name is the ASCII encoding of the variable's name.
 * If it is a (nested) mapping, then the address of the value at key `+k_1,...,k_n+` is
@@ -68,7 +73,7 @@ Pedersen hash and the final value is taken stem:[$\bmod (2^{251-256})$]
 * If it is a mapping to complex values (e.g., tuples or structs), then this complex value lies in a continuous segment starting from the address calculated in the previous point. Note that 256 field elements is the current limitation on the maximal size of a complex storage value.
 * Note that when calling `var.addr(args)` for a storage variable with complex values, the returned value is the address of the first element in the storage.
 
-Roughly, we can summarize the above as follows:
+We can summarize the above as follows:
 
 `storage variable address := pedersen(keccak(variable name), keys)`
 
