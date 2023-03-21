@@ -773,7 +773,7 @@ Cairo instructions (which we referred to previously by Casm) are translated to p
 </div>
 <div class="paragraph">
 <p>Thanks to Cairo, we can formulate the statement "this Starknet block is valid" in a way that we can prove.
-Note that we can only prove things about Casm, that is, regardless of what the user is sending to the Starknet sequencer, what will be proven is the correct Casm execution.
+Note that we can only prove things about Casm. That is, regardless of what the user sends to the Starknet sequencer, what&#8217;s proven is the correct Casm execution.
 This means that we need a way to translate Sierra into Casm, and this is achieved with the Sierra
 &rarr;
 Casm compiler.</p>
@@ -784,22 +784,22 @@ Casm compiler.</p>
 <h2 id="why_do_we_need_sierra"><a class="anchor" href="#why_do_we_need_sierra"></a>Why do we need Sierra?</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>To understand why we chose to add an additional layer between the code that the user is writing (Cairo 1.0) and the code that is being proven (Casm),
+<p>To understand why we chose to add an additional layer between the code that the user writes (Cairo 1.0) and the code that is being proven (Casm),
 we need to consider more components in the system, and the limitations of Cairo.</p>
 </div>
 <div class="sect2">
-<h3 id="reverted_transctions_unsatasfiable_airs_and_dos_attacks"><a class="anchor" href="#reverted_transctions_unsatasfiable_airs_and_dos_attacks"></a>Reverted transctions, unsatasfiable AIRs, and DOS attacks</h3>
+<h3 id="reverted_transactions_unsatisfiable_airs_and_dos_attacks"><a class="anchor" href="#reverted_transactions_unsatisfiable_airs_and_dos_attacks"></a>Reverted transactions, unsatisfiable AIRs, and DOS attacks</h3>
 <div class="paragraph">
-<p>A crucial property of every decentralized L2 is that the sequencers are guranteed to be componsated for work that they have done.
-The notion of reverted transactions is a good example, even if the user&#8217;s transaction failed mid execution, the sequencer should be able to include it in a block and charge execution fees up to the point of failure.
-If the sequencer cannot charge for such transactions, then sending transactions that will eventually fail (after a lot of computation steps) are an obvious DOS attack on the sequencer.
-The sequencer cannot look at a transaction and conclude that it will fail without actually doing the work (this is equivalent to solving the halting problem).</p>
+<p>A crucial property of every decentralized L2 is that the sequencers are guaranteed to be compensated for work they do.
+The notion of reverted transactions is a good example: even if the user&#8217;s transaction failed mid execution, the sequencer should be able to include it in a block and charge execution fees up to the point of failure.
+If the sequencer cannot charge for such transactions, then sending transactions that will eventually fail (after a lot of computation steps) is an obvious DOS attack on the sequencer.
+The sequencer cannot look at a transaction and conclude that it would fail without actually doing the work (this is equivalent to solving the halting problem).</p>
 </div>
 <div class="paragraph">
 <p>The obvious solution to the above predicament is to include such transactions in the block, similar to Ethereum. However, this may not be as simple to do in a validity rollup.
 With Cairo 0, there is no separating layer between user code and what is being proven. This means that users can write code which is unprovable in some cases. In fact, such code is very easy to write, e.g. <code>assert 0=1</code> is a valid
 Cairo instruction that cannot be proven, as it translates to polynomial constraints that are not satisfiable. Any Casm execution that contains this instruction cannot be proven.
-Sierra is the layer between user code and the proven statement that allows us to make sure that all transactions are eventually provable.</p>
+Sierra is the layer between user code and the provable statement, that allows us to make sure all transactions are eventually provable.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -819,7 +819,7 @@ Sierra is the layer between user code and the proven statement that allows us to
 only a single program/Circuit is being handled by the prover, and user code is interpreted by that program.</p>
 </div>
 <div class="paragraph">
-<p>One of the reasons we chose to have an intermediate represnetation between user code and Casm is that it allows us to continue using the battle tested CairoVM.</p>
+<p>One of the reasons we chose to have an intermediate representation between user code and Casm is that it allows us to continue using the battle tested CairoVM.</p>
 </div>
 </td>
 </tr>
@@ -829,8 +829,8 @@ only a single program/Circuit is being handled by the prover, and user code is i
 <div class="sect2">
 <h3 id="safe_casm"><a class="anchor" href="#safe_casm"></a>Safe Casm</h3>
 <div class="paragraph">
-<p>The method by which Sierra guarantess that user code is always provable is by compiling Sierra instructions to a subset of Casm, which we call "safe Casm".
-The important property that we require from safe Casm is that it will be provable for all inputs. A canonical example for safe Casm is using <code>if/else</code> instructions instead of <code>assert</code>, that is, making sure all failures are
+<p>The method by which Sierra guarantees that user code is always provable is by compiling Sierra instructions to a subset of Casm, which we call "safe Casm".
+The important property that we require from safe Casm is being provable for all inputs. A canonical example for safe Casm is using <code>if/else</code> instructions instead of <code>assert</code>, that is, making sure all failures are
 graceful.</p>
 </div>
 <div class="paragraph">
@@ -860,7 +860,7 @@ consider the <code>find_element</code> function from the common library of Cairo
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Below we abuse the "Casm" notation by not distingushing Cairo 0 from Casm and referring to the
+<p>Below we abuse the "Casm" notation by not distinguishing Cairo 0 from Casm and referring to the
 above as Casm (while we actually refer to the compilation result of the above).</p>
 </div>
 </td>
@@ -868,16 +868,16 @@ above as Casm (while we actually refer to the compilation result of the above).<
 </table>
 </div>
 <div class="paragraph">
-<p>For berevity, we have omitted the hint in the above snippet, but it&#8217;s clear that this function can only execute correctly if the requested element exists the array (otherwise it will fail for every possible hint,
-there is nothing we can substitute in 'index` that will make the following lines run successfully).</p>
+<p>For brevity, we have omitted the hint in the above snippet, but it&#8217;s clear that this function can only execute correctly if the requested element exists in the array (otherwise it would fail for every possible hint -
+there is nothing we can substitute <code>index</code> for, that makes the following lines run successfully).</p>
 </div>
 <div class="paragraph">
 <p>Such Casm cannot be generated by the Sierra&rarr;Casm compiler.
-Furthermore, Simply replacing the assertion with an if/else statement will not do, as this will result in none deterministic execution. That is, for the same input, different hint values can yield different results.
-A malicious prover can use this freedom to harm the user - in this example, he will be able to make it seem as if an element isn&#8217;t part of the array, eventhough it actually is.</p>
+Furthermore, simply replacing the assertion with an if/else statement doesn&#8217;t do, as this results in non-deterministic execution. That is, for the same input, different hint values can yield different results.
+A malicious prover can use this freedom to harm the user - in this example, they are able to make it seem as if an element isn&#8217;t part of the array, even though it actually is.</p>
 </div>
 <div class="paragraph">
-<p>The safe Casm for finding an element in an array behaves like the above snippet in the happy flow (element is there): an index is given in a hint, and we check if the array at the hinted index contains the requested element.
+<p>The safe Casm for finding an element in an array behaves like the above snippet in the happy flow (element is there): an index is given in a hint, and we verify that the array at the hinted index contains the requested element.
 However, in the unhappy flow (element isn&#8217;t there), we <strong>must</strong> go over the entire array to verify this.</p>
 </div>
 <div class="paragraph">
@@ -894,7 +894,7 @@ However, in the unhappy flow (element isn&#8217;t there), we <strong>must</stron
 <p>Sierra&#8217;s gas metering adds further complications to the above example. Even looking through the array to verify that the element isn&#8217;t there may leave some flexibility to the prover.</p>
 </div>
 <div class="paragraph">
-<p>If we take gas limitations into consideration, the user may have enough gas for the happy flow, but not for the unhappy one, making the execution stop mid-search, and allowing the prover to get away with lieing about the element not being present.</p>
+<p>If we take gas limitations into consideration, the user may have enough gas for the happy flow, but not for the unhappy one, making the execution stop mid-search, and allowing the prover to get away with lying about the element not being present.</p>
 </div>
 <div class="paragraph">
 <p>The way we plan to handle this is by requiring the user to have enough gas for the unhappy flow before actually calling <code>find_element</code>.</p>
