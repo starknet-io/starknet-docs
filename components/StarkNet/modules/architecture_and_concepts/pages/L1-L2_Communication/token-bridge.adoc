@@ -6,7 +6,9 @@
 
 StarkGate is the Ethereum↔Starknet token bridge developed by StarkWare. Each supported token is associated with an L1 and L2 bridge contracts that are communicating via Starknet's messaging mechanism.
 
-The bridges facilitate a user's ability to conduct their transactions with their ETH and ERC-20 tokens that reside on L1, via the Starknet Alpha network and its STARK-based computational compression capabilities. For simplicity, we use terms such as "`deposit`", "`transact`", and "`transfer`" to refer to various operations involving a bridge, even though ETH and ERC20 tokens never actually leave Ethereum.
+The bridges facilitate a user's ability to conduct their transactions with their ETH and ERC-20 tokens that reside on L1, via the Starknet Alpha network and its STARK-based computational compression capabilities.
+
+For simplicity, we use terms such as "`deposit`", "`transact`", and "`transfer`" to refer to various operations involving a bridge, even though ETH and ERC20 tokens never actually leave Ethereum.
 
 [id="l1l2_transfer_deposit"]
 === L1→L2 Transfer (Deposit)
@@ -27,14 +29,20 @@ At the end of this step (i.e., after the execution on L1) the deposit transactio
 ==== Step 2: Deposit Triggered on Starknet
 
 Once enough block confirmations are received for step 1, the sequencers may refer to the deposit request by triggering the L1 handler "`
-https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/cairo/token_bridge.cairo#L135[`handle_deposit`] on the L2 bridge. The function `handle_deposit` verifies that the deposit indeed came from the corresponding L1 bridge. It then calls to the relevant ERC-20 contract (e.g. the ERC-20 representing ETH on Starknet) and mints the tokens for the user.
+https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/cairo/token_bridge.cairo#L135[`handle_deposit`] on the L2 bridge.
+
+The function `handle_deposit` verifies that the deposit indeed came from the corresponding L1 bridge. It then calls to the relevant ERC-20 contract (e.g. the ERC-20 representing ETH on Starknet) and mints the tokens for the user.
 
 At the end of this step (i.e., after the sequencer processed this transaction, but before a proof is generated), the status of the deposit request will be xref:../Blocks/transaction-life-cycle.adoc#accepted_on_l2[`ACCEPTED_ON_L2`].
 
 [id="step_3_the_block_that_includes_the_transfer_is_proved"]
 ==== Step 3: The Block That Includes The Transfer Is Proved
 
-Once the sequencer completes the block construction, Starknet's provers will prove its validity and submit a state update to L1. When this happens, the message confirming the funds transfer will be cleared from the Starknet Core Contract, and the fact that the user has transferred their funds will be part of the now finalized state of Starknet. Note that if the message wasn't on L1 to begin with (meaning Starknet "`invented`" a deposit request), the state update would fail.
+Once the sequencer completes the block construction, Starknet's provers will prove its validity and submit a state update to L1.
+
+When this happens, the message confirming the funds transfer will be cleared from the Starknet Core Contract, and the fact that the user has transferred their funds will be part of the now finalized state of Starknet.
+
+Note that if the message wasn't on L1 to begin with (meaning Starknet "`invented`" a deposit request), the state update would fail.
 
 [id="l2l1_transfer_withdraw"]
 === L2→L1 Transfer (Withdraw)
