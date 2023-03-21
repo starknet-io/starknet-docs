@@ -752,7 +752,10 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>In this section, we will review Starknet Alpha fee mechanism. If you want to skip the motivation and deep dive into the mechanism, you can skip directly to the final <a href="#overall-fee">formula</a>. This section focuses on fees paid by an account on L2. For information about messaging fees that are paid on L1, see <a href="../../L1-L2_Communication/messaging-mechanism/#l1&#8212;&#8203;l2-message-fees" class="xref page">L1 → L2 message fees</a>.</p>
+<p>In this section, we will review Starknet Alpha fee mechanism. If you want to skip the motivation and deep dive into the mechanism, you can skip directly to the final <a href="#overall-fee">formula</a>.</p>
+</div>
+<div class="paragraph">
+<p>This section focuses on fees paid by an account on L2. For information about messaging fees that are paid on L1, see <a href="../../L1-L2_Communication/messaging-mechanism/#l1&#8212;&#8203;l2-message-fees" class="xref page">L1 → L2 message fees</a>.</p>
 </div>
 </div>
 </div>
@@ -802,7 +805,10 @@
 <p>Recall that a Cairo program execution yields an execution trace. When proving a Starknet block, we aggregate all the transactions appearing in that block to the execution trace.</p>
 </div>
 <div class="paragraph">
-<p>Starknet&#8217;s prover generates proofs for execution traces, up to some maximal length \(L\) (Derived from the specs of the proving machine and the desired proof latency). Tracking the execution trace length associated with each transaction is simple.
+<p>Starknet&#8217;s prover generates proofs for execution traces, up to some maximal length \(L\) (Derived from the specs of the proving machine and the desired proof latency).</p>
+</div>
+<div class="paragraph">
+<p>Tracking the execution trace length associated with each transaction is simple.
 Each assertion over field elements (such as verifying addition/multiplication over the field) requires the same, constant number of trace cells (this is where our &#8220;no-builtins&#8221; assumption kicks in! Obviously Pedersen occupies more trace cells than addition). Therefore, in a world without builtins, the fee of the transaction is correlated with \(\text{TraceCells}[tx]/L\).</p>
 </div>
 </div>
@@ -834,7 +840,10 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 <p>The proof will be closed and sent to L1 when any of these components becomes full. It&#8217;s important to realize that the division to builtins must be predetermined! We can&#8217;t decide on the fly to have proof with 20,000,001 Pedersen and nothing else.</p>
 </div>
 <div class="paragraph">
-<p>Suppose, for example, that a transaction uses 10,000 Cairo steps and 500 Pedersen hashes. We can squeeze at most 40,000 such transactions into our hypothetical trace (20,000,000/500). Therefore, its gas price will be correlated with 1/40,000 the cost of submitting proof. Notice we completely ignored the number of Cairo steps this transaction performance estimation, as it is not the limiting factor (since 500,000,000/10,000 &gt; 20,000,000/500). With this example in mind, we can now formulate the exact fee associated with L2 computation.</p>
+<p>Suppose, for example, that a transaction uses 10,000 Cairo steps and 500 Pedersen hashes. We can squeeze at most 40,000 such transactions into our hypothetical trace (20,000,000/500). Therefore, its gas price will be correlated with 1/40,000 the cost of submitting proof.</p>
+</div>
+<div class="paragraph">
+<p>Notice we completely ignored the number of Cairo steps this transaction performance estimation, as it is not the limiting factor (since 500,000,000/10,000 &gt; 20,000,000/500). With this example in mind, we can now formulate the exact fee associated with L2 computation.</p>
 </div>
 </div>
 <div class="sect3">
@@ -853,7 +862,10 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 </ul>
 </div>
 <div class="paragraph">
-<p>The sequencer crosses this information with the <code>CairoResourceFeeWeights</code> vector. For each resource type (step or a specific builtin application), <code>CairoResourceFeeWeights</code> has an entry that specifies the relative gas cost of that component in the proof. Going back to the above example, if the cost of submitting a proof with 20,000,000 Pedersen hashes is roughly 5m gas, then the weight of the Pedersen builtin is 0.25 gas per application (5,000,000/20,000,000). The sequencer has a pre-defined weights vector, in accordance with the proof parameters.</p>
+<p>The sequencer crosses this information with the <code>CairoResourceFeeWeights</code> vector. For each resource type (step or a specific builtin application), <code>CairoResourceFeeWeights</code> has an entry that specifies the relative gas cost of that component in the proof.</p>
+</div>
+<div class="paragraph">
+<p>Going back to the above example, if the cost of submitting a proof with 20,000,000 Pedersen hashes is roughly 5m gas, then the weight of the Pedersen builtin is 0.25 gas per application (5,000,000/20,000,000). The sequencer has a pre-defined weights vector, in accordance with the proof parameters.</p>
 </div>
 <div class="paragraph">
 <p>The sequencer will charge only according to the limiting factor! Therefore the fee is correlated with:</p>
@@ -974,7 +986,10 @@ Consequently, the associated storage update fee for a transaction updating \(n\)
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Note that there are many possible improvements to the above pessimistic estimation that will be gradually presented in future versions of Starknet. For example, if different transactions within the same block update the same storage cell, there is no need to charge both of them (only the latest value reaches L1). In the future, Starknet may include a refund mechanism for such cases.</p>
+<p>Note that there are many possible improvements to the above pessimistic estimation that will be gradually presented in future versions of Starknet.</p>
+</div>
+<div class="paragraph">
+<p>For example, if different transactions within the same block update the same storage cell, there is no need to charge both of them (only the latest value reaches L1). In the future, Starknet may include a refund mechanism for such cases.</p>
 </div>
 </td>
 </tr>

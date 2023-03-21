@@ -768,13 +768,17 @@ This new contract class is then compiled by the sequencer, via the Sierra &rarr;
 <p>Starknet is a validity rollup, which means that the execution inside every block needs to be proven, and this is where STARKs come in handy.
 However, STARK proofs can address statements that are formulated in the language of polynomial
 constraints, and have no knowledge of smart contract execution.
-To overcome this gap, we developed <a href="https://github.com/starknet-io/starknet-stack-resources/blob/main/Cairo/Cairo%20%E2%80%93%20a%20Turing-complete%20STARK-friendly%20CPU%20architecture.pdf">Cairo</a>.
-Cairo instructions (which we referred to previously by Casm) are translated to polynomial constraints that enforce the correct execution of a program (according to the Cairo semantics defined in the paper).</p>
+To overcome this gap, we developed <a href="https://github.com/starknet-io/starknet-stack-resources/blob/main/Cairo/Cairo%20%E2%80%93%20a%20Turing-complete%20STARK-friendly%20CPU%20architecture.pdf">Cairo</a>.</p>
+</div>
+<div class="paragraph">
+<p>Cairo instructions (which we referred to previously by Casm) are translated to polynomial constraints that enforce the correct execution of a program (according to the Cairo semantics defined in the paper).</p>
 </div>
 <div class="paragraph">
 <p>Thanks to Cairo, we can formulate the statement "this Starknet block is valid" in a way that we can prove.
-Note that we can only prove things about Casm. That is, regardless of what the user sends to the Starknet sequencer, what&#8217;s proven is the correct Casm execution.
-This means that we need a way to translate Sierra into Casm, and this is achieved with the Sierra
+Note that we can only prove things about Casm. That is, regardless of what the user sends to the Starknet sequencer, what&#8217;s proven is the correct Casm execution.</p>
+</div>
+<div class="paragraph">
+<p>This means that we need a way to translate Sierra into Casm, and this is achieved with the Sierra
 &rarr;
 Casm compiler.</p>
 </div>
@@ -791,13 +795,18 @@ we need to consider more components in the system, and the limitations of Cairo.
 <h3 id="reverted_transactions_unsatisfiable_airs_and_dos_attacks"><a class="anchor" href="#reverted_transactions_unsatisfiable_airs_and_dos_attacks"></a>Reverted transactions, unsatisfiable AIRs, and DOS attacks</h3>
 <div class="paragraph">
 <p>A crucial property of every decentralized L2 is that the sequencers are guaranteed to be compensated for work they do.
-The notion of reverted transactions is a good example: even if the user&#8217;s transaction failed mid execution, the sequencer should be able to include it in a block and charge execution fees up to the point of failure.
-If the sequencer cannot charge for such transactions, then sending transactions that will eventually fail (after a lot of computation steps) is an obvious DOS attack on the sequencer.
+The notion of reverted transactions is a good example: even if the user&#8217;s transaction failed mid execution, the sequencer should be able to include it in a block and charge execution fees up to the point of failure.</p>
+</div>
+<div class="paragraph">
+<p>If the sequencer cannot charge for such transactions, then sending transactions that will eventually fail (after a lot of computation steps) is an obvious DOS attack on the sequencer.
 The sequencer cannot look at a transaction and conclude that it would fail without actually doing the work (this is equivalent to solving the halting problem).</p>
 </div>
 <div class="paragraph">
 <p>The obvious solution to the above predicament is to include such transactions in the block, similar to Ethereum. However, this may not be as simple to do in a validity rollup.
-With Cairo 0, there is no separating layer between user code and what is being proven. This means that users can write code which is unprovable in some cases. In fact, such code is very easy to write, e.g. <code>assert 0=1</code> is a valid
+With Cairo 0, there is no separating layer between user code and what is being proven.</p>
+</div>
+<div class="paragraph">
+<p>This means that users can write code which is unprovable in some cases. In fact, such code is very easy to write, e.g. <code>assert 0=1</code> is a valid
 Cairo instruction that cannot be proven, as it translates to polynomial constraints that are not satisfiable. Any Casm execution that contains this instruction cannot be proven.
 Sierra is the layer between user code and the provable statement, that allows us to make sure all transactions are eventually provable.</p>
 </div>
