@@ -1,0 +1,404 @@
+[id="interacting-with-l1-contracts"]
+= Interacting with L1 contracts
+
+[id="background"]
+== Background
+
+One important property of a good L2 system is the ability to interact with the L1 system it’s built
+on (since otherwise the system is, in fact, isolated). In this section we describe how Starknet
+contracts can interact with Ethereum L1 contracts.
+
+Every Starknet contract may send and receive messages to/from any L1 contract. Usually, it’s
+recommended to design a pair of contracts: an L2 contract and its L1 contract counterpart (for
+example, written in Solidity) and decide on the message protocol between the two contracts.
+
+[id="messages-from-l2-to-l1"]
+=== Messages from L2 to L1
+
+Messages from L2 to L1 work as follows:
+
+. The Starknet (L2) contract function calls the library function `send_message_to_l1()` in order to
+send the message. It specifies:
+.. The destination L1 contract (_to_).
+.. The data to send (_payload_).
++
+The Starknet OS adds the _from_ address, which is the L2 address of the contract sending the message.
+. Once a state update containing the L2 transaction is accepted on-chain, the message is stored on
+the L1 Starknet core contract, waiting to be consumed.
+. The L1 contract specified by the _to_ address invokes the `consumeMessageFromL2()` of the Starknet
+core contract.
+
+*Note*: Since any L2 contract can send messages to any L1 contract it is recommended that the L1
+contract check the _from_ address before processing the transaction.
+
+Below we will show how one can use this mechanism to implement a withdrawal transaction.
+
+[id="messages-from-l1-to-l2"]
+=== Messages from L1 to L2
+
+The other direction is similar:
+
+. The L1 contract calls (on L1) the `send_message()` function of the Starknet core contract with a
+message and a fee. The core contract stores the message and the fee. In this case the message
+includes an additional field - the _selector_, which determines what function to call in the
+corresponding L2 contract.
+. Assuming the fee is sufficient, the Starknet Sequencer automatically consumes the message and
+invokes the requested L2 function of the contract designated by the “to” address.
+
+This direction is useful, for example, for _deposit_ transactions.
+
+Note that while honest Sequencers automatically consume L1 -> L2 messages, it is not enforced by the
+protocol (so a Sequencer may choose to skip a message). This should be taken into account when
+designing the message protocol between the two contracts.
+
+[IMPORTANT]
+====
+The Starknet Alpha system is still under development, and therefore from time to time the state of
+the system will reset and all contracts will be removed. This means that you shouldn’t move valuable
+assets to the Starknet system, unless you have a way to withdraw them given the removal of the L2
+contract.
+====
+
+[id="an-example-of-a-simple-token-bridge"]
+== An example of a simple token bridge
+
+In this section we’ll build a simple token bridge – the user will be able to deposit L1 tokens and
+their L2 balance will increase. Then, they will be able to withdraw some tokens, which will
+decrease their L2 balance and increase their L1 balance in return.
+
+[id="some-preparations"]
+=== Some preparations
+
+Start with the `%lang` directive, a few imports and a few constants:
+
+[#l1l2_header]
+[source,cairo]
+----
+%lang starknet
+
+from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.math import assert_nn
+from starkware.starknet.common.messages import send_message_to_l1
+
+const L1_CONTRACT_ADDRESS = (
+    0x8359E4B0152ed5A731162D3c7B0D8D56edB165A0);
+const MESSAGE_WITHDRAW = 0;
+----
+
+Note that in real applications you may want to maintain the address of the L1 contract as a storage
+variable, rather than a constant.
+
+Then, define the storage variable that holds the balances, together with a getter `@view` function:
+
+[#l1l2_balance]
+[source,cairo]
+----
+// A mapping from a user (L1 Ethereum address) to their balance.
+@storage_var
+func balance(user: felt) -> (res: felt) {
+}
+
+@view
+func get_balance{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(user: felt) -> (balance: felt) {
+    let (res) = balance.read(user=user);
+    return (balance=res);
+}
+----
+
+Just so we’ll have some “funds” to play with, define a function that can mint new tokens (in real
+applications you probably wouldn’t want a function that lets the user effectively “print” money.
+In addition, you’ll want to check that `amount` is nonnegative):
+
+[#l1l2_increase_balance]
+[source,cairo]
+----
+@external
+func increase_balance{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(user: felt, amount: felt) {
+    let (res) = balance.read(user=user);
+    balance.write(user, res + amount);
+    return ();
+}
+----
+
+[id="sending-a-message-to-l1"]
+=== Sending a message to L1
+
+Sending a message to L1 can be useful for withdrawals: The user requesting the withdrawal invokes
+a `withdraw` (L2) transaction. The transaction decreases their L2 balance and sends a message to
+the L1 contract, indicating that the user’s L1 balance should be increased by the withdrawn amount.
+The L1 counterpart should allow the user to consume the message and increase their balance on L1
+when doing so.
+
+[#l1l2_withdraw]
+[source,cairo]
+----
+@external
+func withdraw{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(user: felt, amount: felt) {
+    // Make sure 'amount' is positive.
+    assert_nn(amount);
+
+    let (res) = balance.read(user=user);
+    tempvar new_balance = res - amount;
+
+    // Make sure the new balance will be positive.
+    assert_nn(new_balance);
+
+    // Update the new balance.
+    balance.write(user, new_balance);
+
+    // Send the withdrawal message.
+    let (message_payload: felt*) = alloc();
+    assert message_payload[0] = MESSAGE_WITHDRAW;
+    assert message_payload[1] = user;
+    assert message_payload[2] = amount;
+    send_message_to_l1(
+        to_address=L1_CONTRACT_ADDRESS,
+        payload_size=3,
+        payload=message_payload,
+    );
+
+    return ();
+}
+----
+
+Note that a new implicit argument was added – the system call pointer (`syscall_ptr`). This argument
+allows us to invoke some functions of the Starknet OS, including the “send message” function.
+
+Sending a message is done at the end of `withdraw()` by calling `send_message_to_l1()`, which gets
+the L1 contract address, the size of the message and the message itself (as a `felt*`). Note that the
+message itself is given as a pointer, and therefore the message length must be passed explicitly. In
+our example, the message data is: `MESSAGE_WITHDRAW, user, amount`. We choose to use the first
+element as an indicator of the message type (note that we don’t really need it here since we only
+have one message type).
+
+Now let’s take a look at how the link:../_static/L1L2Example.sol[L1 contract counterpart] may be
+written. Consider the `withdraw()` function: It gets the user and the amount, consumes the message
+(this part will fail if the message wasn’t received on-chain) and updates the user’s balance
+accordingly. As you’ll see below, we passed the address of the L2 contract as an argument to the
+function, so that the contract can be deployed once and used by anyone doing this tutorial. However,
+normally it doesn’t make sense to get the address of the L2 contract as an argument – the address
+should be fixed for each instance of the contract.
+
+[id="receiving-a-message-from-l1"]
+=== Receiving a message from L1
+
+In order to handle a message that was sent from an L1 contract, you should declare an L1 handler:
+
+[#l1l2_deposit]
+[source,cairo]
+----
+@l1_handler
+func deposit{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr,
+}(from_address: felt, user: felt, amount: felt) {
+    // Make sure the message was sent by the intended L1 contract.
+    assert from_address = L1_CONTRACT_ADDRESS;
+
+    // Read the current balance.
+    let (res) = balance.read(user=user);
+
+    // Compute and update the new balance.
+    tempvar new_balance = res + amount;
+    balance.write(user, new_balance);
+
+    return ();
+}
+----
+
+An L1 handler is called by the Starknet OS in order to process a message sent from an L1 contract.
+A Starknet contract may define a few L1 handlers, and they are identified by an integer value called
+the _selector_. You can compute the selector based on the L1 handler name using the following Python
+code:
+
+[#l1l2_selector]
+[source,python]
+----
+from starkware.starknet.compiler.compile import \
+    get_selector_from_name
+
+print(get_selector_from_name('deposit'))
+----
+
+You should get:
+
+[#l1l2_selector_output]
+[source,python]
+----
+352040181584456735608515580760888541466059565068553383579463728554843487745
+----
+
+When an L1 contract wants to send a message, it calls the `sendMessageToL2()` function of the
+Starknet Core contract specifying the L2 contract address, the selector for the handler to be invoked
+and the message payload. The message fee is paid in ETH and needs to be sent with the call.
+See the deposit function in the link:../_static/L1L2Example.sol[example L1 contract] for an example.
+
+[id="using-the-contract"]
+=== Using the contract
+
+Save the new Starknet contract file as `l1l2.cairo`. You can find the full Cairo file
+link:../_static/l1l2.cairo[here].
+
+Compile and declare the contract:
+
+[#l1l2_compile_and_declare]
+[source,bash]
+----
+starknet-compile l1l2.cairo \
+    --output l1l2_compiled.json \
+    --abi l1l2_abi.json
+starknet declare --contract l1l2_compiled.json
+----
+
+Deploy the contract:
+
+[#l1l2_deploy]
+[source,bash]
+----
+starknet deploy --class_hash ${L1L2_CLASS_HASH}
+----
+
+where `$\{L1L2_CLASS_HASH\}` is the value of class_hash. Don’t forget to set the `STARKNET_NETWORK`
+environment variable to `alpha-goerli` before running `starknet deploy`.
+
+Set the following environment variable:
+
+[#l1l2_contract_address]
+[source,bash]
+----
+# The deployment address of the previous contract.
+export CONTRACT_ADDRESS="<address of the previous contract>"
+----
+
+Choose your favorite `USERID`, it should be a 251-bit integer value:
+
+[#l1l2_user_id]
+[source,bash]
+----
+export USERID="<favorite 251-bit integer>"
+----
+
+Invoke the `increase_balance` function:
+
+[#l1l2_invoke_increase_balance]
+[source,bash]
+----
+starknet invoke \
+    --address ${CONTRACT_ADDRESS} \
+    --abi l1l2_abi.json \
+    --function increase_balance \
+    --inputs \
+        ${USERID} \
+        3333
+----
+
+After the balance is increased, invoke the `withdraw` function:
+
+[#l1l2_invoke_withdraw]
+[source,bash]
+----
+starknet invoke \
+    --address ${CONTRACT_ADDRESS} \
+    --abi l1l2_abi.json \
+    --function withdraw \
+    --inputs \
+        ${USERID} \
+        1000
+----
+
+Call `get_balance` to check that the balance was computed correctly (remember that you’ll have to
+wait until the second transaction is included in a block):
+
+[#l1l2_get_balance]
+[source,bash]
+----
+starknet call \
+    --address ${CONTRACT_ADDRESS} \
+    --abi l1l2_abi.json \
+    --function get_balance \
+    --inputs \
+        ${USERID}
+----
+
+You should get:
+
+[#l1l2_get_balance_output]
+[source,bash]
+----
+2333
+----
+
+Wait for the transaction to be accepted on-chain (this may take some time) – you can use
+`starknet tx_status` to track the transaction’s progress. Then, invoke the `withdraw()`
+function of the example contract, deployed at address
+https://goerli.etherscan.io/address/0x8359E4B0152ed5A731162D3c7B0D8D56edB165A0#writeContract[0x8359E4B0152ed5A731162D3c7B0D8D56edB165A0],
+with the following arguments: `CONTRACT_ADDRESS, USERID, 1000` (where, as before,
+`CONTRACT_ADDRESS` is the address of the *L2* contract you deployed). After the `withdraw()`
+transaction, the user’s L1 balance should be `1000` and their L2 balance should be `2333`.
+
+After your `withdraw()` transaction is accepted on-chain, you can deposit some of the withdrawn funds
+back to L2. Call the `deposit()` function of the example contract with the following arguments:
+`CONTRACT_ADDRESS, USERID, 600` and pay the message fee in ETH. For the Goerli testnet, you can use a
+message fee of `0.01` ETH. (Note that the ‘value’ to pay in ETH is displayed as `payableAmount` in
+Etherscan.) It may take some time until Starknet processes the incoming message and calls the L1
+handler (for example, the system waits for a few blockchain confirmations). But after that time,
+you’ll be able to see the updated balance of the user by invoking `starknet call` for `get_balance`
+again. The new balances should be: L1 balance – `400` and L2 balance – `2933`.
+
+[id="estimate-message-fee"]
+=== Estimate message fee
+
+You can estimate the L2 costs of a given message from L1 before sending it. The `estimate_message_fee`
+command estimates the L2 costs of handling a message from L1 without affecting the contract state.
+This is similar to using the xref:cli.adoc#estimate-fee[estimate_fee] flag for an invoke function.
+The result is presented in WEI and ETH, as shown below.
+
+First, set the sender address (an L1 address) of the message you wish to simulate. In our case, use
+the address of the example contract from the last section.
+
+[#l1l2_l1_contract_address]
+[source,bash]
+----
+export L1_CONTRACT_ADDRESS=0x8359E4B0152ed5A731162D3c7B0D8D56edB165A0
+----
+
+Now, to estimate the fee of a given message (in this example – invoking `deposit()`)
+run the following:
+
+[#l1l2_estimate_message_fee]
+[source,bash]
+----
+starknet estimate_message_fee \
+    --from_address ${L1_CONTRACT_ADDRESS} \
+    --address ${CONTRACT_ADDRESS} \
+    --abi l1l2_abi.json \
+    --function deposit \
+    --inputs \
+        ${USERID} \
+        200
+----
+
+The output should resemble:
+
+[#l1l2_estimate_message_fee_output]
+[source,bash]
+----
+The estimated fee is: 2081700000000000 WEI (0.002082 ETH).
+Gas usage: 20817
+Gas price: 100000000000 WEI
+----
+
