@@ -2,45 +2,48 @@
 
 = Deploying Starknet contracts
 
-In this section, you will learn to compile, deploy and interact with a Starknet contract written in Cairo.
+== Overview
 
-Follow the below steps in order to accomplish your goal!
+In this section, you will learn to compile, deploy and interact with a Starknet contract written in Cairo.
 
 == Setting up environment variables 
 
-The following commands must run every time you open a new terminal to interact with Starknet. Setting them saves you time when using the CLI within the same terminal session.
+Bash environment variables are used to store configuration information, set system-wide settings, and provide information to scripts.
+
+The following commands must run every time you open a new terminal in order to interact with
+Starknet. Setting them saves you time when using the CLI within the same terminal session.
 
 [,Bash]
 ----
-# Use Starknet testnet
 export STARKNET_NETWORK=alpha-goerli
-# Set the default wallet implementation to be used by the CLI
 export STARKNET_WALLET=starkware.starknet.wallets.open_zeppelin.OpenZeppelinAccount
-# Set the path to the cairo 1 compiler binary. Adapt this path to fit your installation if needed
 export CAIRO_COMPILER_DIR=~/.cairo/target/release/
-# Compiler arguments
 export CAIRO_COMPILER_ARGS=--add-pythonic-hints
 ----
 
 == Setting up an account 
 
-You need to set up your CLI with an account contract and fund it. 
-____
-Starknet accounts are smart contracts. As such, creating one involves sending a transaction, and takes a bit longer than creating an EOA on other networks.
-You can learn more in the https://docs.starknet.io/documentation/architecture_and_concepts/Account_Abstraction/introduction/[accounts] section of the documentation.
-____
+In order to deploy a smart contract to Starknet, you need to set up an account contract and fund it.
 
-This process will involve three steps:
+[NOTE]
+====
+Starknet accounts are smart contracts. As such, creating one involves sending a transaction, and takes longer than creating an EOA on other networks.
+
+You can learn more in the https://docs.starknet.io/documentation/architecture_and_concepts/Account_Abstraction/introduction/[accounts] section of the documentation.
+====
+
+Setting up a Starknet account will involve three steps:
 
 * Generating your account address locally
 * Funding it
 * Deploying it
 
-The Starknet account declared through the CLI are stored on your machine in folder `~/.starknet_accounts/`.
+Starknet accounts declared through the CLI are stored on your machine in folder `~/.starknet_accounts/`.
+
+Create a new account using the following command:
 
 [,Bash]
 ----
-# Creating a new account.
 starknet new_account --account account_name
 ----
 
@@ -56,20 +59,26 @@ NOTE: This is a modified version of the OpenZeppelin account contract. The signa
 differently.
 ----
 
-Next step is to fund it.
+Next we will fund the account with some L2 Goerli ETH. Use the https://faucet.goerli.starknet.io[faucet] to obtain funds and send them to the newly created account.
 
-* Use the https://faucet.goerli.starknet.io[faucet] to get some funds and send them to the account
-* Bridge funds using https://goerli.starkgate.starknet.io/[Starkgate]
+[NOTE]
+====
+It is also possible to use an Ethereum Goerli (L1) faucet then bridge your testnet ETH to Starknet
+using the link:https://goerli.starkgate.starknet.io/[Goerli Starkgate bridge].
+====
 
-However you chose to do it, please make sure that the funding transaction reaches the "PENDING" status before moving on. You can look for it on https://testnet.starkscan.co/[Starkscan] or https://goerli.voyager.online/[Voyager]
+Ensure that the funding transaction reaches the `PENDING` status before moving on. You can find
+it by going to https://testnet.starkscan.co/[Starkscan] or https://goerli.voyager.online/[Voyager].
+
+Once the transaction is confirmed, you can deploy the account using the following command:
 
 [,Bash]
 ----
-# Deploying your account
+
 starknet deploy_account --account account_name
 ----
 
-Your sample output should look something like this:
+The output should look similar to the below code snippet:
 
 [,Bash]
 ----
@@ -79,36 +88,35 @@ Contract address: 0x03f42fc2355be54197a8b270ff2cb8e2eb7902e777b3498f8ad58c6c147c
 Transaction hash: 0x3d15e05389ecd1ff65555220be57f0ab43729877b20ca086048276917ed2838
 ----
 
-Monitor the transaction until it passes the "PENDING" state.
+Use the generated transaction hash to monitor the deploy account transaction until it shows the
+`PENDING` status.
 
 == Create and compile a contract
 
-Before we get started, make sure that the below commands are working properly on your system. If
-they don't, please check the xref:cairo_1/environment_setup.adoc[Setting up your environment]
+Now you have an account and have funded it will Goerli ETH.
+
+Ensure that the below commands are working properly on your system. If
+they don't, make sure you have followed the steps in the xref:cairo_1/environment_setup.adoc[Setting up your environment]
 section.
 
 [,Bash]
 ----
 starknet --version
-starknet-compile  --version
+starknet-compile --version
 ----
 
-You can now create a folder of your choice (in any location) where you would like to practice
-your Cairo skills . Inside the new folder, create a file name `hello_starknet.cairo`.
+Create a folder to store your smart contract. Inside the new folder, create a file name
+`hello_starknet.cairo`.
 
 [,Bash]
 ----
-#Create a new folder for practicing your cairo skills
-cd ~/
-mkdir cairo_practice && cd cairo_practice
-
-#Create a new file called hello_starknet.cairo
+mkdir example && cd example
 touch hello_starknet.cairo
 ----
 
 Copy and paste the following piece of code into your `hello_starknet.cairo` file:
 
-[,Rust]
+[,Bash]
 ----
 #[contract]
 mod HelloStarknet {
@@ -118,43 +126,46 @@ mod HelloStarknet {
     #[event]
     fn Hello(from:ContractAddress, value:felt252) {}
 
+    #[event]
+    fn Getting_Started(from:ContractAddress, value:felt252) {}
+
+
     #[external]
     fn say_hello(message:felt252) {
         let caller=get_caller_address();
         Hello(caller, message);
     }
-
 }
 ----
 
-Customize the above code by adding a new type of event. Find a name that is unique (this is important).
-Add the following code:
+[NOTE]
+====
+For a more detailed explanation of the above code, see the xref:cairo_1/writing_a_starknet_contract.adoc[Writing a smart contract section].
+====
 
-----
-    #[event]
-    fn My_Unique_Event_Name(from:ContractAddress, value:felt252) {}
-----
-
-Compile the above Starknet contract using the following command:
+Now, compile the above Starknet contract using the following command:
 
 [,Bash]
 ----
-starknet-compile hello_starknet.cairo hello_starknet.json 
+starknet-compile hello_starknet.cairo simplestorage.json
 ----
 
-The above command should compile to produce a `hello_starknet.json` file  in the same folder.
+The above command should compile to produce a `≈` file  in the same folder.
+
+We have now created a contracts and compiled it. Next, we will deploy it to Starknet.
 
 == Declare a contract class 
 
 On Starknet, the deployment process is in two steps:
 
-* Declaring the class of your contract, or sending your contract's code to the network
-* Deploying a contract, or creating an instance of the code you previously declared
+* Declaring the class of your contract (sending your contract's code to the network)
+* Deploying a contract (creating an instance of the code you previously declared)
 
-Let's start with declaring the above code.
+Complete the following steps to declare your contract class of the above contract example:
+
 [,Bash]
 ----
-starknet declare --contract hello_starknet.json --account account_name
+starknet declare --contract hello_starknet.cairo --account account_name
 ----
 ____
 The above command may fail if you are using code that has already been declared by someone else! Please make sure to add custom code to your contract to create a new contract class.
