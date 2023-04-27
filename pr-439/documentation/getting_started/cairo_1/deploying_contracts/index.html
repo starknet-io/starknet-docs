@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Deploying Starknet contracts :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/getting_started/cairo_1/deploying_contracts/">
-    <link rel="prev" href="../writing_first_contract/">
-    <link rel="next" href="../../../tools/ref_block_explorers/">
+    <link rel="prev" href="../environment_setup/">
+    <link rel="next" href="../writing_a_starknet_contract/">
     <meta name="generator" content="Antora 3.1.1">
   <link rel="stylesheet" href="../../../../_/css/vendor/tabs.css">
   <link id="theme" rel="stylesheet" title="Default" href="../../../../_/css/site.css?new">
@@ -299,15 +299,15 @@
        class="nav-link"
      href="../environment_setup/">Setting up your environment</a>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="../writing_first_contract/">Writing a smart contract</a>
-  </li>
   <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
      href="./">Deploying smart contracts</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../writing_a_starknet_contract/">Writing a smart contract</a>
   </li>
 </ul>
   </li>
@@ -391,13 +391,11 @@
 </aside>
 <article class="doc">
 <h1 class="page">Deploying Starknet contracts</h1>
-<div id="preamble">
+<div class="sect1">
+<h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>In this section, you will learn to compile, deploy and interact with a Starknet contract written in Cairo.</p>
-</div>
-<div class="paragraph">
-<p>Follow the below steps in order to accomplish your goal!</p>
 </div>
 </div>
 </div>
@@ -405,17 +403,17 @@
 <h2 id="setting_up_environment_variables"><a class="anchor" href="#setting_up_environment_variables"></a>Setting up environment variables</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following commands must run every time you open a new terminal to interact with Starknet. Setting them saves you time when using the CLI within the same terminal session.</p>
+<p>Bash environment variables are used to store configuration information, set system-wide settings, and provide information to scripts.</p>
+</div>
+<div class="paragraph">
+<p>The following commands must run every time you open a new terminal in order to interact with
+Starknet. Setting them saves you time when using the CLI within the same terminal session.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash"># Use Starknet testnet
-export STARKNET_NETWORK=alpha-goerli
-# Set the default wallet implementation to be used by the CLI
+<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">export STARKNET_NETWORK=alpha-goerli
 export STARKNET_WALLET=starkware.starknet.wallets.open_zeppelin.OpenZeppelinAccount
-# Set the path to the cairo 1 compiler binary. Adapt this path to fit your installation if needed
 export CAIRO_COMPILER_DIR=~/.cairo/target/release/
-# Compiler arguments
 export CAIRO_COMPILER_ARGS=--add-pythonic-hints</code></pre>
 </div>
 </div>
@@ -425,18 +423,27 @@ export CAIRO_COMPILER_ARGS=--add-pythonic-hints</code></pre>
 <h2 id="setting_up_an_account"><a class="anchor" href="#setting_up_an_account"></a>Setting up an account</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>You need to set up your CLI with an account contract and fund it.</p>
+<p>In order to deploy a smart contract to Starknet, you need to set up an account contract and fund it.</p>
 </div>
-<div class="quoteblock">
-<blockquote>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Starknet accounts are smart contracts. As such, creating one involves sending a transaction, and takes a bit longer than creating an EOA on other networks.
-You can learn more in the <a href="https://docs.starknet.io/documentation/architecture_and_concepts/Account_Abstraction/introduction/">accounts</a> section of the documentation.</p>
-</div>
-</blockquote>
+<p>Starknet accounts are smart contracts. As such, creating one involves sending a transaction, and takes longer than creating an EOA on other networks.</p>
 </div>
 <div class="paragraph">
-<p>This process will involve three steps:</p>
+<p>You can learn more in the <a href="https://docs.starknet.io/documentation/architecture_and_concepts/Account_Abstraction/introduction/">accounts</a> section of the documentation.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Setting up a Starknet account will involve three steps:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -452,12 +459,14 @@ You can learn more in the <a href="https://docs.starknet.io/documentation/archit
 </ul>
 </div>
 <div class="paragraph">
-<p>The Starknet account declared through the CLI are stored on your machine in folder <code>~/.starknet_accounts/</code>.</p>
+<p>Starknet accounts declared through the CLI are stored on your machine in folder <code>~/.starknet_accounts/</code>.</p>
+</div>
+<div class="paragraph">
+<p>Create a new account using the following command:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash"># Creating a new account.
-starknet new_account --account account_name</code></pre>
+<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">starknet new_account --account account_name</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -475,29 +484,37 @@ differently.</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Next step is to fund it.</p>
+<p>Next we will fund the account with some L2 Goerli ETH. Use the <a href="https://faucet.goerli.starknet.io">faucet</a> to obtain funds and send them to the newly created account.</p>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p>Use the <a href="https://faucet.goerli.starknet.io">faucet</a> to get some funds and send them to the account</p>
-</li>
-<li>
-<p>Bridge funds using <a href="https://goerli.starkgate.starknet.io/">Starkgate</a></p>
-</li>
-</ul>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>It is also possible to use an Ethereum Goerli (L1) faucet then bridge your testnet ETH to Starknet
+using the <a href="https://goerli.starkgate.starknet.io/">Goerli Starkgate bridge</a>.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>However you chose to do it, please make sure that the funding transaction reaches the "PENDING" status before moving on. You can look for it on <a href="https://testnet.starkscan.co/">Starkscan</a> or <a href="https://goerli.voyager.online/">Voyager</a></p>
+<p>Ensure that the funding transaction reaches the <code>PENDING</code> status before moving on. You can find
+it by going to <a href="https://testnet.starkscan.co/">Starkscan</a> or <a href="https://goerli.voyager.online/">Voyager</a>.</p>
+</div>
+<div class="paragraph">
+<p>Once the transaction is confirmed, you can deploy the account using the following command:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash"># Deploying your account
-starknet deploy_account --account account_name</code></pre>
+<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">starknet deploy_account --account account_name</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Your sample output should look something like this:</p>
+<p>The output should look similar to the below code snippet:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -508,7 +525,8 @@ Transaction hash: 0x3d15e05389ecd1ff65555220be57f0ab43729877b20ca086048276917ed2
 </div>
 </div>
 <div class="paragraph">
-<p>Monitor the transaction until it passes the "PENDING" state.</p>
+<p>Use the generated transaction hash to monitor the deploy account transaction until it shows the
+<code>PENDING</code> status.</p>
 </div>
 </div>
 </div>
@@ -516,27 +534,26 @@ Transaction hash: 0x3d15e05389ecd1ff65555220be57f0ab43729877b20ca086048276917ed2
 <h2 id="create_and_compile_a_contract"><a class="anchor" href="#create_and_compile_a_contract"></a>Create and compile a contract</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Before we get started, make sure that the below commands are working properly on your system. If
-they don&#8217;t, please check the <a href="../environment_setup/" class="xref page">Setting up your environment</a>
+<p>Now you have an account and have funded it will Goerli ETH.</p>
+</div>
+<div class="paragraph">
+<p>Ensure that the below commands are working properly on your system. If
+they don&#8217;t, make sure you have followed the steps in the <a href="../environment_setup/" class="xref page">Setting up your environment</a>
 section.</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">starknet --version
-starknet-compile  --version</code></pre>
+starknet-compile --version</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>You can now create a folder of your choice (in any location) where you would like to practice
-your Cairo skills . Inside the new folder, create a file name <code>hello_starknet.cairo</code>.</p>
+<p>Create a folder to store your smart contract. Inside the new folder, create a file name
+<code>hello_starknet.cairo</code>.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">#Create a new folder for practicing your cairo skills
-cd ~/
-mkdir cairo_practice &amp;&amp; cd cairo_practice
-
-#Create a new file called hello_starknet.cairo
+<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">mkdir example &amp;&amp; cd example
 touch hello_starknet.cairo</code></pre>
 </div>
 </div>
@@ -545,7 +562,7 @@ touch hello_starknet.cairo</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-Rust hljs" data-lang="Rust">#[contract]
+<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">#[contract]
 mod HelloStarknet {
     use starknet::get_caller_address;
     use starknet::ContractAddress;
@@ -553,35 +570,45 @@ mod HelloStarknet {
     #[event]
     fn Hello(from:ContractAddress, value:felt252) {}
 
+    #[event]
+    fn Getting_Started(from:ContractAddress, value:felt252) {}
+
+
     #[external]
     fn say_hello(message:felt252) {
         let caller=get_caller_address();
         Hello(caller, message);
     }
-
 }</code></pre>
 </div>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Customize the above code by adding a new type of event. Find a name that is unique (this is important).
-Add the following code:</p>
+<p>For a more detailed explanation of the above code, see the <a href="../writing_a_starknet_contract/" class="xref page">Writing a smart contract section</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Now, compile the above Starknet contract using the following command:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>    #[event]
-    fn My_Unique_Event_Name(from:ContractAddress, value:felt252) {}</pre>
+<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">starknet-compile hello_starknet.cairo simplestorage.json</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Compile the above Starknet contract using the following command:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">starknet-compile hello_starknet.cairo hello_starknet.json</code></pre>
-</div>
+<p>The above command should compile to produce a <code>≈</code> file  in the same folder.</p>
 </div>
 <div class="paragraph">
-<p>The above command should compile to produce a <code>hello_starknet.json</code> file  in the same folder.</p>
+<p>We have now created a contracts and compiled it. Next, we will deploy it to Starknet.</p>
 </div>
 </div>
 </div>
@@ -594,19 +621,19 @@ Add the following code:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>Declaring the class of your contract, or sending your contract&#8217;s code to the network</p>
+<p>Declaring the class of your contract (sending your contract&#8217;s code to the network)</p>
 </li>
 <li>
-<p>Deploying a contract, or creating an instance of the code you previously declared</p>
+<p>Deploying a contract (creating an instance of the code you previously declared)</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>Let&#8217;s start with declaring the above code.</p>
+<p>Complete the following steps to declare your contract class of the above contract example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">starknet declare --contract hello_starknet.json --account account_name</code></pre>
+<pre class="highlightjs highlight"><code class="language-Bash hljs" data-lang="Bash">starknet declare --contract hello_starknet.cairo --account account_name</code></pre>
 </div>
 </div>
 <div class="quoteblock">
@@ -709,8 +736,8 @@ Transaction hash: 0xbfb3ec183b4ee58db67113cf8832c31e78fe8000f091cc598d5aa9ca6a62
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../writing_first_contract/">Writing a smart contract</a></span>
-  <span class="next"><a href="../../../tools/ref_block_explorers/">Starknet block explorers</a></span>
+  <span class="prev"><a href="../environment_setup/">Setting up your environment</a></span>
+  <span class="next"><a href="../writing_a_starknet_contract/">Writing a smart contract</a></span>
 </nav>
 </article>
   </div>
