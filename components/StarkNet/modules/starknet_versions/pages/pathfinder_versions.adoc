@@ -14,7 +14,133 @@ It provides the following features:
 
 See the official https://github.com/eqlabs/pathfinder[Pathfinder Github repository] for more details.
 
-## v0.4.5 (latest)
+## v0.5.4 (latest)
+
+The primary focus of this release is to provide support for Starknet v0.11.1, and will continue to work for v0.11.0. Since this release is required for v0.11.1, you should update your node before the network is updated.
+
+### Added
+
+- Starknet v0.11.1 support
+- CORS support via the `rpc.cors-domains` configuration option
+- Transaction hashes are now verified as part of the sync process. Previously, these were not verified as the exact algorithm was underdocumented and the transaction format was still evolving.
+
+### Fixed
+
+- RPC server panic for unprefixed unregistered method names
+- Data can temporarily appear to go missing when transitioning from `PENDING` to `ACCEPTED ON L2`
+  - This was commonly seen when rapidly monitoring a new transaction, which would go from `PENDING` to `TXN_HASH_NOT_FOUND` to `ACCEPTED_ON_L2` as pathfinder moved the ephemeral pending data to latest data on disk.
+
+## v0.5.3
+
+Fixes for minor issues and inconsistencies.
+
+### Added
+
+- `max-rpc-connections` command-line argument. This sets the maximum number incoming RPC connections the pathfinder node will accept. This defaults to 1024 if not specified.
+- `cairo-lang` upgraded to 0.11.0.2
+
+### Fixed
+
+- `starknet_simulateTransaction` data model inconsistency
+- `poll-pending` default value restored to `false`
+- incoming RPC connections limited to 100. This limit was accidentily introduced in v0.5.2 as part of a dependency upgrade, whereas before it was unlimited. The default is now 1024 and can be configured using `--max-rpc-connections`.
+- handling of invalid JSON-RPC requests
+
+## v0.5.2
+
+This release fixes a few RPC bugs and adds support for bulk fee estimation and transaction simulation (traces) as part of v0.3 RPC specification.
+
+In addition it also adds a `pathfinder_getTransactionStatus` endpoint which lets you track a transactions status -- including `REJECTED` and `RECEIVED` -- in the same fashion as the gateway.
+
+### Added
+
+- support `starknet_estimateFee` in the JSON-RPC v0.3 API
+  - supports estimating multiple transactions
+  - this includes declaring and immediately using a class (not currently possible via the gateway)
+- support `starknet_simulateTransaction` for JSON-RPC v0.3
+  - supports simulating multiple transactions
+  - this includes declaring and immediately using a class (not currently possible via the gateway)
+- support `pathfinder_getTransactionStatus` which is exposed on all RPC routes
+  - this enables querying a transactions current status, including whether the gateway has received or rejected it
+
+### Fixed
+
+- RPC returns int for entrypoint offsets instead of hex
+- RPC rejects Fee values with more than 32 digits
+- RPC does not expose `pathfinder_getProof` on v0.3 route
+
+## v0.5.1
+
+This is a minor bugfix release, primarily to fix an issue with syncing on `testnet2`.
+
+### Fixed
+
+* pathfinder sometimes spams nethermind L1 nodes
+* pathfinder stops syncing `testnet2` at block 95220 due to a Sierra class compilation issue
+
+## v0.5.0
+
+### Highlights
+
+- starknet v0.11.0 support
+- RPC API v0.3 partial support
+- removed several deprecated config options
+- requires python 3.9 or 3.10 (no longer 3.8)
+
+### Added
+
+- support for state commitment and class commitment in `pathfinder_getProof`
+- support for starknet v0.11
+- partial support for RPC specification v0.3
+  - exposed on `/rpc/v0.3/` route
+  - missing support for `starknet_estimateFee` and `starknet_simulate`
+
+### Changed
+
+- `starknet_call` and `starknet_estimateFee` JSON-RPC methods return more detailed error messages
+- `python` version requirement has changed to `3.9` or `3.10` (was `3.8` or `3.9` previously)
+
+### Fixed
+
+- RPC accepts hex inputs for Felt without '0x' prefix. This led to confusion especially when passing in a decimal string which would get silently interpretted as hex.
+- using a Nethermind Ethereum endpoint occasionally causes errors such as `<block-number> could not be found` to be logged.
+- sync can miss new block events by getting stuck waiting for pending data.
+
+### Removed
+
+- `--config` configuration option (deprecated in [v0.4.1](https://github.com/eqlabs/pathfinder/releases/tag/v0.4.1))
+- `--integration` configuration option (deprecated in [v0.4.1](https://github.com/eqlabs/pathfinder/releases/tag/v0.4.1))
+- `--sequencer-url` configuration option (deprecated in [v0.4.1](https://github.com/eqlabs/pathfinder/releases/tag/v0.4.1))
+- `--testnet2` configuration option (deprecated in [v0.4.1](https://github.com/eqlabs/pathfinder/releases/tag/v0.4.1))
+- `starknet_addDeployTransaction` as this is no longer an allowed transaction since starknet v0.10.3
+- RPC api version `0.1`, which used to be served on path `/rpc/v0.1`
+
+### RPC API
+
+We added support for v0.3 and removed v0.1. We still support v0.2 at both `/rpc/v0.2` and `/rpc` (default) routes. In summary:
+```
+/                     # serves v0.2
+/rpc/v0.2/            # serves v0.2
+/rpc/v0.3/            # serves v0.3
+```
+We are missing `starknet_estimateFee` and `starknet_simulate` support for v0.3, which will be added in an upcoming release.
+
+### Python requirement
+
+Note: this only applies if you are building from source. This does not impact docker users.
+
+Pathfinder requires python to support the starknet VM used to simulate starknet transactions and function calls. Previous versions of the VM only worked with python 3.8 or 3.9 which was a hassle because most operating systems no longer directly support it. The new version of the VM bundled with starknet v0.11 now requires python version 3.9 or 3.10.
+
+### Configuration changes
+
+Several configuration options are now removed, after they were deprecated in pathfinder v0.4.1. Here is a migration guide:
+
+- `--testnet2`: use `--network testnet2` instead
+- `--integration`: use `--network integration` instead
+- `--sequencer-url`: use `--network custom` in combination with `--feeder-gateway-url` and `gateway-url`
+- `--config`: use environment variables or env files as an alternative
+
+## v0.4.5
 Hotfix for a bug introduced in the previous version v0.4.4, which prevented a new node from syncing on blocks near genesis.
 
 ### Added
