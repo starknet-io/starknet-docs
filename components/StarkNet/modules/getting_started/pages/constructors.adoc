@@ -1,0 +1,51 @@
+[#constructors]
+= Constructors
+
+A contract may need to initialize its state before it is ready for public use.
+
+For example, one may want to designate a contract owner, that can do certain operations that other users can’t.
+Setting a storage variable to the owner can be done by the contract constructor.
+
+The contract constructor is defined using the `@constructor` decorator and its name must be `constructor`.
+
+The constructor semantics are similar to that of any other external function, except that the
+constructor is guaranteed to run during the contract deployment and it cannot be invoked again after
+the contract is deployed.
+
+For example, we can define an ownable contract as follows:
+
+[#ownable]
+[source,cairo]
+----
+#[constructor]
+   fn constructor() {
+    // Cairo 1.0 example needed
+       return ();
+   }
+----
+
+Save the contract as `ownable.cairo` and then compile and declare it.
+
+[#ownable_compile_and_declare]
+[source,bash]
+----
+starknet-compile ownable.cairo \
+    --output ownable_compiled.json \
+    --abi ownable_abi.json
+starknet declare --contract ownable_compiled.json
+----
+
+After compiling the contract, you can deploy it. When you deploy the contract, replace
+`$\{OWNABLE_CLASS_HASH\}` with the class hash you got from `starknet declare`, and pass the arguments
+using the `--inputs` flag. The number of inputs must match the signature of the constructor, or the
+deploy transaction will fail.
+
+[#ownable_deploy]
+[source,bash]
+----
+starknet deploy --class_hash ${OWNABLE_CLASS_HASH} --inputs 123
+----
+
+When a contract is deployed, the contract address, contract class hash and the constructor calldata
+are included in the on-chain data.
+
