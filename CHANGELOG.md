@@ -2,9 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### Bug Fixes
+### [0.1.134](https://github.com/starknet-io/starknet-docs/compare/v0.1.133...v0.1.134) (2023-05-19)
 
-* Resolve theme issues causing problems on side nav ([#434](https://github.com/starknet-io/starknet-docs/issues/434)) ([ad6e5bc](https://github.com/starknet-io/starknet-docs/commit/ad6e5bc254ef5386ab7778a8463b0b6951ac43be))
 ### [0.1.132](https://github.com/starknet-io/starknet-docs/compare/v0.1.131...v0.1.132) (2023-05-19)
 
 ### [0.1.131](https://github.com/starknet-io/starknet-docs/compare/v0.1.130...v0.1.131) (2023-05-18)
