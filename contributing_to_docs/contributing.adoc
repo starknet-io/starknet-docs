@@ -1,0 +1,220 @@
+[id="contributing-to-docs-contributing"]
+= Contribute to Starknet documentation
+:icons:
+:toc: macro
+:toc-title:
+:toclevels: 1
+:description: Basic information about the Starknet docs GitHub repository
+
+toc::[]
+
+== Different ways to contribute
+
+There are a few different ways you can contribute to Starknet documentation:
+
+* Create a link:https://github.com/starknet-io/starknet-docs/issues[GitHub issue].
+* Submit a pull request (PR). You can create a local clone of your own fork of the link:https://github.com/starknet-io/starknet-docs[starknet-docs repository], make your changes, and submit a PR. This option is best if you have substantial changes, or to help the changes you want to be added more quickly.
+
+*What happens when you submit a PR?*
+
+The following diagram outlines the Starknet documentation contribution process:
+
+When you submit a PR, the https://github.com/orgs/openshift/teams/team-documentation[Starknet Docs team] reviews the PR and arranges further technical reviews as necessary. If the PR requires changes, the reviewers add comments in the PR. We might request that you make the changes, or let you know that we incorporated your content in a different PR. Occasionally, we might add commits to the original PR directly. When the PR has been reviewed and all updates are complete, the documentation team merges the PR and applies it to the valid version(s).
+
+// For a more detailed description of the contribution workflow, see link:create_or_edit_content.adoc#understanding-the-contribution-workflow[Understanding the contribution workflow].
+
+// == Repository organization
+// Each top directory in the Starknet documentation repository can include a
+// collection of top level assemblies and subdirectories that contain more
+// assemblies. The exceptions to this rule are directories whose names
+// start with an underscore (like `_builder_lib` and `_javascripts`), which contain
+// the assets used to generate the finished documentation.
+//
+// Each top level `<topic>` directory contains AsciiDoc assembly files, any `<subtopic>`
+// subdirectories, and symlinks to the `images` and `modules` directories that
+// contain all the images and modules for the collection.
+//
+// ----
+// /
+// /topic_dir1
+// /subtopic_dir1
+// /subtopic_dirN
+// /topic_dir/assembly1.adoc
+// /topic_dir/assemblyN.adoc
+// /topic_dir/subtopic_dir1/assembly1.adoc
+// /topic_dir/subtopic_dirN/assemblyN.adoc
+// /topic_dir/~images
+// /topic_dir/~modules
+// ...
+// /topic_dir2
+// ----
+
+// == Version management
+// Most of the content applies to all five OpenShift products: OKD, OpenShift
+// Online, OpenShift Dedicated, ROSA and OpenShift Container Platform. While a large
+// amount of content is reused for all product collections, some information
+// applies to only specific collections. Content inclusion and exclusion is managed
+// on the assembly level by specifying distributions in the
+// `&#95;topic&#95;map.yml` files in the `&#95;topic&#95;maps` folder or by using `ifdef/endif` statements in individual
+// files.
+
+////
+While it is _possible_
+to accomplish this solely with Git branches to maintain slightly different
+versions of a given topic, doing so would make the task of maintaining internal
+consistency extremely difficult for content contributors.
+
+Git branching is still extremely valuable, and serves the important role of
+tracking the release versions of documentation for the various OpenShift
+products.
+////
+
+=== Conditional text between products
+Starknet documentation uses AsciiDoc's `ifdef/endif` macro to conditionalize and reuse content, down to the single-line level.
+
+For information on conditionalization in AsciiDoc, see link:https://docs.asciidoctor.org/asciidoc/latest/directives/conditionals[Conditionals] in the _AsciiDoc Language Documentation_.
+
+// The supported distribution attributes used with the OpenShift build mechanism
+// are:
+//
+// * _openshift-origin_
+// * _openshift-online_
+// * _openshift-enterprise_
+// * _openshift-dedicated_
+// * _openshift-aro_
+// * _openshift-webscale_
+// * _openshift-rosa_
+
+// These attributes can be used by themselves or in conjunction to conditionalize
+// text within an assembly or module.
+
+For example, if the same file should appear in _Document A_ and _Document B_, with only minor differences:
+
+----
+This first line is unconditionalized, and will appear in both _Document A_ and _Document B_.
+
+\ifdef::document_A[]
+This line will only appear for _Document A_.
+\endif::document_A[]
+
+ifdef::document_B
+This line will only appear for _Document B_.
+\endif::document_B[]
+
+ifndef::document_B
+This line will not appear for _Document B_.
+\endif::[]
+----
+
+[NOTE]
+====
+While the `ifdef/endif` blocks have no size limit, do not use them to
+to conditionalize an entire file. If an entire file is specific to a
+only some distributions, specify them in the `nav.adoc`
+file.
+====
+
+// == Release branches
+//
+// With the combination of conditionalizing content within files with
+// `ifdef/endif` and conditionalizing whole files in the `&#95;topic&#95;map.yml`
+// file, the `main` branch of
+// this repository always contains a complete set of documentation for all
+// OpenShift products. However, when and as new versions of an OpenShift product
+// are released, the `main` branch is merged down to new or existing release
+// branches. Here is the general naming scheme used in the branches:
+//
+// * `main` - This is our *working* branch.
+// * `enterprise-N.N` - OpenShift Container Platform support releases. The docs
+// for OpenShift Online and OpenShift Dedicated are based on the appropriate
+// `enterprise-N.N` branch.
+//
+// On a 12-hourly basis, the documentation web sites are rebuilt for each of these
+// branches. This way the published content for each released version of an
+// OpenShift product will remain the same while development continues on the
+// `main` branch. Additionally, any corrections or additions that are
+// "cherry-picked" into the release branches will show up in the published
+// documentation after 12 hours.
+//
+// [NOTE]
+// ====
+// All OpenShift content development for the 4.x stream occurs on the `main`, or
+// *working* branch.
+// Therefore, when submitting your work the PR must be created against the `main`
+// branch. After it is reviewed, a writer will apply the content to the relevant
+// release branches. If you know which branches a change applies to, be sure to
+// specify it in your PR.
+//
+// When adding or updating content for version 3.11, you should create a feature
+// branch against enterprise-3.11 to submit your changes.
+// ====
+
+== Adding files to the collection
+After you create files, you must add them to the /modules/<module>/`nav*.adoc` file so
+that the build system can render them in the table of contents. If you don't include the file in the `nav*.adoc` file, Antora will include the file in the built output, but it will not be accessible via the TOC.
+
+// For all supported versions, the topic map files are available in the `&#95;topic&#95;maps` folder. Older versions support `&#95;topic&#95;map.yml` file in the root folder.
+//
+// OpenShift Dedicated and OpenShift ROSA have their own topic maps: `&#95;topic&#95;map&#95;osd.yml` and `&#95;topic&#95;map&#95;rosa.yml`. Edits to these files should be coordinated with Service Delivery documentation team members as that team is primarily responsible for maintaining this content.
+//
+// [NOTE]
+// ====
+// Module files are included in the appropriate assembly files. Modules are not added directly to the `&#95;topic&#95;map.yml` file.
+// ====
+
+// === `nav.adoc` Topic map file format
+// For supported branches the `&#95;topic&#95;map.yml` is based in the `&#95;topic&#95;maps` folder in the root directory and are organized (primarily) by distributions.
+//
+// The `&#95;topic&#95;map.yml` file uses the following format:
+//
+// ----
+// --- //<1>
+// Name: Origin of the Species <2>
+// Dir:  origin_of_the_species <3>
+// Distros: all <4>
+// Topics:
+//   - Name: The Majestic Marmoset <5>
+//     File: the_majestic_marmoset <6>
+//     Distros: all
+//   - Name: The Curious Crocodile
+//     File: the_curious_crocodile
+//     Distros: openshift-online,openshift-enterprise <4>
+//   - Name: The Numerous Nematodes
+//     Dir: the_numerous_nematodes <7>
+//     Topics:
+//       - Name: The Wily Worm <8>
+//         File: the_wily_worm
+//       - Name: The Acrobatic Ascarid  <= Sub-topic 2 name
+//         File: the_acrobatic_ascarid  <= Sub-topic 2 file under <group dir>/<subtopic dir>
+// ----
+// <1> Record separator at the top of each topic group.
+// <2> Display name of topic group.
+// <3> Directory name of topic group.
+// <4> Which OpenShift versions this topic group is part of.
+// * The *Distros* setting is optional for topic groups and topic items. By
+// default, if the *Distros* setting is not used, it is processed as if it was set
+// to *Distros: all* for that particular topic or topic group. This means that
+// topic or topic group will appear in all product documentation versions.
+// * The *all* value for *Distros* is a synonym for
+// _openshift-origin,openshift-enterprise,openshift-online,openshift-dedicated,openshift-aro,openshift-webscale_.
+// * The *all* value overrides other values, so _openshift-online,all_ is processed
+// as *all*.
+// * Do not use _openshift-dedicated_ or _openshift-rosa_ in the main `&#95;topic&#95;map.yml` file. Use the distribution specific topic map file.
+// <5> Assembly name.
+// <6> Assembly file under the topic group dir without `.adoc`.
+// <7> This topic is actually a subtopic group. Instead of a `File` path it has a
+// `Dir` path and `Topics`, just like a top-level topic group.
+// <8> Assemblies belonging to a subtopic group are listed just like regular assemblies
+// with a `Name` and `File`.
+//
+//
+
+// == Next steps
+// * First, you should link:tools_and_setup.adoc[install and set up the tools and software]
+// on your workstation so that you can contribute.
+// * Next, link:doc_guidelines.adoc[review the documentation guidelines] to
+// understand some basic guidelines to keep things consistent
+// across our content.
+// * If you are ready to create content, or want to edit existing content, the
+// link:create_or_edit_content.adoc[create or edit content] topic describes how
+// you can do this by creating a working branch.
