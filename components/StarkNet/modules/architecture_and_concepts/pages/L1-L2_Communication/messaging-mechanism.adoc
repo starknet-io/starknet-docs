@@ -66,14 +66,14 @@ NOTE: As the hash of the message being sent needs to be written to L1 storage (i
 
 Contracts on L1 can interact asynchronously with contracts on L2 via the L1→L2 messaging protocol. The protocol consists of the following stages:
 
-. *1.* An L1 contract initiates a message to an L2 contract on Starknet. It does so by calling the link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract with the message parameters.
- .. *1.1* The Starknet Core Contract hashes the message parameters and updates the L1→L2 message mapping to indicate that a message with this hash was indeed sent. In fact, the L1 contract records the fee that the sender paid. For more information, see xref:l1-l2_message_fees[L1 → L2 message fees].
-. *2.* The message is then decoded into a Starknet transaction that invokes a function annotated with the `l1_handler` decorator on the target contract. Transactions like this on L2 are called *_L1 handler transactions_*.
- .. *2.1.* The Starknet sequencer, upon seeing enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction.
- .. *2.2.* The L2 transaction invokes the relevant `l1_handler`.
-. *3.* The L1 Handler transaction that was created in the previous step is added to a proof.
-. *4.* The state update is received on the Core contract.
-. *5.* the message is cleared from the Core contract's storage. At this point the message is handled.
+. An L1 contract initiates a message to an L2 contract on Starknet. It does so by calling the link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract with the message parameters.
+ .. The Starknet Core Contract hashes the message parameters and updates the L1→L2 message mapping to indicate that a message with this hash was indeed sent. In fact, the L1 contract records the fee that the sender paid. For more information, see xref:l1-l2_message_fees[L1 → L2 message fees].
+. The message is then decoded into a Starknet transaction that invokes a function annotated with the `l1_handler` decorator on the target contract. Transactions like this on L2 are called *_L1 handler transactions_*.
+ .. The Starknet sequencer, upon seeing enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction.
+ .. The L2 transaction invokes the relevant `l1_handler`.
+. The L1 Handler transaction that was created in the previous step is added to a proof.
+. The state update is received on the Core contract.
+. the message is cleared from the Core contract's storage. At this point, the message is handled.
 
 The above flow is illustrated in the following diagram:
 
@@ -92,7 +92,7 @@ An L1→L2 message consists of:
 *Message nonce*
 
 The message nonce is maintained on the Starknet Core contract on L1, and is bumped whenever a message is
-sent to L2. It is used to avoid hash collisions between different L1 handler transactions who are induced by the same message being sent on L1 multiple times (see xref:structure_and_hashing_l1-l2[below]).
+sent to L2. It is used to avoid hash collisions between different L1 handler transactions that are induced by the same message being sent on L1 multiple times (see xref:structure_and_hashing_l1-l2[below]).
 ====
 
 [id="l2-l1_message_cancellation"]
