@@ -474,185 +474,6 @@ on the transactions or particular changes that this update caused.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="on_chain_data_pre_v0_11_0"><a class="anchor" href="#on_chain_data_pre_v0_11_0"></a>On-chain data: pre v0.11.0</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="pre_v0.11.0_format"><a class="anchor" href="#pre_v0.11.0_format"></a>Pre v0.11.0 Format</h3>
-<div class="paragraph">
-<p>The state diffs contain information on every contract whose storage was updated and additional information on contract deployments. Those differences are sent as <code>uint256[]</code> array as part of the calldata, and are encoded as follows:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Number of cells that encode contract deployments</p>
-</li>
-<li>
-<p>For each deployed contract, we have:</p>
-<div class="ulist">
-<ul>
-<li>
-<p><code>contract_address</code> - the <a href="../../Contracts/contract-address/" class="xref page">address</a> of the deployed contract</p>
-</li>
-<li>
-<p><code>contract_hash</code> - the <a href="../../Contracts/class-hash/" class="xref page">hash</a> of the class</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>Number of contracts whose storage is updated</p>
-</li>
-<li>
-<p>For each such contract, we have:</p>
-<div class="ulist">
-<ul>
-<li>
-<p><code>contract_address</code> - the <a href="../../Contracts/contract-address/" class="xref page">address</a> of the contract</p>
-</li>
-<li>
-<p><code>num_of_storage_updates</code> - number of storage updates</p>
-</li>
-<li>
-<p>`nonce, num_of_storage_updates ` - a uint256 value that encodes both the number of storage updates for that contract and the updated nonce:</p>
-<div class="stemblock">
-<div class="content">
-\[\underbrace{0\cdots0}_{\text{128 bits}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |
-{\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}\]
-</div>
-</div>
-</li>
-<li>
-<p>For each storage update:</p>
-<div class="ulist">
-<ul>
-<li>
-<p><code>key</code> - the address inside the contract&#8217;s storage where the value is updated</p>
-</li>
-<li>
-<p><code>value</code> - the new value</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="pre_v0.11.0_example"><a class="anchor" href="#pre_v0.11.0_example"></a>Pre v0.11.0 Example</h3>
-<div class="paragraph">
-<p>Below we show an example of on chain data which was extracted from L1, and proceed to decode it according to the above format.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">[
-  2,
-  2472939307328371039455977650994226407024607754063562993856224077254594995194,
-  1336043477925910602175429627555369551262229712266217887481529642650907574765,
-  5,
-  2019172390095051323869047481075102003731246132997057518965927979101413600827,
-  18446744073709551617, 5, 102,
-  2111158214429736260101797453815341265658516118421387314850625535905115418634,
-  2,
-  619473939880410191267127038055308002651079521370507951329266275707625062498,
-  1471584055184889701471507129567376607666785522455476394130774434754411633091,
-  619473939880410191267127038055308002651079521370507951329266275707625062499,
-  541081937647750334353499719661793404023294520617957763260656728924567461866,
-  2472939307328371039455977650994226407024607754063562993856224077254594995194,
-  1,
-  955723665991825982403667749532843665052270105995360175183368988948217233556,
-  2439272289032330041885427773916021390926903450917097317807468082958581062272,
-  3429319713503054399243751728532349500489096444181867640228809233993992987070,
-  1, 5, 1110,
-  3476138891838001128614704553731964710634238587541803499001822322602421164873,
-  6, 59664015286291125586727181187045849528930298741728639958614076589374875456,
-  600,
-  221246409693049874911156614478125967098431447433028390043893900771521609973,
-  400,
-  558404273560404778508455254030458021013656352466216690688595011803280448030,
-  100,
-  558404273560404778508455254030458021013656352466216690688595011803280448031,
-  200,
-  558404273560404778508455254030458021013656352466216690688595011803280448032,
-  300,
-  1351148242645005540004162531550805076995747746087542030095186557536641755046,
-  500
-]</code></pre>
-</div>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The first element, 2, is the number of cells that encode contracts deployment.</p>
-</li>
-<li>
-<p>The next two elements describe a single contract deployment with the following parameters:</p>
-<div class="ulist">
-<ul>
-<li>
-<p><code>contract_address</code>:</p>
-<div class="listingblock">
-<div class="content">
-<pre>2472939307328371039455977650994226407024607754063562993856224077254594995194</pre>
-</div>
-</div>
-</li>
-<li>
-<p><code>contract_hash</code>:</p>
-<div class="listingblock">
-<div class="content">
-<pre>1336043477925910602175429627555369551262229712266217887481529642650907574765</pre>
-</div>
-</div>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>The next element, <code>5</code> (index 6 in the array), is the number of contracts whose storage was updated. We will take only the first contract as an example.</p>
-<div class="ulist">
-<ul>
-<li>
-<p><code>contract_address</code>:</p>
-<div class="listingblock">
-<div class="content">
-<pre>2019172390095051323869047481075102003731246132997057518965927979101413600827</pre>
-</div>
-</div>
-</li>
-<li>
-<p>One update (indicated by the cell at index 8):</p>
-</li>
-<li>
-<p>Following the above contract address, we have <code>18446744073709551617</code> (index 8 in the array), which is \(2^{64}+1\), thus:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>The new contract nonce is 1</p>
-</li>
-<li>
-<p>One storage key is updated</p>
-</li>
-<li>
-<p>The value at key 5 was changed to 102.</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>The next 4 contracts storage updates are interpreted in the same manner.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
 <h2 id="on_chain_data_post_v0_11_0"><a class="anchor" href="#on_chain_data_post_v0_11_0"></a>On-chain data: post v0.11.0</h2>
 <div class="sectionbody">
 <div class="sect2">
@@ -666,7 +487,7 @@ on the transactions or particular changes that this update caused.</p>
 <div class="ulist">
 <ul>
 <li>
-<p>The contract adddress</p>
+<p>The contract address</p>
 </li>
 <li>
 <p>A single word that encodes:</p>
@@ -722,7 +543,8 @@ updates section, which contains the new class hash</p>
 </li>
 <li>
 <p>For each class we have:</p>
-</li>
+<div class="ulist">
+<ul>
 <li>
 <p>The class hash</p>
 </li>
@@ -731,12 +553,15 @@ updates section, which contains the new class hash</p>
 </li>
 </ul>
 </div>
+</li>
+</ul>
+</div>
 </div>
 <div class="sect2">
 <h3 id="v0.11.0_example"><a class="anchor" href="#v0.11.0_example"></a>v0.11.0 Example</h3>
 <div class="paragraph">
-<p>Below we show an example of on chain data which was extracted from L1, and proceed to decode it
-according to the <a href="#v0.11.0format
+<p>Below we show an example of on chain data that was extracted from L1, and proceed to decode it
+according to the <a href="#v0.11.0_format
 ">above format</a>.</p>
 </div>
 <div class="listingblock">
@@ -756,7 +581,7 @@ according to the <a href="#v0.11.0format
 <div class="ulist">
 <ul>
 <li>
-<p>The first element, <code>1</code>, is the number of contract whose state was updated</p>
+<p>The first element, <code>1</code>, is the number of contracts whose state was updated</p>
 </li>
 <li>
 <p>The second element, <code>2019172390095051323869047481075102003731246132997057518965927979101413600827</code>, is the address of the first (and only) contract whose state changed</p>
@@ -766,13 +591,13 @@ according to the <a href="#v0.11.0format
 <div class="ulist">
 <ul>
 <li>
-<p>flag = 0, that is, the contract was not just deployed or replaced, so we shouldn&#8217;t treat the next word as the class hash</p>
+<p>The class information flag is <code>0</code>, that is, the contract was not just deployed or replaced, so we shouldn&#8217;t treat the next word as the class hash</p>
 </li>
 <li>
-<p>the new nonce is <code>1</code></p>
+<p>The new nonce is <code>1</code></p>
 </li>
 <li>
-<p>one storage cell was updated</p>
+<p>One storage cell was updated</p>
 </li>
 </ul>
 </div>
@@ -784,13 +609,194 @@ to <code>200</code>)</p>
 <li>
 <p>Next we have the new declare section: <code>1</code>
 means that we had a single
-<a href="../../Blocks/transactions/#declare_transaction_version_2" class="xref page">declare v2</a> in this state update, and the next two elements
+<a href="../../Blocks/transactions/#declare_v2" class="xref page">declare v2</a> in this state update, and the next two elements
 encode
 <a href="../../Contracts/class-hash/" class="xref page">the class hash</a> and
-<a href="../../../starknet_versions/upcoming_versions/#_what_to_expect" class="xref page">compiled class hash</a> of the declared
+<a href="../../../starknet_versions/upcoming_versions/#what_to_expect" class="xref page">compiled class hash</a> of the declared
 class</p>
 </li>
 </ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="on_chain_data_pre_v0_11_0"><a class="anchor" href="#on_chain_data_pre_v0_11_0"></a>On-chain data: pre v0.11.0</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="pre_v0.11.0_format"><a class="anchor" href="#pre_v0.11.0_format"></a>Pre v0.11.0 Format</h3>
+<div class="paragraph">
+<p>The state diffs contain information on every contract whose storage was updated and additional information on contract deployments. Those differences are sent as <code>uint256[]</code> array as part of the calldata, and are encoded as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Number of cells that encode contract deployments</p>
+</li>
+<li>
+<p>For each deployed contract, we have:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>contract_address</code> - the <a href="../../Contracts/contract-address/" class="xref page">address</a> of the deployed contract</p>
+</li>
+<li>
+<p><code>contract_hash</code> - the <a href="../../Contracts/class-hash/" class="xref page">hash</a> of the class</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Number of contracts whose storage is updated</p>
+</li>
+<li>
+<p>For each such contract, we have:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>contract_address</code> - the <a href="../../Contracts/contract-address/" class="xref page">address</a> of the contract</p>
+</li>
+<li>
+<p><code>num_of_storage_updates</code> - number of storage updates</p>
+</li>
+<li>
+<p>`nonce, num of storage updates ` - a uint256 value that encodes both the number of storage updates for that contract and the updated nonce:</p>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{128 bits}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |
+{\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}\]
+</div>
+</div>
+</li>
+<li>
+<p>For each storage update:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>key</code> - the address inside the contract&#8217;s storage where the value is updated</p>
+</li>
+<li>
+<p><code>value</code> - the new value</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="pre_v0.11.0_example"><a class="anchor" href="#pre_v0.11.0_example"></a>Pre v0.11.0 Example</h3>
+<div class="paragraph">
+<p>Below we show an example of on chain data which was extracted from L1, and proceed to decode it according to the above format.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">[
+  2,
+  2472939307328371039455977650994226407024607754063562993856224077254594995194,
+  1336043477925910602175429627555369551262229712266217887481529642650907574765,
+  5,
+  2019172390095051323869047481075102003731246132997057518965927979101413600827,
+  18446744073709551617,
+  5,
+  102,
+  2111158214429736260101797453815341265658516118421387314850625535905115418634,
+  2,
+  619473939880410191267127038055308002651079521370507951329266275707625062498,
+  1471584055184889701471507129567376607666785522455476394130774434754411633091,
+  619473939880410191267127038055308002651079521370507951329266275707625062499,
+  541081937647750334353499719661793404023294520617957763260656728924567461866,
+  2472939307328371039455977650994226407024607754063562993856224077254594995194,
+  1,
+  955723665991825982403667749532843665052270105995360175183368988948217233556,
+  2439272289032330041885427773916021390926903450917097317807468082958581062272,
+  3429319713503054399243751728532349500489096444181867640228809233993992987070,
+  1,
+  5,
+  1110,
+  3476138891838001128614704553731964710634238587541803499001822322602421164873,
+  6,
+  59664015286291125586727181187045849528930298741728639958614076589374875456,
+  600,
+  221246409693049874911156614478125967098431447433028390043893900771521609973,
+  400,
+  558404273560404778508455254030458021013656352466216690688595011803280448030,
+  100,
+  558404273560404778508455254030458021013656352466216690688595011803280448031,
+  200,
+  558404273560404778508455254030458021013656352466216690688595011803280448032,
+  300,
+  1351148242645005540004162531550805076995747746087542030095186557536641755046,
+  500
+]</code></pre>
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The first element, <code>2</code>, is the number of cells that encode contracts deployment.</p>
+</li>
+<li>
+<p>The next two elements describe a single contract deployment with the following parameters:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>contract_address</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre>2472939307328371039455977650994226407024607754063562993856224077254594995194</pre>
+</div>
+</div>
+</li>
+<li>
+<p><code>contract_hash</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre>1336043477925910602175429627555369551262229712266217887481529642650907574765</pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>The next element, <code>5</code> (index 3 in the array), is the number of contracts whose storage was updated. We will take only the first contract as an example.</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>contract_address</code>:</p>
+<div class="listingblock">
+<div class="content">
+<pre>2019172390095051323869047481075102003731246132997057518965927979101413600827</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Following the above contract address, we have <code>18446744073709551617</code> (index 8 in the array), which is \(2^{64}+1\), thus:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The new contract nonce is <code>1</code></p>
+</li>
+<li>
+<p>One storage key is updated</p>
+</li>
+<li>
+<p>The value at key <code>5</code> was changed to <code>102</code></p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The next 4 contract storage updates are interpreted in the same manner.</p>
 </div>
 </div>
 </div>
@@ -802,7 +808,7 @@ class</p>
 <p>The data described above is sent across several Ethereum transactions, each holding a part of this array as calldata. Each new Starknet block has its associated state diff transactions.</p>
 </div>
 <div class="paragraph">
-<p>You can find the code for extracting this data from Ethereum in <a href="https://github.com/eqlabs/pathfinder/blob/2fe6f549a0b8b9923ed7a21cd1a588bc571657d6/crates/pathfinder/src/ethereum/state_update/retrieve.rs">Pathfinder&#8217;s repo</a>. Pathfinder is the first Starknet full node implementation. You may also take a look at the <a href="https://github.com/eqlabs/pathfinder/blob/2fe6f549a0b8b9923ed7a21cd1a588bc571657d6/crates/pathfinder/resources/fact_retrieval.py">python script</a> which extracts the same information.</p>
+<p>You can find the code for extracting this data from Ethereum in <a href="https://github.com/eqlabs/pathfinder/blob/2fe6f549a0b8b9923ed7a21cd1a588bc571657d6/crates/pathfinder/src/ethereum/state_update/retrieve.rs">Pathfinder&#8217;s repo</a>. Pathfinder is the first Starknet full node implementation. You may also take a look at the <a href="https://github.com/eqlabs/pathfinder/blob/2fe6f549a0b8b9923ed7a21cd1a588bc571657d6/crates/pathfinder/resources/fact_retrieval.py">Python script</a> which extracts the same information.</p>
 </div>
 </div>
 </div>
@@ -1024,6 +1030,7 @@ class</p>
     const appId = "VHYJO45TI4";
     const apiKey = "9d5f273e78238a8c505526e481c857f7";
     const searchClient = algoliasearch(appId, apiKey);
+    const hitsPerPage = 20
 
     function getSources({ query, state }) {
         if (!query) {
@@ -1043,6 +1050,7 @@ class</p>
                     params: {
                       attributesToSnippet: ["title:8", "content:10"],
                       snippetEllipsisText: "…",
+                      hitsPerPage,
                     }
                   }
                 ]
@@ -1118,7 +1126,7 @@ class</p>
       openOnFocus: true,
       detachedMediaQuery: "",
       getSources,
-      plugins: [recentlyViewedItems, mostPopulerSearches]
+      plugins: [recentlyViewedItems, mostPopulerSearches],
     });
 </script>
 
