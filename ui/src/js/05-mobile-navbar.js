@@ -6,7 +6,7 @@
   // navbarBurger.addEventListener('click', toggleNavbarMenu.bind(navbarBurger))
 
   // For some strange reason, the body has a overflow scroll if we do not throw an error in this file 🤷‍♂️
-  throw error
+  // throw error
 
   // function toggleNavbarMenu (e) {
   //   e.stopPropagation() // trap event
