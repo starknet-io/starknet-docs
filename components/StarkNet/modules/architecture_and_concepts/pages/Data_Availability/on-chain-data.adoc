@@ -17,104 +17,6 @@ on the transactions or particular changes that this update caused.
 Consequently, more information must be provided in order to allow other parties to locally track Starknet's state.
 ====
 
-== On-chain data: pre v0.11.0
-
-[id="pre_v0.11.0_format"]
-=== Pre v0.11.0 Format
-
-The state diffs contain information on every contract whose storage was updated and additional information on contract deployments. Those differences are sent as `uint256[]` array as part of the calldata, and are encoded as follows:
-
-* Number of cells that encode contract deployments
-* For each deployed contract, we have:
- ** `contract_address` - the xref:../Contracts/contract-address.adoc[address] of the deployed contract
- ** `contract_hash` - the xref:../Contracts/class-hash.adoc[hash] of the class
-* Number of contracts whose storage is updated
-* For each such contract, we have:
- ** `contract_address` - the xref:../Contracts/contract-address.adoc[address] of the contract
- ** `num_of_storage_updates` - number of storage updates
- ** `nonce, num_of_storage_updates ` - a uint256 value that encodes both the number of storage updates for that contract and the updated nonce:
-+
-[stem]
-++++
-\underbrace{0\cdots0}_{\text{128 bits}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |
-{\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}
-++++
- ** For each storage update:
-  *** `key` - the address inside the contract's storage where the value is updated
-  *** `value` - the new value
-
-[id="pre_v0.11.0_example"]
-===  Pre v0.11.0 Example
-
-Below we show an example of on chain data which was extracted from L1, and proceed to decode it according to the above format.
-
-[source,json]
-----
-[
-  2,
-  2472939307328371039455977650994226407024607754063562993856224077254594995194,
-  1336043477925910602175429627555369551262229712266217887481529642650907574765,
-  5,
-  2019172390095051323869047481075102003731246132997057518965927979101413600827,
-  18446744073709551617, 5, 102,
-  2111158214429736260101797453815341265658516118421387314850625535905115418634,
-  2,
-  619473939880410191267127038055308002651079521370507951329266275707625062498,
-  1471584055184889701471507129567376607666785522455476394130774434754411633091,
-  619473939880410191267127038055308002651079521370507951329266275707625062499,
-  541081937647750334353499719661793404023294520617957763260656728924567461866,
-  2472939307328371039455977650994226407024607754063562993856224077254594995194,
-  1,
-  955723665991825982403667749532843665052270105995360175183368988948217233556,
-  2439272289032330041885427773916021390926903450917097317807468082958581062272,
-  3429319713503054399243751728532349500489096444181867640228809233993992987070,
-  1, 5, 1110,
-  3476138891838001128614704553731964710634238587541803499001822322602421164873,
-  6, 59664015286291125586727181187045849528930298741728639958614076589374875456,
-  600,
-  221246409693049874911156614478125967098431447433028390043893900771521609973,
-  400,
-  558404273560404778508455254030458021013656352466216690688595011803280448030,
-  100,
-  558404273560404778508455254030458021013656352466216690688595011803280448031,
-  200,
-  558404273560404778508455254030458021013656352466216690688595011803280448032,
-  300,
-  1351148242645005540004162531550805076995747746087542030095186557536641755046,
-  500
-]
-----
-
-* The first element, 2, is the number of cells that encode contracts deployment.
-* The next two elements describe a single contract deployment with the following parameters:
- ** `contract_address`:
-+
-----
-2472939307328371039455977650994226407024607754063562993856224077254594995194
-----
-
- ** `contract_hash`:
-+
-----
-1336043477925910602175429627555369551262229712266217887481529642650907574765
-----
-
-* The next element, `5` (index 6 in the array), is the number of contracts whose storage was updated. We will take only the first contract as an example.
- ** `contract_address`:
-+
-----
-2019172390095051323869047481075102003731246132997057518965927979101413600827
-----
-
-** One update (indicated by the cell at index 8):
- **  Following the above contract address, we have `18446744073709551617` (index 8 in the array), which is stem:[$2^{64}+1$], thus:
-  *** The new contract nonce is 1
-  *** One storage key is updated
-  *** The value at key 5 was changed to 102.
-
-The next 4 contracts storage updates are interpreted in the same manner.
-
-
 == On-chain data: post v0.11.0
 
 
@@ -125,7 +27,7 @@ The state diffs contain information on every contract whose storage was updated 
 
 For each affected contract, we have:
 
-* The contract adddress
+* The contract address
 * A single word that encodes:
 
 ** class information flag (0 = Storage updates only / 1 = contract was deployed or replaced in
@@ -153,14 +55,14 @@ Next, we have information about newly declared classes:
 
 * The # of (Cairo 1.0) classes that were declared in the block
 * For each class we have:
-* The class hash
-* xref:starknet_versions:upcoming_versions.adoc[The compiled class hash]
+** The class hash
+** xref:starknet_versions:upcoming_versions.adoc[The compiled class hash]
 
 [id="v0.11.0_example"]
 === v0.11.0 Example
 
-Below we show an example of on chain data which was extracted from L1, and proceed to decode it
-according to the xref:documentation:architecture_and_concepts:Data_Availability/on-chain-data.adoc#v0.11.0format
+Below we show an example of on chain data that was extracted from L1, and proceed to decode it
+according to the xref:documentation:architecture_and_concepts:Data_Availability/on-chain-data.adoc#v0.11.0_format
 [above format].
 
 [source,json]
@@ -177,25 +79,126 @@ according to the xref:documentation:architecture_and_concepts:Data_Availability/
 ]
 ----
 
-* The first element, `1`, is the number of contract whose state was updated
+* The first element, `1`, is the number of contracts whose state was updated
 * The second element, `2019172390095051323869047481075102003731246132997057518965927979101413600827`, is the address of the first (and only) contract whose state changed
 * The third element, `18446744073709551617`, which is stem:[$2^{64}+1$], encodes the following:
-** flag = 0, that is, the contract was not just deployed or replaced, so we shouldn't treat the next word as the class hash
-** the new nonce is `1`
-** one storage cell was updated
+** The class information flag is `0`, that is, the contract was not just deployed or replaced, so we shouldn't treat the next word as the class hash
+** The new nonce is `1`
+** One storage cell was updated
 * The next two elements, `100` and `200` encode the storage update (the value of key `100` was set
 to `200`)
 * Next we have the new declare section: `1`
 means that we had a single
-xref:documentation:architecture_and_concepts:Blocks/transactions.adoc#declare_transaction_version_2[declare v2] in this state update, and the next two elements
+xref:documentation:architecture_and_concepts:Blocks/transactions.adoc#declare_v2[declare v2] in this state update, and the next two elements
 encode
 xref:documentation:architecture_and_concepts:Contracts/class-hash.adoc[the class hash] and
-xref:starknet_versions:upcoming_versions.adoc#_what_to_expect[compiled class hash] of the declared
+xref:starknet_versions:upcoming_versions.adoc#what_to_expect[compiled class hash] of the declared
 class
+
+== On-chain data: pre v0.11.0
+
+[id="pre_v0.11.0_format"]
+=== Pre v0.11.0 Format
+
+The state diffs contain information on every contract whose storage was updated and additional information on contract deployments. Those differences are sent as `uint256[]` array as part of the calldata, and are encoded as follows:
+
+* Number of cells that encode contract deployments
+* For each deployed contract, we have:
+ ** `contract_address` - the xref:../Contracts/contract-address.adoc[address] of the deployed contract
+ ** `contract_hash` - the xref:../Contracts/class-hash.adoc[hash] of the class
+* Number of contracts whose storage is updated
+* For each such contract, we have:
+ ** `contract_address` - the xref:../Contracts/contract-address.adoc[address] of the contract
+ ** `num_of_storage_updates` - number of storage updates
+ ** `nonce, num of storage updates ` - a uint256 value that encodes both the number of storage updates for that contract and the updated nonce:
++
+[stem]
+++++
+\underbrace{0\cdots0}_{\text{128 bits}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |
+{\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}
+++++
+ ** For each storage update:
+  *** `key` - the address inside the contract's storage where the value is updated
+  *** `value` - the new value
+
+[id="pre_v0.11.0_example"]
+===  Pre v0.11.0 Example
+
+Below we show an example of on chain data which was extracted from L1, and proceed to decode it according to the above format.
+
+[source,json]
+----
+[
+  2,
+  2472939307328371039455977650994226407024607754063562993856224077254594995194,
+  1336043477925910602175429627555369551262229712266217887481529642650907574765,
+  5,
+  2019172390095051323869047481075102003731246132997057518965927979101413600827,
+  18446744073709551617,
+  5,
+  102,
+  2111158214429736260101797453815341265658516118421387314850625535905115418634,
+  2,
+  619473939880410191267127038055308002651079521370507951329266275707625062498,
+  1471584055184889701471507129567376607666785522455476394130774434754411633091,
+  619473939880410191267127038055308002651079521370507951329266275707625062499,
+  541081937647750334353499719661793404023294520617957763260656728924567461866,
+  2472939307328371039455977650994226407024607754063562993856224077254594995194,
+  1,
+  955723665991825982403667749532843665052270105995360175183368988948217233556,
+  2439272289032330041885427773916021390926903450917097317807468082958581062272,
+  3429319713503054399243751728532349500489096444181867640228809233993992987070,
+  1,
+  5,
+  1110,
+  3476138891838001128614704553731964710634238587541803499001822322602421164873,
+  6,
+  59664015286291125586727181187045849528930298741728639958614076589374875456,
+  600,
+  221246409693049874911156614478125967098431447433028390043893900771521609973,
+  400,
+  558404273560404778508455254030458021013656352466216690688595011803280448030,
+  100,
+  558404273560404778508455254030458021013656352466216690688595011803280448031,
+  200,
+  558404273560404778508455254030458021013656352466216690688595011803280448032,
+  300,
+  1351148242645005540004162531550805076995747746087542030095186557536641755046,
+  500
+]
+----
+
+* The first element, `2`, is the number of cells that encode contracts deployment.
+* The next two elements describe a single contract deployment with the following parameters:
+ ** `contract_address`:
++
+----
+2472939307328371039455977650994226407024607754063562993856224077254594995194
+----
+
+ ** `contract_hash`:
++
+----
+1336043477925910602175429627555369551262229712266217887481529642650907574765
+----
+
+* The next element, `5` (index 3 in the array), is the number of contracts whose storage was updated. We will take only the first contract as an example.
+ ** `contract_address`:
++
+----
+2019172390095051323869047481075102003731246132997057518965927979101413600827
+----
+
+**  Following the above contract address, we have `18446744073709551617` (index 8 in the array), which is stem:[$2^{64}+1$], thus:
+  *** The new contract nonce is `1`
+  *** One storage key is updated
+  *** The value at key `5` was changed to `102`
+
+The next 4 contract storage updates are interpreted in the same manner.
 
 [id="extract_from_ethereum"]
 == Extract from Ethereum
 
 The data described above is sent across several Ethereum transactions, each holding a part of this array as calldata. Each new Starknet block has its associated state diff transactions.
 
-You can find the code for extracting this data from Ethereum in https://github.com/eqlabs/pathfinder/blob/2fe6f549a0b8b9923ed7a21cd1a588bc571657d6/crates/pathfinder/src/ethereum/state_update/retrieve.rs[Pathfinder's repo]. Pathfinder is the first Starknet full node implementation. You may also take a look at the https://github.com/eqlabs/pathfinder/blob/2fe6f549a0b8b9923ed7a21cd1a588bc571657d6/crates/pathfinder/resources/fact_retrieval.py[python script] which extracts the same information.
+You can find the code for extracting this data from Ethereum in https://github.com/eqlabs/pathfinder/blob/2fe6f549a0b8b9923ed7a21cd1a588bc571657d6/crates/pathfinder/src/ethereum/state_update/retrieve.rs[Pathfinder's repo]. Pathfinder is the first Starknet full node implementation. You may also take a look at the https://github.com/eqlabs/pathfinder/blob/2fe6f549a0b8b9923ed7a21cd1a588bc571657d6/crates/pathfinder/resources/fact_retrieval.py[Python script] which extracts the same information.
