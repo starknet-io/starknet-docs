@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Cairo 1 Contract Syntax :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Contracts/contract-syntax/">
+    <link rel="prev" href="../contract-abi/">
+    <link rel="next" href="../../Blocks/header/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -94,7 +96,9 @@
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../../../">Starknet</a></li>
-    <li><a href="./">Cairo 1 Contract Syntax</a></li>
+    <li>Architecture and concepts</li>
+    <li>Smart contracts</li>
+    <li><a href="./">Contract Syntax</a></li>
   </ul>
 </nav>
 </div>
@@ -210,6 +214,11 @@
     <a 
        class="nav-link"
      href="../contract-abi/">Contract ABI</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="3">
+    <a 
+       class="nav-link"
+     href="./">Contract Syntax</a>
   </li>
 </ul>
   </li>
@@ -456,17 +465,15 @@ This affects how external functions, storage, and events are organized inside th
 </div>
 </div>
 <div class="sect1">
-<h2 id="how_do_i_migrate"><a class="anchor" href="#how_do_i_migrate"></a>How do I migrate</h2>
+<h2 id="new_contract_syntax_concrete_steps_for_migrating"><a class="anchor" href="#new_contract_syntax_concrete_steps_for_migrating"></a>New contract syntax - concrete steps for migrating</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Given a contract written with the previous compiler version (v1.1.0), you can follow the steps below in order to make it compatible with the new syntax:</p>
+<p>Given a contract written with the previous compiler version (v1.1.0), you can follow the steps below in order to make it compatible with the new syntax.</p>
 </div>
-<div class="ulist">
-<ul>
-<li>
+<div class="sect2">
+<h3 id="storage_anotation"><a class="anchor" href="#storage_anotation"></a>Storage Anotation</h3>
+<div class="paragraph">
 <p>Anotate the <code>Storage</code> struct with the <code>#[storage]</code> attribute</p>
-</li>
-</ul>
 </div>
 <div id="tabs_1" class="openblock tabs is-loading">
 <div class="content">
@@ -503,10 +510,12 @@ struct Storage {
 </div>
 </div>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p>Gather your contract’s external/view function signatures under a trait anotated with <code>#[starknet::interface]</code></p>
+</div>
+<div class="sect2">
+<h3 id="contract_interface"><a class="anchor" href="#contract_interface"></a>Contract Interface</h3>
+<div class="paragraph">
+<p>Gather your contract’s external/view function signatures under a trait anotated with <code>#[starknet::interface]</code>:</p>
+</div>
 <div class="ulist">
 <ul>
 <li>
@@ -520,9 +529,6 @@ struct Storage {
 </li>
 <li>
 <p>Static functions that do not touch storage or emit events do not require an addition argument</p>
-</li>
-</ul>
-</div>
 </li>
 </ul>
 </div>
@@ -572,13 +578,11 @@ mod CounterContract {
 </div>
 </div>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p>Replace the <code><mark>[abi]</code> attribute with <code></mark>[starknet::interface]</code> (while it doesn&#8217;t affecting the generated code, we recommended adding to the trait a generic parameter <code>T</code> representing the contract&#8217;s state,
-and adding the <code>ref self: T</code> argument to external functions and <code>self: @T</code> argument for view functions)</p>
-</li>
-</ul>
+</div>
+<div class="sect2">
+<h3 id="add_interface_impl"><a class="anchor" href="#add_interface_impl"></a>Add Interface Impl</h3>
+<div class="paragraph">
+<p>Add the external/view function bodies under an impl of the interface trait, and mark the impl with the <code>[external(v0)]</code> attribute</p>
 </div>
 <div id="tabs_3" class="openblock tabs is-loading">
 <div class="content">
@@ -595,47 +599,6 @@ and adding the <code>ref self: T</code> argument to external functions and <code
 <div id="tabs_3_old--panel" class="tabpanel" aria-labelledby="tabs_3_old">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[abi]
-trait IOtherContract {
-    fn decrease_allowed() -&gt; bool;
-}</code></pre>
-</div>
-</div>
-</div>
-<div id="tabs_3_new--panel" class="tabpanel" aria-labelledby="tabs_3_new">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[starknet::interface]
-trait IOtherContract&lt;TContractState&gt; {
-    fn decrease_allowed(self: @TContractState) -&gt; bool;
-}</code></pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Add the external/view function bodies under an impl of the above trait, and mark the impl with the <code>[external(v0)]</code> attribute</p>
-</li>
-</ul>
-</div>
-<div id="tabs_4" class="openblock tabs is-loading">
-<div class="content">
-<div class="ulist tablist">
-<ul>
-<li id="tabs_4_old" class="tab">
-<p>old</p>
-</li>
-<li id="tabs_4_new" class="tab">
-<p>new</p>
-</li>
-</ul>
-</div>
-<div id="tabs_4_old--panel" class="tabpanel" aria-labelledby="tabs_4_old">
-<div class="listingblock">
-<div class="content">
 <pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[contract]
 mod CounterContract {
    #[external]
@@ -648,7 +611,7 @@ mod CounterContract {
 </div>
 </div>
 </div>
-<div id="tabs_4_new--panel" class="tabpanel" aria-labelledby="tabs_4_new">
+<div id="tabs_3_new--panel" class="tabpanel" aria-labelledby="tabs_3_new">
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[starknet::interface]
@@ -672,12 +635,53 @@ mod CounterContract {
 </div>
 </div>
 </div>
-<div class="ulist">
+</div>
+<div class="sect2">
+<h3 id="replace_the_abi_attribute_with_starknetinterface"><a class="anchor" href="#replace_the_abi_attribute_with_starknetinterface"></a>Replace the <code>abi</code> attribute with <code>starknet::interface</code></h3>
+<div class="paragraph">
+<p>These attributes are responsible for generating the dispatcher type, used to call the contract.
+Replace the <code><mark>[abi]</code> attribute with <code></mark>[starknet::interface]</code>. While it doesn&#8217;t affect the generated code, we recommended adding to the trait a generic parameter <code>T</code> representing the contract&#8217;s state,
+and adding the <code>ref self: T</code> argument to external functions and <code>self: @T</code> argument for view functions.</p>
+</div>
+<div id="tabs_4" class="openblock tabs is-loading">
+<div class="content">
+<div class="ulist tablist">
 <ul>
-<li>
-<p>Modify storage accesses to happen through <code>ContractState</code> or <code>@ContractState</code> (none external functions in the contract that access storage also need to get it as an argument)</p>
+<li id="tabs_4_old" class="tab">
+<p>old</p>
+</li>
+<li id="tabs_4_new" class="tab">
+<p>new</p>
 </li>
 </ul>
+</div>
+<div id="tabs_4_old--panel" class="tabpanel" aria-labelledby="tabs_4_old">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[abi]
+trait IOtherContract {
+    fn decrease_allowed() -&gt; bool;
+}</code></pre>
+</div>
+</div>
+</div>
+<div id="tabs_4_new--panel" class="tabpanel" aria-labelledby="tabs_4_new">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[starknet::interface]
+trait IOtherContract&lt;TContractState&gt; {
+    fn decrease_allowed(self: @TContractState) -&gt; bool;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="storage_accesses"><a class="anchor" href="#storage_accesses"></a>Storage Accesses</h3>
+<div class="paragraph">
+<p>Modify storage accesses to happen through <code>ContractState</code> or <code>@ContractState</code> (none external functions in the contract that access storage also need to get it as an argument)</p>
 </div>
 <div id="tabs_5" class="openblock tabs is-loading">
 <div class="content">
@@ -707,13 +711,12 @@ mod CounterContract {
 </div>
 </div>
 </div>
-<div class="ulist">
-<ul>
-<li>
+</div>
+<div class="sect2">
+<h3 id="events_definition"><a class="anchor" href="#events_definition"></a>Events Definition</h3>
+<div class="paragraph">
 <p>Unify all the contract&#8217;s events under the <code>Event</code> enum, and add a corresponding struct for every variant (all the structs must derive the <code>Event</code> trait,
 and each member type has to implement the <code>Serde</code> trait)</p>
-</li>
-</ul>
 </div>
 <div id="tabs_6" class="openblock tabs is-loading">
 <div class="content">
@@ -761,12 +764,11 @@ struct CounterDecreased {
 </div>
 </div>
 </div>
-<div class="ulist">
-<ul>
-<li>
+</div>
+<div class="sect2">
+<h3 id="events_emition"><a class="anchor" href="#events_emition"></a>Events Emition</h3>
+<div class="paragraph">
 <p>Emit events via the <code>ContractState</code> type</p>
-</li>
-</ul>
 </div>
 <div id="tabs_7" class="openblock tabs is-loading">
 <div class="content">
@@ -793,7 +795,7 @@ struct CounterDecreased {
 <div id="tabs_7_new--panel" class="tabpanel" aria-labelledby="tabs_7_new">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">fn increase_counter(amount: u128) {
+<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">fn increase_counter(ref self: ContractState, amount: u128) {
     ...
     self.emit(Event::CounterIncreased(CounterIncreased { amount }));
 }</code></pre>
@@ -804,6 +806,11 @@ struct CounterDecreased {
 </div>
 </div>
 </div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="../contract-abi/">Contract ABI</a></span>
+  <span class="next"><a href="../../Blocks/header/">Block structure</a></span>
+</nav>
 </article>
   </div>
 </main>
