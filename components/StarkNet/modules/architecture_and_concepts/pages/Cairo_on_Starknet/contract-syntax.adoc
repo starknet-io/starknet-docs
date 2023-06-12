@@ -1,4 +1,4 @@
-# Cairo 1 Contract Syntax
+# Contract Syntax - Migration Guide
 
 With the link:https://github.com/starkware-libs/cairo/releases/tag/v2.0.0-rc0[v2.0.0 release] of
 the Cairo compiler, the Starknet contract syntax has evolved. This affects how external
@@ -13,6 +13,32 @@ For a comprehensive breakdown of the changes, see the link:https://community.sta
 ## New contract syntax - concrete steps for migrating
 
 Given a contract written with the previous compiler version (v1.1.0), you can follow the steps below in order to make it compatible with the new syntax.
+
+### Contract Anotation
+
+Outside the contract module, Starknet related attributes are expected to have the `starknet::` prefix.
+
+[tabs]
+====
+old::
++
+[source,rust]
+----
+#[contract]
+mod CounterContract {
+   ...
+}
+----
+new::
++
+[source,rust]
+----
+#[starknet::contract]
+mod CounterContract {
+   ...
+}
+----
+====
 
 ### Storage Anotation
 
@@ -46,8 +72,8 @@ struct Storage {
 Gather your contract’s external/view function signatures under a trait anotated with `#[starknet::interface]`:
 
 * Add a generic parameter to the trait, here we use the name `TContractState` as it stands for the state of your contract
-* For view functions, add the `self: TContractState` argument
-* For external functions, add the `self: @TContractState` argument
+* For view functions, add the `self: @TContractState` argument
+* For external functions, add the `ref self: TContractState` argument
 * Static functions that do not touch storage or emit events do not require an addition argument
 
 [tabs]
@@ -74,7 +100,7 @@ new::
 #[starknet::interface]
 trait ICounterContract<TContractState> {
    fn increase_counter(ref self: TContractState, amount: u128);
-   fn decrease_counter(ref self: TContractState);
+   fn decrease_counter(ref self: TContractState, amount: u128);
    fn get_counter(self: @TContractState) -> u128;
 }
 
@@ -113,7 +139,7 @@ new::
 #[starknet::interface]
 trait ICounterContract<TContractState> {
    fn increase_counter(ref self: TContractState, amount: u128);
-   fn decrease_counter(ref self: TContractState);
+   fn decrease_counter(ref self: TContractState, amount: u128);
    fn get_counter(self: @TContractState) -> u128;
 }
 
@@ -121,9 +147,9 @@ trait ICounterContract<TContractState> {
 mod CounterContract {
    #[external(v0)]
    impl CounterContract of super::ICounterContract<ContractState> {
-      fn increase_counter(amount: u128) { ... }
-      fn decrease_counter(amount: u128) { ... }
-      fn get_counter() -> u128 { ... }
+      fn increase_counter(ref self: ContractState, amount: u128) { ... }
+      fn decrease_counter(ref self: ContractState, amount: u128) { ... }
+      fn get_counter(self: @ContractState) -> u128 { ... }
    }
 }
 ----
