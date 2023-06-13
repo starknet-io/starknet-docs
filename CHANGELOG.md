@@ -4,7 +4,6 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### [0.1.172](https://github.com/starknet-io/starknet-docs/compare/v0.1.171...v0.1.172) (2023-06-20)
 
-
 ### Bug Fixes
 
 * minor fixes in "Class hash" ([#556](https://github.com/starknet-io/starknet-docs/issues/556)) ([a0b4743](https://github.com/starknet-io/starknet-docs/commit/a0b4743a172889cd014d562ef0affcddaaed837e))
