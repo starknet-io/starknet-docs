@@ -35,10 +35,10 @@ In Starknet, the commitment combines the roots of two binary xref:#merkle_patric
 
 Where:
 
-* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#poseidon_hash[Poseidon] hash function
 * `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
 * `contracts_tree_root` is the root of the Merkle-Patricia tree whose leaves are the contracts states, see xref:#contracts_tree[below]
 * `classes_tree_root` is the root of the Merkle-Patricia tree whose leaves are the compiled class hashes, see xref:#classes_tree[below]
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#poseidon_array_hash[Poseidon] hash function
 
 [id="contracts_tree"]
 === The contracts tree
@@ -73,11 +73,13 @@ Where:
 * stem:[$h$] is the xref:../Hashing/hash-functions.adoc#poseidon_hash[Poseidon] hash function
 * `CONTRACT_CLASS_LEAF_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
 * `compiled_class_hash` is the hash of the Cairo assembly resulting from compiling the given class via the Sierra&rarr;Casm compiler
+* stem:[$h$] is stem:[$poseidon_2$] defined xref:../Hashing/hash-functions.adoc#poseidon_hash[here]
 
 [NOTE]
 ====
 Cairo 1.0 classes that are part of the commitment are defined with Sierra, an intermediate representation between Cairo 1.0 and Cairo assembly (see xref:architecture_and_concepts:Contracts/system-calls-cairo1.adoc[here] for more information).
 
+Cairo 1.0 classes that are part of the commitment are defined with Sierra, an intermediate representation between Cairo 1.0 and Cairo assembly (see xref:architecture_and_concepts:Contracts/cairo-1-and-sierra.adoc[here] for more information).
 However, the prover only deals with Cairo assembly.
 This means that unless we want the compilation from Sierra to Casm to be part of every block in which the class is used, the commitment must have some information about the associated Cairo assembly.
 
@@ -100,8 +102,8 @@ stem:[$path$] is an integer in stem:[$[0, 2^{length}-1\]$], and the binary expan
 
 [NOTE]
 ====
-The reason that length is specified and cannot be deduced from stem:[$path$] is that we're
-dealing with field elements of fixed size (251 bits each).
+You must specify length. You cannot deduce it from stem:[$path$] because
+field elements have a fixed size of 251 bits.
 
 For a node with stem:[$length>0$], following stem:[$path$] leads the highest node whose both right and left child are none empty.
 ====
