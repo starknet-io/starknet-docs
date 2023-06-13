@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Cairo 1 Contract Syntax :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Contracts/contract-syntax/">
-    <link rel="prev" href="../contract-abi/">
-    <link rel="next" href="../../Blocks/header/">
+    <title>Cairo 1.0 and Sierra :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Cairo_on_Starknet/cairo-1-and-sierra/">
+    <link rel="prev" href="../../Contracts/system-calls-cairo1/">
+    <link rel="next" href="../contract-syntax/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -97,8 +97,8 @@
   <ul>
     <li><a href="../../../">Starknet</a></li>
     <li>Architecture and concepts</li>
-    <li>Smart contracts</li>
-    <li><a href="./">Contract Syntax</a></li>
+    <li>Cairo on Starknet</li>
+    <li><a href="./">Cairo 1.0 and Sierra</a></li>
   </ul>
 </nav>
 </div>
@@ -198,27 +198,22 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../contract-classes/">Contract classes</a>
+     href="../../Contracts/contract-classes/">Contract classes</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../contract-address/">Contract address</a>
+     href="../../Contracts/contract-address/">Contract address</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../contract-storage/">Contract storage</a>
+     href="../../Contracts/contract-storage/">Contract storage</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../contract-abi/">Contract ABI</a>
-  </li>
-  <li class="nav-item is-current-page" data-depth="3">
-    <a 
-       class="nav-link"
-     href="./">Contract Syntax</a>
+     href="../../Contracts/contract-abi/">Contract ABI</a>
   </li>
 </ul>
   </li>
@@ -276,7 +271,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../class-hash/">Class hash</a>
+     href="../../Contracts/class-hash/">Class hash</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -290,19 +285,30 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../system-calls-cairo0/">Cairo 0</a>
+     href="../../Contracts/system-calls-cairo0/">Cairo 0</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../system-calls-cairo1/">Cairo 1.0</a>
+     href="../../Contracts/system-calls-cairo1/">Cairo 1.0</a>
   </li>
 </ul>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item parent" data-depth="2">
+    <button class="nav-item-toggle mask-svg-center"></button>
+    <span class="nav-text">Cairo on Starknet</span>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="3">
     <a 
        class="nav-link"
-     href="../cairo-1-and-sierra/">Cairo 1.0 and Sierra</a>
+     href="./">Cairo 1.0 and Sierra</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../contract-syntax/">Contract Syntax</a>
+  </li>
+</ul>
   </li>
 </ul>
   </li>
@@ -454,362 +460,164 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Cairo 1 Contract Syntax</h1>
+<h1 class="page">Cairo 1.0 and Sierra</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>With the <a href="https://github.com/starkware-libs/cairo/releases/tag/v2.0.0-rc0">v2.0.0 release</a> of the Cairo compiler, the contract syntax has evolved.
-This affects how external functions, storage, and events are organized inside the contract. We summarize here the technical steps required to migrate from the old syntax
-(for a comperhensive treatment of the changes, see the <a href="https://community.starknet.io/t/cairo-1-contract-syntax-is-evolving/94794">community forum post</a>).</p>
+<p>Up until <a href="../../../starknet_versions/upcoming_versions/" class="xref page">Starknet Alpha v0.11.0</a> users would write contracts in Cairo 0 and compile them locally to Cairo assembly (or Casm for short).
+Next, the user would submit the compilation output (the <a href="../../Contracts/contract-classes/" class="xref page">contract class</a>) to the Starknet sequencer via a <code>declare</code> transaction.</p>
+</div>
+<div class="paragraph">
+<p>With Cairo 1.0, the contract class resulting from <a href="../../Contracts/class-hash/#cairo1_class" class="xref page">compiling Cairo 1.0</a> does not include Casm. Instead of Casm, it includes instructions in an intermediate representation called Sierra (Safe Intermediate Representation).
+This new contract class is then compiled by the sequencer, via the Sierra &rarr; Casm compiler, to generate the Cairo assembly associated with this class.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="new_contract_syntax_concrete_steps_for_migrating"><a class="anchor" href="#new_contract_syntax_concrete_steps_for_migrating"></a>New contract syntax - concrete steps for migrating</h2>
+<h2 id="why_do_we_need_casm"><a class="anchor" href="#why_do_we_need_casm"></a>Why do we need Casm?</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Given a contract written with the previous compiler version (v1.1.0), you can follow the steps below in order to make it compatible with the new syntax.</p>
+<p>Starknet is a validity rollup, which means that the execution inside every block needs to be proven, and this is where STARKs come in handy.
+However, STARK proofs can address statements that are formulated in the language of polynomial
+constraints, and have no knowledge of smart contract execution.
+To overcome this gap, we developed <a href="https://github.com/starknet-io/starknet-stack-resources/blob/main/Cairo/Cairo%20%E2%80%93%20a%20Turing-complete%20STARK-friendly%20CPU%20architecture.pdf">Cairo</a>.</p>
+</div>
+<div class="paragraph">
+<p>Cairo instructions (which we referred to previously by Casm) are translated to polynomial constraints that enforce the correct execution of a program (according to the Cairo semantics defined in the paper).</p>
+</div>
+<div class="paragraph">
+<p>Thanks to Cairo, we can formulate the statement "this Starknet block is valid" in a way that we can prove.
+Note that we can only prove things about Casm. That is, regardless of what the user sends to the Starknet sequencer, what&#8217;s proven is the correct Casm execution.</p>
+</div>
+<div class="paragraph">
+<p>This means that we need a way to translate Sierra into Casm, and this is achieved with the Sierra
+&rarr;
+Casm compiler.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="why_do_we_need_sierra"><a class="anchor" href="#why_do_we_need_sierra"></a>Why do we need Sierra?</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To understand why we chose to add an additional layer between the code that the user writes (Cairo 1.0) and the code that is being proven (Casm),
+we need to consider more components in the system, and the limitations of Cairo.</p>
 </div>
 <div class="sect2">
-<h3 id="storage_anotation"><a class="anchor" href="#storage_anotation"></a>Storage Anotation</h3>
+<h3 id="reverted_transactions_unsatisfiable_airs_and_dos_attacks"><a class="anchor" href="#reverted_transactions_unsatisfiable_airs_and_dos_attacks"></a>Reverted transactions, unsatisfiable AIRs, and DOS attacks</h3>
 <div class="paragraph">
-<p>Anotate the <code>Storage</code> struct with the <code>#[storage]</code> attribute</p>
+<p>A crucial property of every decentralized L2 is that the sequencers are guaranteed to be compensated for work they do.
+The notion of reverted transactions is a good example: even if the user&#8217;s transaction failed mid execution, the sequencer should be able to include it in a block and charge execution fees up to the point of failure.</p>
 </div>
-<div id="tabs_1" class="openblock tabs is-loading">
-<div class="content">
-<div class="ulist tablist">
-<ul>
-<li id="tabs_1_old" class="tab">
-<p>old</p>
-</li>
-<li id="tabs_1_new" class="tab">
-<p>new</p>
-</li>
-</ul>
-</div>
-<div id="tabs_1_old--panel" class="tabpanel" aria-labelledby="tabs_1_old">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">struct Storage {
-    counter: u128,
-    other_contract: IOtherContractDispatcher
-}</code></pre>
-</div>
-</div>
-</div>
-<div id="tabs_1_new--panel" class="tabpanel" aria-labelledby="tabs_1_new">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[storage]
-struct Storage {
-    counter: u128,
-    other_contract: IOtherContractDispatcher
-}</code></pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="contract_interface"><a class="anchor" href="#contract_interface"></a>Contract Interface</h3>
 <div class="paragraph">
-<p>Gather your contract’s external/view function signatures under a trait anotated with <code>#[starknet::interface]</code>:</p>
+<p>If the sequencer cannot charge for such transactions, then sending transactions that will eventually fail (after a lot of computation steps) is an obvious DOS attack on the sequencer.
+The sequencer cannot look at a transaction and conclude that it would fail without actually doing the work (this is equivalent to solving the halting problem).</p>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p>Add a generic parameter to the trait, here we use the name <code>TContractState</code> as it stands for the state of your contract</p>
-</li>
-<li>
-<p>For view functions, add the <code>self: TContractState</code> argument</p>
-</li>
-<li>
-<p>For external functions, add the <code>self: @TContractState</code> argument</p>
-</li>
-<li>
-<p>Static functions that do not touch storage or emit events do not require an addition argument</p>
-</li>
-</ul>
+<div class="paragraph">
+<p>The obvious solution to the above predicament is to include such transactions in the block, similar to Ethereum. However, this may not be as simple to do in a validity rollup.
+With Cairo 0, there is no separating layer between user code and what is being proven.</p>
 </div>
-<div id="tabs_2" class="openblock tabs is-loading">
-<div class="content">
-<div class="ulist tablist">
-<ul>
-<li id="tabs_2_old" class="tab">
-<p>old</p>
-</li>
-<li id="tabs_2_new" class="tab">
-<p>new</p>
-</li>
-</ul>
-</div>
-<div id="tabs_2_old--panel" class="tabpanel" aria-labelledby="tabs_2_old">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[contract]
-mod CounterContract {
-   #[external]
-   fn increase_counter(amount: u128) { ... }
-   #[external]
-   fn decrease_counter(amount: u128) { ... }
-   #[view]
-   fn get_counter() -&gt; u128 { ... }
-}</code></pre>
-</div>
-</div>
-</div>
-<div id="tabs_2_new--panel" class="tabpanel" aria-labelledby="tabs_2_new">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[starknet::interface]
-trait ICounterContract&lt;TContractState&gt; {
-   fn increase_counter(ref self: TContractState, amount: u128);
-   fn decrease_counter(ref self: TContractState);
-   fn get_counter(self: @TContractState) -&gt; u128;
-}
-
-#[starknet::contract]
-mod CounterContract {
-   ...
-}</code></pre>
-</div>
-</div>
-</div>
-</div>
+<div class="paragraph">
+<p>This means that users can write code which is unprovable in some cases. In fact, such code is very easy to write, e.g. <code>assert 0=1</code> is a valid
+Cairo instruction that cannot be proven, as it translates to polynomial constraints that are not satisfiable. Any Casm execution that contains this instruction cannot be proven.
+Sierra is the layer between user code and the provable statement, that allows us to make sure all transactions are eventually provable.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="add_interface_impl"><a class="anchor" href="#add_interface_impl"></a>Add Interface Impl</h3>
+<h3 id="safe_casm"><a class="anchor" href="#safe_casm"></a>Safe Casm</h3>
 <div class="paragraph">
-<p>Add the external/view function bodies under an impl of the interface trait, and mark the impl with the <code>[external(v0)]</code> attribute</p>
+<p>The method by which Sierra guarantees that user code is always provable is by compiling Sierra instructions to a subset of Casm, which we call "safe Casm".
+The important property that we require from safe Casm is being provable for all inputs. A canonical example for safe Casm is using <code>if/else</code> instructions instead of <code>assert</code>, that is, making sure all failures are
+graceful.</p>
 </div>
-<div id="tabs_3" class="openblock tabs is-loading">
-<div class="content">
-<div class="ulist tablist">
-<ul>
-<li id="tabs_3_old" class="tab">
-<p>old</p>
-</li>
-<li id="tabs_3_new" class="tab">
-<p>new</p>
-</li>
-</ul>
+<div class="paragraph">
+<p>To better understand the considerations that go into designing the Sierra &rarr; Casm compiler,
+consider the <code>find_element</code> function from the common library of Cairo 0:</p>
 </div>
-<div id="tabs_3_old--panel" class="tabpanel" aria-labelledby="tabs_3_old">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[contract]
-mod CounterContract {
-   #[external]
-   fn increase_counter(amount: u128) { ... }
-   #[external]
-   fn decrease_counter(amount: u128) { ... }
-   #[view]
-   fn get_counter() -&gt; u128 { ... }
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">func find_element{range_check_ptr}(array_ptr: felt*, elm_size, n_elms, key) -&gt; (elm_ptr: felt*) {
+    alloc_locals;
+    local index;
+    %{
+        ...
+    %}
+    assert_nn_le(a=index, b=n_elms - 1);
+    tempvar elm_ptr = array_ptr + elm_size * index;
+    assert [elm_ptr] = key;
+    return (elm_ptr=elm_ptr);
 }</code></pre>
 </div>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Below we abuse the "Casm" notation by not distinguishing Cairo 0 from Casm and referring to the
+above as Casm (while we actually refer to the compilation result of the above).</p>
 </div>
-<div id="tabs_3_new--panel" class="tabpanel" aria-labelledby="tabs_3_new">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[starknet::interface]
-trait ICounterContract&lt;TContractState&gt; {
-   fn increase_counter(ref self: TContractState, amount: u128);
-   fn decrease_counter(ref self: TContractState);
-   fn get_counter(self: @TContractState) -&gt; u128;
-}
-
-#[starknet::contract]
-mod CounterContract {
-   #[external(v0)]
-   impl CounterContract of super::ICounterContract&lt;ContractState&gt; {
-      fn increase_counter(amount: u128) { ... }
-      fn decrease_counter(amount: u128) { ... }
-      fn get_counter() -&gt; u128 { ... }
-   }
-}</code></pre>
+</td>
+</tr>
+</table>
 </div>
+<div class="paragraph">
+<p>For brevity, we have omitted the hint in the above snippet, but it&#8217;s clear that this function can only execute correctly if the requested element exists in the array (otherwise it would fail for every possible hint -
+there is nothing we can substitute <code>index</code> for, that makes the following lines run successfully).</p>
 </div>
+<div class="paragraph">
+<p>Such Casm cannot be generated by the Sierra&rarr;Casm compiler.
+Furthermore, simply replacing the assertion with an if/else statement doesn&#8217;t do, as this results in non-deterministic execution. That is, for the same input, different hint values can yield different results.
+A malicious prover can use this freedom to harm the user - in this example, they are able to make it seem as if an element isn&#8217;t part of the array, even though it actually is.</p>
 </div>
+<div class="paragraph">
+<p>The safe Casm for finding an element in an array behaves like the above snippet in the happy flow (element is there): an index is given in a hint, and we verify that the array at the hinted index contains the requested element.
+However, in the unhappy flow (element isn&#8217;t there), we <strong>must</strong> go over the entire array to verify this.</p>
 </div>
+<div class="paragraph">
+<p>This was not the case in Cairo 0, as we were fine with certain paths not being provable (in the above snippet, the unhappy flow in which the element isn&#8217;t in the array is never provable).</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Sierra&#8217;s gas metering adds further complications to the above example. Even looking through the array to verify that the element isn&#8217;t there may leave some flexibility to the prover.</p>
+</div>
+<div class="paragraph">
+<p>If we take gas limitations into consideration, the user may have enough gas for the happy flow, but not for the unhappy one, making the execution stop mid-search, and allowing the prover to get away with lying about the element not being present.</p>
+</div>
+<div class="paragraph">
+<p>The way we plan to handle this is by requiring the user to have enough gas for the unhappy flow before actually calling <code>find_element</code>.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 <div class="sect2">
-<h3 id="replace_the_abi_attribute_with_starknetinterface"><a class="anchor" href="#replace_the_abi_attribute_with_starknetinterface"></a>Replace the <code>abi</code> attribute with <code>starknet::interface</code></h3>
+<h3 id="hints_in_cairo_1_0"><a class="anchor" href="#hints_in_cairo_1_0"></a>Hints in Cairo 1.0</h3>
 <div class="paragraph">
-<p>These attributes are responsible for generating the dispatcher type, used to call the contract.
-Replace the <code><mark>[abi]</code> attribute with <code></mark>[starknet::interface]</code>. While it doesn&#8217;t affect the generated code, we recommended adding to the trait a generic parameter <code>T</code> representing the contract&#8217;s state,
-and adding the <code>ref self: T</code> argument to external functions and <code>self: @T</code> argument for view functions.</p>
+<p>Smart contracts written with Cairo 1.0 cannot contain user defined hints. This is already true with Cairo 0 contracts (only whitelisted hints are accepted), but with Cairo 1.0 the hints in use are
+determined by the Sierra &rarr; Casm compiler. Since this compilation is there to ensure that only
+"safe" Casm is generated, there is no room for hints that are not generated by the compiler.</p>
 </div>
-<div id="tabs_4" class="openblock tabs is-loading">
-<div class="content">
-<div class="ulist tablist">
-<ul>
-<li id="tabs_4_old" class="tab">
-<p>old</p>
-</li>
-<li id="tabs_4_new" class="tab">
-<p>new</p>
-</li>
-</ul>
-</div>
-<div id="tabs_4_old--panel" class="tabpanel" aria-labelledby="tabs_4_old">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[abi]
-trait IOtherContract {
-    fn decrease_allowed() -&gt; bool;
-}</code></pre>
-</div>
-</div>
-</div>
-<div id="tabs_4_new--panel" class="tabpanel" aria-labelledby="tabs_4_new">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[starknet::interface]
-trait IOtherContract&lt;TContractState&gt; {
-    fn decrease_allowed(self: @TContractState) -&gt; bool;
-}</code></pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="storage_accesses"><a class="anchor" href="#storage_accesses"></a>Storage Accesses</h3>
 <div class="paragraph">
-<p>Modify storage accesses to happen through <code>ContractState</code> or <code>@ContractState</code> (none external functions in the contract that access storage also need to get it as an argument)</p>
-</div>
-<div id="tabs_5" class="openblock tabs is-loading">
-<div class="content">
-<div class="ulist tablist">
-<ul>
-<li id="tabs_5_old" class="tab">
-<p>old</p>
-</li>
-<li id="tabs_5_new" class="tab">
-<p>new</p>
-</li>
-</ul>
-</div>
-<div id="tabs_5_old--panel" class="tabpanel" aria-labelledby="tabs_5_old">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">let current = counter::read();</code></pre>
-</div>
-</div>
-</div>
-<div id="tabs_5_new--panel" class="tabpanel" aria-labelledby="tabs_5_new">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">let current = self.counter.read();</code></pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="events_definition"><a class="anchor" href="#events_definition"></a>Events Definition</h3>
-<div class="paragraph">
-<p>Unify all the contract&#8217;s events under the <code>Event</code> enum, and add a corresponding struct for every variant (all the structs must derive the <code>Event</code> trait,
-and each member type has to implement the <code>Serde</code> trait)</p>
-</div>
-<div id="tabs_6" class="openblock tabs is-loading">
-<div class="content">
-<div class="ulist tablist">
-<ul>
-<li id="tabs_6_old" class="tab">
-<p>old</p>
-</li>
-<li id="tabs_6_new" class="tab">
-<p>new</p>
-</li>
-</ul>
-</div>
-<div id="tabs_6_old--panel" class="tabpanel" aria-labelledby="tabs_6_old">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[event]
-fn counter_increased(amount: u128) {}
-#[event]
-fn counter_decreased(amount: u128) {}</code></pre>
-</div>
-</div>
-</div>
-<div id="tabs_6_new--panel" class="tabpanel" aria-labelledby="tabs_6_new">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[event]
-#[derive(Drop, starknet::Event)]
-enum Event {
-    CounterIncreased: CounterIncreased,
-    CounterDecreased: CounterDecreased
-}
-
-#[derive(Drop, starknet::Event)]
-struct CounterIncreased {
-    amount: u128
-}
-
-#[derive(Drop, starknet::Event)]
-struct CounterDecreased {
-    amount: u128
-}</code></pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="events_emition"><a class="anchor" href="#events_emition"></a>Events Emition</h3>
-<div class="paragraph">
-<p>Emit events via the <code>ContractState</code> type</p>
-</div>
-<div id="tabs_7" class="openblock tabs is-loading">
-<div class="content">
-<div class="ulist tablist">
-<ul>
-<li id="tabs_7_old" class="tab">
-<p>old</p>
-</li>
-<li id="tabs_7_new" class="tab">
-<p>new</p>
-</li>
-</ul>
-</div>
-<div id="tabs_7_old--panel" class="tabpanel" aria-labelledby="tabs_7_old">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">fn increase_counter(amount: u128) {
-    ...
-    counter_increased(amount);
-}</code></pre>
-</div>
-</div>
-</div>
-<div id="tabs_7_new--panel" class="tabpanel" aria-labelledby="tabs_7_new">
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">fn increase_counter(ref self: ContractState, amount: u128) {
-    ...
-    self.emit(Event::CounterIncreased(CounterIncreased { amount }));
-}</code></pre>
-</div>
-</div>
-</div>
-</div>
+<p>In the future, native Cairo 1.0 may contain hint syntax similar to Cairo 0, but it will not be available in Starknet smart contracts (<a href="https://medium.com/starkware/fractal-scaling-from-l2-to-l3-7fe238ecfb4f">L3s</a> on top of Starknet may make use of such functionality).
+Note that this is currently not part of Starknet&#8217;s roadmap.</p>
 </div>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../contract-abi/">Contract ABI</a></span>
-  <span class="next"><a href="../../Blocks/header/">Block structure</a></span>
+  <span class="prev"><a href="../../Contracts/system-calls-cairo1/">Cairo 1.0</a></span>
+  <span class="next"><a href="../contract-syntax/">Contract Syntax</a></span>
 </nav>
 </article>
   </div>
