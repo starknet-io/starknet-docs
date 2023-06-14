@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.159](https://github.com/starknet-io/starknet-docs/compare/v0.1.158...v0.1.159) (2023-06-13)
+
+### [0.1.158](https://github.com/starknet-io/starknet-docs/compare/v0.1.157...v0.1.158) (2023-06-13)
+
+### [0.1.157](https://github.com/starknet-io/starknet-docs/compare/v0.1.156...v0.1.157) (2023-06-12)
+
+### [0.1.156](https://github.com/starknet-io/starknet-docs/compare/v0.1.155...v0.1.156) (2023-06-12)
+
+### [0.1.155](https://github.com/starknet-io/starknet-docs/compare/v0.1.154...v0.1.155) (2023-06-09)
+
+
+### Bug Fixes
+
+* minor fixes in "Block structure" ([#526](https://github.com/starknet-io/starknet-docs/issues/526)) ([0ea5756](https://github.com/starknet-io/starknet-docs/commit/0ea57568f0859c8baf3d8fa36728755375ab5651))
+* minor fixes in "Contract address" ([#525](https://github.com/starknet-io/starknet-docs/issues/525)) ([244666e](https://github.com/starknet-io/starknet-docs/commit/244666e851792648e0ddeb58b7227a8900510d87))
+* minor fixes in "L1-L2 messaging" ([#532](https://github.com/starknet-io/starknet-docs/issues/532)) ([d287023](https://github.com/starknet-io/starknet-docs/commit/d287023e236adb073a34edea79576554b8393fe9))
+* minor fixes in "Transaction lifecycle" ([#527](https://github.com/starknet-io/starknet-docs/issues/527)) ([872e18c](https://github.com/starknet-io/starknet-docs/commit/872e18c0fad091b0dc674a37b8bb6dd79ab0cd03))
+
+### [0.1.154](https://github.com/starknet-io/starknet-docs/compare/v0.1.153...v0.1.154) (2023-06-09)
+
+### [0.1.153](https://github.com/starknet-io/starknet-docs/compare/v0.1.152...v0.1.153) (2023-06-09)
+
+### [0.1.152](https://github.com/starknet-io/starknet-docs/compare/v0.1.151...v0.1.152) (2023-06-06)
+
 ### [0.1.151](https://github.com/starknet-io/starknet-docs/compare/v0.1.150...v0.1.151) (2023-06-05)
 
 ### [0.1.150](https://github.com/starknet-io/starknet-docs/compare/v0.1.149...v0.1.150) (2023-06-05)
