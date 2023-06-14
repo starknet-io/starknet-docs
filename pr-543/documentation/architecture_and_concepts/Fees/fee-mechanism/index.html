@@ -36,6 +36,17 @@
     <script src="../../../../_/js/vendor/medium-zoom.js?new"></script>
     <script type="text/javascript" id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="e4db29b5-cd94-4bcf-87e4-04f4ca564240" data-blockingmode="manual"></script>
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
+
+    <script>
+        (function(h,o,t,j,a,r){
+        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+        h._hjSettings={hjid:3529885,hjsv:6};
+        a=o.getElementsByTagName('head')[0];
+        r=o.createElement('script');r.async=1;
+        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+        a.appendChild(r);
+        })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+    </script>
 <link rel="icon" href="../../../../_/img/favicon/favicon.ico" type="image/x-icon">
 
 <!-- For all browsers -->
@@ -305,7 +316,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Cairo_on_Starknet/contract-syntax/">Contract Syntax</a>
+     href="../../Cairo_on_Starknet/contract-syntax/">Contract Syntax - Migration Guide</a>
   </li>
 </ul>
   </li>
@@ -386,7 +397,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../tools/api_rpc/">Starknet Full-nodes &amp; API services</a>
+     href="../../../tools/api_rpc/">Starknet full-nodes &amp; API services</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -485,33 +496,43 @@
 <div class="ulist">
 <ul>
 <li>
-<p><a href="#computation">Computational complexity</a>: the heavier the transaction, the larger its portion in the proof verification cost.</p>
+<p><a href="#computation">Computational complexity</a>: the heavier the transaction, the larger its portion in the proof verification cost.
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p>
 </li>
 <li>
-<p><a href="#on-chain-data">On chain data</a>: L1 calldata cost originating from <a href="#../Data_Availability/on_chain_data.adoc" class="xref unresolved">data availability</a> and L2→L1 messages.</p>
+<p><a href="#on-chain-data">On chain data</a>: L1 calldata cost originating from <a href="../../Data_Availability/on-chain-data/" class="xref page">data availability</a>
+and L2→L1 messages.</p>
 </li>
 </ul>
 </div>
+<div class="exampleblock">
+<div class="content">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#_on_chain_data">On chain data</a>: L1 calldata cost originating from <a href="#_on_chain_data">data availability</a> and L2→L1 messages.
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; add subtitles</p>
+</li>
+</ul>
 </div>
+<div class="paragraph">
+<p>== Fee Units</p>
 </div>
-<div class="sect1">
-<h2 id="fee_units"><a class="anchor" href="#fee_units"></a>Fee Units</h2>
-<div class="sectionbody">
 <div class="paragraph">
 <p>The fee is denominated in ETH (this may change in future versions). Each transaction is associated with a gas estimate (explained below), and combining this with the gas price yields the estimated fee.</p>
 </div>
+<div class="paragraph">
+<p>== How much fee is charged? High-level overview</p>
 </div>
+<div class="paragraph">
+<p>=== Computation</p>
 </div>
-<div class="sect1">
-<h2 id="how_much_fee_is_charged_high_level_overview"><a class="anchor" href="#how_much_fee_is_charged_high_level_overview"></a>How much fee is charged? High-level overview</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="computation"><a class="anchor" href="#computation"></a>Computation</h3>
 <div class="paragraph">
 <p>Let&#8217;s analyze the correct metric for measuring transaction complexity. For simplicity, we will ignore Cairo&#8217;s builtins for the sake of the explanation, and later see how to address them.</p>
 </div>
-<div class="sect3">
-<h4 id="without_builtins"><a class="anchor" href="#without_builtins"></a>Without builtins</h4>
+<div class="paragraph">
+<p>==== Without builtins</p>
+</div>
 <div class="paragraph">
 <p>Recall that a Cairo program execution yields an execution trace. When proving a Starknet block, we aggregate all the transactions appearing in that block to the execution trace.</p>
 </div>
@@ -522,9 +543,9 @@
 <p>Tracking the execution trace length associated with each transaction is simple.
 Each assertion over field elements (such as verifying addition/multiplication over the field) requires the same, constant number of trace cells (this is where our &#8220;no-builtins&#8221; assumption kicks in! Obviously Pedersen occupies more trace cells than addition). Therefore, in a world without builtins, the fee of the transaction \(tx\) is correlated with \(\text{TraceCells}[tx]/L\).</p>
 </div>
+<div class="paragraph">
+<p>==== Adding builtins</p>
 </div>
-<div class="sect3">
-<h4 id="adding_builtins"><a class="anchor" href="#adding_builtins"></a>Adding builtins</h4>
 <div class="paragraph">
 <p>The Cairo execution trace is separated&#8201;&#8212;&#8201;and each builtin has its own slot. We have to mind this slot allocation when determining the fee.</p>
 </div>
@@ -556,9 +577,9 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 <div class="paragraph">
 <p>Notice we completely ignored the number of Cairo steps in this transaction performance estimation, as it is not the limiting factor (since 500,000,000/10,000 &gt; 20,000,000/500). With this example in mind, we can now formulate the exact fee associated with L2 computation.</p>
 </div>
+<div class="paragraph">
+<p>==== General Case</p>
 </div>
-<div class="sect3">
-<h4 id="general_case"><a class="anchor" href="#general_case"></a>General Case</h4>
 <div class="paragraph">
 <p>For each transaction, the sequencer calculates a vector <code>CairoResourceUsage</code> holding:</p>
 </div>
@@ -623,10 +644,9 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 </tr>
 </tbody>
 </table>
+<div class="paragraph">
+<p>=== On Chain Data</p>
 </div>
-</div>
-<div class="sect2">
-<h3 id="on_chain_data"><a class="anchor" href="#on_chain_data"></a>On Chain Data</h3>
 <div class="paragraph">
 <p>The on chain data associated with a transaction is composed of three parts</p>
 </div>
@@ -643,10 +663,12 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 </li>
 </ul>
 </div>
-<div class="sect3">
-<h4 id="storage_updates"><a class="anchor" href="#storage_updates"></a>Storage Updates</h4>
 <div class="paragraph">
-<p>Whenever a transaction updates a key at the storage of some contract, the following <a href="../../Data_Availability/on-chain-data/" class="xref page">data</a> reaches L1:</p>
+<p>==== Storage Updates</p>
+</div>
+<div class="paragraph">
+<p>Whenever a transaction updates a key at the storage of some contract, the following <a href="../../Data_Availability/on-chain-data/" class="xref page">data</a>
+reaches L1:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -706,9 +728,9 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 </tr>
 </table>
 </div>
+<div class="paragraph">
+<p>==== L2→L1 Messages</p>
 </div>
-<div class="sect3">
-<h4 id="l2l1_messages"><a class="anchor" href="#l2l1_messages"></a>L2→L1 Messages</h4>
 <div class="paragraph">
 <p>When a transaction that raises the <code>send_message_to_l1</code> syscall is included in a state update, the following <a href="../../Data_Availability/on-chain-data/" class="xref page">data</a> reaches L1:</p>
 </div>
@@ -739,9 +761,9 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 <div class="paragraph">
 <p>where \(c_w\) is the calldata cost (in gas) per 32-byte word.</p>
 </div>
+<div class="paragraph">
+<p>==== Deployed Contracts</p>
 </div>
-<div class="sect3">
-<h4 id="deployed_contracts"><a class="anchor" href="#deployed_contracts"></a>Deployed Contracts</h4>
 <div class="paragraph">
 <p>When a transaction that raises the <code>deploy</code> syscall is included in a state update, the following <a href="../../Data_Availability/on-chain-data/#format" class="xref page">data</a> reaches L1:</p>
 </div>
@@ -766,13 +788,9 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 <div class="paragraph">
 <p>where \(c_w\) is the calldata cost (in gas) per 32-byte word.</p>
 </div>
+<div class="paragraph">
+<p>== Overall Fee</p>
 </div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="overall_fee"><a class="anchor" href="#overall_fee"></a>Overall Fee</h2>
-<div class="sectionbody">
 <div class="paragraph">
 <p>The fee for a transaction with:</p>
 </div>
@@ -806,13 +824,13 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 <div class="paragraph">
 <p>where \(w\) is the weights vector discussed <a href="#general_case">above</a> and \(c_w\) is the calldata cost (in gas) per 32-byte word.</p>
 </div>
+<div class="paragraph">
+<p>== When is the fee charged?</p>
 </div>
-</div>
-<div class="sect1">
-<h2 id="when_is_the_fee_charged"><a class="anchor" href="#when_is_the_fee_charged"></a>When is the fee charged?</h2>
-<div class="sectionbody">
 <div class="paragraph">
 <p>The fee is charged atomically with the transaction execution on L2. The Starknet OS injects a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.</p>
+</div>
+</div>
 </div>
 </div>
 </div>
