@@ -5,37 +5,26 @@
 
 The state of Starknet consists of:
 
-* contract instances: a mapping between addresses (251 bit field elements) and contract's state.
-* xref:architecture_and_concepts:Contracts/contract-classes.adoc[contract classes]: a mapping between class hash and the class definition
+* xref:architecture_and_concepts:Contracts/contract-classes.adoc[Contract classes]: a mapping between class hash and the class definition
+* xref:architecture_and_concepts:Contracts/contract-classes.adoc[Contract instances]: a mapping between addresses (251-bit field elements) and the contract's state.
 
 A contract state consists of:
 
-* class_hash (defines the functionality)
-* xref:../Contracts/contract-storage.adoc[contract storage] (a key-value mapping where the key/values are field elements)
-* contract nonce - the number of transactions sent from this contract
-
-// TODO Ariel 04/09: replace this note with a reference to account abstraction / nonce section
-
-[NOTE]
-====
-*nonce*
-
-Similarly to Ethereum, the contract's nonce is used to provide replay protection at the protocol level. When a transaction is sent to a given contract, the transaction's nonce must match the nonce of the contract. After the transaction is executed, the contract's nonce is increased by one.
-
-Note that while on Ethereum, only EOAs can send transactions and consequently have a non-zero nonce, on Starknet, only account contracts can send transactions and have a non-zero nonce.
-====
+* xref:../Contracts/class-hash.adoc[Class hash]: defines the functionality of the contract
+* xref:../Contracts/contract-storage.adoc[Contract storage]: a key-value mapping where the key/values are field elements
+* xref:../Account_Abstraction/approach.adoc#replay_protection[Contract nonce]: the number of transactions sent from this contract
 
 With the above definition, we can provide a brief sketch of Starknet's transition function. A transaction stem:[$tx$] transitions the system from state stem:[$S$] to state stem:[$S'$] if:
 
-* stem:[$tx$] is an xref:../Blocks/transactions.adoc#invoke-transaction[invoke] transaction, and the storage of stem:[$S'$] is the result of executing the target contract code with respect to the previous state stem:[$S$] (the arguments, contract address, and the specific entry point are part of the transaction)
-* stem:[$tx$] is a xref:../Blocks/transactions.adoc#deploy-transaction[deploy] transaction, and stem:[$S'$] contains the new contract's state at the contract's address. Additionally, the storage of stem:[$S$] is updated according to the execution of the contract's constructor.
-* stem:[$tx$] is a xref:../Blocks/transactions.adoc#declare-transaction[declare] transaction, and stem:[$S'$] contains the class hash and definition in the contract classes mapping
+* stem:[$tx$] is an xref:../Blocks/transactions.adoc#invoke_transaction[invoke] transaction, and the storage of stem:[$S'$] is the result of executing the target contract code with respect to the previous state stem:[$S$] (the arguments, contract address, and the specific entry point are part of the transaction)
+* stem:[$tx$] is a xref:../Blocks/transactions.adoc#deploy_account_transaction[deploy_account] transaction, and stem:[$S'$] contains the new contract's state at the contract's address. Additionally, the storage of stem:[$S$] is updated according to the execution of the contract's constructor.
+* stem:[$tx$] is a xref:../Blocks/transactions.adoc#declare_transaction[declare] transaction, and stem:[$S'$] contains the class hash and definition in the contract classes mapping
 
 [id="state_commitment"]
 == State Commitment
 
 The state commitment is a digest which uniquely (up to hash collisions) encodes the state.
-In Starknet, the commitment combines the roots of two binary Merkle-Patricia trees of height 251 in the following manner:
+In Starknet, the commitment combines the roots of two binary xref:#merkle_patricia_tree[Merkle-Patricia trees] of height 251 in the following manner:
 
 [stem]
 ++++
@@ -46,10 +35,10 @@ In Starknet, the commitment combines the roots of two binary Merkle-Patricia tre
 
 Where:
 
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#poseidon_hash[Poseidon] hash function
 * `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
 * `contracts_tree_root` is the root of the Merkle-Patricia tree whose leaves are the contracts states, see xref:#contracts_tree[below]
 * `classes_tree_root` is the root of the Merkle-Patricia tree whose leaves are the compiled class hashes, see xref:#classes_tree[below]
-* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#poseidon_array_hash[Poseidon] hash function
 
 [id="contracts_tree"]
 === The contracts tree
@@ -63,10 +52,10 @@ h(h(h(\text{class_hash}, \text{storage_root}), \text{nonce}),0)
 
 Where:
 
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen_hash[Pedersen] hash function.
 * stem:[$\text{class_hash}$] is the hash of the contract's definition discussed xref:documentation:architecture_and_concepts:Contracts/class-hash.adoc[here]
 * stem:[$\text{storage_root}$] is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract's storage
 * stem:[$\text{nonce}$] is the current nonce of the contract
-* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#pedersen_array_hash[Pedersen] hash function.
 
 [id="classes_tree"]
 === The classes tree
@@ -81,16 +70,14 @@ h(\text{CONTRACT_CLASS_LEAF_V0}, \text{compiled_class_hash})
 
 Where:
 
+* stem:[$h$] is the xref:../Hashing/hash-functions.adoc#poseidon_hash[Poseidon] hash function
 * `CONTRACT_CLASS_LEAF_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
 * `compiled_class_hash` is the hash of the Cairo assembly resulting from compiling the given class via the Sierra&rarr;Casm compiler
-* stem:[$h$] is stem:[$poseidon_2$] defined xref:../Hashing/hash-functions.adoc#poseidon_hash[here]
 
 [NOTE]
 ====
-*compiled classes*
+Cairo 1.0 classes that are part of the commitment are defined with Sierra, an intermediate representation between Cairo 1.0 and Cairo assembly (see xref:architecture_and_concepts:Contracts/cairo-1-and-sierra.adoc[here] for more information).
 
-Cairo 1.0 classes that are part of the commitment are defined with Sierra, an intermediate
-representation between Cairo 1.0 and Cairo assembly (see xref:Cairo_on_Starknet/cairo-1-and-sierra.adoc[here] for more information).
 However, the prover only deals with Cairo assembly.
 This means that unless we want the compilation from Sierra to Casm to be part of every block in which the class is used, the commitment must have some information about the associated Cairo assembly.
 
@@ -126,7 +113,7 @@ h(bottom, path) + length, & \text{otherwise}
 
 Note that any arithmetic operations in the above are done in our field.
 
-We can now proceed to recursively define the nodes in the trie. The triplet representing the parent of the nodes
+We can now proceed to recursively define the nodes in the tree. The triplet represents the parent of the nodes
 stem:[$left=(\ell_L, p_L, b_L)$], stem:[$right=(\ell_R, p_R, b_R)$] is given by:
 
 [stem]
