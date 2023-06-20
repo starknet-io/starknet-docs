@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.175](https://github.com/starknet-io/starknet-docs/compare/v0.1.174...v0.1.175) (2023-06-20)
+
+
+### Bug Fixes
+
+* minor fixes in "System Calls/Cairo 0" ([#567](https://github.com/starknet-io/starknet-docs/issues/567)) ([4c946c1](https://github.com/starknet-io/starknet-docs/commit/4c946c12569f361530c25e7fac45cecf280b28b1)), closes [#545](https://github.com/starknet-io/starknet-docs/issues/545) [#540](https://github.com/starknet-io/starknet-docs/issues/540) [#544](https://github.com/starknet-io/starknet-docs/issues/544)
+
 ### [0.1.174](https://github.com/starknet-io/starknet-docs/compare/v0.1.173...v0.1.174) (2023-06-20)
 
 ### [0.1.173](https://github.com/starknet-io/starknet-docs/compare/v0.1.172...v0.1.173) (2023-06-20)
