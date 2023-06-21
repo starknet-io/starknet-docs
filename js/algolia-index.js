@@ -110,6 +110,7 @@ const startIndexing = (currentBranch) => {
       };
       algoliaIndex.saveObject(record).wait();
       console.log("Done indexing ===>", url);
+      console.log("Saved record ===>", record);
     }
   });
 };
