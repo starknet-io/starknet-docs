@@ -84,7 +84,10 @@ const startIndexing = (currentBranch) => {
             console.error(err, "beforeUpload");
             return;
           }
-          const title = data.split("\n")[1].split("=")[1];
+          const titleFromAscii = data.split("\n").find(str => str.slice(0,2) === '= ')?.split("=")[1] ?? ""
+          const titleFromMK = data.split("\n").find(str => str.slice(0,2) === '# ')?.split("#")[1] ?? ""
+          const title = (titleFromAscii || titleFromMK).trim()
+
           const html = asciidoctor.convertFile(targetPath, { to_file: false, standalone: true });
           const text = convert(html, {
             wordwrap: 130
@@ -103,13 +106,17 @@ const startIndexing = (currentBranch) => {
       const url = targetPath
         .split("modules")[1]
         .replace("/pages", "")
-        .replace(".adoc", "");
+        .replace(".adoc", "")
+        .replace("ROOT/index", "")
+        .replace("index", "")
       const record = {
         url: "https://docs.starknet.io/documentation" + url,
         ...file,
       };
       algoliaIndex.saveObject(record).wait();
       console.log("Done indexing ===>", url);
+      console.log("Saved record title ===>", record.title);
+      console.log("Saved record url ===>", record.url);
     }
   });
 };
