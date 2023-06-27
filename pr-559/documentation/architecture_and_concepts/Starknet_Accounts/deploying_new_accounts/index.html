@@ -3,10 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Simplified transaction flow :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Accounts/simplified_transaction_flow/">
-    <link rel="prev" href="../deploying_new_accounts/">
-    <link rel="next" href="#Smart_Contracts/contract-classes.adoc">
+    <title>Deploying new accounts :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Starknet_Accounts/deploying_new_accounts/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -107,9 +105,7 @@
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../../../">Starknet</a></li>
-    <li><a href="#architecture_and_concepts:index.adoc">Architecture &amp; concepts</a></li>
-    <li>Accounts</li>
-    <li><a href="./">Simplified transaction flow</a></li>
+    <li><a href="./">Deploying new accounts</a></li>
   </ul>
 </nav>
 </div>
@@ -315,27 +311,27 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../introduction/">Introduction to account abstraction</a>
+     href="#Accounts/introduction.adoc">Introduction to account abstraction</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../approach/">Starknet account structure</a>
+     href="#Accounts/approach.adoc">Starknet account structure</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../validate_and_execute/">Validate and execute</a>
+     href="#Accounts/validate_and_execute.adoc">Validate and execute</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../deploying_new_accounts/">Deploying new accounts</a>
+     href="#Accounts/deploying_new_accounts.adoc">Deploying new accounts</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="3">
+  <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="./">Simplified transaction flow</a>
+     href="#Accounts/simplified_transaction_flow.adoc">Simplified transaction flow</a>
   </li>
 </ul>
   </li>
@@ -508,42 +504,175 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Simplified transaction flow</h1>
+<h1 class="page">Deploying new accounts</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>The key stages of transaction lifetime are:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>The sequencer selects a transaction from the mempool and executes <code>&lowbar;&lowbar;validate&lowbar;&lowbar;</code></p>
-</li>
-<li>
-<p>If the transaction was valid, the <code>&lowbar;&lowbar;execute&lowbar;&lowbar;</code> function is called</p>
-</li>
-<li>
-<p>If <code>&lowbar;&lowbar;execute&lowbar;&lowbar;</code> ran successfully, the sequencer includes the transaction in the block, charges the fee and proceeds to work on the next transaction (once the block is concluded, it will be sent to the prover)</p>
-</li>
-</ol>
+<p>Starknet provides the <code>deploy_account</code> transaction in order to deploy new accounts to the
+network.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="a_payment_mechanism"><a class="anchor" href="#a_payment_mechanism"></a>The payment mechanism</h2>
+<h2 id="deploy_account_transaction"><a class="anchor" href="#deploy_account_transaction"></a>Deploy account transaction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The sequencer receives fees in ETH in return for including transactions in a block.</p>
+<p>In order to deploy a new account on StarkNet you need to complete the following steps:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Decide on the account contract that you want to deploy</p>
+</li>
+<li>
+<p>Compute your would-be account address off-chain</p>
+</li>
+<li>
+<p>Send funds to this address</p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>For more details on how the transaction fee is computed, see <a href="../../Network_Architecture/Fees/fee-mechanism/" class="xref page">the fees section</a></p>
+<p>Once the address has enough funds to pay for the deployment, you can then send a <code>deploy_account</code> transaction.</p>
 </div>
 </div>
 </div>
-<nav class="pagination">
-  <span class="prev"><a href="../deploying_new_accounts/">Deploying new accounts</a></span>
-  <span class="next"><a href="#Smart_Contracts/contract-classes.adoc">Contract classes</a></span>
-</nav>
+<div class="sect1">
+<h2 id="transaction_flow"><a class="anchor" href="#transaction_flow"></a>Transaction flow</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Upon receiving a <code>deploy_account</code> transaction, the sequencer will:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Verify that the address has funds to pay for the deployment</p>
+</li>
+<li>
+<p>Execute the constructor with the given arguments</p>
+</li>
+<li>
+<p>Execute the <code>&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;</code> entry point (See below)</p>
+</li>
+<li>
+<p>Charge fee from the new account address</p>
+</li>
+<li>
+<p>Advance the nonce to 1</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="validate_deploy"><a class="anchor" href="#validate_deploy"></a>Validate deploy</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>There are two potential issues that arise from sending a <code>deploy_account</code> transaction without any extra validation:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Sequencers having the ability to charge arbitrarily high fees, thus potentially draining user funds from a pre-funded account</p>
+</li>
+<li>
+<p>A bad actor having the ability to carry out a sequencer DOS attack by sending multiple, invalid <code>deploy_account</code> transactions. This would result in the sequencer not being compensated for work completed.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>To prevent the scenario described in the first point, a new optional validation entrypoint is provided: <code>&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;</code>.</p>
+</div>
+<div class="paragraph">
+<p>To prevent the potential DOS attack from the second point, we introduce some limitations on the constructor and <em>_validate_deploy</em>
+_ executions, namely:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Limited # of Cairo steps</p>
+</li>
+<li>
+<p>Limited # of builtin applications</p>
+</li>
+<li>
+<p>No external contract calls (library calls and self-calls are allowed)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This entrypoint should be included in any accounts or contracts that wish to allow this new deployment flow.</p>
+</div>
+<div class="sect2">
+<h3 id="using_validate_deploy"><a class="anchor" href="#using_validate_deploy"></a>Using validate deploy</h3>
+<div class="paragraph">
+<p><code>&lowbar;&lowbar;validate_deploy&lowbar;&lowbar;</code> expects the following arguments:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>class hash</p>
+</li>
+<li>
+<p>contract address salt</p>
+</li>
+<li>
+<p>constructor arguments - the arguments expected by the contract’s constructor (this will be enforced in the compiler).</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In determining the contract address, deployer address 0 will be used.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Consider an account with the following constructor signature:</p>
+</div>
+<div id="constructor_signature" class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">@constructor
+func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _public_key: felt
+)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then the signature of <code>&lowbar;&lowbar;validate_deploy</code>&lowbar;&lowbar; must be:</p>
+</div>
+<div id="call_validate_deploy" class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">func __validate_deploy__{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
+}(class_hash: felt, contract_address_salt: felt, _public_key: felt)</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The transaction hash and <code>max_fee</code> are accessible through the <code>get_tx_info</code> system call.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
 </article>
   </div>
 </main>
