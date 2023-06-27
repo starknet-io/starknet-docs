@@ -36,6 +36,17 @@
     <script src="../../../../_/js/vendor/medium-zoom.js?new"></script>
     <script type="text/javascript" id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="e4db29b5-cd94-4bcf-87e4-04f4ca564240" data-blockingmode="manual"></script>
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
+
+    <script>
+        (function(h,o,t,j,a,r){
+        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+        h._hjSettings={hjid:3529885,hjsv:6};
+        a=o.getElementsByTagName('head')[0];
+        r=o.createElement('script');r.async=1;
+        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+        a.appendChild(r);
+        })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+    </script>
 <link rel="icon" href="../../../../_/img/favicon/favicon.ico" type="image/x-icon">
 
 <!-- For all browsers -->
@@ -285,19 +296,30 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Contracts/system-calls-cairo0/">Cairo 0</a>
+     href="../../Contracts/system-calls-cairo1/">Cairo 1.0</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Contracts/system-calls-cairo1/">Cairo 1.0</a>
+     href="../../Contracts/system-calls-cairo0/">Cairo 0</a>
   </li>
 </ul>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item parent" data-depth="2">
+    <button class="nav-item-toggle mask-svg-center"></button>
+    <span class="nav-text">Cairo on Starknet</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Contracts/cairo-1-and-sierra/">Cairo 1.0 and Sierra</a>
+     href="../../Cairo_on_Starknet/cairo-1-and-sierra/">Cairo 1.0 and Sierra</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../../Cairo_on_Starknet/contract-syntax/">Contract Syntax - Migration Guide</a>
+  </li>
+</ul>
   </li>
 </ul>
   </li>
@@ -307,11 +329,7 @@
 <ul class="nav-list">
   <li class="nav-item parent" data-depth="1">
     <button class="nav-item-toggle mask-svg-center"></button>
-        <span>
-    <a 
-       class="nav-link nav-link-with-toggle"
-     href="../../../getting_started/">Getting Started</a>
-        </span>
+    <span class="nav-text">Getting Started</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a 
@@ -373,6 +391,11 @@
     <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../../../tools/api_rpc/">Starknet full-nodes &amp; API services</a>
+  </li>
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
@@ -489,7 +512,7 @@
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>global_state_root</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The state <a href="../../State/starknet-state/#state-commitment" class="xref page">commitment</a> after this block</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The state <a href="../../State/starknet-state/#state_commitment" class="xref page">commitment</a> after this block</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">&#10003;</p></td>
 </tr>
 <tr>
@@ -553,10 +576,10 @@
 <p>The commitment fields <code>event_commitment</code> and <code>transaction_commitment</code> are the roots of a height 64 binary Merkle Patricia tree.</p>
 </div>
 <div class="paragraph">
-<p>The leaf at index \(i\) corresponds to the hash of the \(i'th\) event for <code>event_commitment</code> and \(h(transaction \ hash, signature)\) for <code>invoke transaction_commitment</code>.</p>
+<p>For <code>event_commitment</code>, the leaf at index \(i\) corresponds to the hash of the \(i'th\) event.</p>
 </div>
 <div class="paragraph">
-<p>For other types of transactions, we use \(h(0,0)\).</p>
+<p>For <code>transaction_commitment</code>, the leaf at index \(i\) corresponds to \(h(transaction \ hash, signature)\) if the \(i'th\) transaction is an <code>invoke</code> transaction and \(h(0,0)\) otherwise.</p>
 </div>
 </td>
 </tr>
@@ -816,6 +839,7 @@ h(B)=h(&amp;\text{block_number}, \text{ global_state_root}, \text{ sequencer_add
     const appId = "VHYJO45TI4";
     const apiKey = "9d5f273e78238a8c505526e481c857f7";
     const searchClient = algoliasearch(appId, apiKey);
+    const hitsPerPage = 20
 
     function getSources({ query, state }) {
         if (!query) {
@@ -835,10 +859,14 @@ h(B)=h(&amp;\text{block_number}, \text{ global_state_root}, \text{ sequencer_add
                     params: {
                       attributesToSnippet: ["title:8", "content:10"],
                       snippetEllipsisText: "…",
+                      hitsPerPage,
                     }
                   }
                 ]
               });
+            },
+            getItemUrl({ item }) {
+              return `${item.url}`;
             },
             onSelect({ item }) {
               recentlyViewedItems.data.addItem({
@@ -910,7 +938,7 @@ h(B)=h(&amp;\text{block_number}, \text{ global_state_root}, \text{ sequencer_add
       openOnFocus: true,
       detachedMediaQuery: "",
       getSources,
-      plugins: [recentlyViewedItems, mostPopulerSearches]
+      plugins: [recentlyViewedItems, mostPopulerSearches],
     });
 </script>
 
