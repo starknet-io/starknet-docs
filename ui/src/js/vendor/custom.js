@@ -19,6 +19,29 @@
     }
   }
 
+  function checkParagraphLines() {
+    var paragraphs = document.querySelectorAll('.admonitionblock td.content p');
+
+    for (var j = 0; j < paragraphs.length; j++) {
+      var currentParagraph = paragraphs[j];
+      var originalHeight = currentParagraph.offsetHeight;
+      currentParagraph.style.whiteSpace = 'nowrap';
+      var oneLineHeight = currentParagraph.offsetHeight;
+      currentParagraph.style.whiteSpace = '';
+
+      var containerDiv = currentParagraph.closest('.admonitionblock');
+
+      if (originalHeight <= oneLineHeight) {
+        containerDiv.classList.add('one-line-block');
+      } else {
+        containerDiv.classList.remove('one-line-block');
+      }
+    }
+  }
+
+  checkParagraphLines();
+  window.addEventListener('resize', checkParagraphLines);
+
   mediumZoom('[data-zoomable]');
 
   let theme = window.localStorage.getItem('data-theme');
