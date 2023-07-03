@@ -6,7 +6,7 @@
     <title>Hash functions :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Hashing/hash-functions/">
     <link rel="prev" href="../../Contracts/class-hash/">
-    <link rel="next" href="../../Contracts/system-calls-cairo0/">
+    <link rel="next" href="../../Contracts/system-calls-cairo1/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -36,6 +36,17 @@
     <script src="../../../../_/js/vendor/medium-zoom.js?new"></script>
     <script type="text/javascript" id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="e4db29b5-cd94-4bcf-87e4-04f4ca564240" data-blockingmode="manual"></script>
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
+
+    <script>
+        (function(h,o,t,j,a,r){
+        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+        h._hjSettings={hjid:3529885,hjsv:6};
+        a=o.getElementsByTagName('head')[0];
+        r=o.createElement('script');r.async=1;
+        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+        a.appendChild(r);
+        })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+    </script>
 <link rel="icon" href="../../../../_/img/favicon/favicon.ico" type="image/x-icon">
 
 <!-- For all browsers -->
@@ -284,19 +295,30 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Contracts/system-calls-cairo0/">Cairo 0</a>
+     href="../../Contracts/system-calls-cairo1/">Cairo 1.0</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Contracts/system-calls-cairo1/">Cairo 1.0</a>
+     href="../../Contracts/system-calls-cairo0/">Cairo 0</a>
   </li>
 </ul>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item parent" data-depth="2">
+    <button class="nav-item-toggle mask-svg-center"></button>
+    <span class="nav-text">Cairo on Starknet</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Contracts/cairo-1-and-sierra/">Cairo 1.0 and Sierra</a>
+     href="../../Cairo_on_Starknet/cairo-1-and-sierra/">Cairo 1.0 and Sierra</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../../Cairo_on_Starknet/contract-syntax/">Contract Syntax - Migration Guide</a>
+  </li>
+</ul>
   </li>
 </ul>
   </li>
@@ -306,11 +328,7 @@
 <ul class="nav-list">
   <li class="nav-item parent" data-depth="1">
     <button class="nav-item-toggle mask-svg-center"></button>
-        <span>
-    <a 
-       class="nav-link nav-link-with-toggle"
-     href="../../../getting_started/">Getting Started</a>
-        </span>
+    <span class="nav-text">Getting Started</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a 
@@ -372,6 +390,11 @@
     <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">Tools</span>
 <ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../../../tools/api_rpc/">Starknet full-nodes &amp; API services</a>
+  </li>
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
@@ -459,7 +482,7 @@
 <p>\(sn\_keccak: \{0,1\}^* \rightarrow \mathbb{F}_p\)</p>
 </li>
 <li>
-<p>\(pedersen: \mathbb{F}_p^2\rightarrow\mathbb{F}_p\)</p>
+<p>\(pedersen: \mathbb{F}_p^*\rightarrow\mathbb{F}_p\)</p>
 </li>
 <li>
 <p>\(poseidon: \mathbb{F}_p^*\rightarrow \mathbb{F}_p\)</p>
@@ -472,8 +495,7 @@
 <h2 id="starknet_keccak"><a class="anchor" href="#starknet_keccak"></a>Starknet Keccak</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Starknet keccak, usually denoted by \(sn\_keccak\), is defined as the first 250 bits of the Keccak256 hash (this is just Keccak256 augmented
-in order to fit into a field element).</p>
+<p>Starknet keccak, usually denoted by \(sn\_keccak\), is defined as the first 250 bits of the Keccak256 hash (this is just Keccak256 truncated in order to fit into a field element).</p>
 </div>
 </div>
 </div>
@@ -483,7 +505,7 @@ in order to fit into a field element).</p>
 <div class="sect2">
 <h3 id="stark_curve"><a class="anchor" href="#stark_curve"></a>STARK curve</h3>
 <div class="paragraph">
-<p>Pedersen hash makes use of the following STARK friendly elliptic curve over \(\mathbb{F}_p\):</p>
+<p>Pedersen hash makes use of the following STARK-friendly elliptic curve over \(\mathbb{F}_p\):</p>
 </div>
 <div class="stemblock">
 <div class="content">
@@ -505,7 +527,7 @@ in order to fit into a field element).</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="definition"><a class="anchor" href="#definition"></a>Definition</h3>
+<h3 id="pedersen_definition"><a class="anchor" href="#pedersen_definition"></a>Definition</h3>
 <div class="paragraph">
 <p>Given an input \((a,b)\in\mathbb{F}_p^2\), we begin by breaking it into \(a_{low}, a_{high}, b_{low}, b_{high}\),
 where the low part consists of the low 248 bits of the element and the high part consists of the high 4 bits of the element. Our Pedersen hash is then defined by:</p>
@@ -516,59 +538,13 @@ where the low part consists of the low 248 bits of the element and the high part
 </div>
 </div>
 <div class="paragraph">
-<p>where the values of the constants \(shift\_point, P_0, P_1, P_2, P_3\) can be found in <a href="https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/crypto/signature/fast_pedersen_hash.py" target="_blank" rel="noopener">fast_pedersen_hash.py</a>, and \([P]_x\) denotes the \(x\) coordinate of the point \(P\).</p>
+<p>where the values of the constants \(shift\_point, P_0, P_1, P_2, P_3\) can be found in <a href="https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/crypto/signature/fast_pedersen_hash.py" target="_blank" rel="noopener">fast_pedersen_hash.py</a>, and \([P]_x\) denotes the \(x\) coordinate of the point \(P\) on the STARK curve.</p>
 </div>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="poseidon_hash"><a class="anchor" href="#poseidon_hash"></a>Poseidon hash</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p><a href="https://www.poseidon-hash.info/">Poseidon</a> is a family of hash functions designed for being very efficient as algebraic circuits. As such, they may be very useful in ZK proving systems such as STARKs and others.</p>
-</div>
-<div class="paragraph">
-<p>Poseidon is a sponge construction based on the Hades permutation. Starknet&#8217;s version of Poseidon is based on a three element state permutation (see exact parameters below).</p>
-</div>
-<div class="paragraph">
-<p>We define the Poseidon hash of up to 2 elements below, see <a href="#poseidon_array_hash">below</a> the arbitrary number of inputs version.</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[poseidon_1(x) := \left[\text{hades_permutation}(x,0,1)\right]_0\]
-</div>
-</div>
-<div class="stemblock">
-<div class="content">
-\[poseidon_2(x,y) := \left[\text{hades_permutation}(x,y,2)\right]_0\]
-</div>
-</div>
-<div class="paragraph">
-<p>Where \([\cdot]_j\) denotes taking the j&#8217;th coordinate of a tuple</p>
-</div>
-<div class="paragraph">
-<p>Useful resources:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The exact <a href="https://github.com/starkware-industries/poseidon/blob/main/poseidon3.txt">parameters</a> defining the permutation used in Starknet</p>
-</li>
-<li>
-<p>A <a href="https://github.com/CryptoExperts/poseidon">reference implementation</a> (in c and assembly) of the above by CryptoExperts</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="array_hashing"><a class="anchor" href="#array_hashing"></a>Array hashing</h2>
-<div class="sectionbody">
 <div class="sect2">
-<h3 id="pedersen_array_hash"><a class="anchor" href="#pedersen_array_hash"></a>Pedersen</h3>
+<h3 id="pedersen_array_hash"><a class="anchor" href="#pedersen_array_hash"></a>Array hashing</h3>
 <div class="paragraph">
-<p>Let \(h\) denote the pedersen hash function, then given an array \(a_1,...,a_n\) of \(n\) field elements
-we define \(h(a_1,...,a_n)\) to be:</p>
+<p>Let \(h\) denote the Pedersen hash function, then given an array \(a_1,...,a_n\) of \(n\) field elements we define \(h(a_1,...,a_n)\) to be:</p>
 </div>
 <div class="stemblock">
 <div class="content">
@@ -576,11 +552,40 @@ we define \(h(a_1,...,a_n)\) to be:</p>
 </div>
 </div>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="poseidon_hash"><a class="anchor" href="#poseidon_hash"></a>Poseidon</h2>
+<div class="sectionbody">
 <div class="sect2">
-<h3 id="poseidon_array_hash"><a class="anchor" href="#poseidon_array_hash"></a>Poseidon</h3>
+<h3 id="poseidon_definition"><a class="anchor" href="#poseidon_definition"></a>Definition</h3>
 <div class="paragraph">
-<p>Let \(\text{hades}:\mathbb{F}_p^3\rightarrow\mathbb{F}_p^3\) denote the Hades permutation (with Starknet&#8217;s parameters), then given an array \(a_1,...,a_n\) of \(n\) field elements
-we define \(poseidon(a_1,...,a_n)\) to be the first coordinate of \(H(a_1,...,a_n;0,0,0)\), where:</p>
+<p><a href="https://www.poseidon-hash.info/">Poseidon</a> is a family of hash functions designed for being very efficient as algebraic circuits. As such, they may be very useful in ZK-proving systems such as STARKs and others.</p>
+</div>
+<div class="paragraph">
+<p>Poseidon is a sponge construction based on the Hades permutation. Starknet&#8217;s version of Poseidon is based on a three-element state permutation (see exact parameters <a href="#poseidon_resources">below</a>).</p>
+</div>
+<div class="paragraph">
+<p>We define the Poseidon hash of up to 2 elements as follows:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[poseidon_1(a) := \left[\text{hades_permutation}(a,0,1)\right]_0\]
+</div>
+</div>
+<div class="stemblock">
+<div class="content">
+\[poseidon_2(a,b) := \left[\text{hades_permutation}(a,b,2)\right]_0\]
+</div>
+</div>
+<div class="paragraph">
+<p>Where \([\cdot]_j\) denotes taking the j&#8217;th coordinate of a tuple.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="poseidon_array_hash"><a class="anchor" href="#poseidon_array_hash"></a>Array hashing</h3>
+<div class="paragraph">
+<p>Let \(\text{hades}\) denote the Hades permutation (with Starknet&#8217;s parameters), then given an array \(a_1,...,a_n\) of \(n\) field elements we define \(poseidon(a_1,...,a_n)\) to be the first coordinate of \(H(a_1,...,a_n;0,0,0)\), where:</p>
 </div>
 <div class="stemblock">
 <div class="content">
@@ -591,16 +596,25 @@ H\big(a_3,...,a_n;\text{hades}(s_1+a_1, s_2+a_2, s_3)\big), &amp; \text{if  } n\
 \end{cases}\]
 </div>
 </div>
-<div class="paragraph">
-<p>You can find an implementation of the above in Python <a href="https://github.com/starkware-libs/cairo-lang/blob/12ca9e91bbdc8a423c63280949c7e34382792067/src/starkware/cairo/common/poseidon_hash.py#L46">here</a>,
-and an equivalent Cairo implementation <a href="https://github.com/starkware-libs/cairo-lang/blob/12ca9e91bbdc8a423c63280949c7e34382792067/src/starkware/cairo/common/builtin_poseidon/poseidon.cairo#L28">here</a>.</p>
+</div>
+<div class="sect2">
+<h3 id="poseidon_resources"><a class="anchor" href="#poseidon_resources"></a>Useful resources</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>The exact <a href="https://github.com/starkware-industries/poseidon/blob/main/poseidon3.txt">parameters</a> defining the permutation used in Starknet.</p>
+</li>
+<li>
+<p>Reference implementations in <a href="https://github.com/CryptoExperts/poseidon^">c and assembly</a>, <a href="https://github.com/starkware-libs/cairo-lang/blob/12ca9e91bbdc8a423c63280949c7e34382792067/src/starkware/cairo/common/poseidon_hash.py^">Python</a>, and <a href="https://github.com/starkware-libs/cairo-lang/blob/12ca9e91bbdc8a423c63280949c7e34382792067/src/starkware/cairo/common/builtin_poseidon/poseidon.cairo^">Cairo</a>.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
 </div>
 <nav class="pagination">
   <span class="prev"><a href="../../Contracts/class-hash/">Class hash</a></span>
-  <span class="next"><a href="../../Contracts/system-calls-cairo0/">Cairo 0</a></span>
+  <span class="next"><a href="../../Contracts/system-calls-cairo1/">Cairo 1.0</a></span>
 </nav>
 </article>
   </div>
@@ -841,6 +855,9 @@ and an equivalent Cairo implementation <a href="https://github.com/starkware-lib
                   }
                 ]
               });
+            },
+            getItemUrl({ item }) {
+              return `${item.url}`;
             },
             onSelect({ item }) {
               recentlyViewedItems.data.addItem({
