@@ -30,42 +30,6 @@ toc::[]
 // +
 // It is not necessary to update existing content to unwrap lines, but you can remove existing hard wrapping from any lines that you are currently working in.
 
-// [id="assembly-file-metadata"]
-// == Assembly file metadata
-// Every assembly file should contain the following metadata at the top, with no line spacing in between, except where noted:
-//
-// ----
-// [id="<unique-heading-for-assembly>"]                            <2>
-// = Assembly title                                                <3>
-// include::_attributes/common-attributes.adoc[]                   <4>
-// :context: <unique-context-for-assembly>                         <5>
-//                                                                 <6>
-// toc::[]                                                         <7>
-// ----
-//
-// <1> The content type for the file. For assemblies, always use `:_content-type: ASSEMBLY`. Place this attribute before the anchor ID or, if present, the conditional that contains the anchor ID.
-// <2> A unique (within Starknet docs) anchor ID for this assembly. Use lowercase. Example: cli-developer-commands
-// <3> Human readable title (notice the `=` top-level header)
-// <4> Includes attributes common to Starknet docs.
-// +
-// [NOTE]
-// ====
-// The `{product-title}` and `{product-version}` common attributes are not defined in the `_attributes/common-attributes.adoc` file. Those attributes are pulled by AsciiBinder from the distro mapping definitions in the https://github.com/openshift/openshift-docs/blob/main/_distro_map.yml[_distro_map.yml] file. See xref:product-name-and-version[Product title and version] and xref:attribute-files[attribute files] for more information on this topic.
-// ====
-// +
-// <5> Context used for identifying headers in modules that is the same as the anchor ID. Example: cli-developer-commands.
-// <6> A blank line. You *must* have a blank line here before the toc.
-// <7> The table of contents for the current assembly.
-//
-// After the heading block and a single whitespace line, you can include any content for this assembly.
-//
-// [NOTE]
-// ====
-// The assembly title, which is the first line of the document, is the only level 1 ( = ) title.
-// Section headers within the assembly must be level 2 ( == ) or lower. When you include modules, you must add
-// leveloffsets in the include statements. You can manually add more level 2 or lower section headers in the assembly.
-// ====
-
 [id="module-file-metadata"]
 == Module file metadata
 Every module should be placed in a logical directory under `/components/StarkNet/modules` with the following metadata at the top of the file:
@@ -90,7 +54,7 @@ Example:
 
 [id="snippet-file-metadata"]
 == Text snippet file metadata
-Every text snippet should be placed in the `snippets/` folder and should contain the following metadata at the top:
+Every text snippet should be placed in the `partials` folder for the module in which they are used, and should contain the following metadata at the top:
 
 [source,adoc]
 ----
@@ -155,106 +119,65 @@ To include `attributes.adoc` in `audit.adoc`:
 
  include::$ROOT:partial$attributes.adoc[]
 
-In most cases involving OpenShift Container Platform or OKD, add attributes to the `common-attributes.adoc` file instead of creating or using a separate attributes file. Before you add an attribute, review the contents of the `common-attributes.adoc` file to ensure that it is not already defined.
 
-[IMPORTANT]
-====
-If you think that you need a separate attributes file, check with the docs team before you create it.
-====
+== File names
 
-It is acceptable to group related attributes in the `common-attributes.adoc` file under a comment, as shown in the following example:
-
-----
-//gitops
-:gitops-title: Red Hat OpenShift GitOps
-:gitops-shortname: GitOps
-----
-
-It is also acceptable to enclose attributes in a xref:product-name-and-version[distro-based] conditional, but you must place attribute definitions for the `openshift-enterprise` distro first. The following example shows how to set a different value for the `:op-system-base:` attribute for OKD:
-
-----
-:op-system-base: RHEL
-ifdef::openshift-origin[]
-:op-system-base: Fedora
-endif::[]
-----
-
-== Assembly/module file names
-
-Try to shorten the file name as much as possible _without_ abbreviating important terms that may cause confusion. For example, the `managing-authorization-policies.adoc` file name would be appropriate for an assembly titled "Managing Authorization Policies".
+Try to shorten the file name as much as possible _without_ abbreviating important terms that might cause confusion. For example, the `managing-authorization-policies.adoc` file name would be appropriate for an assembly titled "Managing Authorization Policies".
 
 == Directory names
 
 If you create a directory with a multiple-word name, separate each word with an underscore, for example `backup_and_restore`.
 
-[NOTE]
-====
-Do not italicize user-replaced values. This guideline is an exception to the link:https://redhat-documentation.github.io/supplementary-style-guide/#user-replaced-values[_Red Hat supplementary style guide for product documentation_].
-====
+Do not create or rename a top-level directory in the repository and topic map without checking with the docs team first.
 
-Do not create or rename a top-level directory in the repository and topic map without checking with the docs program manager first.
+// [TIP]
+// ====
+// To create the symbolic links:
+//
+// . Navigate to the directory that you need to add the links in.
+// . Use the following command to create a symbolic link:
+// +
+// ----
+// $ ln -s <target_directory> <link_name>
+// ----
+// +
+// For example, if you are creating the links in a directory that is two levels deep, such as `cli_reference/cli`, use the following commands:
+// +
+// ----
+// $ ln -s ../../images/ images
+// $ ln -s ../../modules/ modules
+// $ ln -s ../../snippets/ snippets
+// $ ln -s ../../_attributes/ attributes
+// ----
+// +
+// Be sure to adjust the number of levels to back up (`../`) depending on how deep your directory is.
+//
+// If you accidentally create an incorrect link, you can remove that link by using `unlink <link_name>`.
+// ====
 
-Avoid creating two levels of subdirectories because the link:https://github.com/openshift/openshift-docs/issues/52149[breadcrumb bar on docs.openshift.com breaks]. If you have a valid use case for two levels of subdirectories, talk with your DPM/CS (and, for aligned teams, the OpenShift DPM) for approval before creating it.
-
-When creating a new directory or subdirectory, you must create four symbolic links in it:
-
-* An `images` symbolic link to the top-level `images/` directory
-* A `modules` symbolic link to the top-level `modules/` directory
-* A `snippets` symbolic link to the top-level `snippets/` directory
-* An `_attributes` symbolic link to the top-level `_attributes/` directory
-
-If the directory that contains an assembly does not have the `images` symbolic link, any images in that assembly or its modules will not be included properly when building the docs.
-
-[TIP]
-====
-To create the symbolic links:
-
-. Navigate to the directory that you need to add the links in.
-. Use the following command to create a symbolic link:
-+
-----
-$ ln -s <target_directory> <link_name>
-----
-+
-For example, if you are creating the links in a directory that is two levels deep, such as `cli_reference/openshift_cli`, use the following commands:
-+
-----
-$ ln -s ../../images/ images
-$ ln -s ../../modules/ modules
-$ ln -s ../../snippets/ snippets
-$ ln -s ../../_attributes/ attributes
-----
-+
-Be sure to adjust the number of levels to back up (`../`) depending on how deep your directory is.
-
-If you accidentally create an incorrect link, you can remove that link by using `unlink <link_name>`.
-====
-
-== Assembly/Module titles and section headings
+== titles and section headings
 
 Use sentence case in all titles and section headings. See http://www.titlecase.com/ or https://convertcase.net/ for a conversion tool.
 
 Try to be as descriptive as possible with the title or section headings
-without making them unnecessarily long. For assemblies and task modules,
+without making them unnecessarily long. For procedural modules,
 use a gerund form in headings, such as:
 
 * Creating
 * Managing
 * Using
 
-Do not use "Overview" as a heading.
+// Do not use "Overview" as a heading.
 
-Do not use backticks or other markup in assembly or module headings.
+// Do not use backticks or other markup in assembly or module headings.
 
 Use only one level 1 heading (`=`) in any file.
 
 === Discrete headings
 
-If you have a section heading that you do not want to appear in the TOC (like if you think that some section is not worth showing up or if there are already too many nested levels), you can use a discrete (or floating) heading:
+If you have a section heading that you do not want to appear in the TOC, for example, if you think that some section is not worth showing up or if there are already too many nested levels, you can use a discrete heading:
 
 https://docs.asciidoctor.org/asciidoc/latest/blocks/discrete-headings/
-
-A discrete heading also will not get a section number in the Customer Portal build of the doc. Previously, we would use plain bold mark-up around a heading like this, but discrete headings also allow you to ignore section nesting rules (like jumping from a `==` section level to a `====` level if you wanted for some style reason).
 
 To use a discrete heading, just add `[discrete]` to the line before your unique ID. For example:
 
@@ -268,23 +191,7 @@ To use a discrete heading, just add `[discrete]` to the line before your unique 
 
 All titles and section headings must have an anchor ID. The anchor ID must be similar to the title or section heading.
 
-=== Anchoring in assembly files
-
-The following is an example anchor ID in an assembly file:
-
-----
-[id="configuring-alert-notifications"]
-= Configuring alert notifications
-----
-
-[NOTE]
-====
-Do not include line spaces between the anchor ID and the section title.
-====
-
-=== Anchoring in module files
-
-You must add the `{context}` variable to the end of each anchor ID in module files. When called, the `{context}` variable is resolved into the value declared in the `:context:` attribute in the corresponding assembly file. This enables cross-referencing to module IDs in context to a specific assembly and is useful when a module is included in multiple assemblies.
+You must add the `{context}` variable to the end of each anchor ID in module files. When called, the `{context}` variable is resolved into the value declared in the `:context:` attribute in the corresponding assembly file. This enables cross-referencing to module IDs in context when a module is included in multiple locations.
 
 [NOTE]
 ====
@@ -305,59 +212,57 @@ The following is an example of an anchor ID for a second level (`==`) heading:
 == Deployment and scaling benefits
 ----
 
-=== Anchoring "Prerequisites", "Additional resources", and "Next steps" titles in assemblies
+// === Anchoring "Prerequisites", "Additional resources", and "Next steps" titles
+//
+// Use unique IDs for "Prerequisites", "Additional resources", and "Next steps" titles. You can add the prefixes `prerequisites_`, `additional-resources_`, or `next-steps_` to a unique string that describes the topic. The unique string can match the value assigned to the `:context:` attribute in the assembly.
+//
+// [NOTE]
+// ====
+// The `prerequisites_`, `additional-resources_`, and `next-steps_` prefixes must end with an underscore (`_`) when declared in an anchor ID in an assembly.
+// ====
+//
+// The following examples include IDs that are unique to the "Configuring alert notifications" assembly:
+//
+// *Example unique ID for a "Prerequisites" title*
+//
+// ----
+// [id="prerequisites_configuring-alert-notifications"]
+// == Prerequisites
+// ----
+//
+// *Example unique ID for an "Additional resources" title*
+//
+// ----
+// [role="_additional-resources"]
+// [id="additional-resources_configuring-alert-notifications"]
+// == Additional resources
+// ----
+//
+// *Example unique ID for a "Next steps" title*
+//
+// ----
+// [id="next-steps_configuring-alert-notifications"]
+// == Next steps
+// ----
 
-Use unique IDs for "Prerequisites", "Additional resources", and "Next steps" titles in assemblies. You can add the prefixes `prerequisites_`, `additional-resources_`, or `next-steps_` to a unique string that describes the assembly topic. The unique string can match the value assigned to the `:context:` attribute in the assembly.
-
-[NOTE]
-====
-The `prerequisites_`, `additional-resources_`, and `next-steps_` prefixes must end with an underscore (`_`) when declared in an anchor ID in an assembly.
-====
-
-The following examples include IDs that are unique to the "Configuring alert notifications" assembly:
-
-*Example unique ID for a "Prerequisites" title*
-
-----
-[id="prerequisites_configuring-alert-notifications"]
-== Prerequisites
-----
-
-*Example unique ID for an "Additional resources" title*
-
-----
-[role="_additional-resources"]
-[id="additional-resources_configuring-alert-notifications"]
-== Additional resources
-----
-
-*Example unique ID for a "Next steps" title*
-
-----
-[id="next-steps_configuring-alert-notifications"]
-== Next steps
-----
-
-== Writing assemblies
-An _assembly_ is a collection of modules that describes how to accomplish a user story.
-
-Avoid link:https://redhat-documentation.github.io/modular-docs/#nesting-assemblies[nesting assemblies] in other assembly files. You can create more complicated document structures by modifying the link:https://github.com/openshift/openshift-docs/tree/main/_topic_maps[topic maps].
-
-For more information about forming assemblies, see the
-link:https://redhat-documentation.github.io/modular-docs/#forming-assemblies[_Red Hat modular docs reference guide_] and the link:https://raw.githubusercontent.com/redhat-documentation/modular-docs/master/modular-docs-manual/files/TEMPLATE_ASSEMBLY_a-collection-of-modules.adoc[assembly template].
-
-[NOTE]
-====
-When using the "Prerequisites", "Next steps", or "Additional resources" headings in an assembly, use `==` formatting, such as `== Prerequisites` or `== Additional resources`. Use of this heading syntax at the assembly level indicates that the sections relate to the whole assembly.
-
-Only use `.` formatting (`.Additional resources`) to follow a module in an assembly. Because you cannot use the xrefs in modules, this functions as a _trailing include_ at the assembly level, where the `.` formatting of the `include` statement indicates that the resource applies specifically to the module and not to the assembly.
-====
+// == Writing assemblies
+// An _assembly_ is a collection of modules that describes how to accomplish a user story.
+//
+// Avoid link:https://redhat-documentation.github.io/modular-docs/#nesting-assemblies[nesting assemblies] in other assembly files. You can create more complicated document structures by modifying the link:https://github.com/openshift/openshift-docs/tree/main/_topic_maps[topic maps].
+//
+// For more information about forming assemblies, see the
+// link:https://redhat-documentation.github.io/modular-docs/#forming-assemblies[_Red Hat modular docs reference guide_] and the link:https://raw.githubusercontent.com/redhat-documentation/modular-docs/master/modular-docs-manual/files/TEMPLATE_ASSEMBLY_a-collection-of-modules.adoc[assembly template].
+//
+// [NOTE]
+// ====
+// When using the "Prerequisites", "Next steps", or "Additional resources" headings in an assembly, use `==` formatting, such as `== Prerequisites` or `== Additional resources`. Use of this heading syntax at the assembly level indicates that the sections relate to the whole assembly.
+//
+// Only use `.` formatting (`.Additional resources`) to follow a module in an assembly. Because you cannot use the xrefs in modules, this functions as a _trailing include_ at the assembly level, where the `.` formatting of the `include` statement indicates that the resource applies specifically to the module and not to the assembly.
+// ====
 
 == Writing concepts
 A _concept_ contains information to support the tasks that users want to do and
-must not include task information like commands or numbered steps. In most
-cases, create your concepts as individual modules and include them in
-appropriate assemblies.
+must not include task information like commands or numbered steps.
 
 Avoid using gerunds in concept titles. "About <concept>"
 is a common concept module title.
@@ -365,303 +270,42 @@ is a common concept module title.
 For more information about creating concept modules, see the
 link:https://redhat-documentation.github.io/modular-docs/#creating-concept-modules[_Red Hat modular docs reference guide_] and the link:https://raw.githubusercontent.com/redhat-documentation/modular-docs/master/modular-docs-manual/files/TEMPLATE_CONCEPT_concept-explanation.adoc[concept template].
 
-== Writing procedures
-A _procedure_ contains the steps that users follow to complete a process or task. Procedures contain ordered steps and explicit commands. In most cases, create your procedures as individual modules and include them in appropriate assemblies.
+== Writing procedural topics
+A _procedure_ contains the steps that users follow to complete a process or task. Procedures contain ordered steps and explicit commands.
 
 Use a gerund in the procedure title, such as "Creating".
 
-For more information about writing procedures, see the
+For more information about writing procedural topics, see the
 link:https://redhat-documentation.github.io/modular-docs/#creating-procedure-modules[_Red Hat modular docs reference guide_] and the link:https://raw.githubusercontent.com/redhat-documentation/modular-docs/master/modular-docs-manual/files/TEMPLATE_PROCEDURE_doing-one-procedure.adoc[procedure template].
-
-[NOTE]
-====
-When needed, use `.Prerequisites`, `.Next steps`, or `.Additional resources` syntax to suppress TOC formatting within a module. Do not use `==` syntax for these headings in modules. Because you cannot use the xrefs in modules, if you need to include a link under one of these headings, place the entire subsection in the assembly instead.
-====
 
 [id="writing-text-snippets"]
 == Writing text snippets
-A _text snippet_ is an optional component that lets you reuse content in multiple modules and assemblies. Text snippets are not a substitute for modules but instead are a more granular form of content reuse. While a module is content that a reader can understand on its own (like an article) or as part of a larger body of work (like an assembly), a text snippet is not self-contained and is not intended to be published or cross referenced on its own.
+A _text snippet_ is an optional component that lets you reuse content in multiple modules and assemblies. Text snippets are not a substitute for modules but instead are a more granular form of content reuse.
 
-In the context of modules and assemblies, text snippets do not include headings or anchor IDs. Text snippets also cannot contain xrefs. This type of component is text only. Examples include the following:
+While a module is content that a reader can understand on its own (like an article) or as part of a larger body of work (like a guide), a text snippet is not self-contained and is not intended to be published or cross referenced on its own.
 
-* Admonitions that appear in multiple modules.
-* An introductory paragraph that appears in multiple assemblies.
-* The same series of steps that appear in multiple procedure modules.
+Examples include the following:
+
+* Admonitions that appear in multiple locations.
+* An introductory paragraph that appears in multiple locations.
+* The same series of steps that appear in multiple procedural modules.
 * A deprecation statement that appears in multiple sets of release notes.
 
 Example:
 
-You could write the following paragraph once and include it in each assembly that explains how to install a cluster using the installer-provisioned default values:
+You could write the following paragraph once and include it in each location that explains how to install a cluster using the installer-provisioned default values:
 
-[source,text]
+[source,adoc]
 ----
 In {product-title} version {product-version}, you can install a cluster on {cloud-provider-first} ({cloud-provider}) that uses the default configuration options.
 ----
 
-[NOTE]
-====
-In the example, `cloud-provider-first` and `cloud-provider` are not defined by the `common-attributes` module. If you use an attribute that is not common to OpenShift docs, make sure to define it locally in either the assembly or module, depending on where the text snippet is included. Because of this, consider adding all attributes that you add to snippets to the `common-attributes.adoc` file.
-====
-
 For more information about creating text snippets, see the
 link:https://redhat-documentation.github.io/modular-docs/#using-text-snippets[_Red Hat modular docs reference guide_].
 
-[id="Auto-generated-content"]
-== Auto-generated content
-
-The following content is auto-generated in each release and must not be manually edited:
-
-* The OpenShift CLI (`oc`) command references `modules/oc-by-example-content.adoc` and `modules/oc-adm-by-example-content.adoc`.
-* The following API references content in the `rest_api` folder: the contents of all `<topic>_apis` subfolders and the `rest_api/objects/index.adoc` and `rest_api/index.adoc` assemblies.
-* OpenShift Virtualization runbook modules: `modules/virt-runbook-<runbook>.adoc`.
-
-[NOTE]
-====
-If the content in these files needs to be updated, the update must be made in the applicable code repository where these files are generated from. The updates are reflected when the files are generated the next time, for example a future release. For help with where to make the updates, you can contact https://github.com/bergerhoffer[Andrea Hoffer] for the CLI docs, https://github.com/jboxman-rh[Jason Boxman] for the API docs, or https://github.com/apinnick[Avital Pinnick] for the OpenShift Virtualization runbooks.
-====
-
-[id="using-conscious-language"]
-== Using conscious language
-
-To assist with the removal of the problematic word "master" from the documentation, use the following terminology when referring to OpenShift control plane nodes:
-
-[options="header"]
-|===
-|Branch |Control plane node reference
-
-|`main`, `enterprise-4.9`, and later enterprise versions
-|Control plane node
-
-|`enterprise-4.8` and earlier enterprise versions
-|Control plane (also known as master) node
-
-|`enterprise-3.11`
-|Master node
-
-|===
-
-You can replace "node" in the preceding examples with "machine", "host", or another suitable description.
-
-In general text, use the term "control plane machine" in place of "master machine"; use the term "compute machine" in place of "worker machine". Be mindful of certain valid code entities, such as `master` role, `worker` role, and `infra` role.
-
-[NOTE]
-====
-If you are cherry picking from `main` to `enterprise-4.8` or earlier, you must manually cherry pick to include the “(also known as master)” phrasing. This is required only if the phrase “control plane” is introduced for the first time in an assembly or module.
-====
-
-[id="adding-a-subsection-on-making-open-source-more-inclusive"]
-=== Adding a subsection on making open source more inclusive
-
-If you create a release notes assembly for a sub-product within the `openshift/openshift-docs` repo, you might include a "Making open source more inclusive" statement. Instead of pasting the statement from the OpenShift Release Notes, use the following module, which is available in the `enterprise-4.8` branch and later:
-
-[source,text]
-----
-\include::modules/making-open-source-more-inclusive.adoc[leveloffset=+1]
-----
-
-[id="product-name-and-version"]
-== Product title and version
-
-When possible, generalize references to the product name and/or version by using
-the `{product-title}` and/or `{product-version}` attributes. These attributes
-are pulled by AsciiBinder from the OpenShift distribution, or _distro_, mapping definitions in the
-https://github.com/openshift/openshift-docs/blob/main/_distro_map.yml[_distro_map.yml]
-file.
-
-The `{product-title}` comes from the first `name:` field in a distro mapping,
-while the associated `{product-version}` comes from the `name:` fields on any
-`branches:` defined.
-
-How these attributes render is dependent on which distro and branch build you
-are viewing. The following table shows the current distros and the
-possible values for `{product-title}` and `{product-version}`, depending on the branch:
-
-[options="header"]
-|===
-|Distro |`{product-title}` |`{product-version}`
-
-|`openshift-origin`
-|OKD
-a|* 3.6, 3.7, 3.9, 3.10, 3.11
-* 4.8, 4.9, 4.10, 4.11, 4.12, 4.13
-* 4 for the `latest/` build from the `main` branch
-
-|`openshift-enterprise`
-|OpenShift Container Platform
-a|* 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.9, 3.10, 3.11
-* 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10, 4.11, 4.12, 4.13, 4.14
-
-|`openshift-dedicated`
-|OpenShift Dedicated
-a|* No value set for the latest `dedicated/` build from the `enterprise-4.13` branch
-* 3 for the `dedicated/3` build from the `enterprise-3.11` branch
-
-|`openshift-rosa`
-|Red Hat OpenShift Service on AWS
-|No value set for the `rosa/` build from the `enterprise-4.13` branch
-
-|`openshift-online`
-|OpenShift Online
-|Pro
-|===
-
-For example:
-
-----
-You can deploy applications on {product-title}.
-----
-
-This is a safe statement that could appear in probably any of the builds, so an
-https://github.com/openshift/openshift-docs/blob/main/contributing_to_docs/contributing.adoc#conditional-text-between-products[ifdef/endif
-statement] is not necessary. For example, if you were viewing a build for the
-`openshift-enterprise` distro (for any of the distro-defined branches), this
-would render as:
-
-> You can deploy applications on OpenShift Container Platform.
-
-And for the `openshift-origin` distro:
-
-> You can deploy applications on OKD.
-
-Considering that we use distinct branches to keep content for product versions separated, global use of `{product-version}` across all branches is probably less useful, but it is available if you come across a requirement for it. Just consider how it will render across any branches that the content appears in.
-
-If it makes more sense in context to refer to the major version of the product instead of a specific minor version (for example, if comparing how something in OpenShift Container Platform 4 differs from OpenShift Container Platform 3), just use the major version number. Do not prepend with a `v`, as in `v3` or `v4`.
-
-[NOTE]
-====
-Other common attribute values are defined in the `_attributes/common-attributes.adoc` file. Where possible, generalize references to those values by using the common attributes. For example, use `{cluster-manager-first}` to refer to Red Hat OpenShift Cluster Manager. If you need to add an attribute to the `_attributes/common-attributes.adoc` file, open a pull request to add it to the attribute list. Do not create a separate attributes file without first consulting the docs team.
-====
-
-//CANARY
-[id="conditional-content"]
-== Conditional content
-
-You can use ifdef and ifeval statements to control the way content displays in different distributions and assemblies.
-
-NOTE: You can nest conditional statements that involve distribution and assembly context, but you must ensure that you close the if statements correctly.
-
-Because we maintain separate branches for each OpenShift Container Platform version, do not use if statements that are based on product version to vary content.
-
-[id="conditionals-for-distributions"]
-=== Conditionals for distributions
-
-Use ifdef and ifndef statements to control content based on distribution, as described in the previous section. For example, the following example renders differently in (`openshift-origin`) and OpenShift Container Platform (`openshift-enterprise`):
-
-----
-\ifdef::openshift-origin[]
-You can link:https://www.keycloak.org/docs/latest/server_admin/index.html#openshift[configure a Keycloak] server as an OpenID
-Connect identity provider for {product-title}.
-\endif::[]
-
-\ifdef::openshift-enterprise[]
-You can
-link:https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/[configure Red Hat Single Sign-On]
-as an OpenID Connect identity provider for {product-title}.
-\endif::[]
-----
-
-In OKD, this section renders as the following text:
-
-> You can link:https://www.keycloak.org/docs/latest/server_admin/index.html#openshift[configure a Keycloak] server as an OpenID
-Connect identity provider for OKD.
-
-In OpenShift Container Platform, this section renders as the following text:
-
-> You can
-link:https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/[configure Red Hat Single Sign-On]
-as an OpenID Connect identity provider for OpenShift Container Platform.
-
-
-[id="conditionals-for-assemblies"]
-=== Conditionals for different assemblies
-
-Use a combination of ifdef and ifeval statements to control content that needs to vary between assemblies. These conditional statements rely on a combination of the context attribute for each assembly and specific temporary attributes within each module to control content.
-
-The following sample shows a simple example. In the assembly that contains the `context` attribute `updating-restricted-network-cluster`, an extra paragraph is displayed.
-
-----
-\ifeval::["{context}" == "updating-restricted-network-cluster"]
-:restricted:
-\endif::[]
-
-...
-
-\ifdef::restricted[]
-If you are upgrading a cluster in a restricted network, install the `oc` version that you plan to upgrade to.
-\endif::restricted[]
-
-...
-
-\ifeval::["{context}" == "updating-restricted-network-cluster"]
-:!restricted:
-\endif::[]
-----
-
-Note that you must set and unset each temporary attribute that you introduce to an assembly. Use the temporary attributes in the applicable ifdef and ifndef statements to vary text between the assemblies. The preceeding example uses `restricted` as the temporary attribute to display an additional paragraph for the assembly with the `updating-restricted-network-cluster` context attribute.
-
-== Node names
-
-Do not use internal company server names in commands or example output. Provide generic OpenShift Container Platform node name examples that are not provider-specific, unless required. Where possible, use the example.com domain name when providing fully qualified domain names (FQDNs).
-
-The following table includes example OpenShift Container Platform 4 node names and their corresponding role types:
-
-[options="header"]
-|===
-
-|Node name |Role type
-
-|*node-1.example.com*
-.3+.^|You can use this format for nodes that do not need role-specific node names.
-
-|*node-2.example.com*
-
-|*node-3.example.com*
-
-|*control-plane-1.example.com*
-.3+.^|You can use this format if you need to describe the control plane role type within a node name.
-
-|*control-plane-2.example.com*
-
-|*control-plane-3.example.com*
-
-|*compute-1.example.com*
-.2+.^|You can use this format if you need to describe the compute node role type within a node name.
-
-|*compute-2.example.com*
-
-|*bootstrap.example.com*
-|You can use this format if you need to describe the bootstrap node role type within a node name.
-|===
-
-This example lists the status of cluster nodes that use the node name formatting guidelines:
-
-....
-[source,terminal]
-----
-$ oc get nodes
-----
-+
-.Example output
-[source,terminal]
-----
-NAME                          STATUS   ROLES    AGE   VERSION
-compute-1.example.com         Ready    worker   33m   v1.19.0+9f84db3
-control-plane-1.example.com   Ready    master   41m   v1.19.0+9f84db3
-control-plane-2.example.com   Ready    master   45m   v1.19.0+9f84db3
-compute-2.example.com         Ready    worker   38m   v1.19.0+9f84db3
-compute-3.example.com         Ready    worker   33m   v1.19.0+9f84db3
-control-plane-3.example.com   Ready    master   41m   v1.19.0+9f84db3
-----
-....
-
-[NOTE]
-====
-Some provider-formatted hostnames include IPv4 addresses. An OpenShift Container Platform node name typically reflects the hostname of a node. If node names in your output need to be provider-specific and require this format, use private IPv4 addresses. For example, you could use `ip-10-0-48-9.example.com` as a node name that includes a private IPv4 address.
-====
-
 == IP addresses
 
-You may include IPv4 addresses from test clusters in examples in the documentation, as long as they are private. Private IPv4 addresses fall into one of the following ranges:
+You can include IPv4 addresses from test clusters in examples in the documentation, as long as they are private. Private IPv4 addresses fall into one of the following ranges:
 
 * 10.0.0.0 to 10.255.255.255 (class A address block 10.0.0.0/8)
 * 172.16.0.0 to 172.31.255.255 (class B address block 172.16.0.0/12)
@@ -678,20 +322,6 @@ Replace all public IP addresses with an address from the following blocks. These
 There might be advanced networking examples that require specific IP addresses, or cloud provider-specific examples that require a public IP address. Contact a subject matter expert if you need assistance with replacing IP addresses.
 ====
 
-== Links, hyperlinks, and cross references
-Links can be used to cross-reference internal assemblies or send readers to external information resources for further reading.
-
-In OpenShift docs:
-
-* All links to internal content is created using `xref` and **must have an anchor ID**.
-* Only use `xref` in assemblies, not in modules.
-* All links to external websites are created using `link`.
-
-[IMPORTANT]
-====
-Do not split link paths across lines when wrapping text. This will cause issues with the doc builds.
-====
-
 === Example URLs
 To provide an example URL path that you do not want to render as a hyperlink, use this format:
 
@@ -699,138 +329,30 @@ To provide an example URL path that you do not want to render as a hyperlink, us
 `\https://www.example.com`
 ....
 
-=== Internal cross-references
-
-Use the relative file path (from the file you are editing to the file you are linking to), even if you are linking to the same directory that you are writing in. This makes search and replace operations to fix broken links much easier.
-
-For example, if you are writing in `architecture/core_concepts/deployments.adoc` and you want to link to `architecture/core_concepts/routes.adoc`, then you must include the path back to the first level of the assembly directory:
-
-----
-xref:../../architecture/networking/routes.adoc#architecture-core-concepts-routes
-----
-
-[NOTE]
-====
-In OpenShift docs, you can only use `xref` in assemblies, not in modules.
-====
-
-.Markup example of cross-referencing
-----
-For more information, see xref:../dev_guide/application_lifecycle/new_app.adoc#dev-guide-new-app[Creating an application].
-
-Rollbacks can be performed using the REST API or the xref:../cli_reference/openshift_cli/get_started_cli.adoc#installing-openshift-cli[OpenShift CLI].
-----
-
-.Rendered output of cross-referencing
-> For more information, see xref:../dev_guide/application_lifecycle/new_app.adoc#dev-guide-new-app[Creating an application].
->
-> Rollbacks can be performed using the REST API or the xref:../cli_reference/openshift_cli/get_started_cli.adoc#installing-openshift-cli[OpenShift CLI].
 
 === Links to external websites
 
-If you want to link to a different website, use:
+If you want to link to a third-party website:
 
+* Do not create a hyperlink.
+* Use the site top level URL as text.
+* Provide the title of the page to search for on the site.
+
+.Example
+
+[source,adoc]
 ----
-link:http://othersite.com/otherpath[friendly reference text]
-----
-
-IMPORTANT: You must use `link:` before the start of the URL.
-
-IMPORTANT: You cannot link to a repository that is hosted on www.github.com.
-
-TIP: If you want to build a link from a URL _without_ changing the text from the actual URL, just print the URL without adding a `[friendly text]` block at the end; it will automatically be rendered as a link.
-
-=== Links to internal content
-There are two scenarios for linking to other assemblies:
-
-1. Link to another file that exists in the same directory.
-2. Link to another file that exists in a separate directory.
-
-The following examples use the example directory structure shown here:
-....
-/
-/foo
-/foo/bar.adoc
-/baz
-/baz/zig.adoc
-/baz/zag.adoc
-....
-
-*Link to assembly in same directory*
-
-----
-xref:<filename>#anchor-id[friendly title]
+For more information, see _A specific page_ at \http://othersite.com/.
 ----
 
-You must use the `.adoc` file extension. The document processor will correctly link this to the resulting HTML file.
-
-For example, using the above syntax, if you are working on `zig.adoc` and want to link to `zag.adoc`, do it this way:
-
-----
-xref:../zag.adoc#baz-zag[comment]
-----
-
-where `baz-zag` is the anchor ID at the top of the file `zag.adoc`.
-
-*Link to assembly in different directory*
-
-----
-xref:../dir/<filename>.adoc#anchor-id[friendly title]
-----
-
-For example, if you are working on `bar.adoc` and you want to link to `zig.adoc`, do it this way:
-
-----
-For more information, see the xref:../baz/zig.adoc#baz-zig[ZIG manual].
-----
-
-[NOTE]
-====
-You must use the `.adoc` extension in order for the link to work correctly and you must specify an anchor ID.
-====
-
-== Embedding an external file
-
-You can embed content hosted outside the link:https://github.com/openshift/openshift-docs[openshift-docs]
-GitHub repository by using the `include` directive to target the URI of a raw
-file. This is helpful for cases where content frequently changes; you embed the raw
-file and the content auto-updates based on the changes made to the content on its
-host site.
-
-[IMPORTANT]
-====
-You are restricted to only embed files from GitHub repositories managed by the
-`openshift` GitHub user. You must also prefix your external file URI with `https`.
-URIs beginning with `http` are forbidden for security reasons and will fail the
-documentation build.
-====
-
-For example, if you want to embed the link:https://github.com/openshift/installer/blob/release-4.8/upi/azure/01_vnet.json[01_vnet.json] template, include the URI of its raw file version like this:
-
-```
-.`01_vnet.json` ARM template
-[source,json]
-----
-\include::https://raw.githubusercontent.com/openshift/installer/release-4.8/upi/azure/01_vnet.json[]
-----
-```
-
-[NOTE]
-====
-Embedding external files is restricted for files that change frequently, like templates. You must ensure that embedded files are QE verified before they are updated on their host site.
-====
-
-[NOTE]
-====
-You must get approval from the Engineering, QE, and Docs teams before embedding an external file.
-====
+A hyperlink to a page on a third-party website is convenient and user-friendly _as long as the link works_. The problem is that a third-party site can move pages without notification, in which case that user-friendly link can become a user-unfriendly broken link, and broken links also impact our search engine rankings.
 
 == Embedding a local YAML file
 
 You can embed local YAML files in AsciiDoc modules.
 Consider embedding a local YAML file when you have a complete and valid YAML file that you want to use.
 This is useful when you want to include a complete YAML CR in the docs.
-The YAML file that you include must be a local file maintained in the link:https://github.com/openshift/openshift-docs[openshift-docs] GitHub repository.
+// The YAML file that you include must be a local file maintained in the link:https://github.com/openshift/openshift-docs[openshift-docs] GitHub repository.
 Use the `include` directive to target the local file.
 
 To use a local YAML file, add it to the `snippets/` folder, and include it in your module. For example:
