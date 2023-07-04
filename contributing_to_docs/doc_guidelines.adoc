@@ -355,21 +355,16 @@ This is useful when you want to include a complete YAML CR in the docs.
 // The YAML file that you include must be a local file maintained in the link:https://github.com/openshift/openshift-docs[openshift-docs] GitHub repository.
 Use the `include` directive to target the local file.
 
-To use a local YAML file, add it to the `snippets/` folder, and include it in your module. For example:
+To use a local YAML file, add it to the `/<module>/attachments/` directory, and include it in your module. For example:
 
 [source,yaml]
 ----
-\include::snippets/install-config.yaml[]
+\include::attachment$install-config.yaml[]
 ----
 
 [NOTE]
 ====
 Do not include link:https://docs.asciidoctor.org/asciidoc/latest/directives/include-lines/[lines by content ranges]. This approach can lead to content errors when the included file is subsequently updated.
-====
-
-[IMPORTANT]
-====
-If the YAML file you want to include is from a GitHub repository that is managed by the `openshift` GitHub user, link to the file directly rather than copying the file to the `/openshift-docs` folder.
 ====
 
 [discrete]
@@ -385,51 +380,26 @@ For example:
 apiVersion: v1 # <1>
 ----
 
-[discrete]
-=== Version and upgrade implications
+// == Indicating Technology Preview features
+//
+// To indicate that a feature is in Technology Preview, include the `snippets/technology-preview.adoc` file in the feature's assembly or module to keep the supportability wording consistent across Technology Preview features. Provide a value for the `:FeatureName:` variable before you include this module.
+//
+// [source,text]
+// ----
+// :FeatureName: The XYZ plug-in
+// \include::snippets/technology-preview.adoc[]
+// ----
+//
+// == Indicating deprecated features
+//
+// To indicate that a feature is deprecated, include the `modules/deprecated-feature.adoc` file in the feature's assembly, or to each relevant assembly such as for a deprecated Operator, to keep the supportability wording consistent across deprecated features. Provide a value for the `:FeatureName:` variable before you include this module.
 
-Carefully consider the version and upgrade implications of including the local YAML file in your content. Including a local YAML file can increase the maintenance overhead for the content.
-If you have a doubt, talk to your content strategist or docs team lead.
-
-[discrete]
-=== Validating the local YAML file
-
-Before you include the YAML file, use a YAML linter or the `oc` CLI to verify that the YAML is valid.
-For example, to validate the `snippets/SiteConfig.yaml` file using `oc`, log in to a cluster and run the following command from a terminal opened in the `openshift-docs/` folder:
-
-[source,terminal]
-----
-$ oc apply -f snippets/SiteConfig.yaml --dry-run=client
-----
-
-.Example output
-[source,terminal]
-----
-siteconfig.ran.openshift.io/example-sno created (dry run)
-----
-
-Running `oc` with the `--dry-run=client` switch does not succeed with an invalid YAML file.
-
-== Indicating Technology Preview features
-
-To indicate that a feature is in Technology Preview, include the `snippets/technology-preview.adoc` file in the feature's assembly or module to keep the supportability wording consistent across Technology Preview features. Provide a value for the `:FeatureName:` variable before you include this module.
-
-[source,text]
-----
-:FeatureName: The XYZ plug-in
-\include::snippets/technology-preview.adoc[]
-----
-
-== Indicating deprecated features
-
-To indicate that a feature is deprecated, include the `modules/deprecated-feature.adoc` file in the feature's assembly, or to each relevant assembly such as for a deprecated Operator, to keep the supportability wording consistent across deprecated features. Provide a value for the `:FeatureName:` variable before you include this module.
-
-For more information on how this is applied, see link:https://github.com/openshift/openshift-docs/pull/31776/files[this example PR].
 
 == Verification of your content
-All documentation changes must be verified by a QE team associate before merging. This includes executing all "Procedure" changes and confirming expected results. There are exceptions for typo-level changes, formatting-only changes, and other negotiated documentation sets and distributions.
 
-If a documentation change is due to a Bugzilla bug or Jira issue, the bug/issue should be put on ON_QA when you have a PR ready. After QE approval is given (either in the bug/issue or in the PR), the QE associate should move the bug/issue status to VERIFIED, at which point the associated PR can be merged. It is also ok for the assigned writer to change the status of the bug/issue to VERIFIED if approval for the changes has been provided in another forum (slack, PR, or email). The writer should indicate that the QE team approved the change as a comment in the bug/issue.
+All documentation changes must be verified by a subject matter expert before merging. This includes executing all "Procedure" changes and confirming expected results. There are exceptions for typo-level changes, formatting-only changes, and other negotiated documentation sets and distributions.
+
+// If a documentation change is due to a bug report or Jira issue, the bug/issue should be put on ON_QA when you have a PR ready. After QE approval is given (either in the bug/issue or in the PR), the QE associate should move the bug/issue status to VERIFIED, at which point the associated PR can be merged. It is also ok for the assigned writer to change the status of the bug/issue to VERIFIED if approval for the changes has been provided in another forum (slack, PR, or email). The writer should indicate that the QE team approved the change as a comment in the bug/issue.
 
 == Images
 
@@ -441,54 +411,61 @@ Use `*.png` format images.
 
 To include a block image (an image on its own line):
 
-1. Put the image file in the `images` folder.
+1. Put the image file in the `modules/<module>/images` folder.
 +
 Ensure that the folder containing your assembly contains an `images` symbolic link to the top-level `images/` directory, otherwise the image will not be found when building the docs.
 
 2. In the `.adoc` content, use this format to link to the image:
 +
 ----
-image::<image_filename>[<alt_text>]
+image::<component>:<module>:<image_filename>[<alt_text>]
 ----
 +
-Note the double `::` instead of a single `:`, as seen in inline image usage.
-You only have to specify `<image_filename>` itself and not the full file path;
-the build mechanism automatically expands this appropriately.
+Notice the double `::` instead of a single `:`, as seen in inline image usage.
++
+.Example
+[source,adoc]
+----
+image::documentation:architecture_and_concepts:l1l2.png[L1 to L2 messaging]
+----
++
+The image file, `l1l2.png`, is in `modules/architecture_and_concepts/images/`.
 
 === Inline images (icons)
 
 Inline images can be used to indicate graphic items in the web console, such as
 buttons or menu icons.
 
-====  Inserting reusable images inline
-
-To simplify reuse, the following common SVGs (the OpenShift web console uses the
-Font Awesome icon set) have already been added to the `images` folder with a
-user-defined entity added to the `common-attributes.adoc` module:
-
-|===
-|Icon |Entity |Alt text |File name
-
-|Kebab
-|`:kebab:`
-|Options menu
-|`ellipsis-v.svg`
-
-|===
-
-When using inline, include the image after the UI element name. For example:
-
-----
-Click the *Options* menu {kebab}.
-----
+// ====  Inserting reusable images inline
+//
+// To simplify reuse, the following common SVGs (the OpenShift web console uses the
+// Font Awesome icon set) have already been added to the `images` folder with a
+// user-defined entity added to the `common-attributes.adoc` module:
+//
+// |===
+// |Icon |Entity |Alt text |File name
+//
+// |Kebab
+// |`:kebab:`
+// |Options menu
+// |`ellipsis-v.svg`
+//
+// |===
+//
+// When using inline, include the image after the UI element name. For example:
+//
+// ----
+// Click the *Options* menu {kebab}.
+// ----
 
 ==== Inserting images inline without reuse
 
-If you are inserting an image that is not part of the `common-attributes.adoc`
+If you are inserting an inline image that is not part of the `common-attributes.adoc`
 module, then include the image using this formatting:
 
 ----
 image:<image_filename>[title="<alt_text>"]
+image:<component>:<module>:<image_filename>[<alt_text>]
 ----
 
 Note the single `:` instead of a double `::`, as seen in block image usage.
@@ -496,7 +473,7 @@ Note the single `:` instead of a double `::`, as seen in block image usage.
 For example:
 
 ----
-image:manage-columns.png[title="Manage Columns icon"]
+image:documentation:architecture_and_concepts:manage-columns.png[title="Manage Columns icon"]
 ----
 
 == Formatting
