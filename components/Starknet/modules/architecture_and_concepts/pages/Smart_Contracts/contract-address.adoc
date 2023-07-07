@@ -1,0 +1,24 @@
+[id="contract_address"]
+= Contract address
+
+The contract address is a unique identifier of the contract on Starknet. It is a chain hash of the following information:
+
+* `prefix` - the ASCII encoding of the constant string "`STARKNET_CONTRACT_ADDRESS`"
+* `caller_address` - currently always zero
+* `salt` - part of the xref:architecture_and_concepts:Network_Architecture/Blocks/transactions.adoc#deploy-transaction[deploy transaction]
+* `contract_hash` - see xref:./class-hash.adoc[the docs]
+* `calldata_hash` - xref:../Cryptography/hash-functions.adoc#array_hashing[array hash] of the inputs to the constructor
+
+The computation is roughly the following:
+
+[source,js]
+----
+contract_address := pedersen(
+    “STARKNET_CONTRACT_ADDRESS”,
+    caller_address,
+    salt,
+    pedersen(contract_code),
+    pedersen(constructor_calldata))
+----
+
+You can find the address computation on our repo https://github.com/starkware-libs/cairo-lang/blob/ed6cf8d6cec50a6ad95fa36d1eb4a7f48538019e/src/starkware/starknet/services/api/gateway/contract_address.py#L12[here].
