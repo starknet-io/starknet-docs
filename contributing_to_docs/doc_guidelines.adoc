@@ -412,8 +412,8 @@ Use `*.png` format images.
 To include a block image (an image on its own line):
 
 1. Put the image file in the `modules/<module>/images` folder.
-+
-Ensure that the folder containing your assembly contains an `images` symbolic link to the top-level `images/` directory, otherwise the image will not be found when building the docs.
+// +
+// Ensure that the folder containing your assembly contains an `images` symbolic link to the top-level `images/` directory, otherwise the image will not be found when building the docs.
 
 2. In the `.adoc` content, use this format to link to the image:
 +
@@ -431,40 +431,12 @@ image::documentation:architecture_and_concepts:l1l2.png[L1 to L2 messaging]
 +
 The image file, `l1l2.png`, is in `modules/architecture_and_concepts/images/`.
 
-=== Inline images (icons)
+=== Inline images
 
-Inline images can be used to indicate graphic items in the web console, such as
-buttons or menu icons.
 
-// ====  Inserting reusable images inline
-//
-// To simplify reuse, the following common SVGs (the OpenShift web console uses the
-// Font Awesome icon set) have already been added to the `images` folder with a
-// user-defined entity added to the `common-attributes.adoc` module:
-//
-// |===
-// |Icon |Entity |Alt text |File name
-//
-// |Kebab
-// |`:kebab:`
-// |Options menu
-// |`ellipsis-v.svg`
-//
-// |===
-//
-// When using inline, include the image after the UI element name. For example:
-//
-// ----
-// Click the *Options* menu {kebab}.
-// ----
-
-==== Inserting images inline without reuse
-
-If you are inserting an inline image that is not part of the `common-attributes.adoc`
-module, then include the image using this formatting:
+Use this formatting:
 
 ----
-image:<image_filename>[title="<alt_text>"]
 image:<component>:<module>:<image_filename>[<alt_text>]
 ----
 
@@ -492,7 +464,7 @@ You can use backticks or other markup in the title for a block, such as a code b
 
 === Code blocks, command syntax, and example output
 
-Code blocks are generally used to show examples of command syntax, example
+Code blocks generally show examples of command syntax, example
 screen output, and configuration files.
 
 The main distinction between showing command syntax and a command example is
@@ -503,37 +475,43 @@ example output of that command, where applicable.
 For example:
 
 ....
-In the following example, the `oc get` operation returns a complete list of services that are currently defined:
+Run the following command to initialize an account:
 
 [source,terminal]
 ----
-$ oc get se
+starknet new_account --account <account_name>
 ----
 
 .Example output
 [source,terminal]
 ----
-NAME                LABELS                                    SELECTOR            IP                  PORT
-kubernetes          component=apiserver,provider=kubernetes   <none>              172.30.17.96        443
-kubernetes-ro       component=apiserver,provider=kubernetes   <none>              172.30.17.77        80
-docker-registry     <none>                                    name=registrypod    172.30.17.158       5001
+Account address: 0x04e93e1fb507d23b398f0a09f5873d3a7769b0e7ed40dbbe8fe7a2e8ea831006
+Public key: 0x07a328511fa8552cd61aaaa89076fe40c3566f4594f29324aa754d41d7c7c55e
+Move the appropriate amount of funds to the account, and then deploy the account
+by invoking the 'starknet deploy_account' command.
+
+NOTE: This is a modified version of the OpenZeppelin account contract. The signature is computed
+differently.
 ----
 ....
 
 This renders as:
 
-> In the following example, the `oc get` operation returns a complete list of services that are currently defined:
+> Run the following command to initialize an account:
 >
 > ----
-> $ oc get se
+>starknet new_account --account <account_name>
 > ----
 >
 > .Example output
 > ----
-> NAME                LABELS                                    SELECTOR            IP                  PORT
-> kubernetes          component=apiserver,provider=kubernetes   <none>              172.30.17.96        443
-> kubernetes-ro       component=apiserver,provider=kubernetes   <none>              172.30.17.77        80
-> docker-registry     <none>                                    name=registrypod    172.30.17.158       5001
+> Account address: 0x04e93e1fb507d23b398f0a09f5873d3a7769b0e7ed40dbbe8fe7a2e8ea831006
+> Public key: 0x07a328511fa8552cd61aaaa89076fe40c3566f4594f29324aa754d41d7c7c55e
+> Move the appropriate amount of funds to the account, and then deploy the account
+> by invoking the 'starknet deploy_account' command.
+>
+> NOTE: This is a modified version of the OpenZeppelin account contract. The signature is computed
+differently.
 > ----
 
 The following guidelines go into more detail about specific requirements and
@@ -548,7 +526,14 @@ use one of the following patterns to introduce the code block:
 ** <Step description>, run the following command:
 ** <Step description>, enter the following command:
 
-* Do NOT use any markup in code blocks; code blocks generally do not accept any markup.
+* Avoid using markup in code block. If you must use any markup in code blocks, see the Asciidoctor documentation on source blocks and substitutions:
+** link:https://docs.asciidoctor.org/asciidoc/latest/verbatim/source-blocks/[Source Code Blocks]
+** link:https://docs.asciidoctor.org/asciidoc/latest/subs/[Substitutions]
++
+[CAUTIONI]
+====
+It can take some trial and error to figure out the correct source block macro to use for the exact markup you want to use.
+====
 
 * For all code blocks, you must include an empty line above a code block (unless
 that line is introducing block metadata, such as `[source,terminal]` for syntax
@@ -575,7 +560,7 @@ $ lorem.sh
 +
 Without the line spaces, the content is likely to be not parsed correctly.
 
-* Use `[source,terminal]` for `oc` commands or any terminal commands to enable
+* Use `[source,terminal]` for CLI commands, and any other commands that you enter in the terminal, to enable
 syntax highlighting. Any `[source]` metadata must go on the line directly before
 the code block. For example:
 +
@@ -592,32 +577,32 @@ If you are also showing a code block for the output of the command, use
 * Use source tags for the programming language used in the code block to enable
 syntax highlighting. For example:
 
-** `[source,yaml]`
-** `[source,go]`
+** `[source,cairo]`
+** `[source,python]`
 ** `[source,javascript]`
-** `[source,jsx]`
+** `[source,json]`
 
-* Do not use more than one command per code block. For example, the following must
-be split up into three separate code blocks:
-+
-....
-To create templates you can modify, run the following commands:
-
-[source,terminal]
-----
-$ oc adm create-login-template > login.html
-----
-
-[source,terminal]
-----
-$ oc adm create-provider-selection-template > providers.html
-----
-
-[source,terminal]
-----
-$ oc adm create-error-template > errors.html
-----
-....
+// * Do not use more than one command per code block. For example, the following must
+// be split up into three separate code blocks:
+// +
+// ....
+// To create templates you can modify, run the following commands:
+//
+// [source,terminal]
+// ----
+// $ oc adm create-login-template > login.html
+// ----
+//
+// [source,terminal]
+// ----
+// $ oc adm create-provider-selection-template > providers.html
+// ----
+//
+// [source,terminal]
+// ----
+// $ oc adm create-error-template > errors.html
+// ----
+// ....
 
 * If your command contains multiple lines and uses callout annotations, you must comment out the callout(s) in the codeblock, as shown in the following example:
 +
@@ -638,38 +623,44 @@ $ oc autoscale <object_type>/<name> \// <1>
 ....
 
 * Separate a command and its related example output into individual code blocks.
-This allows the command to be easily copied using the button on
-+++docs.openshift.com+++.
+This enables a reader to easily copy the command using the *Copy* button image:images/clippy.png[alt="Copy",20,20] on
+docs.starknet.io.
 +
 In addition, prepend the code block for the output with the title `.Example output`
 to make it consistently clear across the docs when this is being represented. A
 lead-in sentence explaining the example output is optional. For example:
 +
 ....
-Use the `oc new-project` command to create a new project:
+Run the `starknet new_account` command to initialize an account:
 
 [source,terminal]
 ----
-$ oc new-project my-project
+$ starknet new_account --account <account_name>
 ----
 
-The output verifies that a new project was created:
+The output verifies that a new account was intialized:
 
 .Example output
 [source,terminal]
 ----
-Now using project "my-project" on server "https://openshift.example.com:6443".
+Account address: 0x04e93e1fb507d23b398f0a09f5873d3a7769b0e7ed40dbbe8fe7a2e8ea831006
+Public key: 0x07a328511fa8552cd61aaaa89076fe40c3566f4594f29324aa754d41d7c7c55e
+Move the appropriate amount of funds to the account, and then deploy the account
+by invoking the 'starknet deploy_account' command.
+
+NOTE: This is a modified version of the OpenZeppelin account contract. The signature is computed
+differently.
 ----
 ....
 
-* To mark up command syntax, use the code block and wrap any replaceable values in angle brackets (`<>`) with the required command parameter, using underscores (`_`) between words as necessary for legibility. Do not italicize user-replaced values. For example:
+* To mark up command syntax, use the code block and wrap any replaceable values in angle brackets (`<>`) with the required command parameter, using underscores (`_`) between words as necessary for legibility. For example:
 +
 ....
-To view a list of objects for the specified object type, enter the following command:
+To deploy the account you initialized, now run the following command:
 
 [source,terminal]
 ----
-$ oc get <object_type> <object_id>
+$ starknet deploy_account --account=<account_name>
 ----
 ....
 +
