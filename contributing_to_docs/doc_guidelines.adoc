@@ -5,6 +5,16 @@
 
 // These guidelines are based on the guidelines for OpenShift documentation. Some sections of the original documentation are commented out. In the future, once it is determined they are not relevant to Starknet docs, those sections might be removed.
 
+== Adding files to the collection
+When you create new files, you must add them to the `/modules/Starknet/<module>/nav*.adoc` file so
+that the build system can render them in the table of contents.
+
+For possible values of `<module>`, see the directories under `/components/Starknet/modules/`.
+
+If you don't include the file in the `nav*.adoc` file, Antora includes the file in the built output, but it is not accessible via the TOC.
+
+== Structuring information
+
 The documentation guidelines for Starknet build on top of the
 link:https://redhat-documentation.github.io/modular-docs/[_Red Hat modular docs reference guide_]. However, because Antora does not natively account for assemblies, Starknet documentation does not use assemblies, so when reading this guide, focus on the information related to modularizing content based on the three major information types:
 
@@ -30,19 +40,20 @@ toc::[]
 // +
 // It is not necessary to update existing content to unwrap lines, but you can remove existing hard wrapping from any lines that you are currently working in.
 
-[id="module-file-metadata"]
-== Module file metadata
-Every module should be placed in a logical directory under `/components/StarkNet/modules` with the following metadata at the top of the file:
+[id="topic-file-metadata"]
+== Topic metadata
+
+Every topic should be placed in a logical directory under `/components/StarkNet/modules` with the following metadata at the top of the file:
 
 ----
-[id="<module-anchor>_{context}"]                                   <1>
-= Module title                                                     <2>
+[id="<topic-anchor>_{context}"]                                   <1>
+= Topic title                                                      <2>
 ----
 
-<1> A module anchor with `{context}` that must be lowercase and must match the module's file name.
+<1> A topic anchor with `{context}` that must be lowercase and must match the topic's file name.
 <2> Human readable title. To ensure consistency in the results of the
 leveloffset values in include statements, you must use a level one heading
-( = ) for the module title.
+( = ) for the topic title.
 
 Example:
 
@@ -52,9 +63,39 @@ Example:
 = Basic CLI commands
 ----
 
+== Conditional text
+Starknet documentation uses AsciiDoc's `ifdef/endif` macro to conditionalize and reuse content, down to the single-line level.
+
+For information on conditionalization in AsciiDoc, see link:https://docs.asciidoctor.org/asciidoc/latest/directives/conditionals[Conditionals] in the _AsciiDoc Language Documentation_.
+
+For example, if the same file should appear in _Document A_ and _Document B_, with only minor differences:
+----
+This first line is unconditionalized, and will appear in both _Document A_ and _Document B_.
+
+\ifdef::document_A[]
+This line will only appear for _Document A_.
+\endif::document_A[]
+
+ifdef::document_B
+This line will only appear for _Document B_.
+\endif::document_B[]
+
+ifndef::document_B
+This line will not appear for _Document B_.
+\endif::[]
+----
+
+[NOTE]
+====
+While the `ifdef/endif` blocks have no size limit, do not use them to
+to conditionalize an entire file. If an entire file is specific to a
+only some distributions, specify them in the `nav.adoc`
+file.
+====
+
 [id="snippet-file-metadata"]
 == Text snippet file metadata
-Every text snippet should be placed in the `partials` folder for the module in which they are used, and should contain the following metadata at the top:
+Every text snippet should be placed in the `partials` folder for the topic in which they are used, and should contain the following metadata at the top:
 
 [source,adoc]
 ----
@@ -63,7 +104,7 @@ Every text snippet should be placed in the `partials` folder for the module in w
 // * list of files where this text snippet is included
 ----
 
-<1> List of modules in which this text snippet is included.
+<1> List of topics in which this text snippet is included.
 
 [NOTE]
 ====
@@ -98,7 +139,7 @@ For detailed information on attributes in AsciiDocs, see link:https://docs.ascii
 
 If an attribute is used in multiple files, it is helpful to place those attributes in a single attributes file, and use an `include` statement to import those attributes where relevant. The attribute file is a normal AsciiDoc file.
 
-All attribute files must be placed in the `partials` directory for the primary module that uses them. Reference an attributes file using the following syntax:
+All attribute files must be placed in the `partials` directory for the primary topic that uses them. Reference an attributes file using the following syntax:
 
  include::partial$attributes/<file_name>.adoc[]
 
@@ -106,7 +147,7 @@ For example:
 
  include::partial$attributes/attributes.adoc[]
 
-If files in more than one module reference the same attribute file, use the following syntax, or suggest a new strategy in a Github issue:
+If files in more than one topic reference the same attribute file, use the following syntax, or suggest a new strategy in a Github issue:
 
 . Create a symlink to the attributes file in the `partials` directory of the parent module for the file that includes the attributes file.
 
@@ -122,7 +163,7 @@ To include `attributes.adoc` in `audit.adoc`:
 
 == File names
 
-Try to shorten the file name as much as possible _without_ abbreviating important terms that might cause confusion. For example, the `managing-authorization-policies.adoc` file name would be appropriate for an assembly titled "Managing Authorization Policies".
+Try to shorten the file name as much as possible _without_ abbreviating important terms that might cause confusion. For example, the `managing-authorization-policies.adoc` file name would be appropriate for an topic entitled _Managing Authorization Policies_.
 
 == Directory names
 
@@ -160,7 +201,7 @@ Do not create or rename a top-level directory in the repository and topic map wi
 Use sentence case in all titles and section headings. See http://www.titlecase.com/ or https://convertcase.net/ for a conversion tool.
 
 Try to be as descriptive as possible with the title or section headings
-without making them unnecessarily long. For procedural modules,
+without making them unnecessarily long. For procedural topics,
 use a gerund form in headings, such as:
 
 * Creating
@@ -191,14 +232,14 @@ To use a discrete heading, just add `[discrete]` to the line before your unique 
 
 All titles and section headings must have an anchor ID. The anchor ID must be similar to the title or section heading.
 
-You must add the `{context}` variable to the end of each anchor ID in module files. When called, the `{context}` variable is resolved into the value declared in the `:context:` attribute in the corresponding assembly file. This enables cross-referencing to module IDs in context when a module is included in multiple locations.
+You must add the `{context}` variable to the end of each anchor ID in topic files. When called, the `{context}` variable is resolved into the value declared in the `:context:` attribute in the corresponding section of the document. This enables cross-referencing to topic IDs in context when a topic is included in multiple locations.
 
 [NOTE]
 ====
 The `{context}` variable must be preceded by an underscore (`_`) when declared in an anchor ID.
 ====
 
-The following is an example of an anchor ID for a module file title:
+The following is an example of an anchor ID for a topic file title:
 
 ----
 [id="sending-notifications-to-external-systems_{context}"]
@@ -265,9 +306,9 @@ A _concept_ contains information to support the tasks that users want to do and
 must not include task information like commands or numbered steps.
 
 Avoid using gerunds in concept titles. "About <concept>"
-is a common concept module title.
+is a common concept topic title.
 
-For more information about creating concept modules, see the
+For more information about creating concept topics, see the
 link:https://redhat-documentation.github.io/modular-docs/#creating-concept-modules[_Red Hat modular docs reference guide_] and the link:https://raw.githubusercontent.com/redhat-documentation/modular-docs/master/modular-docs-manual/files/TEMPLATE_CONCEPT_concept-explanation.adoc[concept template].
 
 == Writing procedural topics
@@ -280,15 +321,15 @@ link:https://redhat-documentation.github.io/modular-docs/#creating-procedure-mod
 
 [id="writing-text-snippets"]
 == Writing text snippets
-A _text snippet_ is an optional component that lets you reuse content in multiple modules and assemblies. Text snippets are not a substitute for modules but instead are a more granular form of content reuse.
+A _text snippet_ is an optional component that lets you reuse content in multiple topics. Text snippets are not a substitute for topics but instead are a more granular form of content reuse.
 
-While a module is content that a reader can understand on its own (like an article) or as part of a larger body of work (like a guide), a text snippet is not self-contained and is not intended to be published or cross referenced on its own.
+While a topic is content that a reader can understand on its own (like an article) or as part of a larger body of work (like a guide), a text snippet is not self-contained and is not intended to be published or cross referenced on its own.
 
 Examples include the following:
 
 * Admonitions that appear in multiple locations.
 * An introductory paragraph that appears in multiple locations.
-* The same series of steps that appear in multiple procedural modules.
+* The same series of steps that appear in multiple procedural topics.
 * A deprecation statement that appears in multiple sets of release notes.
 
 Example:
@@ -349,7 +390,7 @@ A hyperlink to a page on a third-party website is convenient and user-friendly _
 
 == Embedding a local source code file
 
-You can embed local source code files in AsciiDoc modules.
+You can embed local source code files in AsciiDoc topics.
 
 // The YAML file that you include must be a local file maintained in the link:https://github.com/openshift/openshift-docs[openshift-docs] GitHub repository.
 
@@ -418,7 +459,7 @@ To include a block image (an image on its own line):
 2. In the `.adoc` content, use this format to link to the image:
 +
 ----
-image::<component>:<module>:<image_filename>[<alt_text>]
+image::<module>:<image_filename>[<alt_text>]
 ----
 +
 Notice the double `::` instead of a single `:`, as seen in inline image usage.
@@ -437,7 +478,7 @@ The image file, `l1l2.png`, is in `modules/architecture_and_concepts/images/`.
 Use this formatting:
 
 ----
-image:<component>:<module>:<image_filename>[<alt_text>]
+image:<module>:<image_filename>[<alt_text>]
 ----
 
 Note the single `:` instead of a double `::`, as seen in block image usage.
@@ -906,7 +947,7 @@ But this other text uses the same qualifier elsewhere footnote:[{note-text}].
 
 [id="collapsible-content"]
 === Collapsible content
-You can collapse sections of content by using the `collapsible` option, which converts the Asciidoctor markup to HTML `details` and `summary` sections. The `collapsible` option is used at the writer's discretion and is appropriate for considerably long code blocks, lists, or other such content that significantly increases the length of a module or assembly.
+You can collapse sections of content by using the `collapsible` option, which converts the Asciidoctor markup to HTML `details` and `summary` sections. The `collapsible` option is used at the writer's discretion and is appropriate for considerably long code blocks, lists, or other such content that significantly increases the length of a topic.
 
 [NOTE]
 ====
@@ -1006,22 +1047,18 @@ The following guidelines apply to all "Additional resources" sections:
 * Avoid including paragraphs in the section. Use an unordered list.
 * The links and xrefs in the unordered list must contain human-readable text between the square brackets.
 * Each item in the unordered list must contain a minimum of text besides the link or xref.
-
-Additionally, in an assembly, use `==` formatting for the section heading (`== Additional resources`). For example:
-
+* Use `.Additional resources` formatting for an Additional resources section when it applies to a section within a topic. For example:
++
+[source,adoc]
+----
+.Additional resources
+----
+* Use `==` formatting for the section heading (`== Additional resources`) when it applies to the entire topic. For example:
++
 ----
 [id="additional-resources_configuring-alert-notifications"]
 == Additional resources
-* link:some-url.com[Human readable label]
-* xref:some_xref[Human readable label]
-* xref:some_other_xref[Human readable label]
-----
 
-Only use `.` formatting (`.Additional resources`) in a module or to follow a module in an assembly. Because you cannot use the xrefs in modules, this functions as a _trailing include_ at the assembly level, where the `.` formatting of the `include` statement indicates that the resource applies specifically to the module and not to the assembly. For example:
-
-----
-[role="_additional-resources"]
-.Additional resources
 * link:some-url.com[Human readable label]
 * xref:some_xref[Human readable label]
 * xref:some_other_xref[Human readable label]
