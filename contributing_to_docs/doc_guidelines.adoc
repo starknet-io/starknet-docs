@@ -686,18 +686,12 @@ $ starknet deploy_account --account=<account_name>
 This renders as:
 +
 --
-> To view a list of objects for the specified object type, enter the following command:
->
+> To deploy the account you initialized, now run the following command:
+
 > ----
-> $ oc get <object_type> <object_id>
+> $ starknet deploy_account --account=<account_name>
 > ----
 --
-+
-NOTE: Avoid using full command syntax inline with sentences.
-
-* When you specify link:https://kubernetes.io/docs/reference/kubectl/#resource-types[resource names] in `oc` commands, use the full name of the resource type by default. You can use the abbreviation of the resource type name if it improves readability, such as with very long commands, or to be consistent with existing content in the same assembly.
-+
-For example, use `namespaces` instead of `ns` and `poddisruptionbudgets` instead of `pdb`.
 
 * When referring to a path to a location that the user has selected or created, treat the part of the path that the user chose as a replaceable value. For example:
 +
@@ -706,7 +700,7 @@ Create a secret that contains the certificate and key in the `openshift-config` 
 
 [source,terminal]
 ----
-$ oc create secret tls <certificate> --cert=<path_to_certificate>/cert.crt --key=<path_to_key>/cert.key -n openshift-config
+$ oc create secret tls <certificate> --cert=<path_to_certificate>/cert.crt
 ----
 ....
 +
@@ -716,18 +710,11 @@ This renders as:
 > Create a secret that contains the certificate and key in the `openshift-config` namespace:
 >
 > ----
-> $ oc create secret tls <certificate> --cert=<path_to_certificate>/cert.crt --key=<path_to_key>/cert.key -n openshift-config
+> $ oc create secret tls <certificate> --cert=<path_to_certificate>/cert.crt
 > ----
 --
-+
-The following example shows a more complex use of user-chosen elements and prescriptive placement:
-+
-....
-<resource_group_name>/providers/Microsoft.Compute/diskEncryptionSets/<disk_encryption_set_name>
-....
-
 * If you must provide additional information on what a line of a code block
-represents, use callouts (`<1>`, `<2>`, etc.) to provide that information.
+represents, you can use callouts (`<1>`, `<2>`, etc.) to provide that information.
 +
 Use this format when embedding callouts into the code block:
 +
@@ -747,6 +734,7 @@ to provide information about the variables in the code block. Using callouts
 might be impractical if a code block contains too many conditional statements to
 easily use numbered callouts or if the same note applies to multiple lines of the codeblock.
 +
+[source,adoc]
 ....
 ----
 code <variable_1>
@@ -755,6 +743,7 @@ code <variable_2>
 +
 where:
 
+[horizontal]
 <variable_1>:: Specifies the explanation of the first variable.
 <variable_2>:: Specifies the explanation of the first variable.
 ....
@@ -772,12 +761,6 @@ $ oc get endpoints --all-namespaces --template \
     {{ end }}{{ end }}{{ "\n" }}{{ end }}' | awk '/ 172\.30\./ { print $1 }'
 ----
 
-* If the user must run a command as root, use a number sign (`#`) at the start of the command instead of a dollar sign (`$`). For example:
-+
-----
-# subscription-manager list
-----
-
 * For snippets or sections of a file, use an ellipsis (`...` or `# ...` for YAML) to show that the file continues before or after the quoted block.
 +
 ----
@@ -789,158 +772,27 @@ metadata:
 # ...
 ----
 +
-or
-+
-----
-Name:               ci-ln-iyhx092-f76d1-nvdfm-worker-b-wln2l
-Roles:              worker
-...
-Taints:             node-role.kubernetes.io/infra:NoSchedule
-...
-----
-+
 Do not use `[...]`, `<snip>`, or any other variant.
 
-* Do not use `jq` in commands (unless it is truly required), because this requires users to install the `jq` tool. Oftentimes, the same or similar result can be accomplished using `jsonpath` for `oc` commands.
-+
-For example, this command that uses `jq`:
-+
-----
-$ oc get clusterversion -o json|jq ".items[0].spec"
-----
-+
-can be updated to use `jsonpath` instead:
-+
-----
-$ oc get clusterversion -o jsonpath='{.items[0].spec}{"\n"}'
-----
-
-* For Bash "here" documents use `[source,terminal]`, such as the following example:
-+
-....
-[source,terminal]
-----
-$ cat <<EOF| oc create -f -
-apiVersion: v1
-kind: Pod
-metadata:
-  name: mlistener
-  labels:
-    app: multicast-verify
-EOF
-----
-....
-
-* For the output of commands use `[source,text]`, such as with the following example output from the `oc describe <pural> <object>` command:
-+
-....
-[source,text]
-----
-Name:               node1.example.com
-Roles:              worker
-Labels:             kubernetes.io/arch=amd64
-...
-Annotations:        cluster.k8s.io/machine: openshift-machine-api/ahardin-worker-us-east-2a-q5dzc
-...
-CreationTimestamp:  Wed, 13 Feb 2019 11:05:57 -0500
-----
-....
-
-=== YAML formatting for Kubernetes and OpenShift API objects
-The following formatting guidelines apply to YAML manifests, but do not apply to the installation configuration YAML specified by `install-config.yaml`.
-
-When possible, ensure that YAML is valid in a running cluster. You can validate YAML with `oc apply` with the following invocation:
-
-----
-$ oc apply -f test.yaml --dry-run=client
-----
-
-==== Required fields
-
-- Include the `apiVersion` and `kind` so that a user always knows the context of the YAML.
-- Include the full hierarchy to a deeply nested key.
-- For objects that are in the global scope, such as for `config.openshift.io` API group, always include the `metadata.name` for the object, which is usually `cluster`.
-
-.Example API object in the global scope
-----
-apiVersion: config.openshift.io/v1
-kind: Scheduler
-metadata:
-  name: cluster
-# ...
-spec:
-  defaultNodeSelector: node-role.kubernetes.io/app=
-# ...
-----
-
-.Example deeply nested key with full context for `.ports` array
-----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod1
-  namespace: default
-spec:
-  containers:
-  - name: web
-    image: nginx
-    ports:
-    - name: web
-      containerPort: 80
-      protocol: TCP
-----
-
-==== Formatting
-The following conventions govern the layout of YAML for API objects:
-
-- Begin YAML at the beginning of the left margin.
-- Use two-space indentation.
-- Indent arrays at the same depth as the parent field.
-- Include a space immediately after the colon for keys.
-- Use block style for complex strings, such as embedded JSON or text blocks. You can enable block style by specifying `|` or `|-` after a field and indenting the field content by two spaces, such as in the following example:
-+
-----
-fieldName: |-
-  This is a string.
-  And it can be on multiple lines.
-----
-- When truncating YAML, comment out the ellipsis (`# ...`) because three dots (`...`) in YAML is actually a link:https://yaml.org/spec/1.2.2/#22-structures[document end marker].
-- Use three hyphens (`---`) to separate YAML definitions in a single YAML file.
-
-.Example with array indentation flush with parent field
-----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod1
-  labels:
-  - key1: val1
-  - key2: val2
-spec:
-# ...
-----
-
-.Example with block string for annotation
-----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod1
-  annotations:
-    k8s.v1.cni.cncf.io/networks: |-
-      [
-        {
-          "name": "net"
-        }
-      ]
-spec:
-# ...
-----
+// * For the output of commands use `[source,text]`, such as with the following example output:
+// +
+// ....
+// [source,text]
+// ----
+// Name:               node1.example.com
+// Roles:              worker
+// Labels:             kubernetes.io/arch=amd64
+// ...
+// Annotations:        cluster.k8s.io/machine: openshift-machine-api/ahardin-worker-us-east-2a-q5dzc
+// ...
+// CreationTimestamp:  Wed, 13 Feb 2019 11:05:57 -0500
+// ----
+// ....
 
 === Inline code or commands
 Do NOT show full commands or command syntax inline within a sentence. The next section covers how to show commands and command syntax.
 
-Only use case for inline commands would be general commands and operations, without replaceables and command options. In this case an inline command is marked up using the back ticks:
+The only use case for inline commands would be general commands and operations, without replaceables and command options. In this case use back ticks to indicate an inline command. For example:
 
 ....
 Use the `GET` operation to do x.
@@ -952,7 +804,7 @@ This renders as:
 
 === System messages
 
-System messages include error, warning, confirmation, and information messages that are presented to the user in places such as the GUI, CLI, or system logs.
+System messages include error, warning, confirmation, and information messages.
 
 If a message is short enough to include inline, enclose it in back ticks:
 
@@ -987,10 +839,10 @@ This renders as:
 >
 > Now, the installation program uses different AWS Terraform provider code, which now robustly handles S3 eventual consistency, and the installer-provisioned AWS cluster installation does not fail with that error message.
 
-NOTE: Always refer to a message with the type of message it is, followed by the word "message". For example, refer to an error message as an "error message", and not simply as an "error".
+NOTE: Always refer to a message with the type of message it is, followed by the word _message_. For example, refer to an error message as an _error message_, and not simply as an _error_.
 
 === Lists
-Lists are created as shown in this example:
+Write numbered lists as shown in this example:
 
 ....
 . Item 1 (2 spaces between the period and the first character)
@@ -1006,7 +858,7 @@ This renders as:
 > . Item 2
 > . Item 3
 
-If you must add any text, admonitions, or code blocks you have to add the continuous +, as shown in the example:
+If you must add any text, admonitions, or code blocks you have to add the `+` below the line to indicate continuation. For example:
 
 ....
 . Item 1
@@ -1052,54 +904,6 @@ This text has a footnote qualifier attached footnote:[{note-text}].
 But this other text uses the same qualifier elsewhere footnote:[{note-text}].
 ....
 
-Avoid using `footnoteref`.
-
-[IMPORTANT]
-====
-The `footnoteref` directive is deprecated in asciidoctor and causes a build warning when `ascii_binder` is run.
-====
-
-.Footnote with reference
-....
-footnoteref:[ref-string, This is the footnote text.]
-....
-
-==== Alternative footnote styling in tables
-
-For footnotes in tables, use the following syntax to mimic Asciidoctor's
-styling:
-
-....
-[cols="3",options="header"]
-|===
-|Header 1
-|Header 2
-|Header 3
-
-|Item A ^[1]^
-|Item B
-|Item C ^[2]^
-
-|Item D
-|Item E ^[3]^
-|Item F ^[3]^
-|===
-[.small]
---
-1. A description.
-2. Another description.
-3. Two items relate to this description.
---
-....
-
-The notes are kept immediately after the table, instead of moved to the bottom of the rendered assembly. This manual method also allows you to reuse the same footnote number for multiple references as needed.
-
-Note the following:
-
-* Add a space before the superscripted numbers with square brackets.
-* To match the table cell's font size, start the ordered list with a `[.small]`
-style and wrap it in a `--` block.
-
 [id="collapsible-content"]
 === Collapsible content
 You can collapse sections of content by using the `collapsible` option, which converts the Asciidoctor markup to HTML `details` and `summary` sections. The `collapsible` option is used at the writer's discretion and is appropriate for considerably long code blocks, lists, or other such content that significantly increases the length of a module or assembly.
@@ -1121,13 +925,13 @@ This is content within the `details` section.
 
 This renders as a dropdown with collapsed content:
 
-.Title of the `summary` dropdown
+.Title of the `Summary` dropdown
 [%collapsible]
 ====
-This is content within the `details` section.
+This is content within the `Details` section.
 ====
 
-If your collapsible content includes an admonition such as a note or warning, the admonition must be nested:
+If your collapsible content includes an admonition such as a note or warning, you must nest the admonition:
 
 ....
 .Collapsible content that includes an admonition
@@ -1199,15 +1003,13 @@ Nest admonitions when using the `collapsible` option.
 
 The following guidelines apply to all "Additional resources" sections:
 
-* You must include the `[role="_additional-resources"]` attribute declaration before the section heading.
-* You must not include paragraphs in the section. Use an unordered list.
+* Avoid including paragraphs in the section. Use an unordered list.
 * The links and xrefs in the unordered list must contain human-readable text between the square brackets.
 * Each item in the unordered list must contain a minimum of text besides the link or xref.
 
-Additionally, in an assembly, use `==` formatting for the section heading (`== Additional resources`). Use of this heading syntax at the assembly level indicates that the sections relate to the whole assembly. For example:
+Additionally, in an assembly, use `==` formatting for the section heading (`== Additional resources`). For example:
 
 ----
-[role="_additional-resources"]
 [id="additional-resources_configuring-alert-notifications"]
 == Additional resources
 * link:some-url.com[Human readable label]
@@ -1226,7 +1028,7 @@ Only use `.` formatting (`.Additional resources`) in a module or to follow a mod
 ----
 
 == Admonitions
-Admonitions such as notes and warnings are formatted as shown:
+Format admonitions, such as notes and warnings, as follows:
 
 ....
 [ADMONITION]
@@ -1235,324 +1037,4 @@ Text for admonition
 ====
 ....
 
-[id="api-object-formatting"]
-== API object formatting
-
-For terms that are API objects, the way they are written depends on whether the term is a general reference or an actual reference to the object.
-
-[id="api-object-general-references"]
-=== General references
-
-A general reference is any time you are speaking conceptually, or generally, about these components in a cluster.
-
-When referring to API object terms in general usage, use lowercase and separate multi-word API objects. *Default to following this guidance unless you are specifically interacting with/referring to the API object (see xref:api-object-object-references[Object references]).*
-
-For example:
-
-* pod
-* node
-* daemon set
-* config map
-* deployment
-* image stream
-* persistent volume claim
-
-.Examples of general references
-....
-Kubernetes runs your workload by placing containers into pods to run on nodes.
-
-You must have at least one secret, config map, or service account.
-
-The total number of persistent volume claims in a project.
-....
-
-Note that if an object uses an acronym or other special capitalization, then its general reference should honor that. For example, general references to `APIService` should be written as "API service", not "api service". Any other exceptions or special guidance are noted in the xref:../contributing_to_docs/term_glossary.adoc[glossary].
-
-[id="api-object-object-references"]
-=== Object references
-
-An object reference is when you are referring to the actual instance of an API object, where the object name is important.
-
-When referring to actual instances of API objects, use link:https://en.wikipedia.org/wiki/Camel_case#Variations_and_synonyms[PascalCase] and mark it up as monospace in backticks (````).
-
-[NOTE]
-====
-Do not use backticks or other markup in assembly or module headings. You can use backticks or other markup in the title for a block, such as a code block `.Example` or a table `.Description` title.
-====
-
-Be sure to match the proper object type (or `kind` in Kubernetes terms); for example, do not add an "s" to make it plural. *Only follow this guidance if you are explicitly referring to the API object (for example, when editing an object in the CLI or viewing an object in the web console).*
-
-For example:
-
-* `Pod`
-* `Node`
-* `DaemonSet`
-* `ConfigMap`
-* `Deployment`
-* `ImageStream`
-* `PersistentVolumeClaim`
-
-.Examples of API object references
-....
-After you create a `Node` object, or the kubelet on a node self-registers, the control plane checks whether the new `Node` object is valid.
-
-The default amount of CPU that a container can use if not specified in the `Pod` spec.
-
-Create a file, `pvc.yaml`, with the `PersistentVolumeClaim` object definition.
-....
-
-[NOTE]
-====
-Use "object", "resource", "custom resource", "spec", etc. as appropriate after the object reference. This helps with clarity and readability.
-
-Another situation where this is necessary is when referring to the plural version of objects. Do not add an "s" to the end of an object name reference to make it plural. Use only the official `kind` of object (for example, seen when you run `oc api-resources`).
-
-For example, the object `kind` for a node is `Node`, not `Nodes`. So do not write "You can create `Nodes` using `kubectl`." Instead, rewrite to something like "You can create `Node` objects using `kubectl`."
-====
-
-[id="operator-name-capitalization"]
-=== Operator capitalization
-
-The term "Operator" is always capitalized. For example:
-
-----
-= Support policy for unmanaged Operators
-
-Individual Operators have a `managementState` parameter in their configuration.
-----
-
-An Operator's full name must be a proper noun, with each word initially
-capitalized. If it includes a product name, defer the product's capitalization
-style guidelines. For example:
-
-- Red Hat OpenShift Logging Operator
-- Prometheus Operator
-- etcd Operator
-- Node Tuning Operator
-- Cluster Version Operator
-
-== Declarative config examples
-
-Many of our procedures provide imperative `oc` commands (which cannot be stored in a Git repo). Due to efforts around improving the experience for GitOps users, we sometimes also want to provide a declarative YAML example that achieves the same configuration. This allows users to store these YAML configurations in a Git repo and follow GitOps practices to configure OpenShift.
-
-[IMPORTANT]
-====
-When adding declarative examples to procedures, do not completely replace the imperative command with the declarative YAML example. Some users might still prefer the imperative option.
-====
-
-To add a declarative YAML example to a procedure step with an existing imperative command, add it in a "TIP" admonition by following the template in the example below. This example uses an imperative command (`oc create configmap`) to create a config map, and then provides the declarative YAML example of the `ConfigMap` object afterward.
-
-....
-* Define a `ConfigMap` object containing the certificate authority by using the following command:
-+
-[source,terminal]
-----
-$ oc create configmap ca-config-map --from-file=ca.crt=/path/to/ca -n openshift-config
-----
-+
-[TIP]
-====
-You can alternatively apply the following YAML to create the config map:
-
-[source,yaml]
-----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: ca-config-map
-  namespace: openshift-config
-type: Opaque
-data:
-  ca.crt: <base64_encoded_CA_certificate_PEM>
-----
-====
-....
-
-This renders as:
-
-> * Define a `ConfigMap` object containing the certificate authority by using the following command:
-> +
-> [source,terminal]
-> ----
-> $ oc create configmap ca-config-map --from-file=ca.crt=/path/to/ca -n openshift-config
-> ----
-> +
-> [TIP]
-> ====
-> You can alternatively apply the following YAML to create the config map:
->
-> [source,yaml]
-> ----
-> apiVersion: v1
-> kind: ConfigMap
-> metadata:
->   name: ca-config-map
->   namespace: openshift-config
-> type: Opaque
-> data:
->   ca.crt: <base64_encoded_CA_certificate_PEM>
-> ----
-> ====
-
-[NOTE]
-====
-If you are adding a particularly long YAML block, you can optionally use the xref:collapsible-content[`%collapsible`] feature to allow users to collapse the code block.
-====
-
-== Quick markup reference
-
-|===
-|Convention |Markup |Example rendered output
-
-|Code blocks
-
-a|
-....
-Use the following syntax for the `oc` command:
-
-----
-$ oc <action> <object_type> <object_name_or_id>
-----
-....
-
-a|
-> Use the following syntax for the `oc` command:
->
-> ----
-> $ oc <action> <object_type> <object_name_or_id>
-> ----
-
-a|Use backticks for all non-GUI "system items", including:
-
-* Inline commands, operations, literal values, variables, parameters, settings,
-flags, environment variables, user input
-* System term/item, user names, unique or example names for individual API
-objects/resources (e.g., a pod named `mypod`), daemon, service, or software
-package
-* RPM packages
-* File names or directory paths
-
-a|
-....
-`oc get`
-
-Set the `upgrade` variable to `true`.
-
-Use the `--amend` flag.
-
-Answer by typing `Yes` or `No` when prompted.
-
-`user_name`
-
-`service_name`
-
-`package_name`
-
-`filename`
-....
-
-a|
-> Use the `oc get services` command to get a list of services that are currently defined.
->
-> &nbsp;
->
-> Use the `--amend` flag.
->
-> &nbsp;
->
-> Set the `upgrade` variable to `true`.
->
-> &nbsp;
->
-> Answer by typing `Yes` or `No` when prompted.
->
-> &nbsp;
->
-> `cluster-admin` user
->
-> &nbsp;
->
-> `firewalld` service
->
-> &nbsp;
->
-> `rubygems` RPM package
->
-> &nbsp;
->
-> The `express.conf` configuration file is located in the `/usr/share` directory.
-
-|System or software variable to be replaced by the user
-a|
-....
-`<project>`
-
-`<deployment>`
-
-`<install_mode_value>`
-....
-
-a|
-> Use the following command to roll back a Deployment, specifying the Deployment name:
->
-> `oc rollback <deployment>`
->
-> &nbsp;
->
-> Apply the new configuration file:
->
-> `oc apply -f <path_to_configuration_file>/<filename>.yaml`
-
-|Use single asterisks for web console / GUI items (menus, buttons, page titles, etc.).
-Use two characters to form the arrow in a series of menu items (`$$->$$`).
-
-a|
-....
-Choose *Cluster Console* from the list.
-
-Navigate to the *Operators* -> *Catalog Sources* page.
-
-Click *Create Subscription*.
-....
-
-a|
-> Choose *Cluster Console* from the list.
->
-> &nbsp;
->
-> Navigate to the *Operators* -> *Catalog Sources* page.
->
-> &nbsp;
->
-> Click *Create Subscription*.
-
-|Use underscores to emphasize the first appearance of a new term.
-
-a|
-....
-An _Operator_ is a method of packaging, deploying,
-and managing a Kubernetes application.
-....
-
-a|
-> An _Operator_ is a method of packaging, deploying, and managing a Kubernetes application.
-
-|Use of underscores for general emphasis is allowed but should only be used
-very sparingly. Let the writing, instead of font usage, create the emphasis
-wherever possible.
-
-a|
-....
-Do _not_ delete the file.
-....
-
-a|
-> Do _not_ delete the file.
-
-|Footnotes
-
-|A footnote is created with the footnote macro. If you plan to reference a footnote more than once, use the ID footnoteref macro. The Customer Portal does not support spaces in the footnoteref. For example, "dynamic PV" should be "dynamicPV".
-
-|For footnote and footnoteref syntax, see link:http://asciidoctor.org/docs/user-manual/#user-footnotes[AsciiDoctor documentation].
-
-|===
+For a list of available admontion types, see link:https://redhat-documentation.github.io/supplementary-style-guide/#admonitions[Admonitions] in the _Red Hat supplementary style guide for product documentation_.
