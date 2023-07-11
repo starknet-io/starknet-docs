@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.216](https://github.com/starknet-io/starknet-docs/compare/v0.1.215...v0.1.216) (2023-07-11)
+
+### [0.1.215](https://github.com/starknet-io/starknet-docs/compare/v0.1.214...v0.1.215) (2023-07-10)
+
+
+### Features
+
+* add pathfinder versions ([#651](https://github.com/starknet-io/starknet-docs/issues/651)) ([b9f5834](https://github.com/starknet-io/starknet-docs/commit/b9f5834ee46027034d16e47a4e234d5de1ae50ef))
+
+### [0.1.214](https://github.com/starknet-io/starknet-docs/compare/v0.1.213...v0.1.214) (2023-07-10)
+
+
+### Features
+
+* add pathfinder versions ([#651](https://github.com/starknet-io/starknet-docs/issues/651)) ([#652](https://github.com/starknet-io/starknet-docs/issues/652)) ([c2a90bf](https://github.com/starknet-io/starknet-docs/commit/c2a90bf4ba72e807f3baec14399778a2ac35963f))
+
+### [0.1.213](https://github.com/starknet-io/starknet-docs/compare/v0.1.212...v0.1.213) (2023-07-10)
+
+
+### Bug Fixes
+
+* data availability href fix ([#639](https://github.com/starknet-io/starknet-docs/issues/639)) ([6d0514c](https://github.com/starknet-io/starknet-docs/commit/6d0514c0e81ba4b0ea933500c915382c682c6292))
+
+### [0.1.212](https://github.com/starknet-io/starknet-docs/compare/v0.1.211...v0.1.212) (2023-07-10)
+
+### [0.1.211](https://github.com/starknet-io/starknet-docs/compare/v0.1.210...v0.1.211) (2023-07-07)
+
+### [0.1.210](https://github.com/starknet-io/starknet-docs/compare/v0.1.209...v0.1.210) (2023-07-07)
+
+### [0.1.209](https://github.com/starknet-io/starknet-docs/compare/v0.1.208...v0.1.209) (2023-07-07)
+
+### [0.1.208](https://github.com/starknet-io/starknet-docs/compare/v0.1.207...v0.1.208) (2023-07-07)
+
+### [0.1.207](https://github.com/starknet-io/starknet-docs/compare/v0.1.206...v0.1.207) (2023-07-07)
+
 ### [0.1.206](https://github.com/starknet-io/starknet-docs/compare/v0.1.205...v0.1.206) (2023-07-07)
 
 
