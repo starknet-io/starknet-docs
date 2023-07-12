@@ -14,7 +14,130 @@ It provides the following features:
 
 See the official https://github.com/eqlabs/pathfinder[Pathfinder Github repository] for more details.
 
-## v0.5.4 (latest)
+## [0.6.6] - 2023-07-10  (latest)
+
+### Fixed
+
+- stack overflow while compiling Sierra to CASM
+
+## [0.6.5] - 2023-07-07
+
+### Fixed
+
+- pending data from the gateway is inconsistent
+  - this could exhibit as RPC data changing status between `pending | L2 accepted | not found`, especially noticeable for transactions.
+
+### Changed
+
+- substantially increase the character limit of execution errors
+  - previously, the RPC would return a highly truncated error message from the execution vm
+
+## [0.6.4] - 2023-07-05
+
+### Fixed
+
+- Pending data is not polled for starknet v0.12 due to an HTTP error code change from the gateway.
+- Transaction receipts missing `from_address` in `MSG_TO_L1`.
+
+## [0.6.3] - 2023-06-29
+
+### Fixed
+
+- Sierra class hash not in declared classes sync bug
+
+### Changed
+
+- use all libfunc list instead of experimental for sierra compilation
+
+## [0.6.2] - 2023-06-29
+
+### Added
+
+- `starknet_estimateMessageFee` for JSON-RPC v0.3.1 to estimate message fee from L1 handler.
+- sync-related metrics
+  - `current_block`: the currently sync'd block height of the node
+  - `highest_block`: the height of the block chain
+  - `block_time`: timestamp difference between the current block and its parent
+  - `block_latency`: delay between current block being published and sync'd locally
+  - `block_download`: time taken to download current block's data excluding classes
+  - `block_processing`: time taken to process and store the current block
+- configuration for new block polling interval: `--sync.poll-interval <seconds>`
+- Starknet v0.12.0 support
+  - sierra v2.0.0 support
+  - `cairo-lang` upgraded to 0.12.0a0
+
+### Fixed
+
+- reorgs fail if a class declaration is included in the reorg
+- sync can fail if db connection pool is held saturated by rpc queries
+- uses `finalized` (reorg-safe) L1 state instead of `latest`
+- `starknet_getEvents` times out for queries involving a large block range
+
+### Changed
+
+- dropped upgrade support for pathfinder v0.4 and earlier
+- separate db connection pools rpc, sync and storage
+- increased the number of rpc db connections
+
+## [0.6.1] - 2023-06-18
+
+### Fixed
+
+- class hash mismatch for cairo 0 classes with non-ascii text
+
+## [0.6.0] - 2023-06-14
+
+### Fixed
+
+- `starknet_simulateTransaction` requires `transactions` instead of `transaction` as input field.
+- gateway's error message is hidden when submitting a failed transaction
+- `starknet_getEvents` is very slow for certain filter combinations
+
+### Changed
+
+- default RPC API version changed from v0.2 to v0.3
+- disallow JSON-RPC notification-style requests
+
+## [0.5.6] - 2023-05-25
+
+### Added
+
+- Starknet v0.11.2 support
+  - Sierra compiler v1.1.0-rc0
+  - `cairo-lang` upgraded to 0.11.2a0
+- Subscription to `newHead` events via websocket using the method `pathfinder_subscribe_newHeads`, which can
+  be managed by the following command line options
+  - `rpc.websocket`, which enables websocket transport
+  - `rpc.websocket.capacity`, which sets the maximum number of websocket subscriptions per subscription type
+
+  Authors: [Shramee Srivastav](https://github.com/shramee) and [Matthieu Auger](https://github.com/matthieuauger)
+
+## [0.5.5] - 2023-05-18
+
+### Added
+
+- `cairo-lang` upgraded to 0.11.1.1
+
+### Fixed
+
+- RPC emits connection logs and warnings
+- Fee estimate mismatch between gateway and pathfinder
+  - Gateway uses a new gas price sampling algorithm which was incompatible with pathfinders.
+- Fee estimate returns error when submitting Cairo 1.0.0-rc0 classes.
+- Historic L1 handler transactions are served as Invoke V0
+  - Older databases contain L1 handler transactions from before L1 handler was a specific transaction type. These were
+    stored as Invoke V0. These are now correctly identified as being L1 Handler transactions.
+
+### Fixed
+
+- RPC emits connection logs and warnings
+- Fee estimate mismatch between gateway and pathfinder
+  - Gateway uses a new gas price sampling algorithm which was incompatible with pathfinders.
+- Historic L1 handler transactions are served as Invoke V0
+  - Older databases contain L1 handler transactions from before L1 handler was a specific transaction type. These were
+    stored as Invoke V0. These are now correctly identified as being L1 Handler transactions.
+
+## v0.5.4
 
 The primary focus of this release is to provide support for Starknet v0.11.1, and will continue to work for v0.11.0. Since this release is required for v0.11.1, you should update your node before the network is updated.
 
