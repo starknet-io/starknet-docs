@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.221](https://github.com/starknet-io/starknet-docs/compare/v0.1.220...v0.1.221) (2023-07-12)
+
+### [0.1.220](https://github.com/starknet-io/starknet-docs/compare/v0.1.219...v0.1.220) (2023-07-12)
+
+### [0.1.219](https://github.com/starknet-io/starknet-docs/compare/v0.1.218...v0.1.219) (2023-07-12)
+
+### [0.1.218](https://github.com/starknet-io/starknet-docs/compare/v0.1.217...v0.1.218) (2023-07-12)
+
+### [0.1.217](https://github.com/starknet-io/starknet-docs/compare/v0.1.216...v0.1.217) (2023-07-11)
+
+### [0.1.216](https://github.com/starknet-io/starknet-docs/compare/v0.1.215...v0.1.216) (2023-07-11)
+
+### [0.1.215](https://github.com/starknet-io/starknet-docs/compare/v0.1.214...v0.1.215) (2023-07-10)
+
+
+### Features
+
+* add pathfinder versions ([#651](https://github.com/starknet-io/starknet-docs/issues/651)) ([b9f5834](https://github.com/starknet-io/starknet-docs/commit/b9f5834ee46027034d16e47a4e234d5de1ae50ef))
+
 ### [0.1.214](https://github.com/starknet-io/starknet-docs/compare/v0.1.213...v0.1.214) (2023-07-10)
 
 
