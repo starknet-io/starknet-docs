@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.229](https://github.com/starknet-io/starknet-docs/compare/v0.1.228...v0.1.229) (2023-07-13)
+
 ### [0.1.228](https://github.com/starknet-io/starknet-docs/compare/v0.1.227...v0.1.228) (2023-07-13)
 
 
