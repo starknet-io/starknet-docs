@@ -30,14 +30,174 @@ starknet-compile contract.cairo \
 ====
 
 
+[NOTE]
+====
+The Cairo 0 compiler is no longer maintained, see link:https://github.com/starkware-libs/cairo#compiling-starknet-contracts[here] for more details on Cairo 1 contracts
+compilation.
+====
 
 The following is an example contract ABI:
 
-
 [tabs]
 ====
-
-Cairo 1.0::
+Cairo 0::
++
+[source,json]
+----
+[
+  {
+    "members": [
+      {
+        "name": "x",
+        "offset": 0,
+        "type": "felt"
+      },
+      {
+        "name": "y",
+        "offset": 1,
+        "type": "felt"
+      }
+    ],
+    "name": "Point",
+    "size": 2,
+    "type": "struct"
+  },
+  {
+    "members": [
+      {
+        "name": "x",
+        "offset": 0,
+        "type": "felt"
+      },
+      {
+        "name": "p",
+        "offset": 1,
+        "type": "Point"
+      }
+    ],
+    "name": "Test",
+    "size": 3,
+    "type": "struct"
+  },
+  {
+    "data": [
+      {
+        "name": "a",
+        "type": "felt"
+      },
+      {
+        "name": "b",
+        "type": "felt"
+      }
+    ],
+    "keys": [],
+    "name": "status_update",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "name": "a_len",
+        "type": "felt"
+      },
+      {
+        "name": "a",
+        "type": "felt*"
+      }
+    ],
+    "name": "constructor",
+    "outputs": [],
+    "type": "constructor"
+  },
+  {
+    "inputs": [
+      {
+        "name": "user",
+        "type": "felt"
+      }
+    ],
+    "name": "extend_range",
+    "outputs": [],
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "points_len",
+        "type": "felt"
+      },
+      {
+        "name": "points",
+        "type": "(felt, Point, Point)*"
+      }
+    ],
+    "name": "input_arrays",
+    "outputs": [],
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "nested_len",
+        "type": "felt"
+      },
+      {
+        "name": "nested",
+        "type": "Test*"
+      }
+    ],
+    "name": "input_nested_arrays",
+    "outputs": [
+      {
+        "name": "res",
+        "type": "felt"
+      }
+    ],
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "array_len",
+        "type": "felt"
+      },
+      {
+        "name": "array",
+        "type": "felt*"
+      }
+    ],
+    "name": "output_arrays",
+    "outputs": [
+      {
+        "name": "array_len",
+        "type": "felt"
+      },
+      {
+        "name": "array",
+        "type": "felt*"
+      }
+    ],
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "points",
+        "type": "(Point, Point)"
+      }
+    ],
+    "name": "input_output_struct",
+    "outputs": [
+      {
+        "name": "res",
+        "type": "Point"
+      }
+    ],
+    "type": "function"
+  }
+]
+----
+Cairo v1::
 +
 [source,json]
 ----
@@ -272,169 +432,229 @@ Cairo 1.0::
   }
 ]
 ----
-
-Cairo 0::
+Cairo v2::
 +
 [source,json]
 ----
 [
   {
-    "members": [
-      {
-        "name": "x",
-        "offset": 0,
-        "type": "felt"
-      },
-      {
-        "name": "y",
-        "offset": 1,
-        "type": "felt"
-      }
-    ],
-    "name": "Point",
-    "size": 2,
-    "type": "struct"
+    "type": "impl",
+    "name": "CounterContract",
+    "interface_name": "new_syntax_test_contract::new_syntax_test_contract::ICounterContract"
   },
   {
-    "members": [
+    "type": "interface",
+    "name": "new_syntax_test_contract::new_syntax_test_contract::ICounterContract",
+    "items": [
       {
-        "name": "x",
-        "offset": 0,
-        "type": "felt"
+        "type": "function",
+        "name": "increase_counter",
+        "inputs": [
+          {
+            "name": "amount",
+            "type": "core::integer::u128"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
       },
       {
-        "name": "p",
-        "offset": 1,
-        "type": "Point"
+        "type": "function",
+        "name": "decrease_counter",
+        "inputs": [
+          {
+            "name": "amount",
+            "type": "core::integer::u128"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "get_counter",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u128"
+          }
+        ],
+        "state_mutability": "view"
       }
-    ],
-    "name": "Test",
-    "size": 3,
-    "type": "struct"
+    ]
   },
   {
-    "data": [
-      {
-        "name": "a",
-        "type": "felt"
-      },
-      {
-        "name": "b",
-        "type": "felt"
-      }
-    ],
-    "keys": [],
-    "name": "status_update",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "name": "a_len",
-        "type": "felt"
-      },
-      {
-        "name": "a",
-        "type": "felt*"
-      }
-    ],
+    "type": "constructor",
     "name": "constructor",
-    "outputs": [],
-    "type": "constructor"
-  },
-  {
     "inputs": [
       {
-        "name": "user",
-        "type": "felt"
-      }
-    ],
-    "name": "extend_range",
-    "outputs": [],
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "name": "points_len",
-        "type": "felt"
+        "name": "initial_counter",
+        "type": "core::integer::u128"
       },
       {
-        "name": "points",
-        "type": "(felt, Point, Point)*"
+        "name": "other_contract_addr",
+        "type": "core::starknet::contract_address::ContractAddress"
       }
-    ],
-    "name": "input_arrays",
-    "outputs": [],
-    "type": "function"
+    ]
   },
   {
-    "inputs": [
+    "type": "event",
+    "name": "new_syntax_test_contract::new_syntax_test_contract::counter_contract::CounterIncreased",
+    "kind": "struct",
+    "members": [
       {
-        "name": "nested_len",
-        "type": "felt"
-      },
-      {
-        "name": "nested",
-        "type": "Test*"
+        "name": "amount",
+        "type": "core::integer::u128",
+        "kind": "data"
       }
-    ],
-    "name": "input_nested_arrays",
-    "outputs": [
-      {
-        "name": "res",
-        "type": "felt"
-      }
-    ],
-    "type": "function"
+    ]
   },
   {
-    "inputs": [
+    "type": "event",
+    "name": "new_syntax_test_contract::new_syntax_test_contract::counter_contract::CounterDecreased",
+    "kind": "struct",
+    "members": [
       {
-        "name": "array_len",
-        "type": "felt"
-      },
-      {
-        "name": "array",
-        "type": "felt*"
+        "name": "amount",
+        "type": "core::integer::u128",
+        "kind": "data"
       }
-    ],
-    "name": "output_arrays",
-    "outputs": [
-      {
-        "name": "array_len",
-        "type": "felt"
-      },
-      {
-        "name": "array",
-        "type": "felt*"
-      }
-    ],
-    "type": "function"
+    ]
   },
   {
-    "inputs": [
+    "type": "event",
+    "name": "new_syntax_test_contract::new_syntax_test_contract::counter_contract::Event",
+    "kind": "enum",
+    "variants": [
       {
-        "name": "points",
-        "type": "(Point, Point)"
-      }
-    ],
-    "name": "input_output_struct",
-    "outputs": [
+        "name": "CounterIncreased",
+        "type": "new_syntax_test_contract::new_syntax_test_contract::counter_contract::CounterIncreased",
+        "kind": "nested"
+      },
       {
-        "name": "res",
-        "type": "Point"
+        "name": "CounterDecreased",
+        "type": "new_syntax_test_contract::new_syntax_test_contract::counter_contract::CounterDecreased",
+        "kind": "nested"
       }
-    ],
-    "type": "function"
+    ]
   }
 ]
 ----
-
 ====
+
+## Cairo v2 ABI changes
+
+With the transition to v2, the contract ABI underwent some changes.
+Consider the following high level code that generates the ABI in the above example:
+
+[source, rust]
+----
+#[starknet::interface]
+trait IOtherContract<TContractState> {
+    fn decrease_allowed(self: @TContractState) -> bool;
+}
+
+#[starknet::interface]
+trait ICounterContract<TContractState> {
+    fn increase_counter(ref self: TContractState, amount: u128);
+    fn decrease_counter(ref self: TContractState, amount: u128);
+    fn get_counter(self: @TContractState) -> u128;
+}
+
+#[starknet::contract]
+mod counter_contract {
+    use starknet::ContractAddress;
+    use super::{
+        IOtherContractDispatcher, IOtherContractDispatcherTrait, IOtherContractLibraryDispatcher
+    };
+
+    #[storage]
+    struct Storage {
+        counter: u128,
+        other_contract: IOtherContractDispatcher
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        CounterIncreased: CounterIncreased,
+        CounterDecreased: CounterDecreased
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct CounterIncreased {
+        amount: u128
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct CounterDecreased {
+        amount: u128
+    }
+
+    #[constructor]
+    fn constructor(
+        ref self: ContractState, initial_counter: u128, other_contract_addr: ContractAddress
+    ) {
+        self.counter.write(initial_counter);
+        self
+            .other_contract
+            .write(IOtherContractDispatcher { contract_address: other_contract_addr });
+    }
+
+    #[external(v0)]
+    impl CounterContract of super::ICounterContract<ContractState> {
+        fn get_counter(self: @ContractState) -> u128 {
+            self.counter.read()
+        }
+
+        fn increase_counter(ref self: ContractState, amount: u128) {
+            let current = self.counter.read();
+            self.counter.write(current + amount);
+            self.emit(CounterIncreased { amount });
+        }
+
+        fn decrease_counter(ref self: ContractState, amount: u128) {
+            let allowed = self.other_contract.read().decrease_allowed();
+            if allowed {
+                let current = self.counter.read();
+                self.counter.write(current - amount);
+                self.emit(CounterDecreased { amount });
+            }
+        }
+    }
+}
+----
+
+### Interface and Impl ABI entries
+
+Since the `CounterContract` impl is annotated with the `#[external(v0)]` attribute, you'll find the following `impl` entry in the ABI:
+
+```
+{
+  "type": "impl",
+  "name": "CounterContract",
+  "interface_name": "new_syntax_test_contract::new_syntax_test_contract::ICounterContract"
+},
+```
+
+This means that every function appearing in the `ICounterContract` interface 
+is a possible entry point of the contract.
 
 [NOTE]
 ====
-The Cairo 0 compiler is no longer maintained. For more information on compiling Cairo 1 contracts, see link:https://github.com/starkware-libs/cairo#compiling-starknet-contracts[Compiling Starknet contracts] in the Cairo Git repository.
+Standalone functions in the contract (outside an external impl) can also be anotated with `#[external(v0)]` (currently, this is the only way to add L1 handlers).In such cases, a corresponding `function` (or `l1_handler`) entry will be found in the ABI in the same hierarchy as impls and interfaces.
 ====
 
+### Events
+
+In Cairo v2, a dedicated type for the contract's events was introduced. Currently, the contract event type must be an enum named `Event`, whose variants are structs of the same name as the variant. Types that can be emitted via `self.emit(_)` must implement the `Event` link:https://github.com/starkware-libs/cairo/blob/7144f2f383961cbca4804a7d056d48973721446c/corelib/src/starknet/event.cairo#L4[trait], which defines how this type should be serialized into two `felt252` arrays, `keys` and `data`.
+
+The `Event` enum variants appear in the ABI under `"type" = "event"` rather than regular structs. For such entries, each member has an additional `kind` field which specifies how the serialization into keys and data takes place:
+
+* if the kind is `key`, then this member or variant are serialized into the event's keys
+* if the kind is `data`, then this member or variant are serialized into the event's data
+* if the kind is `nested`, then the member or variant are serialized acording to the `Event` attribute, potentially adding to both keys and data. At the moment, this feature is not yet supported, so no high level code written in Cairo v2.0.0 can generate such ABI.
+
+### Specification
+
+You can find a  link:https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_metadata.json#L20[JSON schema specification] of the ABI in the starknet-specs repository. For a UI-friendly version, you can use the  link:https://playground.open-rpc.org/?schemaUrl=https://raw.githubusercontent.com/starkware-libs/starknet-specs/master/api/starknet_metdata.json[OPEN-RPC playground].
