@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.234](https://github.com/starknet-io/starknet-docs/compare/v0.1.233...v0.1.234) (2023-07-25)
+
+
+### Features
+
+* Use remote UI ([#695](https://github.com/starknet-io/starknet-docs/issues/695)) ([49aa719](https://github.com/starknet-io/starknet-docs/commit/49aa719f20f1f216431176989e69991827d46bce))
+
 ### [0.1.233](https://github.com/starknet-io/starknet-docs/compare/v0.1.232...v0.1.233) (2023-07-18)
 
 
