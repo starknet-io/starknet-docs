@@ -10,15 +10,13 @@ During the execution of a Starknet transaction, a contract on Starknet sends an 
 
 For example:
 
-[source,js]
+[source,rs]
 ----
-let (message_payload : felt*) = alloc()
-assert message_payload[0] = <payload_parameter>
+let mut payload: Array<felt252> = ArrayTrait::new();
+payload.append(<payload_parameter>);
 // potentially add more elements to message_payload (message_payload[1], message_payload[2],  etc.)
 
-assert_lt_felt(to_address, ETH_ADDRESS_BOUND)
-assert_not_zero(to_address)
-send_message_to_l1(to_address=to_address, payload_size=1, payload=message_payload)
+send_message_to_l1_syscall(:to_address, payload: payload.span());
 ----
 
 After the state update that included this transaction is proved and the L1 state is updated, the message is stored on L1 in the Starknet Core Contract (and the relevant counter is increased), and the `LogMessageToL1` event (which contains the message parameters) is emitted.
