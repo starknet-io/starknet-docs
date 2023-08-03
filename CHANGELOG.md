@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.237](https://github.com/starknet-io/starknet-docs/compare/v0.1.236...v0.1.237) (2023-08-02)
+
+### [0.1.236](https://github.com/starknet-io/starknet-docs/compare/v0.1.235...v0.1.236) (2023-08-02)
+
+
+### Bug Fixes
+
+* removed image from L1-L2 communication ([#698](https://github.com/starknet-io/starknet-docs/issues/698)) ([84cac9a](https://github.com/starknet-io/starknet-docs/commit/84cac9adf162a1e40e53ee339f63aa5c930dc733))
+
 ### [0.1.235](https://github.com/starknet-io/starknet-docs/compare/v0.1.234...v0.1.235) (2023-07-31)
 
 ### [0.1.234](https://github.com/starknet-io/starknet-docs/compare/v0.1.233...v0.1.234) (2023-07-25)
