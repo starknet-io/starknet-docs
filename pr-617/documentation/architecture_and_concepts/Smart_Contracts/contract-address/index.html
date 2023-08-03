@@ -34,8 +34,6 @@
     <script>function gtag(){dataLayer.push(arguments)};window.dataLayer=window.dataLayer||[];gtag('js',new Date());gtag('config','G-WY42TERK5P')</script>
     <script>var uiRootPath = '../../../../_'</script>
     <script src="../../../../_/js/vendor/medium-zoom.js?new"></script>
-    <script src="../../../../_/js/vendor/rpc.js"></script>
-
     <script type="text/javascript" id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="e4db29b5-cd94-4bcf-87e4-04f4ca564240" data-blockingmode="manual"></script>
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
 
@@ -114,6 +112,9 @@
     <li><a href="./">Contract address</a></li>
   </ul>
 </nav>
+  <div class="edit-this-page">
+    <a href="https://github.com/starknet-io/starknet-docs/edit/dev/components/Starknet/modules/architecture_and_concepts/pages/Smart_Contracts/contract-address.adoc"><img class="pencil">Edit this Page</a>
+  </div>
 </div>
 <div class="body">
 <div class="nav-container" data-component="documentation" data-version="">
@@ -128,7 +129,7 @@
   <li class="nav-item" data-depth="1">
     <a 
        class="nav-link"
-     href="../../../">Overview</a>
+     href="../../../">Introduction</a>
   </li>
 </ul>
   </li>
@@ -231,7 +232,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../starknet_versions/important_addresses/">Recent important addresses</a>
+     href="../../../starknet_versions/important_addresses/">Important addresses</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -446,23 +447,18 @@
 <ul class="nav-list">
   <li class="nav-item parent" data-depth="1">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">API reference</span>
+    <span class="nav-text">Developer tools &amp; resources</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../api/api-reference/">Starknet API reference</a>
+     href="#CLI/starkli.adoc">Starkli CLI (recommended)</a>
   </li>
-</ul>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="#CLI/commands.adoc">Starknet CLI reference (deprecated)</a>
   </li>
-</ul>
-  </li>
-  <li class="nav-item parent" data-depth="0">
-<ul class="nav-list">
-  <li class="nav-item parent" data-depth="1">
-    <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">Developer tools &amp; resources</span>
-<ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
@@ -482,31 +478,6 @@
     <a 
        class="nav-link"
      href="https://book.starknet.io/">The Starknet book</a>
-  </li>
-</ul>
-  </li>
-</ul>
-  </li>
-  <li class="nav-item parent" data-depth="0">
-<ul class="nav-list">
-  <li class="nav-item parent" data-depth="1">
-    <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">Contribute to Starknet</span>
-<ul class="nav-list">
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="../../../contribute/conduct/">Code of conduct</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="../../../contribute/bug-bounty/">Bug bounty</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="https://community.starknet.io/">Community forum</a>
   </li>
 </ul>
   </li>
@@ -542,37 +513,37 @@
 <div class="ulist">
 <ul>
 <li>
-<p><code>prefix</code> - the ASCII encoding of the constant string &#8220;STARKNET_CONTRACT_ADDRESS&#8221;</p>
+<p><code>prefix</code> - The ASCII encoding of the constant string <code>STARKNET_CONTRACT_ADDRESS</code>.</p>
 </li>
 <li>
-<p><code>caller_address</code> - currently always zero</p>
+<p><code>deployer_address</code> - The deployer address, unless <code>deploy_from_zero</code> is <code>true</code>, in which case it is <code>0</code>.</p>
 </li>
 <li>
-<p><code>salt</code> - part of the <a href="../../Network_Architecture/Blocks/transactions/#deploy-transaction" class="xref page">deploy transaction</a></p>
+<p><code>salt</code> - The salt passed by the contract calling the syscall.</p>
 </li>
 <li>
-<p><code>contract_hash</code> - see <a href="../class-hash/" class="xref page">the docs</a></p>
+<p><code>class_hash</code> - See <a href="../class-hash/#computing_the_cairo_1_class_hash" class="xref page">the class hash documentation</a>.</p>
 </li>
 <li>
-<p><code>calldata_hash</code> - <a href="../../Cryptography/hash-functions/#array_hashing" class="xref page">array hash</a> of the inputs to the constructor</p>
+<p><code>constructor_calldata_hash</code> - <a href="#../Hashing/hash-functions.adoc#pedersen_array_hash" class="xref unresolved">Array hash</a> of the inputs to the constructor.</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>The computation is roughly the following:</p>
+<p>The address is computed as follows:</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">contract_address := pedersen(
     “STARKNET_CONTRACT_ADDRESS”,
-    caller_address,
+    deployer_address,
     salt,
-    pedersen(contract_code),
-    pedersen(constructor_calldata))</code></pre>
+    class_hash,
+    constructor_calldata_hash)</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>You can find the address computation on our repo <a href="https://github.com/starkware-libs/cairo-lang/blob/ed6cf8d6cec50a6ad95fa36d1eb4a7f48538019e/src/starkware/starknet/services/api/gateway/contract_address.py#L12">here</a>.</p>
+<p>You can find more detail of the address computation in the <a href="https://github.com/starkware-libs/cairo-lang/blob/ed6cf8d6cec50a6ad95fa36d1eb4a7f48538019e/src/starkware/starknet/services/api/gateway/contract_address.py#L12">Cairo code repository</a>.</p>
 </div>
 <nav class="pagination">
   <span class="prev"><a href="../contract-classes/">Contract classes</a></span>

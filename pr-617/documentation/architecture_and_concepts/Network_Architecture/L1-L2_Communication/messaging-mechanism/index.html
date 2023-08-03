@@ -34,8 +34,6 @@
     <script>function gtag(){dataLayer.push(arguments)};window.dataLayer=window.dataLayer||[];gtag('js',new Date());gtag('config','G-WY42TERK5P')</script>
     <script>var uiRootPath = '../../../../../_'</script>
     <script src="../../../../../_/js/vendor/medium-zoom.js?new"></script>
-    <script src="../../../../../_/js/vendor/rpc.js"></script>
-
     <script type="text/javascript" id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="e4db29b5-cd94-4bcf-87e4-04f4ca564240" data-blockingmode="manual"></script>
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
 
@@ -115,6 +113,9 @@
     <li><a href="./">L1-L2 messaging</a></li>
   </ul>
 </nav>
+  <div class="edit-this-page">
+    <a href="https://github.com/starknet-io/starknet-docs/edit/dev/components/Starknet/modules/architecture_and_concepts/pages/Network_Architecture/L1-L2_Communication/messaging-mechanism.adoc"><img class="pencil">Edit this Page</a>
+  </div>
 </div>
 <div class="body">
 <div class="nav-container" data-component="documentation" data-version="">
@@ -129,7 +130,7 @@
   <li class="nav-item" data-depth="1">
     <a 
        class="nav-link"
-     href="../../../../">Overview</a>
+     href="../../../../">Introduction</a>
   </li>
 </ul>
   </li>
@@ -232,7 +233,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../../starknet_versions/important_addresses/">Recent important addresses</a>
+     href="../../../../starknet_versions/important_addresses/">Important addresses</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -447,23 +448,18 @@
 <ul class="nav-list">
   <li class="nav-item parent" data-depth="1">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">API reference</span>
+    <span class="nav-text">Developer tools &amp; resources</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../../api/api-reference/">Starknet API reference</a>
+     href="#CLI/starkli.adoc">Starkli CLI (recommended)</a>
   </li>
-</ul>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="#CLI/commands.adoc">Starknet CLI reference (deprecated)</a>
   </li>
-</ul>
-  </li>
-  <li class="nav-item parent" data-depth="0">
-<ul class="nav-list">
-  <li class="nav-item parent" data-depth="1">
-    <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">Developer tools &amp; resources</span>
-<ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
@@ -483,31 +479,6 @@
     <a 
        class="nav-link"
      href="https://book.starknet.io/">The Starknet book</a>
-  </li>
-</ul>
-  </li>
-</ul>
-  </li>
-  <li class="nav-item parent" data-depth="0">
-<ul class="nav-list">
-  <li class="nav-item parent" data-depth="1">
-    <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">Contribute to Starknet</span>
-<ul class="nav-list">
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="../../../../contribute/conduct/">Code of conduct</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="../../../../contribute/bug-bounty/">Bug bounty</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="https://community.starknet.io/">Community forum</a>
   </li>
 </ul>
   </li>
@@ -551,13 +522,11 @@
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">let (message_payload : felt*) = alloc()
-assert message_payload[0] = &lt;payload_parameter&gt;
+<pre class="highlightjs highlight"><code class="language-rs hljs" data-lang="rs">let mut payload: Array&lt;felt252&gt; = ArrayTrait::new();
+payload.append(&lt;payload_parameter&gt;);
 // potentially add more elements to message_payload (message_payload[1], message_payload[2],  etc.)
 
-assert_lt_felt(to_address, ETH_ADDRESS_BOUND)
-assert_not_zero(to_address)
-send_message_to_l1(to_address=to_address, payload_size=1, payload=message_payload)</code></pre>
+send_message_to_l1_syscall(:to_address, payload: payload.span());</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -582,7 +551,7 @@ send_message_to_l1(to_address=to_address, payload_size=1, payload=message_payloa
 <div class="paragraph">
 <p>As demonstrated above, the structure of an L2 → L1 message is given by:</p>
 </div>
-<table class="tableblock frame-all grid-all fit-content">
+<table class="tableblock frame-all grid-all fit-content stretch">
 <caption class="title">Table 1. L2 → L1 Message</caption>
 <colgroup>
 <col>
@@ -677,14 +646,6 @@ As the hash of the message being sent needs to be written to L1 storage (in the 
 </ol>
 </div>
 <div class="paragraph">
-<p>The above flow is illustrated in the following diagram:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../../../_images/l1l2.png" alt="l1l2">
-</div>
-</div>
-<div class="paragraph">
 <p>An L1→L2 message consists of:</p>
 </div>
 <div class="ulist">
@@ -763,7 +724,7 @@ sent to L2. It is used to avoid hash collisions between different L1 handler tra
 <div class="paragraph">
 <p>For completeness, we describe the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.</p>
 </div>
-<table class="tableblock frame-all grid-all fit-content">
+<table class="tableblock frame-all grid-all fit-content stretch">
 <caption class="title">Table 2. L1 → L2 Message</caption>
 <colgroup>
 <col>
@@ -811,7 +772,7 @@ sent to L2. It is used to avoid hash collisions between different L1 handler tra
 );</code></pre>
 </div>
 </div>
-<table class="tableblock frame-all grid-all fit-content">
+<table class="tableblock frame-all grid-all fit-content stretch">
 <caption class="title">Table 3. L1 handler transaction</caption>
 <colgroup>
 <col>
@@ -845,12 +806,17 @@ sent to L2. It is used to avoid hash collisions between different L1 handler tra
 <div class="paragraph">
 <p>The hash of the corresponding L1 handler transaction on L2 is computed as follows:</p>
 </div>
-<div class="stemblock">
+<div class="listingblock">
 <div class="content">
-\[\begin{aligned}
-\text{l1_handler_tx_hash} = h( &amp; \text{"l1_handler"}, \text{ version}, \text{ contract_address}, \text{ entry_point_selector}, \\
-&amp; h(\text{ calldata}), \text{ max_fee}, \text{ chain_id}, \text{ nonce})
-\end{aligned}\]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">l1_handler_tx_hash = ℎ(
+    "l1_handler",
+    version,
+    contract_address,
+    entry_point_selector,
+    ℎ(calldata),
+    chain_id,
+    nonce
+)</code></pre>
 </div>
 </div>
 <div class="paragraph">
