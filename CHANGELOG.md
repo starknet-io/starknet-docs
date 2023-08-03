@@ -2,6 +2,132 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.237](https://github.com/starknet-io/starknet-docs/compare/v0.1.236...v0.1.237) (2023-08-02)
+
+### [0.1.236](https://github.com/starknet-io/starknet-docs/compare/v0.1.235...v0.1.236) (2023-08-02)
+
+
+### Bug Fixes
+
+* removed image from L1-L2 communication ([#698](https://github.com/starknet-io/starknet-docs/issues/698)) ([84cac9a](https://github.com/starknet-io/starknet-docs/commit/84cac9adf162a1e40e53ee339f63aa5c930dc733))
+
+### [0.1.235](https://github.com/starknet-io/starknet-docs/compare/v0.1.234...v0.1.235) (2023-07-31)
+
+### [0.1.234](https://github.com/starknet-io/starknet-docs/compare/v0.1.233...v0.1.234) (2023-07-25)
+
+
+### Features
+
+* Use remote UI ([#695](https://github.com/starknet-io/starknet-docs/issues/695)) ([49aa719](https://github.com/starknet-io/starknet-docs/commit/49aa719f20f1f216431176989e69991827d46bce))
+
+### [0.1.233](https://github.com/starknet-io/starknet-docs/compare/v0.1.232...v0.1.233) (2023-07-18)
+
+
+### Bug Fixes
+
+* typos ([#693](https://github.com/starknet-io/starknet-docs/issues/693)) ([e428572](https://github.com/starknet-io/starknet-docs/commit/e428572828788a36c006d61e3d8a010d4eb38395))
+
+### [0.1.232](https://github.com/starknet-io/starknet-docs/compare/v0.1.231...v0.1.232) (2023-07-18)
+
+### [0.1.231](https://github.com/starknet-io/starknet-docs/compare/v0.1.230...v0.1.231) (2023-07-14)
+
+### [0.1.230](https://github.com/starknet-io/starknet-docs/compare/v0.1.229...v0.1.230) (2023-07-14)
+
+### [0.1.229](https://github.com/starknet-io/starknet-docs/compare/v0.1.228...v0.1.229) (2023-07-13)
+
+### [0.1.228](https://github.com/starknet-io/starknet-docs/compare/v0.1.227...v0.1.228) (2023-07-13)
+
+
+### Features
+
+* Add style guide and more details for contributing. ([#519](https://github.com/starknet-io/starknet-docs/issues/519)) ([a52bf4f](https://github.com/starknet-io/starknet-docs/commit/a52bf4ff9488ab06542a9f30e5c687149fdb7db8))
+
+### [0.1.227](https://github.com/starknet-io/starknet-docs/compare/v0.1.226...v0.1.227) (2023-07-12)
+
+### [0.1.226](https://github.com/starknet-io/starknet-docs/compare/v0.1.225...v0.1.226) (2023-07-12)
+
+### [0.1.225](https://github.com/starknet-io/starknet-docs/compare/v0.1.224...v0.1.225) (2023-07-12)
+
+### [0.1.224](https://github.com/starknet-io/starknet-docs/compare/v0.1.223...v0.1.224) (2023-07-12)
+
+### [0.1.223](https://github.com/starknet-io/starknet-docs/compare/v0.1.222...v0.1.223) (2023-07-12)
+
+### [0.1.222](https://github.com/starknet-io/starknet-docs/compare/v0.1.221...v0.1.222) (2023-07-12)
+
+### [0.1.221](https://github.com/starknet-io/starknet-docs/compare/v0.1.220...v0.1.221) (2023-07-12)
+
+### [0.1.220](https://github.com/starknet-io/starknet-docs/compare/v0.1.219...v0.1.220) (2023-07-12)
+
+### [0.1.219](https://github.com/starknet-io/starknet-docs/compare/v0.1.218...v0.1.219) (2023-07-12)
+
+### [0.1.218](https://github.com/starknet-io/starknet-docs/compare/v0.1.217...v0.1.218) (2023-07-12)
+
+### [0.1.217](https://github.com/starknet-io/starknet-docs/compare/v0.1.216...v0.1.217) (2023-07-11)
+
+### [0.1.216](https://github.com/starknet-io/starknet-docs/compare/v0.1.215...v0.1.216) (2023-07-11)
+
+### [0.1.215](https://github.com/starknet-io/starknet-docs/compare/v0.1.214...v0.1.215) (2023-07-10)
+
+
+### Features
+
+* add pathfinder versions ([#651](https://github.com/starknet-io/starknet-docs/issues/651)) ([b9f5834](https://github.com/starknet-io/starknet-docs/commit/b9f5834ee46027034d16e47a4e234d5de1ae50ef))
+
+### [0.1.214](https://github.com/starknet-io/starknet-docs/compare/v0.1.213...v0.1.214) (2023-07-10)
+
+
+### Features
+
+* add pathfinder versions ([#651](https://github.com/starknet-io/starknet-docs/issues/651)) ([#652](https://github.com/starknet-io/starknet-docs/issues/652)) ([c2a90bf](https://github.com/starknet-io/starknet-docs/commit/c2a90bf4ba72e807f3baec14399778a2ac35963f))
+
+### [0.1.213](https://github.com/starknet-io/starknet-docs/compare/v0.1.212...v0.1.213) (2023-07-10)
+
+
+### Bug Fixes
+
+* data availability href fix ([#639](https://github.com/starknet-io/starknet-docs/issues/639)) ([6d0514c](https://github.com/starknet-io/starknet-docs/commit/6d0514c0e81ba4b0ea933500c915382c682c6292))
+
+### [0.1.212](https://github.com/starknet-io/starknet-docs/compare/v0.1.211...v0.1.212) (2023-07-10)
+
+### [0.1.211](https://github.com/starknet-io/starknet-docs/compare/v0.1.210...v0.1.211) (2023-07-07)
+
+### [0.1.210](https://github.com/starknet-io/starknet-docs/compare/v0.1.209...v0.1.210) (2023-07-07)
+
+### [0.1.209](https://github.com/starknet-io/starknet-docs/compare/v0.1.208...v0.1.209) (2023-07-07)
+
+### [0.1.208](https://github.com/starknet-io/starknet-docs/compare/v0.1.207...v0.1.208) (2023-07-07)
+
+### [0.1.207](https://github.com/starknet-io/starknet-docs/compare/v0.1.206...v0.1.207) (2023-07-07)
+
+### [0.1.206](https://github.com/starknet-io/starknet-docs/compare/v0.1.205...v0.1.206) (2023-07-07)
+
+
+### Bug Fixes
+
+* Minor style fixes. ([#631](https://github.com/starknet-io/starknet-docs/issues/631)) ([47bf7eb](https://github.com/starknet-io/starknet-docs/commit/47bf7ebfec9199c6135eaeb214fa2d0a7e6f4a8a))
+
+### [0.1.205](https://github.com/starknet-io/starknet-docs/compare/v0.1.204...v0.1.205) (2023-07-06)
+
+### [0.1.204](https://github.com/starknet-io/starknet-docs/compare/v0.1.203...v0.1.204) (2023-07-06)
+
+### [0.1.203](https://github.com/starknet-io/starknet-docs/compare/v0.1.202...v0.1.203) (2023-07-05)
+
+### [0.1.202](https://github.com/starknet-io/starknet-docs/compare/v0.1.201...v0.1.202) (2023-07-05)
+
+### [0.1.201](https://github.com/starknet-io/starknet-docs/compare/v0.1.200...v0.1.201) (2023-07-05)
+
+### [0.1.200](https://github.com/starknet-io/starknet-docs/compare/v0.1.199...v0.1.200) (2023-07-05)
+
+### [0.1.199](https://github.com/starknet-io/starknet-docs/compare/v0.1.198...v0.1.199) (2023-07-05)
+
+### [0.1.198](https://github.com/starknet-io/starknet-docs/compare/v0.1.197...v0.1.198) (2023-07-05)
+
+### [0.1.197](https://github.com/starknet-io/starknet-docs/compare/v0.1.196...v0.1.197) (2023-07-04)
+
+### [0.1.196](https://github.com/starknet-io/starknet-docs/compare/v0.1.195...v0.1.196) (2023-06-30)
+
+### [0.1.195](https://github.com/starknet-io/starknet-docs/compare/v0.1.194...v0.1.195) (2023-06-28)
+
 ### [0.1.194](https://github.com/starknet-io/starknet-docs/compare/v0.1.193...v0.1.194) (2023-06-22)
 
 ### [0.1.193](https://github.com/starknet-io/starknet-docs/compare/v0.1.192...v0.1.193) (2023-06-22)

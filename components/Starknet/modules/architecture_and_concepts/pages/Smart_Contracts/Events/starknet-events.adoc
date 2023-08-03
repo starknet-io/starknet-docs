@@ -19,6 +19,14 @@ Events can be defined in a contract using the `@event` decorator. Once an event 
 
 [tabs]
 ====
+Cairo 1.0::
++
+[source,js]
+----
+#[event]
+fn Transfer(from: ContractAddress, to: ContractAddress, value: u256) {}
+----
+
 Cairo 0::
 +
 [source,js]
@@ -28,32 +36,24 @@ func message_received(a : felt, b: felt):
 end
 ----
 
-
-Cairo 1.0::
-+
-[source,js]
-----
-#[event]
-fn Transfer(from: ContractAddress, to: ContractAddress, value: u256) {}
-----
-
 ====
 
 
 [tabs]
 ====
-Cairo 0::
-+
-[source,js]
-----
-message_received.emit(1, 2);
-----
 
 Cairo 1.0::
 +
 [source,js]
 ----
 Transfer(12345, 12345, 1)
+----
+
+Cairo 0::
++
+[source,js]
+----
+message_received.emit(1, 2);
 ----
 ====
 
@@ -66,6 +66,23 @@ To emit custom keys, one should use the low level `emit_event` system call:
 
 [tabs]
 ====
+
+Cairo 1.0::
++
+[source,js]
+----
+use starknet::syscalls::emit_event_syscall;
+
+let keys = ArrayTrait::new();
+keys.append('key');
+keys.append('deposit');
+let values = ArrayTrait::new();
+values.append(1);
+values.append(2);
+values.append(3);
+emit_event_syscall(keys, values).unwrap_syscall();
+----
+
 Cairo 0::
 +
 [source,js]
@@ -84,21 +101,6 @@ assert data[2] = 3
 emit_event(2, keys, 3, data)
 ----
 
-Cairo 1.0::
-+
-[source,js]
-----
-use starknet::syscalls::emit_event_syscall;
-
-let keys = ArrayTrait::new();
-keys.append('key');
-keys.append('deposit');
-let values = ArrayTrait::new();
-values.append(1);
-values.append(2);
-values.append(3);
-emit_event_syscall(keys, values).unwrap_syscall();
-----
 ====
 
 The above code emits an event with two keys, the https://www.cairo-lang.org/docs/how_cairo_works/consts.html#short-string-literals[strings] "status" and "deposit" (think of those as identifiers of the event that can be used for indexing) and three data elments 1, 2, 3.
@@ -139,26 +141,6 @@ The event definition appears in the contract's ABI. It contains the list of data
 
 [tabs]
 ====
-Cairo 0::
-+
-[source,json]
-----
-{
-  "data": [
-    {
-      "name": "a",
-      "type": "felt"
-    },
-    {
-      "name": "b",
-      "type": "felt"
-    }
-  ],
-  "keys": [],
-  "name": "message_received",
-  "type": "event"
-}
-----
 
 Cairo 1.0::
 +
@@ -183,6 +165,28 @@ Cairo 1.0::
   ]
 }
 ----
+
+Cairo 0::
++
+[source,json]
+----
+{
+  "data": [
+    {
+      "name": "a",
+      "type": "felt"
+    },
+    {
+      "name": "b",
+      "type": "felt"
+    }
+  ],
+  "keys": [],
+  "name": "message_received",
+  "type": "event"
+}
+----
+
 ====
 
 
