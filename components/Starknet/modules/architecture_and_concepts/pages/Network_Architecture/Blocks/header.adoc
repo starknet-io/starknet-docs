@@ -1,0 +1,63 @@
+:stem: latexmath
+
+[id="block_structure"]
+= Block structure
+
+In Starknet, the block is defined as a list of transactions and a block header containing the following fields:
+
+
+[%autowidth]
+|===
+| Name | Type | Description | Implemented
+
+| `parent_block_hash` | `FieldElement` | The hash of this block's parent | &#10003;
+|`block_number` | `Integer` | The number (height) of this block | &#10003;
+| `global_state_root` | `FieldElement` | The state xref:../Network_Architecture/State/starknet-state.adoc#state_commitment[commitment] after this block | &#10003;
+|`sequencer_address` | `FieldElement` | The Starknet address of the sequencer who created this block | &#10003;
+| `block_timestamp` | `Timestamp` | The time the sequencer created this block before executing transactions | &#10003;
+|`transaction_count` | `Integer` | The number of transactions in a block | &#10003;
+| `transaction_commitment` | `FieldElement` | A commitment to the transactions included in the block | &#10003;
+|`event_count` | `Integer` | The number of events | &#10003;
+| `event_commitment` | `FieldElement` | A commitment to the events produced in this block | &#10003;
+| `protocol_version` | `Integer` | The version of the Starknet protocol used when creating this block |
+| `extra data` | `FieldElement` | Extraneous data that might be useful for running transactions |
+|===
+
+[NOTE]
+====
+The commitment fields `event_commitment` and `transaction_commitment` are the roots of a height 64 binary Merkle Patricia tree.
+
+For `event_commitment`, the leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] event.
+
+For `transaction_commitment`, the leaf at index stem:[$i$] corresponds to stem:[$h(transaction \ hash, signature)$] if the stem:[$i'th$] transaction is an `invoke` transaction and stem:[$h(0,0)$] otherwise.
+
+====
+
+[id="block_hash"]
+== Block hash
+
+The block hash is defined as the Pedersen hash over the header's elements.
+
+[source,cairo]
+----
+ℎ(𝐵) = ℎ(
+    block_number,
+    global_state_root,
+    sequencer_address,
+    block_timestamp,
+    transaction_count,
+    transaction_commitment,
+    event_count,
+    event_commitment,
+    0,
+    0,
+    parent_block_hash
+)
+----
+
+Where stem:[$h$] is the xref:../../Cryptography/hash-functions.adoc#pedersen-hash[Pedersen] hash.
+
+[NOTE]
+====
+Zeros inside the hash computation of an object are used as placeholders, to be replaced in the future by meaningful fields.
+====
