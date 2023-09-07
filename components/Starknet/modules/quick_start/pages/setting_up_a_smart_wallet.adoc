@@ -1,0 +1,122 @@
+= Setting up a smart wallet
+
+[NOTE]
+====
+In order to deploy a smart contract you must first create a smart wallet. This can be done via the link:https://braavos.app/[Braavos] or link:https://www.argent.xyz/argent-x/[Argent X] browser extensions.
+====
+
+== Prerequisites
+Ensure that the below commands are working properly on your system.
+
+[source, bash]
+----
+scarb --version # To compile Cairo code
+starkli  --version # To interact with Starknet
+----
+
+If either of the above commands fail, please check xref:environment_setup.adoc[Setting up your environment].
+
+A smart wallet is composed of two parts:
+
+    * A Signer: A smart contract that can sign transactions.
+    * An Account Descriptor: A json file that contains information about the smart wallet, such as its address and
+public key.
+
+After creating and funding your smart wallet with ETH you can deploy it to Starknet. For demonstration purposes, this page uses Starknet's testnet.
+
+For testnet transactions you can fund your wallet using the https://faucet.goerli.starknet.io/[Starknet Goerli Faucet].
+
+== Creating a Signer
+
+A Signer is a smart contract that can sign transactions. It's a crucial component of accounts in Starknet. To create a Signer will need the private key of your smart wallet (the public key can be derived from it).
+
+Starkli has the ability to create a `keystore` file that securely stores the private key of smart wallets each with a password. The accounts in the keystore file can be used to sign transactions using Starkli. The main advantage of this approach
+is that it prevents storing the private key as plain text on your computer. Instead, a password is used to create an encrypted file in a location of choice.
+
+Normally, the keystore file is stored in the default location of the Starkli CLI. The following command creates a keystore file for a smart wallet in the default location in `~/.starkli-wallets/deployer`
+
+1. Create a new directory:
+
+[source,shell]
+----
+mkdir ~/.starkli-wallets/deployer -p
+----
+
+2. Create a keystore file within the directory:
+
+[source,shell]
+----
+starkli signer keystore from-key ~/.starkli-wallets/deployer/keystore.json
+
+Enter private key:
+Enter password:
+Created new encrypted keystore file: /home/parallels/.starkli-wallets/deployer/keystore.json
+Public key: 0x0550…
+----
+
+[NOTE]
+====
+In the private key prompt, paste the private key of your smart wallet:
+
+In the password prompt, enter a password of your choice.
+
+You will need this password to sign transactions using Starkli.
+====
+
+Next export the private key from your Braavos or Argent wallet:
+
+==== Argent X
+Navigate to: "Settings" section -> Select your Account -> "Export Private Key".
+
+==== Braavos
+Navigate to: "Settings" section -> "Privacy and Security"-> "Export Private Key".
+
+While knowing the private key of a smart wallet is necessary to sign transactions, it's not sufficient. We also need to inform Starkli about the signing mechanism employed by our smart wallet created by Braavos or Argent X.
+
+== Creating an Account Descriptor
+
+Starkli offers a command to collect all the required information from a smart wallet by providing its on-chain address. Using this data, the CLI generates a json file that can be used to sign transactions:
+
+[source,shell]
+----
+starkli account fetch --help
+Fetch account config from an already deployed account contract
+----
+
+
+Currently, the `fetch` command supports both Braavos or Argent X smart wallets. Make sure your wallet address is already deployed and input following command to create and save the account descriptor file:
+
+[source,shell]
+----
+starkli account fetch <SMART_WALLET_ADDRESS> ~/.starkli-wallets/deployer/account.json
+----
+
+The following command shows the details of the account descriptor:
+
+[source,shell]
+----
+cat ~/.starkli-wallets/deployer/account.json
+----
+
+The account descriptor should have the following structure:
+
+[source,json]
+----
+{
+  "version": 1,
+  "variant": {
+        "type": "argent",
+        "version": 1,
+        "implementation": "<ARGENT_CLASS_HASH>",
+        "signer": "<SMART_WALLET_PUBLIC_KEY>",
+        "guardian": "0x0"
+  },
+    "deployment": {
+        "status": "deployed",
+        "class_hash": "<SMART_WALLET_CLASS_HASH>",
+        "address": "<SMART_WALLET_ADDRESS>"
+  }
+}
+----
+
+If you are working with Braavos wallet, the type is defined as `braavos` and the account descriptor structure might be slightly different.
