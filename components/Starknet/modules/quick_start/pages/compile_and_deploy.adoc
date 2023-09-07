@@ -1,6 +1,11 @@
 = Compile and deploy a contract
 
+This page outlines the steps required in order to compile and deploy a smart contract.
+
 == Prerequisites
+
+=== Install Starkli and Scarb
+
 Ensure that the below commands are working properly on your system.
 
 [source, bash]
@@ -11,21 +16,28 @@ starkli  --version # To interact with Starknet
 
 If either of the above commands fail, please check xref:environment_setup.adoc[Setting up your environment].
 
+=== Create a smart wallet
+
+In order to deploy a smart contract you must first create a smart wallet. This can be done via the link:https://braavos.app/[Braavos] or link:https://www.argent.xyz/argent-x/[Argent X] browser extensions.
+
+For more information, see the xref:setting_up_a_smart_wallet.adoc[Setting up a smart wallet] section.
+
+
 == Declaring smart contracts
 
 Deploying a smart contract in Starknet requires two steps:
 
-* Declaring the class of your contract, __sending your contract's code to the network.__
-* Deploying a contract, __creating an instance of the code you previously declared.__
+* Declaring the class of your contract, i.e. sending your contract's code to the network.
+* Deploying a contract, i.e. creating an instance of the code you previously declared.
 
 [TIP]
 ====
-If you require an example smart contract to test with, you can use a preprepared example from the Starknet Book link:https://github.com/starknet-edu/starknetbook/blob/main/chapters/book/modules/chapter_1/pages/contracts/src/lib.cairo[here].
+If you require an example smart contract to test with, you can use a pre prepared example from the Starknet Book link:https://github.com/starknet-edu/starknetbook/blob/main/chapters/book/modules/chapter_1/pages/contracts/src/lib.cairo[here].
 ====
 
 You can compile a smart contract using the Scarb compiler.
 
-To compile a smart contract, create a directory containing your contract source code and a `Scarb.toml` file.
+To compile a smart contract, create a directory containing a `Scarb.toml` file and a subdirectory named `src` containing your contract source code.
 
 Add the following code to the `Scarb.toml` file:
 
@@ -66,14 +78,20 @@ An RPC provider needs to be defined within a smart contract in order for it to b
 The following are the RPC providers available for Starknet:
 
 
-===== Starknet Sequencer's Gateway
-The default an easiest option is to use Starknet Sequencer's Gateway.
+[cols="1,2"]
+|===
+|Provider name |Description
 
-===== Infura or Alchemy
-Use a provider like Infura or Alchemy.
+|Starknet Sequencer's Gateway
+|The default and easiest option is to use Starknet Sequencer's Gateway.
 
-===== Custom configuration
-Set up your own node and use the RPC provider of your node. More information on this can be found within the link:https://book.starknet.io/chapter_4/node.html[Starknet Book].
+|Infura or Alchemy
+|Use a provider like Infura or Alchemy.
+
+|Custom configuration
+|Set up your own node and use the RPC provider of your node. More information on this can be found within the link:https://book.starknet.io/chapter_4/node.html[Starknet Book].
+
+|===
 
 For demonstration purposes, the Starknet Sequencer's Gateway is used in the below steps.
 
@@ -83,9 +101,11 @@ For demonstration purposes, the Starknet Sequencer's Gateway is used in the belo
 starkli declare target/dev/contracts_Ownable.sierra.json --network=goerli-1 --compiler-version=2.1.0
 ----
 
-The network flag is used to specify the network you want to use, it could also be `mainnet` for example. The compiler-version flag is used to specify the version of the compiler you want to use. Starkli is currently running on version `2.1.0` and `2.0.1` of the compiler.
+The `--network` flag is used to specify the network you want to use, it could also be `mainnet` for example.
 
-You can know the compiler version supported by Starkli by running:
+The `--compiler-version` flag is used to specify the version of the compiler you want to use. Starkli is currently running on version `2.1.0` and `2.0.1` of the compiler.
+
+You can find the compiler version supported by Starkli by running:
 
 [source,bash]
 ----
@@ -100,14 +120,17 @@ In the `--compiler-version` flag you will see possible versions of the compiler:
           Statically-linked Sierra compiler version [possible values: 2.0.1, 2.1.0]
 ----
 
-However, it could be that the Scarb compiler version is 2.2.0, you can know this by running:
+However, the Scarb compiler version may be 2.2.0, you can find this out by running:
 
 [source,bash]
 ----
 scarb --version
 ----
 
-This is because Starkli and Scarb are not always in sync. In this case you would need to use the compiler version that Starkli is using by installing a previous version of Scarb (check out the releases in the https://github.com/software-mansion/scarb/releases[Scarb github repo]). For example, you can do this by running the following command for installing Scarb version 0.6.1:
+This is because Starkli and Scarb are not always in sync. In this case you would need to use the compiler version that Starkli is using by installing a previous version of Scarb (check out the releases in the https://github
+.com/software-mansion/scarb/releases[Scarb github repo]).
+
+You can do this by running the following command for installing Scarb version 0.6.1:
 
 [source,bash]
 ----
@@ -125,20 +148,24 @@ starkli declare target/dev/contracts_Ownable.sierra.json \
     --compiler-version=2.1.0
 ----
 
-The result of the declaration command is a contract class hash (Class hash declared:
-0x00e68b4b07aeecc72f768b1c086d9b0aadce131a40a1067ffb92d0b480cf325d). This hash is the identifier of the contract class in Starknet. You can think of it as the address of the contract class. You can use a block explorer like https://testnet.starkscan.co/class/0x00e68b4b07aeecc72f768b1c086d9b0aadce131a40a1067ffb92d0b480cf325d[StarkScan] to see the contract class hash in the blockchain.
+The result of the declaration command is a contract class hash:
+[source,bash]
+----
+Class hash declared: <CLASS_HASH>
+----
+
+This hash is the identifier of the contract class in Starknet. You can think of it as the address of the contract class. You can use a block explorer like https://testnet.starkscan.co/class/0x00e68b4b07aeecc72f768b1c086d9b0aadce131a40a1067ffb92d0b480cf325d[StarkScan] to see the contract class hash in the blockchain.
 
 If the contract you are declaring has previously been declared by someone else, you will get an output like this:
 
 [source,bash]
 ----
-Not declaring class as its already declared. Class hash:
-0x00e68b4b07aeecc72f768b1c086d9b0aadce131a40a1067ffb92d0b480cf325d
+Not declaring class as its already declared. Class hash: <CLASS_HASH>
 ----
 
 == Deploying smart contracts
 
-Deploying a smart contract involves instantiating it on the Starknet testnet. The deployment command requires the class hash of the smart contract and any arguments expected by the constructor. For our example, the constructor expects an address to assign as the owner:
+Deploying a smart contract involves instantiating it on Starknet. The deployment command requires the class hash of the smart contract and any arguments expected by the constructor. For our example, the constructor expects an address to assign as the owner:
 
 [source,bash]
 ----
@@ -169,13 +196,17 @@ Contract deployed:
 0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e
 ----
 
+Your smart contract has now been deployed to Starknet.
+
 == Interacting with a smart contract
 
-Starkli enables interaction with smart contracts via two primary methods: 'call' for read-only functions and 'invoke' for write functions that modify the state.
+Starkli enables interaction with smart contracts via two primary methods: `call` for read-only functions and `invoke` for write functions that modify the state.
 
 === Calling a function
 
-The call command allows querying a smart contract function without sending a transaction. For our smart contract, we can use the get_owner function which doesn't expect any arguments and returns the address of the current owner:
+The `call` command allows querying a smart contract function without sending a transaction.
+
+As an example you can use the `get_owner` function which doesn't expect any arguments and returns the address of the current owner:
 
 [source,bash]
 ----
@@ -185,7 +216,7 @@ starkli call \
     --network=goerli-1
 ----
 
-As expected, it returns the address that we passed to the constructor during deployment:
+This will return the address that we passed to the constructor during deployment:
 
 [source,bash]
 ----
@@ -196,9 +227,9 @@ As expected, it returns the address that we passed to the constructor during dep
 
 === Invoking a function
 
-To modify the state of the smart contract, we use the invoke command.
+To modify the state of the smart contract, use the invoke command.
 
-In this example, we'll invoke the transfer_ownership function to transfer the ownership from our deployer address to a different smart wallet address:
+In this example, we'll invoke the `transfer_ownership` function to transfer the ownership from our deployer address to a different smart wallet address:
 
 [source,bash]
 ----
@@ -209,7 +240,7 @@ starkli invoke \
     --network=goerli-1
 ----
 
-After the transaction is accepted on L2 (you can use a block explorer like StarkScan or Voyager, and the transaction hash returned by the starkli invoke command to know the status of your transaction), we can confirm the state transition by calling the get_owner function again:
+After the transaction is accepted on L2, you can confirm the state transition by calling the `get_owner` function again:
 
 [source,bash]
 ----
@@ -219,6 +250,4 @@ starkli call \
     --network=goerli-1
 ----
 
-The get_owner function now returns the new owner address, confirming the successful ownership transfer.
-
-Congratulations! You have successfully deployed and interacted with a Starknet contract. Go to the Chapter 2 of the Starknet Book to learn more about Starknet and Cairo.
+The `get_owner` function now returns the new owner address, confirming the successful ownership transfer.
