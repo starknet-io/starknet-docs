@@ -1,162 +1,104 @@
 [id="setting-up-your-account"]
-= Setting up your account
+= Setting up an account
 
-[id="introduction"]
-== Introduction
+== Prerequisites
+
+=== Install Starkli
+
+Ensure that the below command is working properly on your system:
+
+[source, bash]
+----
+starkli  --version
+----
+
+If the above commands fail, please check xref:environment_setup.adoc[Setting up your environment].
+
+=== Set the required environment variables
+
+In order to create an account you will need to ensure that a Signer has been created and the appropriate environment variable has been set. Follow xref:environment_setup.adoc#setting_up_starkli_environment_variables[these instructions] for more
+information.
+
+=== Complete your smart wallet set up
+
+Ensure that you have completed the steps outlined in the previous section, xref:setting_up_a_smart_wallet.adoc[Setting up a smart wallet].
 
 [NOTE]
 ====
-Before you create a Starknet account, ensure you have completed the steps in the
-xref:environment_setup.adoc[environment setup section] of these docs.
+Starkli sends out transactions through accounts. Starknet natively supports xref:architecture_and_concepts:Accounts/introduction.adoc[account abstraction] and all accounts are smart contracts. Therefore, there are many "flavors" of accounts.
+Starkli refers to these "flavors" as variants. Currently, the only supported variant is OpenZeppelin's account contract implementation.
+
+Accounts can be created and managed through the `starkli account` command. Variant-specific commands are available under `starkli account <VARIANT>`.
 ====
 
-In order to interact with Starknet, you need to set up a Starknet account. To deploy a new
-account on Starknet you will need to complete the following steps:
-
-    1. Generate a Starknet account and compute its address locally
-    2. Fund your account so that you can deploy the account to the Starknet network
-    3. Deploy the account to the Starknet network
-
-Starknet natively uses Account Abstraction at the protocol layer for account implementation. You
-can learn more about Starknet Account Abstraction
-xref:architecture_and_concepts:Accounts/introduction.adoc[here].
-
-[id="setting-up-the-network"]
-== Setting up the network
-
-In this tutorial we will use the Starknet CLI (command line interface) to interact with Starknet.
-
-Setting the following environment variables will allow you to use the Starknet CLI to interact
-with a consistent set of configurations without having to pass them as arguments to each command:
-
-[#setup_starknet_env]
-[source,bash]
-----
-export STARKNET_NETWORK=alpha-goerli
-export CAIRO_COMPILER_DIR=~/.cairo/target/release/
-export CAIRO_COMPILER_ARGS=--add-pythonic-hints
-----
-
-[id="choosing-a-wallet-provider"]
-== Choosing a wallet provider
-
-Unlike Ethereum, a Starknet account is represented by a deployed contract that defines
-the account’s logic. In this tutorial, we will use a slightly modified version of OpenZeppelin’s
-standard for EOA contract (at the moment, the signature
-is computed differently).
-
-Set the `STARKNET_WALLET` environment variable as follows:
-
-[#setup_wallet]
-[source,bash]
-----
-export STARKNET_WALLET=starkware.starknet.wallets.open_zeppelin.OpenZeppelinAccount
-----
-
-[id="creating-an-account"]
 == Creating an account
 
-Now that your environment variables are set, you can create a Starknet account.
+In this example we are using the `oz` arguement to specify the OpenZeppelin account contract as this is the only variant supported by Starkli currently.
 
 Run the following command to initialize an account:
 
 [#initialize_account]
 [source,bash]
 ----
-starknet new_account --account <account_name>
+starkli account oz init </path/to/account>
 ----
 
-The output should resemble:
-
-[#initialize_account_output]
-[source,bash]
-----
-Account address: 0x04e93e1fb507d23b398f0a09f5873d3a7769b0e7ed40dbbe8fe7a2e8ea831006
-Public key: 0x07a328511fa8552cd61aaaa89076fe40c3566f4594f29324aa754d41d7c7c55e
-Move the appropriate amount of funds to the account, and then deploy the account
-by invoking the 'starknet deploy_account' command.
-
-NOTE: This is a modified version of the OpenZeppelin account contract. The signature is computed
-differently.
-----
-
-[id="transferring-goerli-eth-to-the-account"]
-== Transferring Goerli ETH to the account
-
-In order to pay the fees required to deploy the account and execute transactions on Starknet, you
-need enough ETH in your Starknet account.
-
-You can acquire Starknet Goerli ETH in the following ways:
-
-1. Use the https://faucet.goerli.starknet.io/[Starknet Faucet] to get small amounts of ETH
-directly to
-the account you have just created. This should suffice for simple transactions.
-
-2. Use link:https://goerli.starkgate.starknet.io[StarkGate] – the Starknet L2 bridge, to
-transfer your existing Goerli L1 ETH to and from your Starknet account.
-
-In either case, ensure that the funding transaction reaches the "PENDING" status on Starknet
-before proceeding.
-
-You can check the status of a transaction using the link:https://starkscan.co/[Starkscan] or
-link:https://voyager.online/[Voyager] block explorers for Starknet.
 
 
-[id="simulate-account-deployment"]
-== Simulate deploy account
+[NOTE]
+====
+This command requires a signer. If you receive an error after running this command, ensure you have the `STARKNET_KEYSTORE` environment variable set as per xref:environment_setup.adoc#setting_up_starkli_environment_variables[these instructions].
+====
 
-You can estimate the fee required to deploy your account by running the following command.
 
-To account for fluctuations in fee prices, it is recommended to transfer more than the fee
-estimation value to ensure that your transaction is successful.
+== Deploying an account
+Once you have an account file, you can deploy the account contract with the starkli `account deploy` command.
 
-[#deploy_account_simulate]
-[source,bash]
-----
-starknet deploy_account --simulate --account=<account_name>
-----
+This command sends a `DEPLOY_ACCOUNT` transaction, which requires the account to be funded with some ETH for paying for the transaction fee. For more information on funding your wallet xref:setting_up_a_smart_wallet.adoc#smart_wallet_components[see here].
 
-The output should resemble:
+To deploy your account, run the following command:
 
 [source,bash]
 ----
-The estimated fee is: 822400000000000 WEI (0.000822 ETH).
-Gas usage: 8224
-Gas price: 100000000000 WEI
+starkli account deploy </path/to/account>
 ----
 
 [NOTE]
 ====
-Alternatively you can run the following command for a less verbose output:
-
-[#deploy_account_estimate_fee]
-[source,bash]
-----
-starknet deploy_account --estimate_fee --account=<account_name>
-----
+This command also requires a signer. You must provide the same signer used for creating the account file.
 ====
 
-[id="deploying-an-account"]
-== Deploying an account
+When run, the command shows:
 
-To deploy the account you initialized, now run the following command:
+ * The address where the contract will be deployed.
+ * Instructions for the user to fund the account before proceeding.
 
-[#setup_deploy_account]
+Here's an example command output:
+
 [source,bash]
 ----
-starknet deploy_account --account=<account_name>
-----
-
-The output should resemble:
-
-[#setup_deploy_account_output]
-[source,bash]
-----
-Sending the transaction with max_fee: 0.000563 ETH (562652117844076 WEI).
-Sent deploy account contract transaction.
-
-Contract address: 0x04e93e1fb507d23b398f0a09f5873d3a7769b0e7ed40dbbe8fe7a2e8ea811006
-Transaction hash: 0x69192a77c527fb10a71722400dbad15bdb3a8db237db4f72e06f3b4b63f2195
+The estimated account deployment fee is 0.000011483579723913 ETH. However, to avoid failure, fund at least:
+    0.000017225369585869 ETH
+to the following address:
+    0x01cf4d57ba01109f018dec3ea079a38fc08b789e03de4df937ddb9e8a0ff853a
+Press [ENTER] once youve funded the address.
 ----
 
 You have now successfully deployed a new account to Starknet.
+
+== Fetching an account
+Account fetching allows you to recreate the account file from on-chain data alone.
+
+This could be helpful when:
+
+* The account file is lost; or
+* Migrating an account from another tool/application.
+
+The starkli `account fetch` command creates an account file using just the address provided:
+
+[source,bash]
+----
+starkli account fetch <ADDRESS> --output </path/to/account>
+----
+
+Running the command above creates the account file at `/path/to/account`.
