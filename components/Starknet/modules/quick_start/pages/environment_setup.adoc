@@ -1,208 +1,100 @@
-[id="setting-up-your-environment"]
+[#setup]
 
 = Setting up your environment
 
-== Overview
+In order to interact with Starknet and compile Cairo code, you need to install several tools.
 
-Setting up your local development environment to develop for Starknet involves the following steps:
+The following tools are recommended::
 
-1. xref:#installing_the_prerequisites[Installing the prerequisites].
-2. xref:#installing_the_additional_dependencies[Installing the additional dependencies].
-3. xref:#installing_the_cairo_cli[Installing the Cairo CLI].
-4. xref:#installing_the_cairo_compiler[Installing the Cairo compiler].
+* https://github.com/xJonathanLEI/starkli[Starkli]: A command-line interface that allows you to interact with Starknet.
 
+* https://github.com/software-mansion/scarb[Scarb]: A package manager for Cairo. Among other things, it allows you to compile Cairo code to Sierra, the intermediate language between high-level Cairo and the low-level Cairo Assembly (CASM).
 
-== Installing the prerequisites
+== Starkli Installation
 
-Using a link:https://docs.python.org/3/library/venv.html[Python virtual environment] is a good way to isolate your testing environment.
+Starkliup is the installer for the Starkli environment, and it can be installed using the command line with curl:
 
-To create and enter the Python virtual environment, do one of the following:
-
-* xref:#_manually_activating_the_cairo_virtual_environment[Activate your Cairo virtual
-environment manually].
-* xref:#_using_the_python_environment_manager_to_activate_the_cairo_virtual_environment[Use the Python environment manager].
-
-
-=== Manually activating the Cairo virtual environment
-
-Run the following two commands to manually create and activate a Cairo virtual environment:
-
-[,Bash]
+[source,shell]
 ----
-$ python3.9 -m venv ~/cairo_venv
-$ source ~/cairo_venv/bin/activate
+curl https://get.starkli.sh | sh
 ----
 
-After creating and activating the virtual environment, you should see `(cairo_venv)` in the command line prompt, indicating that the virtual environment is active, for example:
+Restart the terminal after executing the command.
 
-[,Bash]
+Once starkliup has been successfully installed, it can then be used to install Starkli:
+
+[source,shell]
 ----
-(cairo_venv)
-----
-
-
-=== Using the Python environment manager to activate the Cairo virtual environment
-
-Alternatively, you can use the Python environment manager to create a virtual environment:
-
-[source,Bash]
-----
-$ curl https://pyenv.run | bash
+starkliup
 ----
 
-Now add the following to your `.bashrc` or `.zshrc` file:
+Restart the terminal and run the following command to verify the installation:
 
-[source,Bash]
+[source,shell]
 ----
-$ export PATH="$HOME/.pyenv/bin:$PATH"
-$ eval "$(pyenv init -)"
-$ eval "$(pyenv virtualenv-init -)"
+starkli --version
 ----
 
-Restart your terminal and run the following commands:
+To upgrade to the latest version of Starkli simply follow these steps again.
 
-[source,Bash]
-----
-$ pyenv install 3.9.0
-$ pyenv virtualenv 3.9.0 cairo_venv
-$ pyenv activate cairo_venv
-----
+== The Scarb package manager installation
 
-you should see `(cairo_venv)` in the command line prompt, indicating that the virtual environment
-is active, for example:
+Scarb is compatible with macOS, Linux, and Windows operating systems.
 
-[source,Bash]
+
+=== MacOS and Linux installation
+For macOS and Linux users, open your terminal and execute the following command:
+
+[source, bash]
 ----
-(cairo_venv)
+curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh
 ----
 
-== Installing the additional dependencies
+Restart the terminal and run the following command to verify the installation:
 
-Depending on your operating system, you may need to install the following, additional dependencies:
-|===
-|Dependency |Description
-
-|`libgmp3-dev`/`gmp`|A software development library package for the GNU Multiple Precision Arithmetic
-Library.
-|`ECDSA` |(Elliptic Curve Digital Signature Algorithm) is a digital signature algorithm that is based on the mathematics of elliptic curves.
-|`FastECDSA`|An open-source software library that provides an implementation of the Elliptic Curve
-Digital Signature Algorithm (ECDSA) for use in cryptographic applications. It is designed to be fast, efficient, and easy to use, and is written in the Python programming language.
-|`SymPy` |A Python library for symbolic mathematics.
-|===
-
-
-=== Linux
-On Ubuntu, you will need to run the following command to install the `libgmp3-dev` library:
-
-[source,Bash]
+[source, bash]
 ----
-$ sudo apt install -y libgmp3-dev
+scarb --version
 ----
 
-=== macOS
-On macOS, you can use Homebrew to install the `gmp` library:
+You can run the same command to upgrade Scarb.
 
-[source,Bash]
-----
-$ brew install gmp
-----
+=== Windows installation
+Scarb's installation on Windows requires manual setup. Follow the steps in the link:https://docs.swmansion.com/scarb/download#install-via-installation-script[Scarb documentation] to install it.
 
-After that, you need to install the `ecdsa`, `fastecdsa` and `sympy` dependencies (Linux and Mac):
+Restart the terminal and run the following command to verify the installation:
 
-[source,Bash]
+[source, bash]
 ----
-$ pip install ecdsa fastecdsa sympy
+scarb --version
 ----
 
-=== Installing the Cairo CLI
+You can run the same command to upgrade Scarb:
 
-You can interact with Starknet using the Cairo command line interface. If you had
-a previous version of Cairo is installed, uninstall it and install the latest version:
-
-=== Uninstalling the previous version (optional)
-[source,Bash]
+[source, bash]
 ----
-$ pip uninstall cairo-lang
+curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh
 ----
 
-=== Installing the latest version of Cairo
+== Setting up Starkli environment variables
 
-You can use `pip` to install the latest version of Cairo:
+For the majority of flags available on Starkli you can define environment variables to make the commands shorter and easier to manage.
 
-[source,Bash]
+There are two primary environment variables that are vital for effective usage of Starkli's CLI.
+
+These are:
+
+* The location of the keystore file for the xref:setting_up_a_smart_wallet.adoc#creating_a_signer[Signer].
+* The location of the xref:setting_up_a_smart_wallet.adoc#creating_an_account_descriptor[Account Descriptor] file.
+
+Environment variables for these can be set as follows:
+
+[source,bash]
 ----
-$ pip install cairo-lang
-----
-
-Alternatively, you can download a specific version of Cairo using this command:
-
-[source,Bash]
-----
-$ pip install $HOME/Downloads/cairo-lang-0.12.0.zip
-----
-
-Once you have installed the Cairo package, make sure to test your installation by running the
-following command:
-
-[source,Bash]
-----
-$ starknet --version
+export STARKNET_ACCOUNT=~/.starkli-wallets/deployer/account.json
+export STARKNET_KEYSTORE=~/.starkli-wallets/deployer/keystore.json
 ----
 
-You should see an output in your terminal similar to the below:
-[source,Bash]
-----
-$ starknet 0.12.0
-----
+Setting environment variables for Starkli significantly simplifies command execution and management, thereby enhancing efficiency, readability, and control in your Starkli-related development activities.
 
-Make sure the version output matches the link:https://github.com/starkware-libs/cairo-lang/releases[latest release].
-
-== Installing the Cairo compiler
-
-The Cairo compiler allows you to compile Cairo code into Cairo VM executable byte code.
-
-To install the Cairo compiler, run the following commands:
-
-=== Cloning the repository and setting up the Cairo compiler
-
-Go to your $HOME directory
-
-[source,Bash]
-----
-$ cd ~/
-----
-
-Clone the cairo Cairo 1 compiler to a folder called .cairo in your home directory
-
-[source,Bash]
-----
-$ git clone https://github.com/starkware-libs/cairo/ .cairo
-$ cd .cairo/
-$ git checkout tags/v2.0.0
-$ cargo build --all --release
-----
-
-=== Adding the Cairo executables to your path
-
-After building the Cairo binaries, add them to the PATH environment variable by adding the following line to your `.bashrc` or `.zshrc` file:
-
-[source,Bash]
-----
-$ export PATH="$HOME/.cairo/target/release:$PATH"
-----
-
-Then, open a new shell and check that the following command returns a version number:
-
-[source,Bash]
-----
-$ cairo-compile --version
-----
-
-Your output should look similar to the below:
-
-[source,Bash]
-----
-$ cairo-lang-compiler 2.0.0
-----
-
-You are now able to compile, deploy and interact with smart contracts on Starknet
+Your environment is now ready to begin developing on Starknet.
