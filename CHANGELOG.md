@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.294](https://github.com/starknet-io/starknet-docs/compare/v0.1.293...v0.1.294) (2023-09-12)
+
+
+### Bug Fixes
+
+* Update token-bridge.adoc: Starkgate -> StarkGate ([#795](https://github.com/starknet-io/starknet-docs/issues/795)) ([c86c2a9](https://github.com/starknet-io/starknet-docs/commit/c86c2a995530d94a092d958f7d8f425a83d08046))
+
 ### [0.1.293](https://github.com/starknet-io/starknet-docs/compare/v0.1.292...v0.1.293) (2023-09-11)
 
 ### [0.1.292](https://github.com/starknet-io/starknet-docs/compare/v0.1.291...v0.1.292) (2023-09-11)
