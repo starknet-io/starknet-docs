@@ -1,8 +1,8 @@
-= Setting up a smart wallet
+= Set up an account
 
 [TIP]
 ====
-This guide shows you how to set up a Starknet wallet in the context of a smart contract deployment.
+This guide shows you how to set up a Starknet account and wallet in the context of a smart contract deployment.
 
 If you are looking for a guide to creating a Starknet wallet as an end user, please see link:https://www.starknet.io/en/posts/stark-math/getting-started-using-starknet-setting-up-a-starknet-wallet[this post].
 ====
@@ -14,17 +14,17 @@ Ensure that the below commands are working properly on your system.
 
 [source, bash]
 ----
-starkli  --version # To interact with Starknet
-scarb --version # To compile Cairo code
+starkli --version
+scarb --version
 ----
 
 If either of the above commands fail, please visit xref:environment_setup.adoc[Setting up your environment].
 
-=== Download,install and set up Argent X or Braavos wallet
+=== Download, install and set up Argent X or Braavos wallet
 
 Install a Starknet wallet via Argent X or Braavos. A full introductory guide can be found link:https://www.starknet.io/en/posts/stark-math/getting-started-using-starknet-setting-up-a-starknet-wallet[here].
 
-== Smart wallet components
+== Create an account
 A smart wallet is composed of two parts:
 
     * A Signer: A smart contract that can sign transactions.
@@ -35,7 +35,7 @@ After creating and funding your smart wallet with ETH you can deploy it to Stark
 
 For testnet transactions you can fund your wallet using the https://faucet.goerli.starknet.io/[Starknet Goerli Faucet].
 
-== Creating a Signer
+=== Create a Signer
 
 A Signer is a smart contract that can sign transactions. It's a crucial component of accounts in Starknet. To create a Signer you will need the private key of your smart wallet (the public key can be derived from it).
 
@@ -44,7 +44,7 @@ is that it prevents storing the private key as plain text on your computer. Inst
 
 Normally, the keystore file is stored in the default location of the Starkli CLI.
 
-=== Create a keystore file
+==== Create a keystore file
 
 The following command creates a keystore file for a smart wallet in the default location in `~/.starkli-wallets/deployer`:
 
@@ -52,7 +52,7 @@ Create a new directory:
 
 [source,shell]
 ----
-mkdir ~/.starkli-wallets/deployer -p
+mkdir ~/.starkli-wallets/deployer
 ----
 
 Create a keystore file within the directory:
@@ -76,7 +76,7 @@ In the password prompt, enter a password of your choice.
 You will need this password to sign transactions using Starkli.
 ====
 
-=== Export the private key from your wallet
+==== Export the private key from your wallet
 
 Next export the private key from your Argent X or Braavos wallet:
 
@@ -88,7 +88,7 @@ Navigate to: `Settings` section -> `Privacy and Security` -> `Export Private Key
 
 While knowing the private key of a smart wallet is necessary to sign transactions, it's not sufficient. We also need to inform Starkli about the signing mechanism employed by our smart wallet created by Argent X or Braavos.
 
-== Creating an Account Descriptor
+=== Create an Account Descriptor
 
 Starkli offers a command to collect all the required information from a smart wallet by providing its onchain address. Using this data, the CLI generates a json file that can be used to sign transactions:
 
@@ -138,3 +138,39 @@ The account descriptor should have the following structure:
 ====
 If you are working with Braavos wallet, the type is defined as `braavos` and the account descriptor structure might be slightly different.
 ====
+
+== Deploy an account
+Once you have an account file, you can deploy the account contract with the starkli `account deploy` command.
+
+This command sends a `DEPLOY_ACCOUNT` transaction, which requires the account to be funded with some ETH for paying for the transaction fee.
+
+To deploy your account, run the following command:
+
+[source,bash]
+----
+starkli account deploy ~/.starkli-wallets/deployer/account.json
+----
+
+[NOTE]
+====
+This command requires a signer. If you receive an error after running this command, ensure you have the `STARKNET_KEYSTORE` environment variable set as per xref:environment_setup.adoc#setting_up_starkli_environment_variables[these instructions].
+====
+
+
+When run, the command shows:
+
+* The address where the contract will be deployed.
+* Instructions for the user to fund the account before proceeding.
+
+Here's an example command output:
+
+[source,bash]
+----
+The estimated account deployment fee is 0.000011483579723913 ETH. However, to avoid failure, fund at least:
+    0.000017225369585869 ETH
+to the following address:
+    0x01cf4d57ba01109f018dec3ea079a38fc08b789e03de4df937ddb9e8a0ff853a
+Press [ENTER] once youve funded the address.
+----
+
+You have now successfully deployed a new account to Starknet.
