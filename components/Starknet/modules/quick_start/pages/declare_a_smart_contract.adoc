@@ -1,28 +1,20 @@
-= Compile and deploy a contract
+= Declare a smart contract
 
-This page outlines the steps required in order to compile and deploy a smart contract.
 
 == Prerequisites
 
-=== Install Starkli and Scarb
-
+=== Ensure Starkli and Scarb are installed correctly
 Ensure that the below commands are working properly on your system.
 
 [source, bash]
 ----
-scarb --version # To compile Cairo code
-starkli  --version # To interact with Starknet
+starkli --version
+scarb --version
 ----
 
-If either of the above commands fail, please check xref:environment_setup.adoc[Setting up your environment].
+If either of the above commands fail, please visit xref:environment_setup.adoc[Setting up your environment].
 
-=== Create a smart wallet and account
-
-In order to deploy a smart contract you must first create a smart wallet. This can be done via the link:https://braavos.app/[Braavos] or link:https://www.argent.xyz/argent-x/[Argent X] browser extensions.
-
-For more information, see the xref:set_up_an_account.adoc[Setting up an account] section.
-
-== Declare a smart contract
+== Introduction
 
 Deploying a smart contract in Starknet requires two steps:
 
@@ -33,6 +25,8 @@ Deploying a smart contract in Starknet requires two steps:
 ====
 If you require an example smart contract to test with, you can use a pre prepared example from the Starknet Book link:https://github.com/starknet-edu/starknetbook/blob/main/chapters/book/modules/chapter_1/pages/contracts/src/lib.cairo[here].
 ====
+
+== Compile a smart contract
 
 You can compile a smart contract using the Scarb compiler.
 
@@ -70,7 +64,7 @@ The compiled contract will be saved in the `target/dev/` directory as `contracts
 
 The contract is now compiled and ready to be deployed. Next you will need to declare an RPC provider within your contract.
 
-==== Declare an RPC provider
+== Declare an RPC provider
 
 An RPC provider needs to be defined within a smart contract in order for it to be deployed.
 
@@ -94,15 +88,22 @@ The following are the RPC providers available for Starknet:
 
 For demonstration purposes, the Starknet Sequencer's Gateway is used in the below steps.
 
+== Declare a smart contract
+
+A contract can be declared on Starknet using the following command:
 
 [source,bash]
 ----
 starkli declare target/dev/contracts_Ownable.sierra.json --network=goerli-1 --compiler-version=2.1.0
 ----
 
+[NOTE]
+====
 The `--network` flag is used to specify the network you want to use, it could also be `mainnet` for example.
 
 The `--compiler-version` flag is used to specify the version of the compiler you want to use. Starkli is currently running on version `2.1.0` and `2.0.1` of the compiler.
+====
+
 
 You can find the compiler version supported by Starkli by running:
 
@@ -119,7 +120,7 @@ In the `--compiler-version` flag you will see possible versions of the compiler:
           Statically-linked Sierra compiler version [possible values: 2.0.1, 2.1.0]
 ----
 
-However, the Scarb compiler version may be 2.2.0, you can find this out by running:
+However, the Scarb compiler version may be `2.2.0`, you can find this out by running:
 
 [source,bash]
 ----
@@ -130,18 +131,12 @@ This is because Starkli and Scarb are not always in sync.
 
 In this case you would need to use the compiler version that Starkli is using by installing a previous version of Scarb. See the https://github.com/software-mansion/scarb/releases[Scarb github repo] for more detail.
 
-You can do this by running the following command for installing Scarb version 0.6.1:
+You can do this by running the following command for installing Scarb version `0.6.1`:
 
 [source,bash]
 ----
 curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 0.6.1
 ----
-
-[NOTE]
-====
-If you get an error `Error: Invalid contract class`, it means that you are using a version of Scarb that is not supported by Starkli. In this case, you need to install a previous version of Scarb as explained above.
-
-====
 
 If you were using a provider like Infura or Alchemy, the declaration command would look like this:
 
@@ -151,6 +146,8 @@ starkli declare target/dev/contracts_Ownable.sierra.json \
     --rpc=https://starknet-goerli.infura.io/v3/<API_KEY> \ 
     --compiler-version=2.1.0
 ----
+
+== Expected result
 
 The result of the declaration command is a contract class hash:
 [source,bash]
@@ -166,94 +163,3 @@ If the contract you are declaring has previously been declared by someone else, 
 ----
 Not declaring class as its already declared. Class hash: <CLASS_HASH>
 ----
-
-== Deploy a smart contract
-
-Deploying a smart contract involves instantiating it on Starknet. The deployment command requires the class hash of the smart contract and any arguments expected by the constructor. For our example, the constructor expects an address to assign as the owner:
-
-[source,bash]
-----
-starkli deploy \
-    <CLASS_HASH> \
-    <CONSTRUCTOR_INPUTS> \
-    --network=goerli-1
-----
-
-With the class hash and constructor inputs, the command looks like this:
-
-[source,bash]
-----
-starkli deploy \
-    0x00e68b4b07aeecc72f768b1c086d9b0aadce131a40a1067ffb92d0b480cf325d \
-    0x02cdAb749380950e7a7c0deFf5ea8eDD716fEb3a2952aDd4E5659655077B8510 \
-    --network=goerli-1
-----
-
-After running the command and adding your password, you will see an output similar to this:
-
-[source,bash]
-----
-Deploying class 0x00e68b4b07aeecc72f768b1c086d9b0aadce131a40a1067ffb92d0b480cf325d with salt 0x04bc3fc2284c8e41fb3d2a37bb0354fd0506131cc77a8c91e4e67ce3aed1d19e...
-The contract will be deployed at address 0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e
-Contract deployment transaction: 0x0086972e7463d5673d8b553ae521ec2df974a97c2ce6aafc1d1c20d22c6b96c6
-Contract deployed: 0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e
-----
-
-Your smart contract has now been deployed to Starknet.
-
-== Interact with a smart contract
-
-Starkli enables interaction with smart contracts via two primary methods:
-
-    * `call` for read-only functions.
-    * `invoke` for write functions that modify the state.
-
-=== Call a function
-
-The `call` command allows querying a smart contract function without sending a transaction.
-
-As an example you can use the `get_owner` function which doesn't expect any arguments and returns the address of the current owner:
-
-[source,bash]
-----
-starkli call \
-    0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e \
-    get_owner
-    --network=goerli-1
-----
-
-This will return the address that we passed to the constructor during deployment:
-
-[source,bash]
-----
-[
-    "0x02cdab749380950e7a7c0deff5ea8edd716feb3a2952add4e5659655077b8510"
-]
-----
-
-=== Invoke a function
-
-To modify the state of the smart contract, use the `invoke` command.
-
-In this example, we'll invoke the `transfer_ownership` function to transfer the ownership from our deployer address to a different smart wallet address:
-
-[source,bash]
-----
-starkli invoke \
-    0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e \
-    transfer_ownership \
-    0x011088d3cbe4289bc6750ee3a9cf35e52f4fa4e0ac9f42fb0b62e983139e135a \
-    --network=goerli-1
-----
-
-After the transaction is accepted on L2, you can confirm the state transition by calling the `get_owner` function again:
-
-[source,bash]
-----
-starkli call \
-    0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e \
-    get_owner \
-    --network=goerli-1
-----
-
-The `get_owner` function now returns the new owner address, confirming the successful ownership transfer.
