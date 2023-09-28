@@ -1,16 +1,16 @@
 [id="contract_abi"]
 = Contract ABI
 
+== Introduction
+
 Contract ABI is a representation of a Starknet contract's interface. It is formatted as JSON and describes the functions, structs and events which are defined in the contract.
 
 You can get the contract's ABI by compiling:
 
 [source,bash]
 ----
-cargo run --bin starknet-compile -- /path/to/input.cairo /path/to/output.json
+cargo run --bin starknet-compile --</path/to/input.cairo> </path/to/output.json>
 ----
-
-
 
 [NOTE]
 ====
@@ -367,9 +367,276 @@ Cairo v2::
 ----
 ====
 
-## Cairo v2.0.0 ABI changes
+== Cairo v2.3.0 changes
 
-With the transition to v2, the contract ABI underwent some changes.
+=== Nested events
+
+With `v2.3.0` we're relaxing the limitations on the `Event` enum, allowing more flexibility on the events that can be emitted from a given contract:
+
+* It is no longer enforced that the `Event` enum variants are structs of the same name as the variant (they can now be a struct or an enum of any name).
+* Enum variants inside event ABI entries (entries in the abi with `"type": "event"` and `"kind": "enum"`) now have two possible kinds. Before `v2.3.0` it was always `"kind": "nested"`, now `"kind: "flat"` is also possible.
+* This is backward compatible with version ≥ `2.0.0` ABI, i.e. the same structure of the ABI is kept, while allowing more flexibility.
+
+
+Between versions `v2.0.0` and `v2.2.0`, to figure out all the potential serializations of events (what raw `keys`, `data` arrays can be emitted given the ABI),
+it was sufficient to iterate over the abi entries with `"type": "event"` and `"kind": "struct"`, skipping the encapsulating `Event` type which has `"kind": "enum"`.
+With `v2.3.0` onwards, doing so may result in losing information.
+
+To illustrate this, we'll use the following example:
+
+```rust
+// high level code defining the events
+
+#[event]
+#[derive(Drop, starknet::Event)]
+enum Event {
+    ComponentEvent: test_component::Event,
+    TestCounterIncreased: CounterIncreased,
+    TestCounterDecreased: CounterDecreased,
+    TestEnum: MyEnum
+}
+
+#[derive(Drop, starknet::Event)]
+struct CounterIncreased {
+    amount: u128
+}
+
+#[derive(Drop, starknet::Event)]
+struct CounterDecreased {
+    amount: u128
+}
+
+#[derive(Copy, Drop, starknet::Event)]
+enum MyEnum {
+  Var1: MyStruct
+}
+
+#[derive(Copy, Drop, Serde, starknet::Event)]
+struct MyStruct {
+	member: u128
+}
+```
+
+=== Variant names different from types
+
+Enum variant types can now have any name. Let’s take as example the `TestCounterIncreased` variant and the `CounterIncreased` type, as they appear in the ABI:
+
+```json
+{
+  "type": "event",
+  "name": "<namespace>::Event",
+  "kind": "enum",
+  "variants": [
+      {
+          "name": "ComponentEvent",
+          "type": "<namespace>::test_component::Event",
+          "kind": "nested"
+      },
+      {
+          "name": "TestCounterIncreased",
+          "type": "<namespace>::CounterIncreased",
+          "kind": "nested"
+      },
+      {
+          "name": "TestCounterDecreased",
+          "type": "<namespace>::CounterDecreased",
+          "kind": "nested"
+      },
+      {
+          "name": "TestEnum",
+          "type": "<namespace>::MyEnum",
+          "kind": "nested"
+      }
+  ]
+},
+{
+	"type": "event",
+	"name": "<namespace>::CounterIncreased",
+	"kind": "struct",
+	"members": [
+		{
+			"name": "amount",
+			"type": "core::integer::u128",
+			"kind": "data"
+		}
+	]
+}
+```
+
+When the contract emits the `TestCounterIncreased` event, for example by writing `self.emit(CounterIncreased { amount }))`, the event that is emitted has the following keys and data:
+
+* One key based on the variant name: `sn_keccak(TestCounterIncreased)`. This information only appears in the `<namespace>::Event` type entry in the the ABI,
+as the name `TestCounterIncreased` does not appear in the `"kind": "struct"` abi entry. This didn’t matter when the variant name and type had to be equal.
+* One data element based on the struct `CounterIncreased` (which is associated to `TestCounterIncreased` via one of the `Event` type variants).
+
+=== Enum variants inside Event
+
+The introduction of components allows variants of `Event` to be enums.
+In our example, we have two such variants: `TestEnum` (unrelated to components) and `ComponentEvent`.
+The serialization to keys and data is the same in both cases, so we’ll focus on `TestEnum`:
+
+We have the `TestEnum` variant entry inside Event:
+
+```json
+{
+"name": "TestEnum",
+"type": "<namespace>::MyEnum",
+"kind": "nested"
+}
+```
+
+the `MyEnum` event entry:
+
+```json
+{
+	"type": "event",
+	"name": "<namespace>::MyEnum",
+	"kind": "enum",
+	"variants": [
+		{
+			"name": "Var1",
+			"type": "<namespace>::MyStruct",
+			"kind": "nested"
+		}
+	]
+}
+```
+
+and the `MyStruct` event entry:
+
+```json
+{
+	"type": "event",
+	"name": "<namespace>::MyStruct",
+	"kind": "struct",
+	"members": [
+		{
+			"name": "member",
+			"type": "core::integer::u128",
+			"kind": "data"
+		}
+	]
+}
+```
+
+Suppose we’re emitting a `TestEnum` event via `self.emit(Event::TestEnum(MyEnum::Var1(MyStruct {member: 5})))`
+(one can implement the trait `Into<MyStruct, Event>` to avoid having to write this long line). When this event is emitted, the serialization to keys, data happens as follows:
+
+* Since the `TestEnum` variant has `kind` nested, we add the first key: `sn_keccak(TestEnum)`, and the rest of the serialization to keys and data is done recursively via the `starknet::event` trait implementation of `MyEnum`
+* Next, we again handle a `"kind": "nested"` variant (previously it was `TestEnum`, now it’s `Var1`), which means we add another key depending on the sub variant: `sn_keccak(Var1)`, and proceed to serialize according to the `starknet::event` implementation of `MyStruct`
+* Finally, we proceed to serialize `MyStruct`, which gives us a single data member
+
+Summing this up results in `keys = [sn_keccak(TestEnum), sn_keccak(Var1)]` and `data=[5]`
+
+Note that allowing variants which are themselves enums (`TestEnum` is an enum variant here) we can have further nesting. Suppose that we change the high level code to:
+
+```rust
+#[event]
+#[derive(Drop, starknet::Event)]
+enum Event {
+    ComponentEvent: test_component::Event,
+    TestCounterIncreased: CounterIncreased,
+    TestCounterDecreased: CounterDecreased,
+    TestEnum: MyEnum
+}
+
+#[derive(Copy, Drop, starknet::Event)]
+enum MyEnum {
+    Var1: AnotherEnum
+}
+
+#[derive(Copy, Drop, Serde, starknet::Event)]
+enum AnotherEnum {
+    Var2: MyStruct
+}
+
+#[derive(Copy, Drop, Serde, starknet::Event)]
+struct MyStruct {
+    member: u128,
+}
+
+```
+
+then `self.emit(Event::TestEnum(MyEnum::Var1(AnotherEnum::Var2(MyStruct { member: 5 }))))`
+(as before, `Into` implementations can shorten this) will emit an event with `keys = [sn_keccak(TestEnum), sn_keccak(Var1), sn_keccak(Var2)]` and `data=[5]`.
+This will look as follows in the ABI (only the relevant parts are attached):
+
+```json
+{
+  "type": "event",
+  "name": "<namespace>::Event",
+  "kind": "enum",
+  "variants": [
+    // ignoring all the other variants for berevity
+    {
+      "name": "TestEnum",
+      "type": "<namespace>::MyEnum",
+      "kind": "nested"
+    }
+  ]
+},
+{
+  "type": "event",
+  "name": "<namespace>::MyEnum",
+  "kind": "enum",
+  "variants": [
+    {
+      "name": "Var1",
+      "type": "<namespace>::AnotherEnum",
+      "kind": "nested"
+    }
+  ]
+},
+{
+  "type": "event",
+  "name": "<namespace>::AnotherEnum",
+  "kind": "enum",
+  "variants": [
+    {
+      "name": "Var2",
+      "type": "<namespace>::MyStruct",
+      "kind": "nested"
+    }
+  ]
+}
+```
+
+The fact that `TestEnum`, `Var1` and `Var2` are of kind “nested” tells us to add a selector to the list of keys, before continuing to recursively serialize.
+
+=== Flattened enum variants
+
+Sometimes we don’t want to nest enums when serializing the event. The motivation here is that if someone writes an ERC20 as a component (not a contract) which is pluggable anywhere, you may not want the using contract to modify the keys of known events such as `Transfer`.
+
+To avoid nesting, one needs to write the following high level code:
+
+```rust
+#[event]
+#[derive(Drop, starknet::Event)]
+enum Event {
+	ComponentEvent: test_component::Event,
+	TestCounterIncreased: CounterIncreased,
+	TestCounterDecreased: CounterDecreased,
+	#[flat]
+	TestEnum: MyEnum
+}
+```
+
+By writing the above, the `TestEnum` variant entry in the ABI will change to:
+
+```json
+{
+"name": "TestEnum",
+"type": "<namespace>::MyEnum",
+"kind": "flat"
+}
+```
+
+Which means that `self.emit(Event::TestEnum(MyEnum::Var1(MyStruct {member: 5})))` will emit an event with `keys=[sn_keccak(Var1)]` and `data=[5]`.
+
+
+== Cairo v2.0.0 changes
+
+With the transition to v2.0.0, the contract ABI underwent some changes.
 Consider the following high level code that generates the ABI in the above example:
 
 [source, rust]
@@ -450,7 +717,7 @@ mod counter_contract {
 }
 ----
 
-### Interface and Impl ABI entries
+=== Interface and Impl ABI entries
 
 Since the `CounterContract` impl is annotated with the `#[external(v0)]` attribute, you'll find the following `impl` entry in the ABI:
 
@@ -470,277 +737,17 @@ is a possible entry point of the contract.
 Standalone functions in the contract (outside an external impl) can also be anotated with `#[external(v0)]` (currently, this is the only way to add L1 handlers). In such cases, a corresponding `function` (or `l1_handler`) entry will be found in the ABI in the same hierarchy as impls and interfaces.
 ====
 
-### Events
+=== Events
 
 In Cairo v2, a dedicated type for the contract's events was introduced. Currently, the contract event type must be an enum named `Event`, whose variants are structs of the same name as the variant. Types that can be emitted via `self.emit(_)` must implement the `Event` link:https://github.com/starkware-libs/cairo/blob/7144f2f383961cbca4804a7d056d48973721446c/corelib/src/starknet/event.cairo#L4[trait], which defines how this type should be serialized into two `felt252` arrays, `keys` and `data`.
 
 The `Event` enum variants appear in the ABI under `"type" = "event"` rather than regular structs. For such entries, each member has an additional `kind` field which specifies how the serialization into keys and data takes place:
 
-* if the kind is `key`, then this member or variant are serialized into the event's keys
-* if the kind is `data`, then this member or variant are serialized into the event's data
-* if the kind is `nested`, then the member or variant are serialized acording to the `Event` attribute, potentially adding to both keys and data. At the moment, this feature is not yet supported, so no high level code written in Cairo v2.0.0 can generate such ABI.
+* If the kind is `key`, then this member or variant are serialized into the event's keys
+* If the kind is `data`, then this member or variant are serialized into the event's data
+* If the kind is `nested`, then the member or variant are serialized acording to the `Event` attribute, potentially adding to both keys and data. At the moment, this feature is not yet supported, so no high level code written in Cairo v2.0.0 can
+generate such ABI.
 
-### Specification
+=== Specification
 
 You can find a  link:https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_metadata.json#L20[JSON schema specification] of the ABI in the starknet-specs repository. For a UI-friendly version, you can use the  link:https://playground.open-rpc.org/?schemaUrl=https://raw.githubusercontent.com/starkware-libs/starknet-specs/master/api/starknet_metdata.json[OPEN-RPC playground].
-
-## Cairo v2.3.0 - nested events
-
-With v2.3.0 we're relaxing the limitations on the `Event` enum, allowing more flexibility on the events that can be emitted from a given contract:
-
-* It is no longer enforced that the `Event` enum variants are structs of the same name as the variant (they can now be a struct or an enum of any name).
-* Enum variants inside event ABI entries (entries in the abi with `"type": "event"` and `"kind": "enum"`) now have two possible kinds. Before v2.3.0 it was always `"kind": "nested"`, now `"kind: "flat"` is also possible.
-* This is backward compatible with version ≥ 2.0.0 ABI, i.e. the same structure of the ABI is kept, while allowing more flexibility.
-
-
-Between versions v2.0.0-v2.2.0, to figure out all the potential serializations of events (what raw `keys`, `data` arrays can be emitted given the ABI), 
-it was sufficient to iterate over the abi entries with `"type": "event"` and `"kind": "struct"` (skipping the encapsulating `Event` type which has `"kind": "enum"`). 
-With v2.3.0 onwards, doing so may result in losing information. To illustrate this, we'll use the following example:
-
-
-```rust
-// high level code defining the events
-
-#[event]
-#[derive(Drop, starknet::Event)]
-enum Event {
-    ComponentEvent: test_component::Event,
-    TestCounterIncreased: CounterIncreased,
-    TestCounterDecreased: CounterDecreased,
-    TestEnum: MyEnum
-}
-
-#[derive(Drop, starknet::Event)]
-struct CounterIncreased {
-    amount: u128
-}
-
-#[derive(Drop, starknet::Event)]
-struct CounterDecreased {
-    amount: u128
-}
-
-#[derive(Copy, Drop, starknet::Event)]
-enum MyEnum {
-  Var1: MyStruct
-}
-
-#[derive(Copy, Drop, Serde, starknet::Event)]
-struct MyStruct {
-	member: u128
-}
-```
-
-### Variant names different from types
-
-Enum variant types can now have any name. Let’s take as example the `TestCounterIncreased` variant and the `CounterIncreased` type, as they appear in the ABI:
-
-```json
-{
-  "type": "event",
-  "name": "<namespace>::Event",
-  "kind": "enum",
-  "variants": [
-      {
-          "name": "ComponentEvent",
-          "type": "<namespace>::test_component::Event",
-          "kind": "nested"
-      },
-      {
-          "name": "TestCounterIncreased",
-          "type": "<namespace>::CounterIncreased",
-          "kind": "nested"
-      },
-      {
-          "name": "TestCounterDecreased",
-          "type": "<namespace>::CounterDecreased",
-          "kind": "nested"
-      },
-      {
-          "name": "TestEnum",
-          "type": "<namespace>::MyEnum",
-          "kind": "nested"
-      }
-  ]
-},
-{
-	"type": "event",
-	"name": "<namespace>::CounterIncreased",
-	"kind": "struct",
-	"members": [
-		{
-			"name": "amount",
-			"type": "core::integer::u128",
-			"kind": "data"
-		}
-	]
-}
-```
-
-When the contract emits the `TestCounterIncreased` event (e.g. by writing `self.emit(CounterIncreased { amount }))`, the event that is emitted has the following keys and data:
-
-* One key based on the variant name: `sn_keccak(TestCounterIncreased)`. This information only appears in the `<namespace>::Event` type entry in the the ABI, 
-as the name `TestCounterIncreased` does not appear in the `"kind": "struct"` abi entry (this didn’t matter when the variant name and type had to be equal).
-* One data element based on the struct `CounterIncreased` (which is associated to `TestCounterIncreased` via one of the `Event` type variants).
-
-### Enum variants inside Event
-
-The introduction of components allows variants of `Event` to be enums. 
-In our example, we have two such variants: `TestEnum` (unrelated to components) and `ComponentEvent`. 
-The serialization to keys and data is the same in both cases, so we’ll focus on `TestEnum`:
-
-We have the `TestEnum` variant entry inside Event:
-
-```json
-{
-"name": "TestEnum",
-"type": "<namespace>::MyEnum",
-"kind": "nested"
-}
-```
-
-the `MyEnum` event entry:
-
-```json
-{
-	"type": "event",
-	"name": "<namespace>::MyEnum",
-	"kind": "enum",
-	"variants": [
-		{
-			"name": "Var1",
-			"type": "<namespace>::MyStruct",
-			"kind": "nested"
-		}
-	]
-}
-```
-
-and the `MyStruct` event entry
-
-```json
-{
-	"type": "event",
-	"name": "<namespace>::MyStruct",
-	"kind": "struct",
-	"members": [
-		{
-			"name": "member",
-			"type": "core::integer::u128",
-			"kind": "data"
-		}
-	]
-}
-```
-
-Suppose we’re emitting a `TestEnum` event via `self.emit(Event::TestEnum(MyEnum::Var1(MyStruct {member: 5})))` 
-(one can implement the trait `Into<MyStruct, Event>` to avoid having to write this long line). When this event is emitted, the serialization to keys, data happens as follows:
-
-* Since the `TestEnum` variant has kind nested, we add the first key: `sn_keccak(TestEnum)`, and the rest of the serialization to keys and data is done recursively via the `starknet::event` trait implementation of `MyEnum`
-* Next, we again handle a `"kind": "nested"` variant (previously it was `TestEnum`, now it’s `Var1`), which means we add another key depending on the sub variant: `sn_keccak(Var1)`, and proceed to serialize according to the `starknet::event` implementation of `MyStruct`
-* Finally, we proceed to serialize `MyStruct`, which gives us a single data member
-
-Summing this up results in `keys = [sn_keccak(TestEnum), sn_keccak(Var1)]` and `data=[5]`
-
-Note that allowing variants which are themselves enums (`TestEnum` is an enum variant here) we can have further nesting. Suppose that we change the high level code to:
-
-```rust
-#[event]
-#[derive(Drop, starknet::Event)]
-enum Event {
-    ComponentEvent: test_component::Event,
-    TestCounterIncreased: CounterIncreased,
-    TestCounterDecreased: CounterDecreased,
-    TestEnum: MyEnum
-}
-
-#[derive(Copy, Drop, starknet::Event)]
-enum MyEnum {
-    Var1: AnotherEnum
-}
-
-#[derive(Copy, Drop, Serde, starknet::Event)]
-enum AnotherEnum {
-    Var2: MyStruct
-}
-
-#[derive(Copy, Drop, Serde, starknet::Event)]
-struct MyStruct {
-    member: u128,
-}
-
-```
-
-then `self.emit(Event::TestEnum(MyEnum::Var1(AnotherEnum::Var2(MyStruct { member: 5 }))))` 
-(as before, `Into` implementations can shorten this) will emit an event with `keys = [sn_keccak(TestEnum), sn_keccak(Var1), sn_keccak(Var2)]` and `data=[5]`. 
-This will look as follows in the ABI (only the relevant parts are attached):
-
-```json
-{
-  "type": "event",
-  "name": "<namespace>::Event",
-  "kind": "enum",
-  "variants": [
-    // ignoring all the other variants for berevity
-    {
-      "name": "TestEnum",
-      "type": "<namespace>::MyEnum",
-      "kind": "nested"
-    }
-  ]
-},
-{
-  "type": "event",
-  "name": "<namespace>::MyEnum",
-  "kind": "enum",
-  "variants": [
-    {
-      "name": "Var1",
-      "type": "<namespace>::AnotherEnum",
-      "kind": "nested"
-    }
-  ]
-},
-{
-  "type": "event",
-  "name": "<namespace>::AnotherEnum",
-  "kind": "enum",
-  "variants": [
-    {
-      "name": "Var2",
-      "type": "<namespace>::MyStruct",
-      "kind": "nested"
-    }
-  ]
-}
-```
-
-The fact that `TestEnum`, `Var1` and `Var2` are of kind “nested” tells us to add a selector to the list of keys, before continuing to recursively serialize.
-
-### Flattened enum variants
-
-Sometimes we don’t want to nest enums when serializing the event. The motivation here is that if someone writes an ERC20 as a component (not a contract) which is pluggable anywhere, you may not want the using contract to modify the keys of known events such as `Transfer`. To avoid nesting, one needs to write the following high level code:
-
-```rust
-#[event]
-#[derive(Drop, starknet::Event)]
-enum Event {
-	ComponentEvent: test_component::Event,
-	TestCounterIncreased: CounterIncreased,
-	TestCounterDecreased: CounterDecreased,
-	#[flat]
-	TestEnum: MyEnum
-}
-```
-
-By writing the above, the TestEnum variant entry in the ABI will change to:
-
-```json
-{
-"name": "TestEnum",
-"type": "<namespace>::MyEnum",
-"kind": "flat"
-}
-```
-
-Which means that `self.emit(Event::TestEnum(MyEnum::Var1(MyStruct {member: 5})))` will emit an event with `keys=[sn_keccak(Var1)]` and `data=[5]`.
