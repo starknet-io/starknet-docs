@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.330](https://github.com/starknet-io/starknet-docs/compare/v0.1.329...v0.1.330) (2023-09-28)
+
+
+### Bug Fixes
+
+* Moved _Setting up your environment_ to shared repo. ([#847](https://github.com/starknet-io/starknet-docs/issues/847)) ([dffc972](https://github.com/starknet-io/starknet-docs/commit/dffc972925eb2b139350788ce005262a4c5f8e8e))
+
 ### [0.1.329](https://github.com/starknet-io/starknet-docs/compare/v0.1.328...v0.1.329) (2023-09-28)
 
 ### [0.1.328](https://github.com/starknet-io/starknet-docs/compare/v0.1.327...v0.1.328) (2023-09-28)
