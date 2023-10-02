@@ -1,22 +1,18 @@
-# Contract migration guide
+= Migrating a contract from Cairo 0 to Cairo
 
-With the link:https://github.com/starkware-libs/cairo/releases/tag/v2.0.0-rc0[v2.0.0 release] of
-the Cairo compiler, the Starknet contract syntax has evolved. This affects how external
-functions, storage, and events are organized inside the contract.
+With the link:https://github.com/starkware-libs/cairo/releases/tag/v2.0.0-rc0[v2.0.0 release] of the Cairo compiler, the Starknet contract syntax has evolved, affecting the organization of functions, storage, and events.
 
-This page highlights the technical steps required to migrate from the old Starknet contract
-syntax to the new.
+For more information on the latest syntax changes, see the Community Forum post link:https://community.starknet.io/t/cairo-1-contract-syntax-is-evolving/94794[_Cairo 1: Contract Syntax is Evolving_].
 
-For a comprehensive breakdown of the changes, see the link:https://community.starknet.io/t/cairo-1-contract-syntax-is-evolving/94794[community forum post].
+.Prerequisites
 
-## New contract syntax - concrete steps for migrating
+* A contract written with the Cairo compiler v1.1.0
+* The most recent version of the Cairo compiler
 
-Given a contract written with the previous compiler version (v1.1.0), you can follow the steps below in order to make it compatible with the new syntax.
+.Procedure
 
-### Contract anotation
-
-Outside the contract module, Starknet related attributes are expected to have the `starknet::` prefix.
-
+. Change the contract annotation from `\#[contract]` to `#[starknet::contract]`. For example::
++
 [tabs]
 ====
 old::
@@ -38,11 +34,8 @@ mod CounterContract {
 }
 ----
 ====
-
-### Storage anotation
-
-Anotate the `Storage` struct with the `#[storage]` attribute
-
+. Annotate the `Storage` struct with the `#[storage]` attribute. For example:
++
 [tabs]
 ====
 old::
@@ -66,15 +59,17 @@ struct Storage {
 ----
 ====
 
-### Contract interface
-
-Gather your contract’s external and view function signatures under a trait annotated with `#[starknet::interface]`:
-
-* Add a generic parameter to the trait, here we use the name `TContractState` as it stands for the state of your contract
-* For view functions, add the `self: @TContractState` argument
-* For external functions, add the `ref self: TContractState` argument
-* Static functions that do not touch storage or emit events do not require an addition argument
-
+. Gather your contract’s `external` and `view` function signatures under a trait annotated with
+`#[starknet::interface]` as follows:
++
+* Add a generic parameter to the trait. In the following example, the name `TContractState`
+represents the state of your contract.
+* For view functions, add the `self: @TContractState` argument.
+* For external functions, add the `ref self: TContractState` argument.
+* Static functions that do not touch storage or emit events do not require an additional argument.
++
+For example:
++
 [tabs]
 ====
 old::
@@ -91,7 +86,6 @@ mod CounterContract {
    fn get_counter() -> u128 { ... }
 }
 ----
-
 new::
 +
 [source,rust]
@@ -102,7 +96,6 @@ trait ICounterContract<TContractState> {
    fn decrease_counter(ref self: TContractState, amount: u128);
    fn get_counter(self: @TContractState) -> u128;
 }
-
 #[starknet::contract]
 mod CounterContract {
    ...
@@ -110,10 +103,11 @@ mod CounterContract {
 ----
 ====
 
-### Add interface `Impl`
-
-Add the external and view function bodies under an impl of the interface trait, and mark the impl with the `[external(v0)]` attribute
-
+. Add the external and view function bodies under an `impl` of the interface trait, and mark the
+`impl` with the `[external(v0)]` attribute, which generates the type of dispatcher that is used to call the contract.
++
+For example:
++
 [tabs]
 ====
 old::
@@ -130,7 +124,6 @@ mod CounterContract {
    fn get_counter() -> u128 { ... }
 }
 ----
-
 new::
 +
 [source,rust]
@@ -141,7 +134,6 @@ trait ICounterContract<TContractState> {
    fn decrease_counter(ref self: TContractState, amount: u128);
    fn get_counter(self: @TContractState) -> u128;
 }
-
 #[starknet::contract]
 mod CounterContract {
    #[external(v0)]
@@ -154,12 +146,17 @@ mod CounterContract {
 ----
 ====
 
-### Replace the `abi` attribute with `starknet::interface`
-
-These attributes are responsible for generating the dispatcher type, used to call the contract.
-Replace the `#[abi]` attribute with `#[starknet::interface]`. While it doesn't affect the generated code, we recommended adding to the trait a generic parameter `T` representing the contract's state,
-and adding the `ref self: T` argument to external functions and `self: @T` argument for view functions.
-
+. Replace the `\#[abi]` attribute with `#[starknet::interface]`.
++
+[TIP]
+====
+While it doesn't affect the generated code, adding to the trait a generic parameter `T` representing the contract's state,
+and adding the `ref self: T` argument to external functions and `self: @T` argument for view
+functions makes the implementation more complete.
+====
++
+For example:
++
 [tabs]
 ====
 old::
@@ -182,11 +179,16 @@ trait IOtherContract<TContractState> {
 ----
 ====
 
-### Storage access
-
-Modify storage access to happen through `ContractState` or `@ContractState` (none external
-functions in the contract that access storage also need to get it as an argument).
-
+. Modify storage accesses to happen through `ContractState` or `@ContractState`.
++
+[NOTE]
+====
+No external functions in the contract that access storage also need to get it as an argument.
+// Get what as an argument? Storage?
+====
++
+For example:
++
 [tabs]
 ====
 old::
@@ -203,11 +205,17 @@ let current = self.counter.read();
 ----
 ====
 
-### Events definition
-
-Unify all the contract's events under the `Event` enum, and add a corresponding struct for every variant (all the structs must derive the `Event` trait,
-and each member type has to implement the `Serde` trait)
-
+. Unify all the contract's events under the `Event` enum, and add a corresponding struct for every
+variant.
++
+[NOTE]
+====
+All the structs must derive the `Event` trait,
+and each member type must implement the `Serde` trait.
+====
++
+For example:
++
 [tabs]
 ====
 old::
@@ -229,12 +237,10 @@ enum Event {
     CounterIncreased: CounterIncreased,
     CounterDecreased: CounterDecreased
 }
-
 #[derive(Drop, starknet::Event)]
 struct CounterIncreased {
     amount: u128
 }
-
 #[derive(Drop, starknet::Event)]
 struct CounterDecreased {
     amount: u128
@@ -242,10 +248,8 @@ struct CounterDecreased {
 ----
 ====
 
-### Events emition
-
-Emit events via the `ContractState` type
-
+. Emit events via the `ContractState` type. For example:
++
 [tabs]
 ====
 old::
@@ -263,7 +267,7 @@ new::
 ----
 fn increase_counter(ref self: ContractState, amount: u128) {
     ...
-    self.emit(CounterIncreased { amount });
+    self.emit(Event::CounterIncreased(CounterIncreased { amount }));
 }
 ----
 ====
