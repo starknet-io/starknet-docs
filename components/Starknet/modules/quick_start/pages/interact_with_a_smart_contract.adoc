@@ -1,0 +1,71 @@
+= Interacting with a smart contract
+
+== Prerequisites
+
+=== Ensure Starkli and Scarb are installed correctly
+Ensure that the below commands are working properly on your system.
+
+[source, bash]
+----
+starkli --version
+scarb --version
+----
+
+If either of the above commands fail, see xref:environment_setup.adoc[Setting up your environment].
+
+== Introduction
+
+Starkli enables interaction with smart contracts via two primary methods:
+
+* `call` for read-only functions.
+* `invoke` for write functions that modify the state.
+
+== Calling a function
+
+The `call` command allows querying a smart contract function without sending a transaction.
+
+As an example you can use the `get_owner` function which doesn't expect any arguments and returns the address of the current owner:
+
+[source,bash]
+----
+starkli call \
+    0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e \
+    get_owner
+    --network=goerli-1
+----
+
+This will return the address that we passed to the constructor during deployment:
+
+[source,bash]
+----
+[
+    "0x02cdab749380950e7a7c0deff5ea8edd716feb3a2952add4e5659655077b8510"
+]
+----
+
+== Invoking a function
+
+To modify the state of the smart contract, use the `invoke` command. Unlike the `call` command, `invoke` submits a transaction to the network.
+
+In this example, we'll invoke the `transfer_ownership` function to transfer the ownership from our deployer address to a different smart wallet address:
+
+[source,bash]
+----
+starkli invoke \
+    0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e \
+    transfer_ownership \
+    0x011088d3cbe4289bc6750ee3a9cf35e52f4fa4e0ac9f42fb0b62e983139e135a \
+    --network=goerli-1
+----
+
+After the transaction is accepted on L2, you can confirm the state transition by calling the `get_owner` function again:
+
+[source,bash]
+----
+starkli call \
+    0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e \
+    get_owner \
+    --network=goerli-1
+----
+
+The `get_owner` function now returns the new owner address, confirming the successful ownership transfer.
