@@ -506,34 +506,25 @@
 </aside>
 <article class="doc">
 <h1 class="page">Contract ABI</h1>
-<div id="preamble">
+<div class="sect1">
+<h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Contract ABI is a representation of a Starknet contract&#8217;s interface. It is formatted as JSON and describes the functions, structs and events which are defined in the contract.</p>
+<p>A contract ABI is a representation of a Starknet contract interface. It is formatted as JSON and describes the functions, structs and events which are defined in the contract.</p>
 </div>
 <div class="paragraph">
-<p>You can get the contract&#8217;s ABI by compiling:</p>
+<p>You can get the contract&#8217;s ABI by using <code>starknet-compile</code>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cargo run --bin starknet-compile -- /path/to/input.cairo /path/to/output.json</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cargo run --bin starknet-compile -- --single-file &lt;/path/to/input.cairo&gt; &lt;/path/to/output.json&gt;</code></pre>
 </div>
 </div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The Cairo 0 compiler is no longer maintained, see <a href="https://github.com/starkware-libs/cairo#compiling-starknet-contracts">here</a> for more details on Cairo 1 contracts
-compilation.</p>
 </div>
-</td>
-</tr>
-</table>
 </div>
+<div class="sect1">
+<h2 id="an_example_contract_abi"><a class="anchor" href="#an_example_contract_abi"></a>An example contract ABI</h2>
+<div class="sectionbody">
 <div class="paragraph">
 <p>The following is an example contract ABI:</p>
 </div>
@@ -899,11 +890,387 @@ compilation.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="cairo_v2_abi_changes"><a class="anchor" href="#cairo_v2_abi_changes"></a>Cairo v2 ABI changes</h2>
+<h2 id="cairo_v2_3_0_changes"><a class="anchor" href="#cairo_v2_3_0_changes"></a>Cairo v2.3.0 changes</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="nested_events"><a class="anchor" href="#nested_events"></a>Nested events</h3>
+<div class="paragraph">
+<p>With Cairo <code>v2.3.0</code> the limitations on the <code>Event</code> enum have been relaxed, allowing more flexibility on the events that can be emitted from a given contract.</p>
+</div>
+<div class="paragraph">
+<p>For example:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>It is no longer enforced that the <code>Event</code> enum variants are structs of the same name as the variant, they can now be a struct or an enum of any name.</p>
+</li>
+<li>
+<p>Enum variants inside event ABI entries (entries in the abi with <code>"type": "event"</code> and <code>"kind": "enum"</code>) now have two possible kinds. Before <code>v2.3.0</code> it was always <code>"kind": "nested"</code>, now <code>"kind: "flat"</code> is also possible.</p>
+</li>
+<li>
+<p><code>v2.3.0</code> is backwards compatible with version ≥ <code>2.0.0</code> ABI, so the same structure of the ABI is kept, while allowing flexibility.</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Between versions <code>v2.0.0</code> and <code>v2.2.0</code>, to identify all potential serializations of events (what raw <code>keys</code>, <code>data</code> arrays can be emitted given the ABI),
+it was sufficient to iterate over the abi entries with <code>"type": "event"</code> and <code>"kind": "struct"</code>, skipping the encapsulating <code>Event</code> type which has <code>"kind": "enum"</code>.</p>
+</div>
+<div class="paragraph">
+<p>With <code>v2.3.0</code> onwards, doing so may result in losing information.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>To illustrate this, consider the following example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">// high level code defining the events
+
+#[event]
+#[derive(Drop, starknet::Event)]
+enum Event {
+    ComponentEvent: test_component::Event,
+    TestCounterIncreased: CounterIncreased,
+    TestCounterDecreased: CounterDecreased,
+    TestEnum: MyEnum
+}
+
+#[derive(Drop, starknet::Event)]
+struct CounterIncreased {
+    amount: u128
+}
+
+#[derive(Drop, starknet::Event)]
+struct CounterDecreased {
+    amount: u128
+}
+
+#[derive(Copy, Drop, starknet::Event)]
+enum MyEnum {
+  Var1: MyStruct
+}
+
+#[derive(Copy, Drop, Serde, starknet::Event)]
+struct MyStruct {
+	member: u128
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="variant_names_different_from_types"><a class="anchor" href="#variant_names_different_from_types"></a>Variant names different from types</h3>
+<div class="paragraph">
+<p>In <code>v2.3.0</code> enum variant types can now have any name.</p>
+</div>
+<div class="paragraph">
+<p>As an example the <code>TestCounterIncreased</code> variant and the <code>CounterIncreased</code> type, as they appear in the ABI:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "type": "event",
+  "name": "&lt;namespace&gt;::Event",
+  "kind": "enum",
+  "variants": [
+      {
+          "name": "ComponentEvent",
+          "type": "&lt;namespace&gt;::test_component::Event",
+          "kind": "nested"
+      },
+      {
+          "name": "TestCounterIncreased",
+          "type": "&lt;namespace&gt;::CounterIncreased",
+          "kind": "nested"
+      },
+      {
+          "name": "TestCounterDecreased",
+          "type": "&lt;namespace&gt;::CounterDecreased",
+          "kind": "nested"
+      },
+      {
+          "name": "TestEnum",
+          "type": "&lt;namespace&gt;::MyEnum",
+          "kind": "nested"
+      }
+  ]
+},
+{
+	"type": "event",
+	"name": "&lt;namespace&gt;::CounterIncreased",
+	"kind": "struct",
+	"members": [
+		{
+			"name": "amount",
+			"type": "core::integer::u128",
+			"kind": "data"
+		}
+	]
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When the contract emits the <code>TestCounterIncreased</code> event, for example by writing <code>self.emit(CounterIncreased { amount }))</code>, the event that is emitted has the following keys and data:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>One key based on the variant name: <code>sn_keccak(TestCounterIncreased)</code>. This information only appears in the <code>&lt;namespace&gt;::Event</code> type entry in the ABI,
+as the name <code>TestCounterIncreased</code> does not appear in the <code>"kind": "struct"</code> ABI entry. This did not matter in previous versions when the variant name and type had to be equal.</p>
+</li>
+<li>
+<p>One data element based on the struct <code>CounterIncreased</code> which is associated to <code>TestCounterIncreased</code> via one of the <code>Event</code> type variants.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="enum_variants_inside_event"><a class="anchor" href="#enum_variants_inside_event"></a>Enum variants inside Event</h3>
+<div class="paragraph">
+<p>The introduction of components allows variants of <code>Event</code> to be enums.
+In the following example, we have two such variants: <code>TestEnum</code> (unrelated to components) and <code>ComponentEvent</code>.</p>
+</div>
+<div class="paragraph">
+<p>The serialization to keys and data is the same in both cases, so this example will focus on <code>TestEnum</code>:</p>
+</div>
+<div class="paragraph">
+<p>This example shows the <code>TestEnum</code> variant entry inside Event:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+"name": "TestEnum",
+"type": "&lt;namespace&gt;::MyEnum",
+"kind": "nested"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This example shows the <code>MyEnum</code> event entry:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+	"type": "event",
+	"name": "&lt;namespace&gt;::MyEnum",
+	"kind": "enum",
+	"variants": [
+		{
+			"name": "Var1",
+			"type": "&lt;namespace&gt;::MyStruct",
+			"kind": "nested"
+		}
+	]
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This example shows the <code>MyStruct</code> event entry:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+	"type": "event",
+	"name": "&lt;namespace&gt;::MyStruct",
+	"kind": "struct",
+	"members": [
+		{
+			"name": "member",
+			"type": "core::integer::u128",
+			"kind": "data"
+		}
+	]
+}</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If a <code>TestEnum</code> event is being emitted via <code>self.emit(Event::TestEnum(MyEnum::Var1(MyStruct {member: 5})))</code>, you can implement the trait <code>Into&lt;MyStruct, Event&gt;</code> to avoid having to write it out in full.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>When the event is emitted, the serialization to keys and data happens as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Since the <code>TestEnum</code> variant has <code>kind</code> nested, add the first key: <code>sn_keccak(TestEnum)</code>, and the rest of the serialization to keys and data is done recursively via the <code>starknet::event</code> trait implementation of <code>MyEnum</code>.</p>
+</li>
+<li>
+<p>Next, you can handle a <code>"kind": "nested"</code> variant (previously it was <code>TestEnum</code>, now it’s <code>Var1</code>), which means you can add another key depending on the sub variant: <code>sn_keccak(Var1)</code>, and proceed to serialize according to the <code>starknet::event</code>
+implementation of <code>MyStruct</code>.</p>
+</li>
+<li>
+<p>Finally, proceed to serialize <code>MyStruct</code>, which gives us a single data member.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This results in <code>keys = [sn_keccak(TestEnum), sn_keccak(Var1)]</code> and <code>data=[5]</code></p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Allowing variants which are themselves enums (<code>TestEnum</code> is an enum variant here) means further nesting is possible.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>For example, if the high level code is changed to:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[event]
+#[derive(Drop, starknet::Event)]
+enum Event {
+    ComponentEvent: test_component::Event,
+    TestCounterIncreased: CounterIncreased,
+    TestCounterDecreased: CounterDecreased,
+    TestEnum: MyEnum
+}
+
+#[derive(Copy, Drop, starknet::Event)]
+enum MyEnum {
+    Var1: AnotherEnum
+}
+
+#[derive(Copy, Drop, Serde, starknet::Event)]
+enum AnotherEnum {
+    Var2: MyStruct
+}
+
+#[derive(Copy, Drop, Serde, starknet::Event)]
+struct MyStruct {
+    member: u128,
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>then <code>self.emit(Event::TestEnum(MyEnum::Var1(AnotherEnum::Var2(MyStruct { member: 5 }))))</code>
+(as before, <code>Into</code> implementations can shorten this) will emit an event with <code>keys = [sn_keccak(TestEnum), sn_keccak(Var1), sn_keccak(Var2)]</code> and <code>data=[5]</code>.</p>
+</div>
+<div class="paragraph">
+<p>This will look as follows in the ABI (only the relevant parts are shown):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "type": "event",
+  "name": "&lt;namespace&gt;::Event",
+  "kind": "enum",
+  "variants": [
+    // ignoring all the other variants for berevity
+    {
+      "name": "TestEnum",
+      "type": "&lt;namespace&gt;::MyEnum",
+      "kind": "nested"
+    }
+  ]
+},
+{
+  "type": "event",
+  "name": "&lt;namespace&gt;::MyEnum",
+  "kind": "enum",
+  "variants": [
+    {
+      "name": "Var1",
+      "type": "&lt;namespace&gt;::AnotherEnum",
+      "kind": "nested"
+    }
+  ]
+},
+{
+  "type": "event",
+  "name": "&lt;namespace&gt;::AnotherEnum",
+  "kind": "enum",
+  "variants": [
+    {
+      "name": "Var2",
+      "type": "&lt;namespace&gt;::MyStruct",
+      "kind": "nested"
+    }
+  ]
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As <code>TestEnum</code>, <code>Var1</code> and <code>Var2</code> are of kind <code>nested</code>, a selector should be added to the list of keys, before continuing to recursively serialize.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="flattened_enum_variants"><a class="anchor" href="#flattened_enum_variants"></a>Flattened enum variants</h3>
+<div class="paragraph">
+<p>You may not want to nest enums when serializing the event. For example, if you write an ERC20 as a component (not a contract) which is pluggable anywhere, you may not want the contract to modify the keys of known events such as <code>Transfer</code>.</p>
+</div>
+<div class="paragraph">
+<p>To avoid nesting, write the following high level code:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[event]
+#[derive(Drop, starknet::Event)]
+enum Event {
+	ComponentEvent: test_component::Event,
+	TestCounterIncreased: CounterIncreased,
+	TestCounterDecreased: CounterDecreased,
+	#[flat]
+	TestEnum: MyEnum
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>By writing the above, the <code>TestEnum</code> variant entry in the ABI will change to:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+"name": "TestEnum",
+"type": "&lt;namespace&gt;::MyEnum",
+"kind": "flat"
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This means that <code>self.emit(Event::TestEnum(MyEnum::Var1(MyStruct {member: 5})))</code> will emit an event with <code>keys=[sn_keccak(Var1)]</code> and <code>data=[5]</code>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="cairo_v2_0_0_changes"><a class="anchor" href="#cairo_v2_0_0_changes"></a>Cairo v2.0.0 changes</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>With the transition to v2, the contract ABI underwent some changes.
-Consider the following high level code that generates the ABI in the above example:</p>
+<p>With the transition to <code>v2.0.0</code>, the contract ABI underwent some changes.</p>
+</div>
+<div class="paragraph">
+<p>Consider the following high level code that generates the ABI in the following example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -986,7 +1353,7 @@ mod counter_contract {
 <div class="sect2">
 <h3 id="interface_and_impl_abi_entries"><a class="anchor" href="#interface_and_impl_abi_entries"></a>Interface and Impl ABI entries</h3>
 <div class="paragraph">
-<p>Since the <code>CounterContract</code> impl is annotated with the <code>#[external(v0)]</code> attribute, you&#8217;ll find the following <code>impl</code> entry in the ABI:</p>
+<p>Since the <code>CounterContract</code> <code>impl</code> is annotated with the <code>#[external(v0)]</code> attribute, you&#8217;ll find the following <code>impl</code> entry in the ABI:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -994,7 +1361,7 @@ mod counter_contract {
   "type": "impl",
   "name": "CounterContract",
   "interface_name": "new_syntax_test_contract::new_syntax_test_contract::ICounterContract"
-},</code></pre>
+}</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1009,7 +1376,8 @@ is a possible entry point of the contract.</p>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Standalone functions in the contract (outside an external impl) can also be annotated with <code>#[external(v0)]</code> (currently, this is the only way to add L1 handlers). In such cases, a corresponding <code>function</code> (or <code>l1_handler</code>) entry will be found in the ABI in the same hierarchy as impls and interfaces.</p>
+<p>Standalone functions in the contract outside an external <code>impl</code> can also be annotated with <code>#[external(v0)]</code> (currently, this is the only way to add L1 handlers). In such cases, a corresponding <code>function</code> (or <code>l1_handler</code>) entry will be found in
+the ABI in the same hierarchy as <code>impls</code> and interfaces.</p>
 </div>
 </td>
 </tr>
@@ -1022,26 +1390,46 @@ is a possible entry point of the contract.</p>
 <p>In Cairo v2, a dedicated type for the contract&#8217;s events was introduced. Currently, the contract event type must be an enum named <code>Event</code>, whose variants are structs of the same name as the variant. Types that can be emitted via <code>self.emit(_)</code> must implement the <code>Event</code> <a href="https://github.com/starkware-libs/cairo/blob/7144f2f383961cbca4804a7d056d48973721446c/corelib/src/starknet/event.cairo#L4">trait</a>, which defines how this type should be serialized into two <code>felt252</code> arrays, <code>keys</code> and <code>data</code>.</p>
 </div>
 <div class="paragraph">
-<p>The <code>Event</code> enum variants appear in the ABI under <code>"type" = "event"</code> rather than regular structs. For such entries, each member has an additional <code>kind</code> field which specifies how the serialization into keys and data takes place:</p>
+<p>The <code>Event</code> enum variants appear in the ABI under <code>"type" = "event"</code> rather than regular structs.</p>
+</div>
+<div class="paragraph">
+<p>For such entries, each member has an additional <code>kind</code> field which specifies how the serialization into keys and data takes place:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>if the kind is <code>key</code>, then this member or variant are serialized into the event&#8217;s keys</p>
+<p>If the kind is <code>key</code>, then this member or variant are serialized into the event&#8217;s keys.</p>
 </li>
 <li>
-<p>if the kind is <code>data</code>, then this member or variant are serialized into the event&#8217;s data</p>
+<p>If the kind is <code>data</code>, then this member or variant are serialized into the event&#8217;s data.</p>
 </li>
 <li>
-<p>if the kind is <code>nested</code>, then the member or variant are serialized according to the <code>Event</code> attribute, potentially adding to both keys and data. At the moment, this feature is not yet supported, so no high level code written in Cairo v2.0.0 can generate such ABI.</p>
+<p>If the kind is <code>nested</code>, then the member or variant are serialized according to the <code>Event</code> attribute, potentially adding to both keys and data.</p>
 </li>
 </ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This feature is not yet supported, so no high level code written in Cairo <code>v2.0.0</code> can generate such an ABI.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 <div class="sect2">
 <h3 id="specification"><a class="anchor" href="#specification"></a>Specification</h3>
 <div class="paragraph">
-<p>You can find a  <a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_metadata.json#L20">JSON schema specification</a> of the ABI in the starknet-specs repository. For a UI-friendly version, you can use the  <a href="https://playground.open-rpc.org/?schemaUrl=https://raw.githubusercontent.com/starkware-libs/starknet-specs/master/api/starknet_metdata.json">OPEN-RPC playground</a>.</p>
+<p>You can find a <a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_metadata.json#L20">JSON schema specification</a> of the ABI in the <code>starknet-specs</code> repository.</p>
+</div>
+<div class="paragraph">
+<p>For a UI-friendly version, you can use the <a href="https://playground.open-rpc.org/?schemaUrl=https://raw.githubusercontent.com/starkware-libs/starknet-specs/master/api/starknet_metdata.json">OPEN-RPC playground</a>.</p>
 </div>
 </div>
 </div>
