@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Contract migration guide :: Starknet documentation</title>
+    <title>Migrating a contract from Cairo 0 to Cairo :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Smart_Contracts/contract-syntax/">
     <link rel="prev" href="../starknet-events/">
     <link rel="next" href="../cairo-and-sierra/">
@@ -151,6 +151,11 @@
     <a 
        class="nav-link"
      href="../../../quick_start/environment_setup/#installing_starkli">Installing Starkli</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../../../quick_start/environment_setup/#setting_environment_variables_for_starkli">Environment variables</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -418,17 +423,17 @@
   </li>
   <li class="nav-item parent" data-depth="2">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">Command line interface</span>
+    <span class="nav-text">Cairo 0 tools</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../../cli/starkli/">Starkli CLI</a>
+     href="../../../cli/starkli/">Legacy Starknet CLI reference</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../../cli/starknet-compiler-options/">Compiler CLI reference</a>
+     href="../../../cli/starknet-compiler-options/">Legacy compiler CLI reference</a>
   </li>
 </ul>
   </li>
@@ -500,34 +505,29 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Contract migration guide</h1>
-<div id="preamble">
-<div class="sectionbody">
+<h1 class="page">Migrating a contract from Cairo 0 to Cairo</h1>
 <div class="paragraph">
-<p>With the <a href="https://github.com/starkware-libs/cairo/releases/tag/v2.0.0-rc0">v2.0.0 release</a> of
-the Cairo compiler, the Starknet contract syntax has evolved. This affects how external
-functions, storage, and events are organized inside the contract.</p>
+<p>With the <a href="https://github.com/starkware-libs/cairo/releases/tag/v2.0.0-rc0">v2.0.0 release</a> of the Cairo compiler, the Starknet contract syntax has evolved, affecting the organization of functions, storage, and events.</p>
 </div>
 <div class="paragraph">
-<p>This page highlights the technical steps required to migrate from the old Starknet contract
-syntax to the new.</p>
+<p>For more information on the latest syntax changes, see the Community Forum post <a href="https://community.starknet.io/t/cairo-1-contract-syntax-is-evolving/94794"><em>Cairo 1: Contract Syntax is Evolving</em></a>.</p>
 </div>
-<div class="paragraph">
-<p>For a comprehensive breakdown of the changes, see the <a href="https://community.starknet.io/t/cairo-1-contract-syntax-is-evolving/94794">community forum post</a>.</p>
+<div class="ulist">
+<div class="title">Prerequisites</div>
+<ul>
+<li>
+<p>A contract written with the Cairo compiler v1.1.0</p>
+</li>
+<li>
+<p>The most recent version of the Cairo compiler</p>
+</li>
+</ul>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="new_contract_syntax_concrete_steps_for_migrating"><a class="anchor" href="#new_contract_syntax_concrete_steps_for_migrating"></a>New contract syntax - concrete steps for migrating</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Given a contract written with the previous compiler version (v1.1.0), you can follow the steps below in order to make it compatible with the new syntax.</p>
-</div>
-<div class="sect2">
-<h3 id="contract_anotation"><a class="anchor" href="#contract_anotation"></a>Contract anotation</h3>
-<div class="paragraph">
-<p>Outside the contract module, Starknet related attributes are expected to have the <code>starknet::</code> prefix.</p>
-</div>
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Change the contract annotation from <code>#[contract]</code> to <code>#[starknet::contract]</code>. For example::</p>
 <div id="tabs_1" class="openblock tabs is-loading">
 <div class="content">
 <div class="ulist tablist">
@@ -562,12 +562,9 @@ mod CounterContract {
 </div>
 </div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="storage_anotation"><a class="anchor" href="#storage_anotation"></a>Storage anotation</h3>
-<div class="paragraph">
-<p>Anotate the <code>Storage</code> struct with the <code>#[storage]</code> attribute</p>
-</div>
+</li>
+<li>
+<p>Annotate the <code>Storage</code> struct with the <code>#[storage]</code> attribute. For example:</p>
 <div id="tabs_2" class="openblock tabs is-loading">
 <div class="content">
 <div class="ulist tablist">
@@ -603,27 +600,26 @@ struct Storage {
 </div>
 </div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="contract_interface"><a class="anchor" href="#contract_interface"></a>Contract interface</h3>
-<div class="paragraph">
-<p>Gather your contract’s external and view function signatures under a trait annotated with <code>#[starknet::interface]</code>:</p>
-</div>
+</li>
+<li>
+<p>Gather your contract’s <code>external</code> and <code>view</code> function signatures under a trait annotated with
+<code>#[starknet::interface]</code> as follows:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>Add a generic parameter to the trait, here we use the name <code>TContractState</code> as it stands for the state of your contract</p>
+<p>Add a generic parameter to the trait. In the following example, the name <code>TContractState</code>
+represents the state of your contract.</p>
 </li>
 <li>
-<p>For view functions, add the <code>self: @TContractState</code> argument</p>
+<p>For view functions, add the <code>self: @TContractState</code> argument.</p>
 </li>
 <li>
-<p>For external functions, add the <code>ref self: TContractState</code> argument</p>
+<p>For external functions, add the <code>ref self: TContractState</code> argument.</p>
 </li>
 <li>
-<p>Static functions that do not touch storage or emit events do not require an addition argument</p>
-</li>
-</ul>
+<p>Static functions that do not touch storage or emit events do not require an additional argument.</p>
+<div class="paragraph">
+<p>For example:</p>
 </div>
 <div id="tabs_3" class="openblock tabs is-loading">
 <div class="content">
@@ -661,7 +657,6 @@ trait ICounterContract&lt;TContractState&gt; {
    fn decrease_counter(ref self: TContractState, amount: u128);
    fn get_counter(self: @TContractState) -&gt; u128;
 }
-
 #[starknet::contract]
 mod CounterContract {
    ...
@@ -671,11 +666,15 @@ mod CounterContract {
 </div>
 </div>
 </div>
+</li>
+</ul>
 </div>
-<div class="sect2">
-<h3 id="add_interface_impl"><a class="anchor" href="#add_interface_impl"></a>Add interface <code>Impl</code></h3>
+</li>
+<li>
+<p>Add the external and view function bodies under an <code>impl</code> of the interface trait, and mark the
+<code>impl</code> with the <code>[external(v0)]</code> attribute, which generates the type of dispatcher that is used to call the contract.</p>
 <div class="paragraph">
-<p>Add the external and view function bodies under an impl of the interface trait, and mark the impl with the <code>[external(v0)]</code> attribute</p>
+<p>For example:</p>
 </div>
 <div id="tabs_4" class="openblock tabs is-loading">
 <div class="content">
@@ -713,7 +712,6 @@ trait ICounterContract&lt;TContractState&gt; {
    fn decrease_counter(ref self: TContractState, amount: u128);
    fn get_counter(self: @TContractState) -&gt; u128;
 }
-
 #[starknet::contract]
 mod CounterContract {
    #[external(v0)]
@@ -728,13 +726,27 @@ mod CounterContract {
 </div>
 </div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="replace_the_abi_attribute_with_starknetinterface"><a class="anchor" href="#replace_the_abi_attribute_with_starknetinterface"></a>Replace the <code>abi</code> attribute with <code>starknet::interface</code></h3>
+</li>
+<li>
+<p>Replace the <code>#[abi]</code> attribute with <code>#[starknet::interface]</code>.</p>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>These attributes are responsible for generating the dispatcher type, used to call the contract.
-Replace the <code><mark>[abi]</code> attribute with <code></mark>[starknet::interface]</code>. While it doesn&#8217;t affect the generated code, we recommended adding to the trait a generic parameter <code>T</code> representing the contract&#8217;s state,
-and adding the <code>ref self: T</code> argument to external functions and <code>self: @T</code> argument for view functions.</p>
+<p>While it doesn&#8217;t affect the generated code, adding to the trait a generic parameter <code>T</code> representing the contract&#8217;s state,
+and adding the <code>ref self: T</code> argument to external functions and <code>self: @T</code> argument for view
+functions makes the implementation more complete.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>For example:</p>
 </div>
 <div id="tabs_5" class="openblock tabs is-loading">
 <div class="content">
@@ -770,12 +782,25 @@ trait IOtherContract&lt;TContractState&gt; {
 </div>
 </div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="storage_access"><a class="anchor" href="#storage_access"></a>Storage access</h3>
+</li>
+<li>
+<p>Modify storage accesses to happen through <code>ContractState</code> or <code>@ContractState</code>.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Modify storage access to happen through <code>ContractState</code> or <code>@ContractState</code> (none external
-functions in the contract that access storage also need to get it as an argument).</p>
+<p>No external functions in the contract that access storage also need to get it as an argument.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>For example:</p>
 </div>
 <div id="tabs_6" class="openblock tabs is-loading">
 <div class="content">
@@ -805,12 +830,27 @@ functions in the contract that access storage also need to get it as an argument
 </div>
 </div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="events_definition"><a class="anchor" href="#events_definition"></a>Events definition</h3>
+</li>
+<li>
+<p>Unify all the contract&#8217;s events under the <code>Event</code> enum, and add a corresponding struct for every
+variant.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Unify all the contract&#8217;s events under the <code>Event</code> enum, and add a corresponding struct for every variant (all the structs must derive the <code>Event</code> trait,
-and each member type has to implement the <code>Serde</code> trait)</p>
+<p>All the structs must derive the <code>Event</code> trait,
+and each member type must implement the <code>Serde</code> trait.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>For example:</p>
 </div>
 <div id="tabs_7" class="openblock tabs is-loading">
 <div class="content">
@@ -843,12 +883,10 @@ enum Event {
     CounterIncreased: CounterIncreased,
     CounterDecreased: CounterDecreased
 }
-
 #[derive(Drop, starknet::Event)]
 struct CounterIncreased {
     amount: u128
 }
-
 #[derive(Drop, starknet::Event)]
 struct CounterDecreased {
     amount: u128
@@ -858,12 +896,9 @@ struct CounterDecreased {
 </div>
 </div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="events_emition"><a class="anchor" href="#events_emition"></a>Events emition</h3>
-<div class="paragraph">
-<p>Emit events via the <code>ContractState</code> type</p>
-</div>
+</li>
+<li>
+<p>Emit events via the <code>ContractState</code> type. For example:</p>
 <div id="tabs_8" class="openblock tabs is-loading">
 <div class="content">
 <div class="ulist tablist">
@@ -891,15 +926,15 @@ struct CounterDecreased {
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">fn increase_counter(ref self: ContractState, amount: u128) {
     ...
-    self.emit(CounterIncreased { amount });
+    self.emit(Event::CounterIncreased(CounterIncreased { amount }));
 }</code></pre>
 </div>
 </div>
 </div>
 </div>
 </div>
-</div>
-</div>
+</li>
+</ol>
 </div>
 <nav class="pagination">
   <span class="prev"><a href="../starknet-events/">Events</a></span>
