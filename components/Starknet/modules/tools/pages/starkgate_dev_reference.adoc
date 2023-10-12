@@ -1,0 +1,281 @@
+[id="StarkGate_function_reference"]
+= StarkGate API reference
+
+The StarkGate smart contracts include functions that you use to implement various flows in a dApp.
+
+The L1 functions are defined in the following smart contracts:
+
+[horizontal,labelwidth="15"]
+link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/IStarkgateManager.sol[IStarkgateManager.sol]:: The StarkGate Manager API
+link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/IStarkgateRegistry.sol[IStarkgateRegistry.sol]:: The StarkGate Registry API
+link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[StarkGateTokenBridge.sol]:: The StarkGate bridge API
+
+== The StarkGate Manager and Registry
+
+StarkGate includes support for ETH and ERC-20 tokens. To see if a token is currently supported, use the L1 function `getBridge`.
+
+// Ask Dan if he can add a feature that shows all currently supported ERC-20 tokens.
+
+You can add support for other tokens by adding bridges for those other tokens, either existing bridges or new ones that StarkGate automatically creates when you try to bridge an unsupported ERC-20 token from Ethereum to Starknet.
+
+The StarkGate Manager is responsible for adding and removing bridges.
+
+The StarkGate Registry contains the addresses to all supported bridges.
+
+
+Some of the functions in these files are for internal administration use only. This function reference does not describe those functions in detail.
+
+== Function reference for L1
+
+Functions are listed in alphabetical order.
+
+[#getRegistry]
+=== `getRegistry`
+
+[discrete]
+==== Description
+
+Internal use only.
+
+Returns the address of the StarkGate Registry contract.
+
+Only the Manager uses this function.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+None
+
+[discrete]
+==== Returns
+
+The address of the Registry contract.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/7b967dd0db1019e91b1efb5e530fdef9f025e538/src/solidity/IStarkgateManager.sol#L8C14-L8C14[getRegistry]
+
+[#addExistingBridge]
+=== `addExistingBridge`
+
+[discrete]
+==== Description
+Internal use only.
+
+Adds an existing Ethereum<>Starknet bridge to the StarkGate registry.
+
+Does not work for any ERC-20 token bridge's contract address that is already in the registry.
+
+[discrete]
+==== State Mutability
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth=20]
+
+[discrete]
+==== Returns
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/7b967dd0db1019e91b1efb5e530fdef9f025e538/src/solidity/IStarkgateManager.sol#L14C14-L14C31[addExistingBridge]
+
+[#enrollTokenBridge]
+=== `enrollTokenBridge`
+
+[discrete]
+==== Description
+
+Creates an Ethereum<>Starknet bridge for the specified ERC-20 token contract address and adds it to the StarkGate registry.
+
+Does not work for any ERC-20 token bridge's contract address that is already in the registry.
+
+[discrete]
+==== State Mutability
+
+`payable`
+
+The message payload needs to include funds to cover the Starknet (L2) fee for executing this transaction. For the minimum deployment fee, see link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/StarkgateConstants.sol#L22[MIN_DEPLOYMENT_FEE], part of `StarkgateConstants.sol`.
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth=20]
+
+`token`
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateManager.sol#L31C40-L31C45[enrollTokenBridge]
+
+
+[#selfRemove]
+=== `selfRemove`
+
+[discrete]
+==== Description
+
+Use this function to remove enlisting of a specific token bridge from the registry.
+
+The bridge must implement the `isServicingToken` function. For more information, see xref:#isServicingToken[`isServicingToken`]).
+
+If you don’t implement `isServicingToken`, or if it returns `true`, this function fails and the entire transaction is reverted.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth=20]
+`token`:: The address of the token bridge contract to remove.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Function definition
+
+link:[function_name]
+
+
+
+
+[#isServicingToken]
+=== `isServicingToken`
+
+[discrete]
+==== Description
+
+Checks whether the calling contract is currently providing a service for the specified token.
+
+If `true`, or if `isServicingToken` is not implemented, this function fails and the entire transaction is reverted.
+
+You need to include a function in your bridge that implements `isServicingToken` to check if the bridge is currently servicing any transactions.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth=20]
+`token`:: The address of the contract for the desired token.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth=20]
+`true`:: The calling contract is currently providing a service for the token.
+`false:: The calling contract is not currently providing a service for the token.
+
+[discrete]
+==== Example
+
+In this example, the function `onlyServicingToken` implements the `isServicingToken` API to check if the specified token is currently being serviced. If `isServicingToken` returns `false`,  it outputs `TOKEN_NOT_SERVICED`.
+
+[source,solidity]
+----
+    modifier onlyServicingToken(address token) {
+        require(isServicingToken(token), "TOKEN_NOT_SERVICED");
+        _;
+    }
+----
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateService.sol#L9C14-L9C30[isServicingToken] in `IStarkgateService.sol`.
+
+
+
+=== `name`
+
+[discrete]
+==== Description
+
+[discrete]
+==== State Mutability
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth=20]
+
+[discrete]
+==== Returns
+
+[discrete]
+==== Function definition
+
+link:[function_name]
+
+
+
+
+
+=== `name`
+
+[discrete]
+==== Description
+
+[discrete]
+==== State Mutability
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth=20]
+
+[discrete]
+==== Returns
+
+[discrete]
+==== Function definition
+
+link:[function_name]
+
+
+
+=== `name`
+
+[discrete]
+==== Description
+
+[discrete]
+==== State Mutability
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth=20]
+
+[discrete]
+==== Returns
+
+[discrete]
+==== Function definition
+
+link:[function_name]
+
+
