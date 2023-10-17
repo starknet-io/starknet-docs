@@ -8,7 +8,7 @@ The L1 functions are defined in the following smart contracts:
 [horizontal,labelwidth="30"]
 link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/IStarkgateManager.sol[IStarkgateManager.sol]:: The StarkGate Manager API
 link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/IStarkgateRegistry.sol[IStarkgateRegistry.sol]:: The StarkGate Registry API
-link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[StarkGateTokenBridge.sol]:: The StarkGate bridge API
+link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[StarkGateTokenBridge.sol]:: The StarkGate bridge implementation
 
 == The StarkGate Manager and Registry
 
@@ -18,12 +18,13 @@ StarkGate includes support for ETH and ERC-20 tokens. To see if a token is curre
 
 You can add support for other tokens by adding bridges for those other tokens, either existing bridges or new ones that StarkGate automatically creates when you try to bridge an unsupported ERC-20 token from Ethereum to Starknet.
 
-The StarkGate Manager is responsible for adding and removing bridges.
+The _StarkGate Manager_ is responsible for adding and removing bridges.
 
-The StarkGate Registry contains the addresses to all supported bridges.
+The _StarkGate Registry_ contains the addresses to all supported bridges.
 
-StarkGate inlcudes the following three types of bridges, where type has a corresponding smart contract:
+StarkGate includes the following types of bridges, where each type has a corresponding smart contract:
 
+[horizontal,labelwidth=30]
 Multi-bridge:: The multi-bridge contract handles multiple tokens. Users can permissionlessly add new tokens to StarkGate using the `enrollTokenBridge` API. For more information, see xref:#enrollTokenBridge[`enrollTokenBridge`] below.
 Single-bridge:: The implementation is similar to that of the multi-bridge, but each bridge contract implements only one token. This type of bridge enables seamless backward compatibility with the previous version of StarkGate.
 Custom bridge:: A bridge provider can write their own custom bridge and contact StarkWare to add it to StarkGate. This type of bridge can enable functionality beyond what the `enrollTokenBridge` API provides.
@@ -40,7 +41,7 @@ Functions are listed in alphabetical order.
 
 [discrete]
 ==== Description
-Internal use only.
+_Internal use only._
 
 Adds an existing Starknet bridge to the StarkGate registry.
 
@@ -54,7 +55,7 @@ Does not work for any ERC-20 token bridge's contract address that is already in 
 [discrete]
 ==== Parameters
 
-[horizontal,labelwidth="20"]
+[horizontal,labelwidth="20",role=stripes-odd]
 `token`:: The address of an ERC-20 token contract.
 `bridge`:: The address of the corresponding existing ERC-20 token bridge contract.
 
@@ -76,7 +77,7 @@ link:https://github.com/starkware-libs/starkgate/blob/7b967dd0db1019e91b1efb5e53
 [discrete]
 ==== Description
 
-Internal use only.
+_Internal use only._
 
 Blocks a specific token from being used in StarkGate. You cannot deploy a blocked token.
 
@@ -88,7 +89,7 @@ Blocks a specific token from being used in StarkGate. You cannot deploy a blocke
 [discrete]
 ==== Parameters
 
-[horizontal,labelwidth="20"]
+[horizontal,labelwidth="20",role=stripes-odd]
 `token`:: The address of the contract for the desired token.
 
 [discrete]
@@ -110,7 +111,7 @@ link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777
 [discrete]
 ==== Description
 
-Internal use only.
+_Internal use only._
 
 Deactivates bridging of a specific token.
 
@@ -149,18 +150,117 @@ link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777
 [discrete]
 ==== State Mutability
 
+`payable`
+
 [discrete]
 ==== Parameters
 
-[horizontal,labelwidth="20"]
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256 _nonce_`:: A nonce, to prevent replay attacks.
+
 
 [discrete]
 ==== Returns
 
-[horizontal,labelwidth="20"]
+None.
+
+[discrete]
+==== Emitted events
+
+`Deposit`
 
 [discrete]
 ==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L290[`deposit`] in `StarknetTokenBridge.sol`
+
+'''
+
+[#depositCancelRequest]
+=== `depositCancelRequest`
+
+[discrete]
+==== Description
+
+Sends a request to StarkGate to cancel a deposit.
+
+In order to guard against an attack, it takes approximately five days to cancel a deposit. When StarkGate receives the cancellation request, a counter begins. When exactly five days have passed, and the funds still do not appear on L2, you can reclaim the deposit using the `depositReclaim` function.
+
+The `depositReclaim` function can only be used once for any deposit cancellation request.
+
+[discrete]
+==== State Mutability
+
+`nonpayable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30"]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256 _nonce_`:: The nonce of the deposit.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted events
+
+`DepositCancelRequest`
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L531[`depositCancelRequest`]
+
+
+
+'''
+
+[#depositReclaim]
+=== `depositReclaim`
+
+[discrete]
+==== Description
+
+Reclaims a deposit after a five day period has passed from the time that StarkGate received a deposit cancellation request from the `depositCancelRequest` function.
+
+For more information, see xref:#depositCancelRequest[`depositCancelRequest`].
+
+[discrete]
+==== State Mutability
+
+`nonpayable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30"]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256 _nonce_`:: The nonce of the deposit.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted events
+
+`DepositReclaimed`
+
+[discrete]
+==== Function definition
+
 
 '''
 
@@ -175,7 +275,6 @@ Creates a Starknet bridge for the specified ERC-20 token contract address and ad
 Does not work for any ERC-20 token bridge's contract address that is already in the registry.
 
 Enrolling a new bridge creates a class hash. You can see the value of this hash using xref:#get_erc20_class_hash[`get_erc20_class_hash`].
-
 
 include::partial$snippet_enrollTokenBridge_note.adoc[]
 
@@ -198,6 +297,11 @@ For the minimum deployment fee, see link:https://github.com/starkware-libs/stark
 ==== Returns
 
 None.
+
+[discrete]
+==== Emitted events
+
+`TokenEnrollmentInitiated`
 
 [discrete]
 ==== Function definition
@@ -229,7 +333,7 @@ Returns the address of the bridge for the specified token, or a value indicating
 [discrete]
 ==== Returns
 
-[horizontal,labelwidth="20"]
+[horizontal,labelwidth="20",role=stripes-odd]
 `address`:: The address of the bridge for the specified token.
 `Address(0)`:: The bridge does not exist.
 `Address(1)`:: The bridge is blocked or deactivated.
@@ -248,7 +352,7 @@ link:https://github.com/starkware-libs/starkgate/blob/ce53961e124c3f8a5e73e9ec2a
 [discrete]
 ==== Description
 
-Internal use only.
+_Internal use only._
 
 Returns the address of the StarkGate Registry contract.
 
@@ -353,6 +457,38 @@ If you used a bridge for a given token that subsequently was replaced with a new
 ==== Function definition
 
 link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateRegistry.sol#L31C1-L31C2[`getWithdrawalBridges`] in `IStarkgateRegistry.sol`.
+
+
+
+'''
+[#identify]
+
+[discrete]
+==== Description
+
+Returns the name and version of the `StarknetTokenBridge.sol` contract.
+
+[discrete]
+==== State Mutability
+
+`pure`
+
+[discrete]
+==== Parameters
+
+None.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`string _memory_`:: The name and version of the `StarknetTokenBridge.sol` contract.
+
+[discrete]
+==== Function definition
+link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L89[`identify`] in `StarknetTokenBridge.sol`
+
+
 
 '''
 
