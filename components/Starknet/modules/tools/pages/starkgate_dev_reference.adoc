@@ -22,6 +22,11 @@ The StarkGate Manager is responsible for adding and removing bridges.
 
 The StarkGate Registry contains the addresses to all supported bridges.
 
+StarkGate inlcudes the following three types of bridges, where type has a corresponding smart contract:
+
+Multi-bridge:: The multi-bridge contract handles multiple tokens. Users can permissionlessly add new tokens to StarkGate using the `enrollTokenBridge` API. For more information, see xref:#enrollTokenBridge[`enrollTokenBridge`] below.
+Single-bridge:: The implementation is similar to that of the multi-bridge, but each bridge contract implements only one token. This type of bridge enables seamless backward compatibility with the previous version of StarkGate.
+Custom bridge:: A bridge provider can write their own custom bridge and contact StarkWare to add it to StarkGate. This type of bridge can enable functionality beyond what the `enrollTokenBridge` API provides.
 
 Some of the functions in these files are for internal administration use only. This function reference does not describe those functions in detail.
 
@@ -133,6 +138,30 @@ None.
 link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateManager.sol#L20C20-L20C20[`deactivateToken`] in `IStarkgateManager.sol`
 
 
+
+'''
+[#deposit]
+=== `deposit`
+
+[discrete]
+==== Description
+
+[discrete]
+==== State Mutability
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="20"]
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20"]
+
+[discrete]
+==== Function definition
+
 '''
 
 [#enrollTokenBridge]
@@ -141,11 +170,12 @@ link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777
 [discrete]
 ==== Description
 
-Creates a Starknet bridge for the specified ERC-20 token contract address and adds it to the StarkGate registry and to the .
+Creates a Starknet bridge for the specified ERC-20 token contract address and adds it to the StarkGate registry #Does it add it to a certain contract as well?#.
 
 Does not work for any ERC-20 token bridge's contract address that is already in the registry.
 
 Enrolling a new bridge creates a class hash. You can see the value of this hash using xref:#get_erc20_class_hash[`get_erc20_class_hash`].
+
 
 include::partial$snippet_enrollTokenBridge_note.adoc[]
 
@@ -162,7 +192,7 @@ For the minimum deployment fee, see link:https://github.com/starkware-libs/stark
 ==== Parameters
 
 [horizontal,labelwidth="20"]
-`token`:: The address of the contract for the desired token.
+`token`:: The address of the contract for the desired ERC-20 token.
 
 [discrete]
 ==== Returns
@@ -194,7 +224,7 @@ Returns the address of the bridge for the specified token, or a value indicating
 ==== Parameters
 
 [horizontal,labelwidth="20"]
-`tokenAddress`:: The address of the contract for the desired token.
+`tokenAddress`:: The address of the contract for the desired ERC-20 token.
 
 [discrete]
 ==== Returns
@@ -244,6 +274,52 @@ None
 ==== Function definition
 
 link:https://github.com/starkware-libs/starkgate/blob/7b967dd0db1019e91b1efb5e530fdef9f025e538/src/solidity/IStarkgateManager.sol#L8C14-L8C14[`getRegistry`] in `IStarkgateManager.sol`
+
+
+
+'''
+
+[#getStatus]
+=== `getStatus`
+
+[discrete]
+==== Description
+
+Returns the status of the `deploy` transaction triggered by the `enrollTokenBridge` API.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="20"]
+`token`:: The address of the contract for the desired ERC-20 token.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20"]
+`TokenStatus`:: One of the following values: +
+* `Unknown`
+* `Pending`
+* `Active`
+* `Deactivated`
+
+
+
+
+
+
+
+[horizontal,labelwidth="20"]
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/757a461fd998f7e2909e8e71031b419d257da3ed/src/solidity/StarknetTokenBridge.sol#L203C23-L203C23[getStatus] in `StarknetTokenBridge.sol`
 
 '''
 
