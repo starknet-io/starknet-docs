@@ -779,6 +779,31 @@ Custom bridge
 <div class="sect2">
 <h3 id="deposit"><a class="anchor" href="#deposit"></a><code>deposit</code></h3>
 <h4 id="description_4" class="discrete">Description</h4>
+<div class="paragraph">
+<p>Deposits the specified amount of an ERC-20 token to the L1 StarkGate bridge contract.</p>
+</div>
+<div class="paragraph">
+<p>The deposit function does the following:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Checks that the funds transferred are within the Starknet Alpha limitations</p>
+</li>
+<li>
+<p>Transfers the funds from the caller&#8217;s account to the Starknet bridge contract</p>
+</li>
+<li>
+<p>Emits the <code>Deposit</code> event with the sender&#8217;s address on L1, the recipient&#8217;s address on L2, and the amount</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Sends a message to the relevant L2 bridge with the amount to be transferred, and the recipient address as parameters. Note that, since every single bridge is dedicated to one token type, the token type doesn’t have to be explicit here.</p>
+</div>
+<div class="paragraph">
+<p>At the end of this step (i.e., after the execution on L1) the deposit transaction is known to Starknet’s sequencer, yet sequencers may wait for enough L1 confirmations before the corresponding deposit transaction is initiated on L2. During this step, the status of the L2 deposit transaction is NOT_RECEIVED.</p>
+</div>
 <h4 id="state_mutability_4" class="discrete">State Mutability</h4>
 <div class="paragraph">
 <p><code>payable</code></p>
@@ -828,13 +853,106 @@ Custom bridge
 <div class="paragraph">
 <p>None.</p>
 </div>
-<h4 id="emitted_events" class="discrete">Emitted events</h4>
-<div class="paragraph">
-<p><code>Deposit</code></p>
+<h4 id="emitted_event" class="discrete">Emitted event</h4>
+<div class="hdlist stripes-odd">
+<div class="title"><code>Deposit</code></div>
+<table>
+<tr>
+<td class="hdlist1">
+<code>address indexed <em>sender</em></code>
+</td>
+<td class="hdlist2">
+<p>The L1 address of the account that sent the deposit.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>address indexed <em>token</em></code>
+</td>
+<td class="hdlist2">
+<p>Same as the <code>address <em>token</em></code> parameter.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>uint256 <em>amount</em></code>
+</td>
+<td class="hdlist2">
+<p>Same as the <code>uint256 <em>amount</em></code> parameter.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>uint256 indexed <em>l2Recipient</em></code>
+</td>
+<td class="hdlist2">
+<p>Same as the <code>uint256 <em>l2Recipient</em></code> parameter.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>uint256 <em>nonce</em></code>
+</td>
+<td class="hdlist2">
+<p>The nonce for the L1 transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>uint256 <em>fee</em></code>
+</td>
+<td class="hdlist2">
+<p>The L1 fee sent with the transaction. <mark>Is this correct?</mark></p>
+</td>
+</tr>
+</table>
 </div>
-<h4 id="function_definition_4" class="discrete">Function definition</h4>
+<table class="tableblock frame-all grid-all stretch stripes-odd">
+<caption class="title">Table 1. <code>Deposit</code> event</caption>
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>address indexed <em>sender</em></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The L1 address of the account that sent the deposit.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>address indexed <em>token</em></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Same as the <code>address <em>token</em></code> parameter.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uint256 <em>amount</em></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Same as the <code>uint256 <em>amount</em></code> parameter.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uint256 indexed <em>l2Recipient</em></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Same as the <code>uint256 <em>l2Recipient</em></code> parameter.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uint256 <em>nonce</em></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The nonce for the L1 transaction.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uint256 <em>fee</em></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The L1 fee sent with the transaction. <mark>Is this correct?</mark></p></td>
+</tr>
+</tbody>
+</table>
+<h4 id="function_and_event_definitions" class="discrete">Function and event definitions</h4>
 <div class="paragraph">
-<p><a href="https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L290"><code>deposit</code></a> in <code>StarknetTokenBridge.sol</code></p>
+<p>Contract: <a href="https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol"><code>StarknetTokenBridge.sol</code></a></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Function: <a href="https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L290"><code>deposit</code></a></p>
+</li>
+<li>
+<p>Event: <a href=""><code>Deposit</code></a></p>
+</li>
+</ul>
 </div>
 <hr>
 </div>
@@ -899,11 +1017,11 @@ Custom bridge
 <div class="paragraph">
 <p>None.</p>
 </div>
-<h4 id="emitted_events_2" class="discrete">Emitted events</h4>
+<h4 id="emitted_events" class="discrete">Emitted events</h4>
 <div class="paragraph">
 <p><code>DepositCancelRequest</code></p>
 </div>
-<h4 id="function_definition_5" class="discrete">Function definition</h4>
+<h4 id="function_definition_4" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L531"><code>depositCancelRequest</code></a></p>
 </div>
@@ -967,11 +1085,11 @@ Custom bridge
 <div class="paragraph">
 <p>None.</p>
 </div>
-<h4 id="emitted_events_3" class="discrete">Emitted events</h4>
+<h4 id="emitted_events_2" class="discrete">Emitted events</h4>
 <div class="paragraph">
 <p><code>DepositReclaimed</code></p>
 </div>
-<h4 id="function_definition_6" class="discrete">Function definition</h4>
+<h4 id="function_definition_5" class="discrete">Function definition</h4>
 <hr>
 </div>
 <div class="sect2">
@@ -1031,11 +1149,11 @@ Custom bridge
 <div class="paragraph">
 <p>None.</p>
 </div>
-<h4 id="emitted_events_4" class="discrete">Emitted events</h4>
+<h4 id="emitted_events_3" class="discrete">Emitted events</h4>
 <div class="paragraph">
 <p><code>TokenEnrollmentInitiated</code></p>
 </div>
-<h4 id="function_definition_7" class="discrete">Function definition</h4>
+<h4 id="function_definition_6" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateManager.sol#L31C40-L31C45"><code>enrollTokenBridge</code></a> in <code>IStarkgateManager.sol</code></p>
 </div>
@@ -1101,7 +1219,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_8" class="discrete">Function definition</h4>
+<h4 id="function_definition_7" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/ce53961e124c3f8a5e73e9ec2a7f4dcbc1ab6ab9/src/solidity/IStarkgateRegistry.sol#L8"><code>getBridge</code></a> in <code>IStarkgateRegistry.sol</code></p>
 </div>
@@ -1144,7 +1262,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_9" class="discrete">Function definition</h4>
+<h4 id="function_definition_8" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/7b967dd0db1019e91b1efb5e530fdef9f025e538/src/solidity/IStarkgateManager.sol#L8C14-L8C14"><code>getRegistry</code></a> in <code>IStarkgateManager.sol</code></p>
 </div>
@@ -1210,7 +1328,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_10" class="discrete">Function definition</h4>
+<h4 id="function_definition_9" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/757a461fd998f7e2909e8e71031b419d257da3ed/src/solidity/StarknetTokenBridge.sol#L203C23-L203C23"><code>getStatus</code></a> in <code>StarknetTokenBridge.sol</code></p>
 </div>
@@ -1266,7 +1384,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_11" class="discrete">Function definition</h4>
+<h4 id="function_definition_10" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateRegistry.sol#L31C1-L31C2"><code>getWithdrawalBridges</code></a> in <code>IStarkgateRegistry.sol</code>.</p>
 </div>
@@ -1300,7 +1418,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_12" class="discrete">Function definition</h4>
+<h4 id="function_definition_11" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L89"><code>identify</code></a> in <code>StarknetTokenBridge.sol</code></p>
 </div>
@@ -1376,7 +1494,7 @@ Custom bridge
     }</code></pre>
 </div>
 </div>
-<h4 id="function_definition_13" class="discrete">Function definition</h4>
+<h4 id="function_definition_12" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateService.sol#L9C14-L9C30"><code>isServicingToken</code></a> in <code>IStarkgateService.sol</code>.</p>
 </div>
@@ -1419,7 +1537,7 @@ Custom bridge
 <div class="paragraph">
 <p>None.</p>
 </div>
-<h4 id="function_definition_14" class="discrete">Function definition</h4>
+<h4 id="function_definition_13" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateRegistry.sol#L37"><code>selfRemove</code></a> in <code>IStarkgateRegistry.sol</code></p>
 </div>
@@ -1463,7 +1581,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_15" class="discrete">Function definition</h4>
+<h4 id="function_definition_14" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/cairo/token_bridge.cairo#L637C1-L639C10"><code>get_erc20_class_hash</code></a> in <code>token_bridge.cairo</code>.</p>
 </div>
@@ -1496,7 +1614,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_16" class="discrete">Function definition</h4>
+<h4 id="function_definition_15" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/cairo/token_bridge.cairo#L633"><code>get_identity</code></a> in <code>token_bridge.cairo</code>.</p>
 </div>
@@ -1542,7 +1660,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_17" class="discrete">Function definition</h4>
+<h4 id="function_definition_16" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/cairo/token_bridge.cairo#L642C23-L642C23"><code>get_l1_token_address</code></a> in <code>token_bridge.cairo</code>.</p>
 </div>
@@ -1588,7 +1706,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_18" class="discrete">Function definition</h4>
+<h4 id="function_definition_17" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/cairo/token_bridge.cairo#L647C11-L647C11"><code>get_l2_token_address</code></a> in <code>token_bridge.cairo</code>.</p>
 </div>
@@ -1634,7 +1752,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_19" class="discrete">Function definition</h4>
+<h4 id="function_definition_18" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/894d822a33fd5aa2b8469606d2d6e363ff06bb2c/src/cairo/token_bridge_interface.cairo#L14C15-L14C15"><code>get_remaining_withdrawal_quota</code></a> in <code>token_bridge_interface.cairo</code></p>
 </div>
@@ -1667,7 +1785,7 @@ Custom bridge
 </tr>
 </table>
 </div>
-<h4 id="function_definition_20" class="discrete">Function definition</h4>
+<h4 id="function_definition_19" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/cairo/token_bridge.cairo#L629"><code>get_version</code></a> in <code>token_bridge.cairo</code>. <mark>Should this be token_bridge_interface.cairo?</mark></p>
 </div>
@@ -1727,7 +1845,7 @@ Custom bridge
 <div class="paragraph">
 <p>None.</p>
 </div>
-<h4 id="function_definition_21" class="discrete">Function definition</h4>
+<h4 id="function_definition_20" class="discrete">Function definition</h4>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/starkgate/blob/894d822a33fd5aa2b8469606d2d6e363ff06bb2c/src/cairo/token_bridge_interface.cairo#L18"><code>initiate_withdraw</code></a> in <code>token_bridge_interface.cairo</code>.</p>
 </div>
