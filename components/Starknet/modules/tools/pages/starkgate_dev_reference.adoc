@@ -151,6 +151,18 @@ link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777
 [discrete]
 ==== Description
 
+Deposits the specified amount of an ERC-20 token to the L1 StarkGate bridge contract.
+
+The deposit function does the following:
+
+* Checks that the funds transferred are within the Starknet Alpha limitations
+* Transfers the funds from the caller's account to the Starknet bridge contract
+* Emits the `Deposit` event with the sender's address on L1, the recipient's address on L2, and the amount
+
+Sends a message to the relevant L2 bridge with the amount to be transferred, and the recipient address as parameters. Note that, since every single bridge is dedicated to one token type, the token type doesn’t have to be explicit here.
+
+At the end of this step (i.e., after the execution on L1) the deposit transaction is known to Starknet’s sequencer, yet sequencers may wait for enough L1 confirmations before the corresponding deposit transaction is initiated on L2. During this step, the status of the L2 deposit transaction is NOT_RECEIVED.
+
 [discrete]
 ==== State Mutability
 
@@ -172,14 +184,28 @@ link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777
 None.
 
 [discrete]
-==== Emitted events
+==== Emitted event
 
 `Deposit`
 
-[discrete]
-==== Function definition
+.`Deposit` event parameters
+[horizontal,role=stripes-odd]
+`address indexed _sender_`:: The L1 address of the account that sent the deposit.
+`address indexed _token_`:: Same as the `address _token_` parameter.
+`uint256 _amount_`:: Same as the `uint256 _amount_` parameter.
+`uint256 indexed _l2Recipient_`:: Same as the `uint256 _l2Recipient_` parameter.
+`uint256 _nonce_`:: The nonce for the L1 transaction.
+`uint256 _fee_`:: The L1 fee sent with the transaction. #Is this correct?#
 
-link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L290[`deposit`] in `StarknetTokenBridge.sol`
+[discrete]
+==== Function and event definitions
+
+Contract: link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol[`StarknetTokenBridge.sol`]
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L290[`deposit`]
+* Event: link:[`Deposit`]
+
+
 
 '''
 
@@ -260,10 +286,13 @@ None.
 [discrete]
 ==== Emitted events
 
-`DepositReclaimed`
+`event DepositReclaimed`
 
 [discrete]
 ==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L604[`depositReclaim`] in `StarknetTokenBridge.sol`
+
 
 
 '''
