@@ -145,6 +145,7 @@ link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777
 
 
 '''
+
 [#deposit]
 === `deposit`
 
@@ -158,10 +159,6 @@ The deposit function does the following:
 * Checks that the funds transferred are within the Starknet Alpha limitations
 * Transfers the funds from the caller's account to the Starknet bridge contract
 * Emits the `Deposit` event with the sender's address on L1, the recipient's address on L2, and the amount
-
-Sends a message to the relevant L2 bridge with the amount to be transferred, and the recipient address as parameters. Note that, since every single bridge is dedicated to one token type, the token type doesn’t have to be explicit here.
-
-At the end of this step (i.e., after the execution on L1) the deposit transaction is known to Starknet’s sequencer, yet sequencers may wait for enough L1 confirmations before the corresponding deposit transaction is initiated on L2. During this step, the status of the L2 deposit transaction is NOT_RECEIVED.
 
 [discrete]
 ==== State Mutability
@@ -241,7 +238,7 @@ The `depositReclaim` function can only be used once for any deposit cancellation
 None.
 
 [discrete]
-==== Emitted events
+==== Emitted event
 
 `DepositCancelRequest`
 
@@ -284,14 +281,17 @@ For more information, see xref:#depositCancelRequest[`depositCancelRequest`].
 None.
 
 [discrete]
-==== Emitted events
+==== Emitted event
 
 `event DepositReclaimed`
 
 [discrete]
-==== Function definition
+==== Function and event definitions
 
-link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L604[`depositReclaim`] in `StarknetTokenBridge.sol`
+Contract: `StarknetTokenBridge.sol`
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L604[`depositReclaim`]
+* Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L81C11-L81C27[`DepositReclaimed`]
 
 
 '''
@@ -302,14 +302,35 @@ link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec
 [discrete]
 ==== Description
 
-[discrete]
+Similar to xref:#deposit[`deposit`], with a message attached.
+
+#What is included in this message? Why would someone use this instead of `deposit`?#
 
 [discrete]
-==== Event emitted
+==== State Mutability
+
+`payable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256[] calldata _message_`:: The message attached to the deposit. #What is included in the message?#
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
 
 `DepositWithMessage`
 
-.Event parameters
+.Event parameters #Parameters need descriptions#
 * `address indexed _sender_`
 * `address indexed _token_`
 * `uint256 _amount_`
@@ -322,19 +343,119 @@ link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec
 ==== Function and event definitions
 
 Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[StarknetTokenBridge.sol]
-Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L261`depositWithMessage`
-Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L37[`DepositWithMessage`]
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L261[`depositWithMessage`]
+* Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L37[`DepositWithMessage`]
 
 '''
 
-depositWithMessageCancelRequest
+[#depositWithMessageCancelRequest]
+=== depositWithMessageCancelRequest
 
-Event: DepositWithMessageCancelRequest
+[discrete]
+==== Description
+
+Sends a request to StarkGate to cancel a deposit sent with xref:#depositWithMessage[`depositWithMessage`].
+
+Similar to xref:#depositCancelRequest[`depositCancelRequest`].
+
+[discrete]
+==== State mutability
+
+`nonpayable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256[] calldata _message_`:: The message attached to the deposit. #What is included in the message?#
+`uint256 _nonce_`:: The nonce of the deposit.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Event emitted
+
+`DepositWithMessageCancelRequest`
+
+.Event parameters
+* `address indexed _sender_`
+* `address indexed _token_`
+* `uint256 _amount_`
+* `uint256 indexed _l2Recipient_`
+* `uint256[] _message_`
+* `uint256 _nonce_`
+
+[discrete]
+==== Function and event definitions
+
+Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[StarknetTokenBridge.sol]
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L550[`depositWithMessageCancelRequest`]
+* Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L550[`DepositWithMessageCancelRequest`]
+
+
 
 '''
-depositWithMessageReclaim
 
-Event: DepositWithMessageReclaimed
+[#depositWithMessageReclaim]
+=== depositWithMessageReclaim
+
+[discrete]
+==== Description
+
+Reclaims a deposit sent with a message after a five day period has passed from the time that StarkGate received a deposit cancellation request from the `depositWithMessageCancelRequest` function.
+
+For more information, see xref:#depositWithMessageCancelRequest[`depositWithMessageCancelRequest`].
+
+[discrete]
+==== State Mutability
+
+`nonpayable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256 _nonce_`:: The nonce of the deposit.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
+==== Event emitted
+
+`DepositWithMessageCancelRequest`
+
+.Event parameters
+* `address indexed _sender_`
+* `address indexed _token_`
+* `uint256 _amount_`
+* `uint256 indexed _l2Recipient_`
+* `uint256[] _message_`
+* `uint256 _nonce_`
+
+[discrete]
+==== Function and event definitions
+
+Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[StarknetTokenBridge.sol]
+Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L580[`depositWithMessageReclaim`]
+Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L54[`DepositWithMessageReclaimed`]
+
+
+
 
 '''
 
@@ -373,7 +494,7 @@ For the minimum deployment fee, see link:https://github.com/starkware-libs/stark
 None.
 
 [discrete]
-==== Emitted events
+==== Emitted event
 
 `TokenEnrollmentInitiated`
 
@@ -679,7 +800,7 @@ Anyone can call this function, but only after the withdraw message has been reco
 None.
 
 [discrete]
-==== Emitted events
+==== Emitted event
 
 None.
 
