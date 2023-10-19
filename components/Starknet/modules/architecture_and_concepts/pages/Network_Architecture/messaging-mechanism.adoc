@@ -13,7 +13,9 @@ Contracts on L2 can interact asynchronously with contracts on L1 using the _L2�
 
 During the execution of a transaction, a contract on Starknet sends a message from L2 to L1
 // Is this what a transaction is? A message?
-by calling the https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/common/messages.cairo#L4[`send_message_to_L1`] syscall. The message parameters, which include the address of the recipient contract on L1 and the message data, are then attached to the state update that includes this syscall invocation.
+by calling the xref:Smart_Contracts/system-calls-cairo1.adoc#send_message_to_L1[`send_message_to_L1`] syscall.
+
+The message parameters, which include the address of the recipient contract on L1 and the message data, are then attached to the state update that includes this syscall invocation.
 
 // Is there a URL for a syscall that is >Cairo 0?
 // What attaches the message parameters to the state update?
@@ -109,10 +111,12 @@ Contracts on L1 can interact asynchronously with contracts on L1 using the _L1�
 
 The protocol consists of the following stages:
 
-. An L1 contract initiates a message to an L2 contract on Starknet. It does so by calling the link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract with the message parameters.
- .. The Starknet Core Contract hashes the message parameters and updates the L1→L2 message mapping to indicate that a message with this hash was indeed sent. In fact, the L1 contract records the fee that the sender paid. For more information, see xref:l1-l2_message_fees[L1 → L2 message fees].
+. An L1 contract initiates a message to an L2 contract on Starknet by calling the link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract with the message parameters.
++
+The Starknet Core Contract hashes the message parameters and updates the L1→L2 message mapping to indicate that a message with this hash was indeed sent. In fact, the L1 contract records the fee that the sender paid. For more information, see xref:l1-l2_message_fees[L1 → L2 message fees].
 . The message is then decoded into a Starknet transaction that invokes a function annotated with the `l1_handler` decorator on the target contract. Transactions like this on L2 are called *_L1 handler transactions_*.
  .. The Starknet sequencer, upon seeing enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction.
+// What does this mean: "upon seeing enough L1 confirmations..."? Is this talking about waiting for a batch?
  .. The L2 transaction invokes the relevant `l1_handler`.
 . The L1 Handler transaction that was created in the previous step is added to a proof.
 . The state update is received on the Core contract.
@@ -226,3 +230,8 @@ Where:
 ====
 In an `l1_handler` transaction, the first element of the calldata is always the Ethereum address of the sender.
 ====
+
+== Additional resources
+
+* https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/common/messages.cairo#L4[`send_message_to_L1`] in the source contract
+* link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract
