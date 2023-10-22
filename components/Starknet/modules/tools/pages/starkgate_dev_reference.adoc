@@ -610,7 +610,7 @@ Returns the address of the bridge for the specified token, or a value indicating
 ==== Parameters
 
 [horizontal,labelwidth="30",role=stripes-odd]
-`address _tokenAddress_`:: The address of the contract for the desired ERC-20 token.
+`address _token_`:: The address of the contract for the desired ERC-20 token.
 
 [discrete]
 ==== Returns
@@ -736,8 +736,13 @@ If you used a bridge for a given token that subsequently was replaced with a new
 [discrete]
 ==== Returns
 
-[horizontal,labelwidth="20",role=stripes-odd]
+[horizontal,labelwidth="30",role=stripes-odd]
 `address[] memory _bridges_`:: An array of addresses of all bridges that ever serviced `token`.
+
+[discrete]
+==== Events
+
+None.
 
 [discrete]
 ==== Function definition
@@ -786,9 +791,6 @@ link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890
 
 Checks whether the calling contract is currently providing a service for the specified token.
 
-If `true`, or if `isServicingToken` is not implemented, this function fails and the entire transaction is reverted.
-
-You need to include a function in your bridge that implements `isServicingToken` to check if the bridge is currently servicing any transactions.
 
 [discrete]
 ==== State Mutability
@@ -809,19 +811,6 @@ You need to include a function in your bridge that implements `isServicingToken`
 `false`:: The calling contract is not currently providing a service for the token.
 
 [discrete]
-==== Example
-
-In this example, the function `onlyServicingToken` implements the `isServicingToken` API to check if the specified token is currently being serviced. If `isServicingToken` returns `false`,  it outputs `TOKEN_NOT_SERVICED`.
-
-[source,solidity]
-----
-    modifier onlyServicingToken(address token) {
-        require(isServicingToken(token), "TOKEN_NOT_SERVICED");
-        _;
-    }
-----
-
-[discrete]
 ==== Function definition
 
 link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateService.sol#L9C14-L9C30[`isServicingToken`] in `IStarkgateService.sol`.
@@ -834,9 +823,11 @@ link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777
 [discrete]
 ==== Description
 
-Use this function to remove enlisting of a specific token bridge from the registry.
+Removes enlisting of a specific token bridge from the registry.
 
-The bridge must implement the `isServicingToken` function. For more information, see xref:#isServicingToken[`isServicingToken`]).
+Use this function when writing a custom bridge in order to remove the bridge from the registry if you no longer support the specified token.
+
+The bridge must implement the `isServicingToken` function.
 
 If you don’t implement `isServicingToken`, or if it returns `true`, this function fails and the entire transaction is reverted.
 
@@ -861,7 +852,10 @@ None.
 
 link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateRegistry.sol#L37[`selfRemove`] in `IStarkgateRegistry.sol`
 
+[discrete]
+==== See also
 
+* xref:#isServicingToken[`isServicingToken`]
 
 '''
 
@@ -879,8 +873,9 @@ Anyone can call this function, but only after the withdraw message has been reco
 ==== Parameters
 
 [horizontal,labelwidth="20",role=stripes-odd]
-`address _token_`::
-`uint256 _amount_`::
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the withdrawal.
+`address _recipient_`:: (Optional) The recipient. If you don't specify this parameter, the withdraw function uses the sender's address.
 
 [discrete]
 ==== State mutability
@@ -891,6 +886,19 @@ Anyone can call this function, but only after the withdraw message has been reco
 ==== Returns
 
 None.
+
+[discrete]
+==== Emitted event
+
+`Withdrawal`
+
+.Event attributes
+[horizontal]
+`address indexed _recipient_`:: Same as the `address _recipient_` parameter.
+`address indexed _token_`:: Same as the paramater `address _token_`.
+`uint256 _amount_`:: Same as the parameter `uint256 _amount_`.
+
+
 
 [discrete]
 ==== Emitted event
