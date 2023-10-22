@@ -528,7 +528,7 @@
 <p>The StarkGate smart contracts include functions that you use to implement various flows in a dApp.</p>
 </div>
 <div class="paragraph">
-<p>For information on the movement of funds between Ethereum and Starknet, see xref:starkgate-bridge.adoc</p>
+<p>For information on the movement of funds between Ethereum and Starknet, see <a href="../starkgate-bridge/" class="xref page">StarkGate bridge overview</a>.</p>
 </div>
 <div class="paragraph">
 <p>The L1 functions and their interfaces, where available, are defined in the following smart contracts:</p>
@@ -2127,7 +2127,7 @@ Unknown</p>
 <div class="hdlist stripes-odd">
 <table>
 <colgroup>
-<col style="width: 20%;">
+<col style="width: 30%;">
 <col>
 </colgroup>
 <tr>
@@ -2168,7 +2168,7 @@ Unknown</p>
 <div class="paragraph">
 <p><code>Withdrawal</code></p>
 </div>
-<div class="hdlist">
+<div class="hdlist stripes-odd">
 <div class="title">Event attributes</div>
 <table>
 <tr>
@@ -2211,14 +2211,32 @@ Unknown</p>
 <div class="sect1">
 <h2 id="l1_constants"><a class="anchor" href="#l1_constants"></a>L1 Constants</h2>
 <div class="sectionbody">
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 60%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<code>uint256 public constant MIN_DEPLOYMENT_FEE</code>
+</td>
+<td class="hdlist2">
+<p>The minimum L1 fee required to send a message for deposit.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>uint256 public constant MIN_DEPLOYMENT_FEE</code>
+</td>
+<td class="hdlist2">
+<p>The minimum L1 fee required to send a message for the <code>deploy</code> transaction when enrolling a bridge.</p>
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
-<p><a href="https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarkgateConstants.sol" class="bare">https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarkgateConstants.sol</a></p>
-</div>
-<div class="literalblock">
-<div class="content">
-<pre>uint256 public constant MIN_DEPLOYMENT_FEE = 500_000 gwei;
-uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;</pre>
-</div>
+<p>Contract: <a href="https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarkgateConstants.sol">StarkgateConstants.sol</a></p>
 </div>
 </div>
 </div>
@@ -2233,10 +2251,21 @@ uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;</pre>
 <h3 id="get_erc20_class_hash"><a class="anchor" href="#get_erc20_class_hash"></a><code>get_erc20_class_hash</code></h3>
 <h4 id="description_17" class="discrete">Description</h4>
 <div class="paragraph">
-<p>Returns the class hash of the implementation used by the ERC-20 contract. Use the class hash as the type when deploying the ERC-20 contract on L2.</p>
+<p>Returns the current class hash of the implementation used by the ERC-20 contract. Use the class hash as the type when deploying the ERC-20 contract on L2.</p>
 </div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Creating a new bridge with <a href="#enrollTokenBridge"><code>enrollTokenBridge</code></a> generates this class hash.</p>
+<p>If StarkWare changes the class hash such that it is no longer the class hash that you used when deploying your bridge contract, this function returns the new class hash. If you want to refer to the class hash that you used when deploying your contract, see your deployed contract on Starknet.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <h4 id="parameters_18" class="discrete">Parameters</h4>
 <div class="paragraph">
@@ -2330,10 +2359,18 @@ uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;</pre>
 </colgroup>
 <tr>
 <td class="hdlist1">
-<code>ContractAddress</code>
+<code>EthAddress</code>
 </td>
 <td class="hdlist2">
 <p>The L1 address of the ERC-20 token contract.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>EthAddressZeroable::zero()</code>
+</td>
+<td class="hdlist2">
+<p>The token is not found in the bridge.</p>
 </td>
 </tr>
 </table>
@@ -2349,6 +2386,9 @@ uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;</pre>
 <h4 id="description_20" class="discrete">Description</h4>
 <div class="paragraph">
 <p>Returns the L2 address that corresponds to the matching L1 address of an ERC-20 token contract.</p>
+</div>
+<div class="paragraph">
+<p>If the token is not found in the bridge, this function returns <code>0</code>.</p>
 </div>
 <h4 id="parameters_21" class="discrete">Parameters</h4>
 <div class="hdlist stripes-odd">
@@ -2376,10 +2416,18 @@ uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;</pre>
 </colgroup>
 <tr>
 <td class="hdlist1">
-<code>ContractAddress</code>
+<code>ContractAddress <em>address</em></code>
 </td>
 <td class="hdlist2">
 <p>The L2 address of the ERC-20 token contract.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>ContractAddressZeroable::zero()</code>
+</td>
+<td class="hdlist2">
+<p>The token is not found in the bridge.</p>
 </td>
 </tr>
 </table>
@@ -2465,7 +2513,7 @@ uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;</pre>
 </div>
 <h4 id="function_definition_17" class="discrete">Function definition</h4>
 <div class="paragraph">
-<p><a href="https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/cairo/token_bridge.cairo#L629"><code>get_version</code></a> in <code>token_bridge.cairo</code>. <mark>Should this be token_bridge_interface.cairo?</mark></p>
+<p><a href="https://github.com/starkware-libs/starkgate/blob/ddc2e72c0394ef378959870a77789bbe05dff76e/src/cairo/token_bridge_interface.cairo#L7"><code>get_version</code></a> in <code>token_bridge_interface.cairo</code>.</p>
 </div>
 <hr>
 </div>
@@ -2502,7 +2550,7 @@ uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;</pre>
 </tr>
 <tr>
 <td class="hdlist1">
-<code>token</code>
+<code>EthAddress <em>token</em></code>
 </td>
 <td class="hdlist2">
 <p>The L1 address of the ERC-20 token contract.</p>
@@ -2510,11 +2558,10 @@ uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;</pre>
 </tr>
 <tr>
 <td class="hdlist1">
-<code>amount</code>
+<code>uint256 <em>amount</em></code>
 </td>
 <td class="hdlist2">
-<p>The amount to transfer.<br>
-<mark>Would it be helpful to add the type here (not just here, but in all parameters and return values)? Or it enough to supply to link to the function in the contract?</mark></p>
+<p>The amount to transfer.</p>
 </td>
 </tr>
 </table>
@@ -2530,12 +2577,12 @@ uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;</pre>
 </div>
 <div class="sect2">
 <h3 id="on_receive"><a class="anchor" href="#on_receive"></a><code>on_receive</code></h3>
-
+<div class="paragraph">
+<p><mark>Need this info from Roee</mark></p>
 </div>
 </div>
 </div>
-<h1 id="need_this_info_from_roee" class="sect0"><a class="anchor" href="#need_this_info_from_roee"></a>Need this info from Roee#</h1>
-
+</div>
 <nav class="pagination">
   <span class="prev"><a href="../starkgate-cancelling%20a%20deposit/">Cancelling a deposit</a></span>
 </nav>
