@@ -353,11 +353,9 @@ Similar to xref:#deposit[`deposit`], with a message attached.
 
 With this function, a deposit transaction can trigger subsequent actions. For example, you can deposit funds and include a message to transfer those funds to another address. `depositWithMessage` lets you execute these two separate transactions with a single user action.
 
-After I deposit to another recipient, the L1 handler calls the `on_receive` function in the contract of the recipient.
+After I deposit to another recipient, the L1 handler in token_bridge.cairo calls the `on_receive` function in the contract of the recipient.
 
-#What is _the_ L1 handler? Is there only one? I don't see anything about `on_receive` in the docs, so I don't really understand fully.#
-
-#If `on_receive` returns `true`, then all is well. If it returns `false`, the transaction is reverted.#
+If `on_receive` returns `true`, then all is well. If it returns `false`, the transaction is reverted.
 
 ##----
 fn on_receive(
@@ -422,7 +420,7 @@ Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity
 [#Continue review with Roee here#]
 
 [#depositWithMessageCancelRequest]
-=== depositWithMessageCancelRequest
+=== `depositWithMessageCancelRequest`
 
 [discrete]
 ==== Description
@@ -484,7 +482,7 @@ Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity
 '''
 
 [#depositWithMessageReclaim]
-=== depositWithMessageReclaim
+=== `depositWithMessageReclaim`
 
 [discrete]
 ==== Description
@@ -532,8 +530,9 @@ None.
 ==== Function and event definitions
 
 Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[StarknetTokenBridge.sol]
-Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L580[`depositWithMessageReclaim`]
-Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L54[`DepositWithMessageReclaimed`]
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L580[`depositWithMessageReclaim`]
+* Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L54[`DepositWithMessageReclaimed`]
 
 [discrete]
 ==== See also
@@ -551,11 +550,11 @@ Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d4766
 [discrete]
 ==== Description
 
-Creates a Starknet bridge for the specified ERC-20 token contract address in the multi-token bridge contracts and adds the token to the StarkGate registry.
+Creates a Starknet bridge for the specified ERC-20 token contract address in the multi-token bridge contracts and adds the token to the StarkGate Registry.
 
 Does not work for any ERC-20 token bridge's contract address that is already in the registry.
 
-Enrolling a new bridge creates a class hash. You can see the value of this hash using xref:#get_erc20_class_hash[`get_erc20_class_hash`].
+Enrolling a new bridge creates a new ERC-20 contract on L2. You can see the class hash for this contract using xref:#get_erc20_class_hash[`get_erc20_class_hash`].
 
 include::partial$snippet_enrollTokenBridge_note.adoc[]
 
@@ -567,6 +566,8 @@ include::partial$snippet_enrollTokenBridge_note.adoc[]
 The message payload needs to include funds to cover the Starknet (L2) fee for executing this transaction. You can include this payload using a standard wrapper such as web3.js.
 
 For the minimum deployment fee, see link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/StarkgateConstants.sol#L22[`MIN_DEPLOYMENT_FEE`] in `StarkgateConstants.sol`.
+
+[`MIN_DEPLOYMENT_FEE`] in `StarkgateConstants.sol` defines the minimum deployment fee. You can call this function to query the value.
 
 [discrete]
 ==== Parameters
@@ -598,7 +599,7 @@ link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777
 [discrete]
 ==== Description
 
-Returns the address of the bridge for the specified token, or a value indicating if the bridge does not exist, is blocked, or deactivated.
+Returns the address of the bridge for the specified token, or a value indicating if the bridge does not exist, is blocked, or is deactivated.
 
 [discrete]
 ==== State Mutability
@@ -608,7 +609,7 @@ Returns the address of the bridge for the specified token, or a value indicating
 [discrete]
 ==== Parameters
 
-[horizontal,labelwidth="20",role=stripes-odd]
+[horizontal,labelwidth="30",role=stripes-odd]
 `address _tokenAddress_`:: The address of the contract for the desired ERC-20 token.
 
 [discrete]
@@ -625,41 +626,41 @@ Returns the address of the bridge for the specified token, or a value indicating
 link:https://github.com/starkware-libs/starkgate/blob/ce53961e124c3f8a5e73e9ec2a7f4dcbc1ab6ab9/src/solidity/IStarkgateRegistry.sol#L8[`getBridge`] in `IStarkgateRegistry.sol`
 
 
-'''
-
-[#getRegistry]
-=== `getRegistry`
-
-[discrete]
-==== Description
-
-_Internal use only._
-
-Returns the address of the StarkGate Registry contract.
-
-Only the Manager uses this function.
-
-[discrete]
-==== State Mutability
-
-`view`
-
-[discrete]
-==== Parameters
-
-None
-
-[discrete]
-==== Returns
-
-[horizontal,labelwidth="20",role=stripes-odd]
-`address`:: The address of the Registry contract.
-
-[discrete]
-==== Function definition
-
-link:https://github.com/starkware-libs/starkgate/blob/7b967dd0db1019e91b1efb5e530fdef9f025e538/src/solidity/IStarkgateManager.sol#L8C14-L8C14[`getRegistry`] in `IStarkgateManager.sol`
-
+// '''
+//
+// [#getRegistry]
+// === `getRegistry`
+//
+// [discrete]
+// ==== Description
+//
+// _Internal use only._
+//
+// Returns the address of the StarkGate Registry contract.
+//
+// Only the Manager uses this function.
+//
+// [discrete]
+// ==== State Mutability
+//
+// `view`
+//
+// [discrete]
+// ==== Parameters
+//
+// None
+//
+// [discrete]
+// ==== Returns
+//
+// [horizontal,labelwidth="20",role=stripes-odd]
+// `address`:: The address of the Registry contract.
+//
+// [discrete]
+// ==== Function definition
+//
+// link:https://github.com/starkware-libs/starkgate/blob/7b967dd0db1019e91b1efb5e530fdef9f025e538/src/solidity/IStarkgateManager.sol#L8C14-L8C14[`getRegistry`] in `IStarkgateManager.sol`
+//
 
 
 '''
@@ -670,7 +671,9 @@ link:https://github.com/starkware-libs/starkgate/blob/7b967dd0db1019e91b1efb5e53
 [discrete]
 ==== Description
 
-Returns the status of the `deploy` transaction triggered by the `enrollTokenBridge` API.
+Returns the status of a token in StarkGate.
+
+`deploy` transaction triggered by the `enrollTokenBridge` API.
 
 [discrete]
 ==== State Mutability
@@ -687,12 +690,16 @@ Returns the status of the `deploy` transaction triggered by the `enrollTokenBrid
 ==== Returns
 
 [horizontal,labelwidth="20",role=stripes-odd]
-`TokenStatus`:: One of the following values: +
-* `Unknown`
-* `Pending`
-* `Active`
-* `Deactivated`
+`TokenStatus`:: One of the following values:
++
+[horizontal]
+0::: Unknown. The bridge does not recognize the token.
+1::: Pending. The token has been enrolled to StarkGate, but the `deploy` transaction has not yet successfully completed. You can deposit funds.
+2::: Active. The `deploy` transaction for this token has completed successfully and StarkGate recognizes the token.
+3::: Deactivated. The token has been removed from StarkGate. You cannot deposit funds.
 
+The lifecycle of a token in StarkGate is:
+Unknown
 
 [discrete]
 ==== Function definition
@@ -895,6 +902,12 @@ None.
 
 link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L517C11-L517C11[`withdraw`] in `StarknetTokenBridge.sol`
 
+== L1 Constants
+
+https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarkgateConstants.sol
+
+    uint256 public constant MIN_DEPLOYMENT_FEE = 500_000 gwei;
+    uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;
 
 == L2 function reference
 
@@ -1104,3 +1117,7 @@ None.
 ==== Function definition
 
 link:https://github.com/starkware-libs/starkgate/blob/894d822a33fd5aa2b8469606d2d6e363ff06bb2c/src/cairo/token_bridge_interface.cairo#L18[`initiate_withdraw`] in `token_bridge_interface.cairo`.
+
+=== `on_receive`
+
+# Need this info from Roee#
