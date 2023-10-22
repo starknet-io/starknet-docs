@@ -3,7 +3,7 @@
 
 The StarkGate smart contracts include functions that you use to implement various flows in a dApp.
 
-For information on the movement of funds between Ethereum and Starknet, see xref:starkgate-bridge.adoc
+For information on the movement of funds between Ethereum and Starknet, see xref:starkgate-bridge.adoc[StarkGate bridge overview].
 
 The L1 functions and their interfaces, where available, are defined in the following smart contracts:
 
@@ -24,6 +24,8 @@ link:https://github.com/starkware-libs/starkgate/blob/dev/src/cairo/token_bridge
 
 
 == The StarkGate Manager and Registry
+
+In addition to the bridges for each token, StarkGate includes the following administration components:
 
 The _StarkGate Manager_ is responsible for adding and removing bridges.
 
@@ -872,7 +874,7 @@ Anyone can call this function, but only after the withdraw message has been reco
 [discrete]
 ==== Parameters
 
-[horizontal,labelwidth="20",role=stripes-odd]
+[horizontal,labelwidth="30",role=stripes-odd]
 `address _token_`:: The address of the contract for the desired token.
 `uint256 _amount_`:: The amount of the withdrawal.
 `address _recipient_`:: (Optional) The recipient. If you don't specify this parameter, the withdraw function uses the sender's address.
@@ -893,7 +895,7 @@ None.
 `Withdrawal`
 
 .Event attributes
-[horizontal]
+[horizontal,role=stripes-odd]
 `address indexed _recipient_`:: Same as the `address _recipient_` parameter.
 `address indexed _token_`:: Same as the paramater `address _token_`.
 `uint256 _amount_`:: Same as the parameter `uint256 _amount_`.
@@ -912,10 +914,12 @@ link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec
 
 == L1 Constants
 
-https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarkgateConstants.sol
+[horizontal,labelwidth=60,role=stripes-odd]
+`uint256 public constant MIN_DEPLOYMENT_FEE`:: The minimum L1 fee required to send a message for deposit.
+`uint256 public constant MIN_DEPLOYMENT_FEE`:: The minimum L1 fee required to send a message for the `deploy` transaction when enrolling a bridge.
 
-    uint256 public constant MIN_DEPLOYMENT_FEE = 500_000 gwei;
-    uint256 public constant MIN_DEPOSIT_FEE = 100_000 gwei;
+
+Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarkgateConstants.sol[StarkgateConstants.sol]
 
 == L2 function reference
 
@@ -928,9 +932,12 @@ Functions are listed in alphabetical order.
 [discrete]
 ==== Description
 
-Returns the class hash of the implementation used by the ERC-20 contract. Use the class hash as the type when deploying the ERC-20 contract on L2.
+Returns the current class hash of the implementation used by the ERC-20 contract. Use the class hash as the type when deploying the ERC-20 contract on L2.
 
-Creating a new bridge with xref:#enrollTokenBridge[`enrollTokenBridge`] generates this class hash.
+[IMPORTANT]
+====
+If StarkWare changes the class hash such that it is no longer the class hash that you used when deploying your bridge contract, this function returns the new class hash. If you want to refer to the class hash that you used when deploying your contract, see your deployed contract on Starknet.
+====
 
 [discrete]
 ==== Parameters
@@ -997,7 +1004,8 @@ Returns the L1 address that corresponds to the matching L2 address of an ERC-20 
 ==== Returns
 
 [horizontal,labelwidth="20",role=stripes-odd]
-`ContractAddress`:: The L1 address of the ERC-20 token contract.
+`EthAddress`:: The L1 address of the ERC-20 token contract.
+`EthAddressZeroable::zero()`:: The token is not found in the bridge.
 
 
 [discrete]
@@ -1016,6 +1024,8 @@ link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777
 
 Returns the L2 address that corresponds to the matching L1 address of an ERC-20 token contract.
 
+If the token is not found in the bridge, this function returns `0`.
+
 [discrete]
 ==== Parameters
 
@@ -1026,7 +1036,9 @@ Returns the L2 address that corresponds to the matching L1 address of an ERC-20 
 ==== Returns
 
 [horizontal,labelwidth="20",role=stripes-odd]
-`ContractAddress`:: The L2 address of the ERC-20 token contract.
+`ContractAddress _address_`:: The L2 address of the ERC-20 token contract.
+`ContractAddressZeroable::zero()`:: The token is not found in the bridge.
+
 
 
 [discrete]
@@ -1091,7 +1103,7 @@ None.
 [discrete]
 ==== Function definition
 
-link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/cairo/token_bridge.cairo#L629[`get_version`] in `token_bridge.cairo`. #Should this be token_bridge_interface.cairo?#
+link:https://github.com/starkware-libs/starkgate/blob/ddc2e72c0394ef378959870a77789bbe05dff76e/src/cairo/token_bridge_interface.cairo#L7[`get_version`] in `token_bridge_interface.cairo`.
 
 
 '''
@@ -1112,9 +1124,8 @@ Initiates a withdrawal from L2. After initiating the withdrawal, the function do
 
 [horizontal,labelwidth="25",role=stripes-odd]
 `l1_recipient`:: The L1 address of the recipient.
-`token`:: The L1 address of the ERC-20 token contract.
-`amount`:: The amount to transfer. +
-#Would it be helpful to add the type here (not just here, but in all parameters and return values)? Or it enough to supply to link to the function in the contract?#
+`EthAddress _token_`:: The L1 address of the ERC-20 token contract.
+`uint256 _amount_`:: The amount to transfer.
 
 [discrete]
 ==== Returns
@@ -1128,4 +1139,4 @@ link:https://github.com/starkware-libs/starkgate/blob/894d822a33fd5aa2b8469606d2
 
 === `on_receive`
 
-# Need this info from Roee#
+#Need this info from Roee#
