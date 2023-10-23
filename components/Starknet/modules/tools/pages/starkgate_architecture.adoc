@@ -1,12 +1,23 @@
 [id="StarkGate_architecture"]
 = StarkGate architecture
 
+In StarkGate, the bridge for each supported token is defined in a corresponding pair of L1 and L2 contracts.
+
 StarkGate includes the following types of bridges:
 
 [horizontal, labelwidth=30]
 Multi-token bridge:: An instance of an L1 and L2 ERC-20 contract pair that handles multiple tokens.
-Single bridge:: Each single bridge is an instance of an L1 and L2 ERC-20 contract pair that handles a single token. Each token that was supported prior to the latest release uses a single bridge. Each of the following tokens are supported with a single bridge:
 +
+You can permissionlessly add new tokens to this bridge using the `enrollTokenBridge` function.
++
+When you enroll a new token to StarkGate, StarkGate adds the bridge functionality to the `StarknetErc20Bridge.sol` contract on L1, and creates a new ERC-20 token contract on L2 based on a standard ERC-20 contract developed by OpenZeppelin.
+
+Single-token bridge:: For ETH and for ERC-20 tokens supported prior to StarkGate v2.0 #Need to verify version number#, each supported token has its own instance of the pair of L1 and L2 bridge contracts.
++
+The single-token bridge enables seamless backward compatibility with the previous version of StarkGate.
++
+Each of the following tokens are supported with a single-token bridge:
+
 * ETH
 * WBTC
 * USDC
@@ -15,53 +26,46 @@ Single bridge:: Each single bridge is an instance of an L1 and L2 ERC-20 contrac
 * rETH
 * wstETH
 
-[#multi_token_bridge]
-== Multi-token bridge (ERC-20 only)
+To check if a token is currently supported, use the L1 function `getBridge`.
 
-The multi-token bridge is a pair of L1 and L2 contracts. This bridge type handles multiple ERC-20 tokens.
-
-[discrete]
-=== L1 base token contract
-
-`StarknetErc20Bridge.sol`, which inherits from `StarknetTokenBridge.sol`.
-
-[discrete]
-=== L2 base token contract
-
-The standard Open Zeppelin L2 contract link:https://github.com/OpenZeppelin/cairo-contracts/blob/cairo-1/src/openzeppelin/token/erc20/erc20.cairo[`erc20.cairo`]
-
-== Single
-
-This bridge is an instance of the L1 contract `StarknetErc20Bridge.sol`, together with an instance of the standard Open Zeppelin L2 contract link:https://github.com/OpenZeppelin/cairo-contracts/blob/cairo-1/src/openzeppelin/token/erc20/erc20.cairo[`erc20.cairo`].
-StarkGate uses the L1 bridge contract `StarknetErc20Bridge.sol`, as the contract upon which it bases both the multi-token bridge and all ERC-20 single bridges, and `StarknetEthBridge.sol` for the ETH single bridge. Each single bridge has a separate instantiation of the base contract. The multi-token bridge is a single instantiation of this contract, with support for multiple tokens.
+Table xref:#bridge_explanation_table[] describes the two bridge types, including the base contracts for each.
 
 
-Users can permissionlessly add new tokens to this bridge using the `enrollTokenBridge` function. For more information, see xref:starkgate_function_reference.adoc#enrollTokenBridge[`enrollTokenBridge`].
+[#bridge_explanation_table]
+.Comparison of bridge types
+[cols="2,4,4",]
+|===
+| |Single-token bridge (ERC-20, ETH) |Multi-token bridge (ERC-20)
 
-== Single-bridge
+|*Description* |Each supported token has its own instance of the pair of L1 and L2 bridge contracts. |One instance of an L1 and L2 ERC-20 contract pair that handles multiple tokens.
+|*L1 contract* a|
+ERC-20:
 
-The implementation is similar to that of the multi-token bridge, but each instance of the bridge contract supports only one token. This type of bridge enables seamless backward compatibility with the previous version of StarkGate.
+`StarknetERC20Bridge.sol`,
 
-StarkGate uses the L1 bridge contract `StarknetErc20Bridge.sol`, as the contract upon which it bases both the multi-token bridge and all ERC-20 single bridges, and `StarknetEthBridge.sol` for the ETH single bridge. Each single bridge has a separate instantiation of the base contract. The multi-token bridge is a single instantiation of this contract, with support for multiple tokens.
+inherits from `StarknetTokenBridge.sol`
 
-When you enroll a new token to StarkGate, StarkGate adds the bridge functionality to the `StarknetErc20Bridge.sol` contract on L1, and creates a new ERC-20 token contract on L2 based on a standard ERC-20 contract developed by OpenZeppelin.
 
-StarkGate uses the L1 bridge contract `StarknetEthBridge.sol` for ETH.
+ETH:
+
+`StarknetEthBridge.sol`
+
+a|
+One instance of `StarknetERC20Bridge.sol`,
+
+inherits from `StarknetTokenBridge.sol`
+
+|*L2 contract* |One instance of OpenZeppelin’s standard ERC-20 contract: `https://github.com/OpenZeppelin/cairo-contracts/blob/main/src/token/erc20/erc20.cairo[erc20.cairo]`. |One instance of OpenZeppelin’s standard ERC-20 contract: `https://github.com/OpenZeppelin/cairo-contracts/blob/main/src/token/erc20/erc20.cairo[erc20.cairo]`.
+
+|*Supported starting with StarkGate version…* |Prior to StarkGate v2.0 |StarkGate v2.0
+|===
 
 // Need to add the Ethereum addresses of these contracts
 
 
-StarknetErc20Bridge.sol is the class, and that the multi-token bridge and all the single ERC-20 bridges are instantiations of this class. StarknetTokenBridge.sol is not the multi-token bridge, but rather the original contract from which StarknetErc20Bridge.sol inherits.
-
-All existing token bridges that StarkGate currently supports continue to be supported each in its own pair of contracts.
-
-StarkGate includes support for ETH and ERC-20 tokens. To see if a token is currently supported, use the L1 function xref:#getBridge[`getBridge`].
-
 // Ask Dan if he can add a feature that shows all currently supported ERC-20 tokens.
 
-You can add support for other tokens by adding bridges for those other tokens, either existing bridges or new ones that StarkGate automatically creates when you try to bridge an unsupported ERC-20 token from Ethereum to Starknet.
-
-
+[#StarkGate_manager_and_registry]
 == The StarkGate Manager and Registry
 
 StarkGate includes the following administration components:
@@ -72,14 +76,9 @@ The _StarkGate Registry_:: Contains the addresses to all supported bridges.
 
 For information on the functions these components expose, see the xref:starkgate_function_reference.adoc[].
 
-== Single bridges
+== Additional resources
 
-The following tokens are supported using a single bridge:
-
-* ETH
-* WBTC
-* USDC
-* USDT
-* DAI
-* rETH
-* wstETH
+* xref:starkgate_function_reference.adoc#getBridge[`getBridge`] function in the _StarkGate function reference_
+* Standard Open Zeppelin L2 contract link:https://github.com/OpenZeppelin/cairo-contracts/blob/cairo-1/src/openzeppelin/token/erc20/erc20.cairo[`erc20.cairo`] on Github
+* L1 contract `StarknetErc20Bridge.sol` on Github
+* L1 contract `StarknetEthBridge.sol` on Github
