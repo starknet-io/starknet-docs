@@ -3,8 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>StarkGate API reference :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/documentation/tools/starkgate_dev_reference/">
+    <title>StarkGate function reference :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/documentation/tools/starkgate_function_reference/">
+    <link rel="prev" href="../starkgate-cancelling%20a%20deposit/">
     <meta name="generator" content="Antora 3.1.1">
   <link rel="stylesheet" href="../../../_/css/vendor/tabs.css">
   <link id="theme" rel="stylesheet" title="Default" href="../../../_/css/site.css?new">
@@ -99,6 +100,8 @@
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../../">Starknet</a></li>
+    <li>Tools and resources</li>
+    <li>StarkGate bridge developer&#8217;s guide</li>
     <li><a href="./">StarkGate API reference</a></li>
   </ul>
 </nav>
@@ -489,10 +492,10 @@
   </li>
 </ul>
   </li>
-  <li class="nav-item" data-depth="3">
+  <li class="nav-item is-current-page" data-depth="3">
     <a 
        class="nav-link"
-     href="#starkgate_function_reference.adoc">StarkGate API reference</a>
+     href="./">StarkGate API reference</a>
   </li>
 </ul>
   </li>
@@ -523,7 +526,7 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">StarkGate API reference</h1>
+<h1 class="page">StarkGate function reference</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
@@ -578,7 +581,29 @@
 <a href="https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol"><code>StarknetTokenBridge.sol</code></a>
 </td>
 <td class="hdlist2">
-<p>The StarkGate multi-token bridge implementation. You can use the functions in this contract to implement all currently supported single bridges, such ETH and USDC.</p>
+<p>The primary StarkGate bridge contract. The functions and events in this reference that provide the main user bridge functionality are defined in this contract.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<a href="https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetERC20Bridge.sol"><code>StarknetERC20Bridge.sol</code></a>
+</td>
+<td class="hdlist2">
+<p>The StarkGate ERC-20 bridge contract. This contract implements all currently supported ERC-20 tokens in the multi-token bridge, as well as all the single ERC-20 bridges, such as WBTC and USDC.</p>
+<div class="paragraph">
+<p>This contract is an implementation of <a href="https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol"><code>StarknetTokenBridge.sol</code></a>.</p>
+</div>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<a href="https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetEthBridge.sol"><code>StarknetEthBridge.sol</code></a>
+</td>
+<td class="hdlist2">
+<p>The StarkGate ETH bridge.</p>
+<div class="paragraph">
+<p>This contract is an implementation of <a href="https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol"><code>StarknetTokenBridge.sol</code></a>.</p>
+</div>
 </td>
 </tr>
 </table>
@@ -613,68 +638,13 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="the_starkgate_manager_and_registry"><a class="anchor" href="#the_starkgate_manager_and_registry"></a>The StarkGate Manager and Registry</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>In addition to the bridges for each token, StarkGate includes the following administration components:</p>
-</div>
-<div class="paragraph">
-<p>The <em>StarkGate Manager</em> is responsible for adding and removing bridges.</p>
-</div>
-<div class="paragraph">
-<p>The <em>StarkGate Registry</em> contains the addresses to all supported bridges.</p>
-</div>
-<div class="paragraph">
-<p>StarkGate includes support for ETH and ERC-20 tokens. To see if a token is currently supported, use the L1 function <a href="#getBridge"><code>getBridge</code></a>.</p>
-</div>
-<div class="paragraph">
-<p>You can add support for other tokens by adding bridges for those other tokens, either existing bridges or new ones that StarkGate automatically creates when you try to bridge an unsupported ERC-20 token from Ethereum to Starknet.</p>
-</div>
-<div class="paragraph">
-<p>StarkGate includes the following types of bridges, where each type has a corresponding smart contract:</p>
-</div>
-<div class="hdlist">
-<table>
-<colgroup>
-<col style="width: 30%;">
-<col>
-</colgroup>
-<tr>
-<td class="hdlist1">
-Multi-token bridge
-</td>
-<td class="hdlist2">
-<p>The multi-token bridge contract handles multiple tokens. Users can permissionlessly add new tokens to StarkGate using the <code>enrollTokenBridge</code> API. For more information, see <a href="#enrollTokenBridge"><code>enrollTokenBridge</code></a> below.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-Single-bridge
-</td>
-<td class="hdlist2">
-<p>The implementation is similar to that of the multi-token bridge, but each bridge contract implements only one token. This type of bridge enables seamless backward compatibility with the previous version of StarkGate.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-Custom bridge
-</td>
-<td class="hdlist2">
-<p>A bridge provider can write their own custom bridge and contact StarkWare to add it to StarkGate. This type of bridge can enable functionality beyond what the <code>enrollTokenBridge</code> API provides.</p>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>Some of the functions in these files are for internal administration use only. This function reference does not describe those functions in detail.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
 <h2 id="l1_function_reference"><a class="anchor" href="#l1_function_reference"></a>L1 function reference</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Functions are listed in alphabetical order.</p>
+</div>
+<div class="paragraph">
+<p>Some functions are for internal administrative use only. This function reference does not describe those functions in detail.</p>
 </div>
 <hr>
 <div class="sect2">
@@ -2588,6 +2558,9 @@ Unknown</p>
 </div>
 </div>
 </div>
+<nav class="pagination">
+  <span class="prev"><a href="../starkgate-cancelling%20a%20deposit/">Cancelling a deposit</a></span>
+</nav>
 </article>
   </div>
 </main>
