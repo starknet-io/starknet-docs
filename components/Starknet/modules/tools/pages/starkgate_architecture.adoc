@@ -1,54 +1,26 @@
 [id="StarkGate_architecture"]
 = StarkGate architecture
 
-In StarkGate, the bridge for each supported token is defined in a corresponding pair of L1 and L2 contracts.
+While StarkGate is referred to as _a bridge_, technically, each supported token has its own bridge, each of which is defined in a corresponding pair of L1 and L2 contracts, as described in xref:#bridge_explanation_table[].
 
-You can check if a token is currently supported with the L1 function `getBridge`.
-
-StarkGate includes the following types of bridges:
-
-[horizontal, labelwidth=20]
-Multi-token bridge:: This bridge handles multiple tokens.
-+
-Default for new tokens in StarkGate beginning with StarkGate #v2.0#.
-Single-token bridge:: For ETH and for ERC-20 tokens supported prior to StarkGate #v2.0# #Need to verify version number#, each supported token has its own instance of the pair of L1 and L2 bridge contracts.
-+
-The single-token bridge enables seamless backward compatibility with the previous version of StarkGate.
-
-
-
-The table xref:#bridge_explanation_table[] describes the two bridge types, including the base contracts for each.
-
-
+.Components of a bridge for an individual token
 [#bridge_explanation_table]
-.Comparison of bridge types
-[cols="2,4,4",]
+[cols='1,8']
 |===
-| |Single-token bridge (ERC-20, ETH) |Multi-token bridge (ERC-20)
-
-|*Description* |Each supported token has its own instance of the pair of L1 and L2 bridge contracts. |One instance of an L1 and L2 ERC-20 bridge contract pair handles multiple tokens.
-|*L1 contract* a|
-
-
-* Each supported ERC-20 token has an instance of the `StarknetERC20Bridge.sol` contract, which inherits from `StarknetTokenBridge.sol`.
-
-* ETH has an instance of the `StarknetETHBridge.sol` contract, which inherits from `StarknetTokenBridge.sol`.
-
+| *L1*
 a|
-Bridge functionality for ERC-20 tokens is supported in a single instance of `StarknetTokenBridge.sol`.
-
-
-|*L2 contract* a| * Each supported ERC-20 token has its own bridge contract based on `token_bridge.cairo`.
-* Each supported ERC-20 token has a unique ERC-20 contract.
-a| * Bridge functionality for ERC-20 tokens is supported in a single contract that inherits from the `token_bridge.cairo` class.
-* ERC-20 tokens are represented in a class based on an ERC-20 contract developed by OpenZeppelin, and customized by StarkWare. Each new contract uses the hash of this class to define its inheritance. #What is the name of the contract?#
-
-
-|*Supported starting with StarkGate version…* |Prior to StarkGate v2.0 |StarkGate v2.0
+* ERC-20 contract that defines the token on Ethereum. This contract must exist before you can bridge it.
+* Bridge functionality for ERC-20 tokens is supported in `StarknetTokenBridge.sol`.
+| *L2*
+a|
+* StarkGate Cairo bridge contract instance of the `token_bridge.cairo`contract class.
+* ERC-20 Cairo token contract instance of a standard ERC-20 Cairo token contract class. Each new contract uses the hash of this class to define its inheritance. StarkGate creates this contract automatically when creating the bridge in StarkGate.
 |===
 
 // Need to add the Ethereum addresses of these contracts
+StarkGate provides a contract that enables seamless backward compatibility with the previous version of StarkGate.
 
+You can check if a token is currently supported with the L1 function `getBridge`.
 
 // Ask Dan if he can add a feature that shows all currently supported ERC-20 tokens.
 
@@ -58,32 +30,30 @@ When you enroll a new ERC-20 token, StarkGate does the following:
 
 . Adds bridge functionality for that token on L1 using the `StarknetTokenBridge.sol` contract.
 . Adds bridge functionality for that token on L2 using the `token_bridge.cairo` class.
-. Creates a new ERC-20 token contract on L2 based on an ERC-20 class developed by OpenZeppelin, and customized by StarkWare. Each new contract uses the class hash of this this class to identify its inheritance. #What is the name of the contract?#
+. Creates a new ERC-20 token contract on L2 based on a standard ERC-20 contract class. Each new contract uses the class hash of this contract class to identify its inheritance.
 +
 [NOTE]
 ====
 When the code of `token_bridge.cairo` is updated, its class hash changes. However,any existing contract continues to refer to the previous class hash. Any new contracts use the new class hash.
 ====
-//
-// [#StarkGate_manager_and_registry]
-// == The StarkGate Manager and Registry
-//
-// StarkGate includes the following administration components:
-//
+
+[#StarkGate_manager_and_registry]
+== The StarkGate Manager and Registry
+
+StarkGate includes the following administration components:
+
 // [horizontal]
-// The _StarkGate Manager_:: Is responsible for adding and removing bridges.
-// The _StarkGate Registry_:: Contains the addresses to all supported bridges.
-//
-// For information on the functions these components expose, see the xref:starkgate_function_reference.adoc[].
+The _StarkGate Manager_:: is responsible for adding bridges
+The _StarkGate Registry_::
+* contains the addresses to all supported bridges
+* enables a bridge developer to stop servicing an existing bridge
+
 
 == Additional resources
 
-* _StarkGate function reference_
-** xref:starkgate_function_reference.adoc#getBridge[`getBridge`] function
-** xref:starkgate_function_reference.adoc#enrollTokenBridge[`enrollTokenBridge`]
+The xref:starkgate_function_reference.adoc[_StarkGate function reference_]. Lists functions exposed by the Registry, Manager, and the bridge itself, including:
 
-#Update the following with the correct links#
-
-* Standard Open Zeppelin L2 contract link:https://github.com/OpenZeppelin/cairo-contracts/blob/cairo-1/src/openzeppelin/token/erc20/erc20.cairo[`erc20.cairo`] on Github
-* L1 contract `StarknetErc20Bridge.sol` on Github
-* L1 contract `StarknetEthBridge.sol` on Github
+* xref:starkgate_function_reference.adoc#getBridge[`getBridge`]
+* xref:starkgate_function_reference.adoc#enrollTokenBridge[`enrollTokenBridge`]
+* L1 contracts on Github
+* L2 contracts on Github
