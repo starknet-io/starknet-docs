@@ -1,25 +1,20 @@
 [id="messaging_mechanism"]
 = L1-L2 messaging
 
-// Who is the audience for this? dApp devs?
-// What do they actually need to do with this info?
-
 [id="l2-l1_messages"]
 == L2 → L1 messages
 
 Contracts on L2 can interact asynchronously with contracts on L1 using the _L2→L1_ messaging protocol.
 
-// What does the protocal consist of? Is it just the syscall?
+#What does the protocol consist of? Is it just the syscall?#
 
 During the execution of a transaction, a contract on Starknet sends a message from L2 to L1
-// Is this what a transaction is? A message?
-by calling the xref:Smart_Contracts/system-calls-cairo1.adoc#send_message_to_L1[`send_message_to_L1`] syscall.
+by calling the `send_message_to_L1` syscall.
 
 The message parameters, which include the address of the recipient contract on L1 and the message data, are then attached to the state update that includes this syscall invocation.
 
-// Is there a URL for a syscall that is >Cairo 0?
-// What attaches the message parameters to the state update?
-// What does it mean that the parameters are _attached_? to the _relevant_ state update--How many state updates are there that it might be attahed to that
+* #What entity attaches the message parameters to the state update? Is it the sequencer, the Starknet OS? Something else?#
+* #Is there a URL for a syscall that is >Cairo 0?#
 
 For example:
 
@@ -36,32 +31,50 @@ send_message_to_l1_syscall(to_address: to_address.into(), payload: payload.span(
 The sequence is as follows:
 
 . The prover proves the state update that includes this transaction.
-. The L1 state is updated.
-// what actually updates the state?
-. The message is stored on L1 in the Starknet Core Contract and the relevant counter is increased
-// What stores the message in the contract?
-// What counter? How is it increased?
-. The `LogMessageToL1` event, which contains the message parameters, is emitted.
+. The L1 state is updated. +
+#What actually updates the state?#
+. The message is stored on L1 in the Starknet Core Contract and the relevant counter is increased +
+#What stores the message in the contract?# +
+#What counter? How is it increased?#
+. The `LogMessageToL1` event, which contains the message parameters, is emitted. +
+#What emits this event?#
 
 
 Subsequently, the message recipient on L1
 // Is there a message recipient on L2?
 // Who is the recipient? Is it a user account contract? Or is it some other contract that requires the message in order to execute some functionality?
-can access and consume the message by by calling the https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119[`consumeMessageFromL2`] function, which include the message parameters within the transaction.
+can access and consume the message by calling the link:https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119[`consumeMessageFromL2`] function, which includes the message parameters within the transaction.
 // What's an example of this kind of transaction? Are we only talking about the backend of a dApp? Or is there a way to do this directly as part of a transaction using Starkli?
 
 // who or what calls this? Is this a function?
-This #function (is this actually a function???)#, which is part of the Starknet Core Contract, verifies the following:
+This function, which is part of the Starknet Core Contract, +
+#What is the URL for the Starknet Core Contract? This function is in StarknetMessaging.sol. Is that the Core Contract?#
+verifies the following:
 
-* The hash corresponds to a stored message.
-//hash of what?
+* The hash corresponds to a stored message. +
+#Leo thinks that the sequencer or the prover creates the hash...#
+#The function `messageHash` in the Starknet Core Contract implementation. link:https://etherscan.io/address/0x16938e4b59297060484fa56a12594d8d6f4177e8#code[] computes the hash of each message after it is proved#
 * The entity calling the function is indeed the recipient on L1.
 
 // We need to separate out these functions into a reference.
 
-In such a case, the reference count of the message hash in the Starknet Core Contract decreases by 1.
+In such a case, the reference count of the message hash in the Starknet Core Contract decreases by 1. +
+#What is the reference count? Is this an Ethereum concept?#
 
-The above flow is illustrated in xref:#diagram_l2-l1_messaging_mechanism[]:
+#*Diagram comments*:#
+
+* StarkNet -> Starknet
+* #1: *L2->L1 message* is not clear if this is a function call or what.#
+* #The title should have an actual arrow. Better to remove the title from the graphic and just use the caption.#
+* #Step 3: Error in callout Stark**N**et OS notifies *on* the message, which is included in the proof#
+* #All arrows appear as - > instead of arrows.#
+* #5 Unclear from where the consumer receives the message on L2. Why is the message consumer on L2 in the diagram? I thought that the consumer is on L1.#
+* #3 Blockchain Dispatcher takes place after verification#
+* #Add: The Verifier after it verifies stores the verified facts in the Fact Registry#
+* #When the dispatcher sends the L1 tx to the Starknet Core Contract, the tx invokes the `updateState` function, which then reads the Fact Registry contract, and if the fact has been registered, it updates the Starknet state.#
+
+
+xref:#diagram_l2-l1_messaging_mechanism[] illustrates this flow:
 
 [#diagram_l2-l1_messaging_mechanism]
 .L2->L1 Messaging mechanism
@@ -69,13 +82,17 @@ image::l2l1.png[L2->L1 message mechanism]
 
 === L2 → L1 message structure
 
-The structure of an L2 → L1 message is show in xref:#structure_l2-l1[]
+xref:#structure_l2-l1[] illustrates the structure of an L2 → L1 message.
+
+* #Better to show code than this table. Or show it together with code. The table shows a FromAddress, but in the example at the top of the page, I don't see where the From address comes from.#
+* #The ToAddress is `EthereumAddress`. Where can I see this type? The code at the top of the page shows `EthAddress`, not `EthereumAddress`.#
+* #Same question for other items in the table.#
 
 [#structure_l2-l1]
 .L2 → L1 Message structure
 [%autowidth.stretch]
 |===
-| FromAddress    | ToAddress         | Payload
+| `FromAddress`    | `ToAddress`         | `Payload`
 
 | `FieldElement` | `EthereumAddress` | `Payload`
 |===
@@ -99,7 +116,7 @@ keccak256(
 
 [NOTE]
 ====
-Sending an L2 to L1 message always incurs a fixed 20K gas cost, because the hash of the message being sent must be written to L1 storage in the Starknet Core contract.
+Sending an L2 to L1 message always incurs a fixed cost of 20,000 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core contract.
 ====
 
 [id="l1-l2-messages"]
