@@ -520,11 +520,24 @@
 <p>Contracts on L2 can interact asynchronously with contracts on L1 using the <em>L2→L1</em> messaging protocol.</p>
 </div>
 <div class="paragraph">
+<p><mark>What does the protocal consist of? Is it just the syscall?</mark></p>
+</div>
+<div class="paragraph">
 <p>During the execution of a transaction, a contract on Starknet sends a message from L2 to L1
-by calling the <a href="../../Smart_Contracts/system-calls-cairo1/#send_message_to_L1" class="xref page"><code>send_message_to_L1</code></a> syscall.</p>
+by calling the <code>send_message_to_L1</code> syscall.</p>
 </div>
 <div class="paragraph">
 <p>The message parameters, which include the address of the recipient contract on L1 and the message data, are then attached to the state update that includes this syscall invocation.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><mark>What entity attaches the message parameters to the state update? Is it the sequencer, the Starknet OS? Something else?</mark></p>
+</li>
+<li>
+<p><mark>Is there a URL for a syscall that is &gt;Cairo 0?</mark></p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
 <p>For example:</p>
@@ -548,22 +561,28 @@ send_message_to_l1_syscall(to_address: to_address.into(), payload: payload.span(
 <p>The prover proves the state update that includes this transaction.</p>
 </li>
 <li>
-<p>The L1 state is updated.</p>
+<p>The L1 state is updated.<br>
+<mark>What actually updates the state?</mark></p>
 </li>
 <li>
-<p>The message is stored on L1 in the Starknet Core Contract and the relevant counter is increased</p>
+<p>The message is stored on L1 in the Starknet Core Contract and the relevant counter is increased<br>
+<mark>What stores the message in the contract?</mark><br>
+<mark>What counter? How is it increased?</mark></p>
 </li>
 <li>
-<p>The <code>LogMessageToL1</code> event, which contains the message parameters, is emitted.</p>
+<p>The <code>LogMessageToL1</code> event, which contains the message parameters, is emitted.<br>
+<mark>What emits this event?</mark></p>
 </li>
 </ol>
 </div>
 <div class="paragraph">
 <p>Subsequently, the message recipient on L1
-can access and consume the message by by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119"><code>consumeMessageFromL2</code></a> function, which include the message parameters within the transaction.</p>
+can access and consume the message by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119"><code>consumeMessageFromL2</code></a> function, which includes the message parameters within the transaction.</p>
 </div>
 <div class="paragraph">
-<p>This <mark>function (is this actually a function???)</mark>, which is part of the Starknet Core Contract, verifies the following:</p>
+<p>This function, which is part of the Starknet Core Contract,<br>
+<mark>What is the URL for the Starknet Core Contract? This function is in StarknetMessaging.sol. Is that the Core Contract?</mark>
+verifies the following:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -576,7 +595,33 @@ can access and consume the message by by calling the <a href="https://github.com
 </ul>
 </div>
 <div class="paragraph">
-<p>In such a case, the reference count of the message hash in the Starknet Core Contract decreases by 1.</p>
+<p>In such a case, the reference count of the message hash in the Starknet Core Contract decreases by 1.<br>
+<mark>What is the reference count? Is this an Ethereum concept?</mark></p>
+</div>
+<div class="paragraph">
+<p><mark><strong>Diagram comments</strong>:</mark></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>StarkNet &#8594; Starknet</p>
+</li>
+<li>
+<p><mark>1: <strong>L2&#8594;L1 message</strong> is not clear if this is a function call or what.</mark></p>
+</li>
+<li>
+<p><mark>The title should have an actual arrow. Better to remove the title from the graphic and just use the caption.</mark></p>
+</li>
+<li>
+<p><mark>Step 3: Error in callout Stark<strong>N</strong>et OS notifies <strong>on</strong> the message, which is included in the proof</mark></p>
+</li>
+<li>
+<p><mark>All arrows appear as - &gt; instead of arrows.</mark></p>
+</li>
+<li>
+<p><mark>5 Unclear from where the consumer receives the message on L2. Why is the message consumer on L2 in the diagram? I thought that the consumer is on L1.</mark></p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
 <p>The above flow is illustrated in <a href="#diagram_l2-l1_messaging_mechanism">L2&#8594;L1 Messaging mechanism</a>:</p>
@@ -591,6 +636,19 @@ can access and consume the message by by calling the <a href="https://github.com
 <h3 id="l2_l1_message_structure"><a class="anchor" href="#l2_l1_message_structure"></a>L2 → L1 message structure</h3>
 <div class="paragraph">
 <p>The structure of an L2 → L1 message is show in <a href="#structure_l2-l1">L2 → L1 Message structure</a></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><mark>Better to show code than this table. Or show it together with code. The table shows a FromAddress, but in the example at the top of the page, I don&#8217;t see where the From address comes from.</mark></p>
+</li>
+<li>
+<p><mark>The ToAddress is <code>EthereumAddress</code>. Where can I see this type? The code at the top of the page shows <code>EthAddress</code>, not <code>EthereumAddress</code>.</mark></p>
+</li>
+<li>
+<p><mark>Same question for other items in the table.</mark></p>
+</li>
+</ul>
 </div>
 <table id="structure_l2-l1" class="tableblock frame-all grid-all fit-content stretch">
 <caption class="title">Table 1. L2 → L1 Message structure</caption>
