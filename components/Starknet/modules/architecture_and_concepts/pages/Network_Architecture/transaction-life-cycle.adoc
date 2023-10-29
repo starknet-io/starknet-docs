@@ -7,28 +7,33 @@
 
 image::transaction-flow.png[]
 
-The transaction lifecycle in Starknet involves the following high level steps:
+The high-level steps in the Starknet transaction lifecycle are as follows:
 
-=== 1. Transaction Submission
+. Transaction Submission
++
 A transaction is submitted to one of the gateways, functioning as the Mempool and marks the transaction status as `RECEIVED`.
 
-=== 2. Validation
+. Validation
++
+.. Mempool validation
++
+The Mempool performs a preliminary validation on the transaction. If the transaction is invalid, it does not proceed.
 
-==== 2.1 Mempool validation
-The Mempool performs validation on the transaction to check for its validity. If the transaction is invalid, it will not proceed to the next stages.
 
-==== 2.2 Sequencer validation
-The sequencer performs validation on the transaction prior to execution to ensure that the transaction is still valid. If the transaction is invalid, it will not proceed to the next stages.
+.. Sequencer validation
++
+The sequencer performs validation on the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.
 
-=== 3. Execution
-The sequencer operation sequentially applies the validated transactions to the state. If a transaction fails during execution, it will be included in the block with the status `REVERTED`.
+. Execution
++
+The sequencer operation sequentially applies all validated transactions to the state. If a transaction fails during execution, it is included in the block with the status `REVERTED`.
 
-=== 4. Proof Generation
-The Prover stage executes the operating system on the new block, computes the proof, and transmits it to L1.
+. Proof generation
++
+The Prover executes the operating system on the new block, computes the proof, and transmits it to L1.
 
 [id="transaction_status"]
-
-== Transaction status
+Transaction status
 
 The diagram below illustrates how each transaction status fits into the overall transaction flow:
 
@@ -47,7 +52,7 @@ The transaction is not yet known to the sequencer.
 [id="received"]
 ==== RECEIVED
 
-The transaction was received by the mempool. The transaction will now either execute successfully, be rejected or be reverted.
+The transaction was received by the mempool. The transaction now either executes successfully, is rejected or reverted.
 
 [id="accepted_on_l2"]
 ==== ACCEPTED_ON_L2
@@ -64,12 +69,12 @@ The transaction was accepted on Ethereum.
 [id="rejected"]
 ==== REJECTED
 
-The transaction was received by the Mempool but failed validation in the sequencer. Such transactions will not be included in a block.
+The transaction was received by the Mempool but failed validation in the sequencer. Such transactions are not included in a block.
 
 [id="reverted"]
 ==== REVERTED
 
-The transaction passed validation but failed during execution in the sequencer. They will be included in the block with the status `REVERTED`.
+The transaction passed validation but failed during execution in the sequencer. It is be included in the block with the status `REVERTED`.
 
 [id="succeeded"]
 ==== SUCCEEDED
@@ -81,13 +86,13 @@ The transaction was successfully executed by the sequencer.
 
 When a transaction is marked as `REVERTED`, the following state implications occur:
 
-Nonce increases:: The nonce value for the account of the failed transaction will increase despite the failure.
+Nonce increases:: The nonce value for the account of the failed transaction iterates despite the failure.
 
-Fee charge:: A fee will be charged for the execution of the transaction up to the point of failure.
+Fee charge:: A fee is charged for the execution of the transaction up to the point of failure.
 
 Partial Reversion:: All changes that occurred during the `validate` stage are not reverted. However, all changes that occurred during the `execute` stage are reverted, including no messages to L1 or events.
 
-Fee Calculation:: The fee charged for `REVERTED` transactions will be calculated as follows:
+Fee Calculation:: The fee charged for `REVERTED` transactions is calculated as follows:
 
 [source,bash]
 ----
