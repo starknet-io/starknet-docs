@@ -9,7 +9,7 @@ image::transaction-flow.png[]
 
 The high-level steps in the Starknet transaction lifecycle are as follows:
 
-. *Transaction submission:* A transaction is submitted to one of the gateways, functioning as the Mempool and marks the transaction status as `RECEIVED`.
+. *Transaction submission:* A transaction is submitted to one of the gateways, functioning as the mempool and marks the transaction status as `RECEIVED`.
 
 . *Mempool validation:*
 The mempool performs a preliminary validation on the transaction. If the transaction is invalid, it does not proceed.
@@ -30,46 +30,22 @@ The diagram below illustrates how each transaction status fits into the overall 
 image::txn-flow.png[]
 
 
-The following are the possible statuses of a transaction from the moment it's sent by the user to the moment it's validated by L1:
+The following are the possible statuses of a transaction from the moment a user sends it until the moment it passes the L1 verifier:
 
-=== Finality statuses
+[cols="1,2,4",]
+|===
+|Status type |Status |Explanation
 
-[id="not_received"]
-==== NOT_RECEIVED
+.4+|*Finality* |`NOT_RECEIVED` |The transaction is not yet known to the sequencer.
+|`RECEIVED` |The transaction was received by the mempool. The transaction now either executes successfully, is rejected, or reverted.
+|`ACCEPTED_ON_L2` |The transaction passed validation and entered an actual created block on L2.
+|`ACCEPTED_ON_L1` |The transaction was accepted on Ethereum.
+.3+|*Execution* |`REJECTED` |The transaction was received by the mempool but failed validation in the sequencer. Such transactions are not included in a block.
+|`REVERTED` |The transaction passed validation but failed during execution in the sequencer. It is included in the block with the status `REVERTED`.
+|`SUCCEEDED` |The transaction was successfully executed by the sequencer.
+|===
 
-The transaction is not yet known to the sequencer.
 
-[id="received"]
-==== RECEIVED
-
-The transaction was received by the mempool. The transaction now either executes successfully, is rejected or reverted.
-
-[id="accepted_on_l2"]
-==== ACCEPTED_ON_L2
-
-The transaction passed validation and entered an actual created block on L2.
-
-[id="accepted_on_l1"]
-==== ACCEPTED_ON_L1
-
-The transaction was accepted on Ethereum.
-
-=== Execution statuses
-
-[id="rejected"]
-==== REJECTED
-
-The transaction was received by the Mempool but failed validation in the sequencer. Such transactions are not included in a block.
-
-[id="reverted"]
-==== REVERTED
-
-The transaction passed validation but failed during execution in the sequencer. It is be included in the block with the status `REVERTED`.
-
-[id="succeeded"]
-==== SUCCEEDED
-
-The transaction was successfully executed by the sequencer.
 
 [id="transaction-state-implications"]
 == State Implications of a `REVERTED` Transaction
