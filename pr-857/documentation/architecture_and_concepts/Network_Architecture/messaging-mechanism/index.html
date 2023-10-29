@@ -520,7 +520,7 @@
 <p>Contracts on L2 can interact asynchronously with contracts on L1 using the <em>L2→L1</em> messaging protocol.</p>
 </div>
 <div class="paragraph">
-<p><mark>What does the protocal consist of? Is it just the syscall?</mark></p>
+<p><mark>What does the protocol consist of? Is it just the syscall?</mark></p>
 </div>
 <div class="paragraph">
 <p>During the execution of a transaction, a contract on Starknet sends a message from L2 to L1
@@ -587,7 +587,9 @@ verifies the following:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>The hash corresponds to a stored message.</p>
+<p>The hash corresponds to a stored message.<br>
+<mark>Leo thinks that the sequencer or the prover creates the hash&#8230;&#8203;</mark>
+<mark>The function <code>messageHash</code> in the Starknet Core Contract implementation. <a href="https://etherscan.io/address/0x16938e4b59297060484fa56a12594d8d6f4177e8#code" class="bare">https://etherscan.io/address/0x16938e4b59297060484fa56a12594d8d6f4177e8#code</a> computes the hash of each message after it is proved</mark></p>
 </li>
 <li>
 <p>The entity calling the function is indeed the recipient on L1.</p>
@@ -621,10 +623,19 @@ verifies the following:</p>
 <li>
 <p><mark>5 Unclear from where the consumer receives the message on L2. Why is the message consumer on L2 in the diagram? I thought that the consumer is on L1.</mark></p>
 </li>
+<li>
+<p><mark>3 Blockchain Dispatcher takes place after verification</mark></p>
+</li>
+<li>
+<p><mark>Add: The Verifier after it verifies stores the verified facts in the Fact Registry</mark></p>
+</li>
+<li>
+<p><mark>When the dispatcher sends the L1 tx to the Starknet Core Contract, the tx invokes the <code>updateState</code> function, which then reads the Fact Registry contract, and if the fact has been registered, it updates the Starknet state.</mark></p>
+</li>
 </ul>
 </div>
 <div class="paragraph">
-<p>The above flow is illustrated in <a href="#diagram_l2-l1_messaging_mechanism">L2&#8594;L1 Messaging mechanism</a>:</p>
+<p><a href="#diagram_l2-l1_messaging_mechanism">L2&#8594;L1 Messaging mechanism</a> illustrates this flow:</p>
 </div>
 <div id="diagram_l2-l1_messaging_mechanism" class="imageblock">
 <div class="content">
@@ -635,7 +646,7 @@ verifies the following:</p>
 <div class="sect2">
 <h3 id="l2_l1_message_structure"><a class="anchor" href="#l2_l1_message_structure"></a>L2 → L1 message structure</h3>
 <div class="paragraph">
-<p>The structure of an L2 → L1 message is show in <a href="#structure_l2-l1">L2 → L1 Message structure</a></p>
+<p><a href="#structure_l2-l1">L2 → L1 Message structure</a> illustrates the structure of an L2 → L1 message.</p>
 </div>
 <div class="ulist">
 <ul>
@@ -659,9 +670,9 @@ verifies the following:</p>
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">FromAddress</th>
-<th class="tableblock halign-left valign-top">ToAddress</th>
-<th class="tableblock halign-left valign-top">Payload</th>
+<th class="tableblock halign-left valign-top"><code>FromAddress</code></th>
+<th class="tableblock halign-left valign-top"><code>ToAddress</code></th>
+<th class="tableblock halign-left valign-top"><code>Payload</code></th>
 </tr>
 </thead>
 <tbody>
@@ -698,7 +709,7 @@ verifies the following:</p>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Sending an L2 to L1 message always incurs a fixed 20K gas cost, because the hash of the message being sent must be written to L1 storage in the Starknet Core contract.</p>
+<p>Sending an L2 to L1 message always incurs a fixed cost of 20,000 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core contract.</p>
 </div>
 </td>
 </tr>
