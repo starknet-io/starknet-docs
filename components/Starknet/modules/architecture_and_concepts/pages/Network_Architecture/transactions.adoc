@@ -14,12 +14,20 @@ This topic describes the available fields for these transaction types and how ea
 
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 
-Starknet supports the transaction versions described here.
-
 [IMPORTANT]
 ====
 Do not submit a transaction that uses an unsupported transaction type, because it cannot be included in a proof, and so cannot become part of a Starknet block.
 ====
+
+.Supported Starknet transaction versions
+[cols=",,",]
+|===
+|Transaction name |Current version |Deprecated version
+
+|`invoke` |v1 |v0
+|`declare` |v2 |v1, v0
+|`deploy_account` |v0 |
+|===
 
 [id=invoke_transaction]
 == `invoke` transaction
@@ -295,6 +303,34 @@ deploy_account_tx_hash = ℎ(
     nonce
 )
 ----
+
+[id="deploy_transaction"]
+
+=== `deploy` transaction hash calculation
+
+In order to calculate the transaction hash, we first need to obtain the deployed contract address. The Deploy transaction's hash is calculated as follows:
+
+[source,cairo]
+----
+deploy_tx_hash = ℎ(
+    "deploy",
+    version,
+    contract_address,
+    sn_keccak("constructor"),
+    ℎ(constructor_calldata),
+    0,
+    chain_id
+)
+----
+
+Where:
+
+* The placeholder zero is used to align the hash computation for the different types of transactions.
+* “deploy” and “constructor” are constant strings encoded in ASCII.
+* stem:[$h$] is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash and
+stem:[$sn\_keccak$] is xref:../Cryptography/hash-functions.adoc#starknet_keccak[Starknet Keccak].
+* `chain_id` is a constant value that specifies the network to which this transaction is sent. See xref:#chain-id[Chain-Id].
+* `contract_address` is calculated as described xref:architecture_and_concepts:Smart_Contracts/contract-address.adoc[here].
 
 [id="signature"]
 == Signature
