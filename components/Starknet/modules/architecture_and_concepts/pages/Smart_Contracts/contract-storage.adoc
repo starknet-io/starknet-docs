@@ -35,9 +35,9 @@ use starknet::syscalls::storage_write_syscall;
 
 The most common way for interacting with a contract's storage is through storage variables.
 
-The `@storage_var` decorator declares a variable that will be kept as part of the contract storage. The variable can consist of a single felt, or it can be a mapping from multiple arguments to a tuple of felts or structs.
+The `#[storage]` attribute above the `Storage` struct declares that the content of this struct will be part of the contract storage. The storage variables stored inside this struct can consist of a single felt, or it can be a mapping from multiple arguments to a tuple of felts or structs.
 
-To use this variable, the `var.read(args)`, `var.write(args, value)` and `var.addr(args)` functions are automatically created by the `@storage_var` decorator, for reading the storage value, writing the storage value and getting the storage address, respectively.
+To use this variable, the `var.read(args)`, `var.write(args, value)` and `var.address(args)` functions are automatically created by the `#[storage]` attribute, for reading the storage value, writing the storage value and getting the storage address, respectively.
 
 The Starknet contract compiler generates the Cairo code that maps the storage variable's name and argument values to an address -- so that it can be part of the generated proof.
 
@@ -48,7 +48,7 @@ The address of a storage variable is computed as follows:
 `+h(...h(h(sn_keccak(variable_name),k_1),k_2),...,k_n)+` where stem:[$h$] is the
 Pedersen hash and the final value is taken stem:[$\bmod 2^{251}-256$]
 * If it is a mapping to complex values (e.g., tuples or structs), then this complex value lies in a continuous segment starting from the address calculated in the previous point. Note that 256 field elements is the current limitation on the maximal size of a complex storage value.
-* Note that when calling `var.addr(args)` for a storage variable with complex values, the returned value is the address of the first element in the storage.
+* Note that when calling `var.address(args)` for a storage variable with complex values, the returned value is the address of the first element in the storage.
 
 We can summarize the above as follows:
 
@@ -58,6 +58,7 @@ In the following example we define a storage variables with complex values.
 
 [source,js]
 ----
+#[storage]
 struct Storage {
     name: felt252,
     symbol: felt252,
