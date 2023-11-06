@@ -56,9 +56,9 @@ extern fn get_execution_info_syscall() -> SyscallResult<Box<starknet::info::Exec
 [discrete]
 ==== Description
 
-Gets information about the original transaction.
+Gets information about the currently executing block and the transactions in the block.
 
-In Cairo 1.0, all block/transaction/execution context getters are batched into this single system call.
+In Cairo 1.0, this single system call contains all information for a block, transaction, and execution context.
 
 [discrete]
 ==== Arguments
@@ -68,12 +68,52 @@ None.
 [discrete]
 ==== Return values
 
+Returns the struct `ExecutionInfo`. `ExecutionInfo` is a container for information about the currently executing block and the transactions in the block.
+
+.Contents of `ExecutionInfo`
+[cols="2,3"]
+|===
+|`_block_info_: Box<BlockInfo>` a| Contains the following information about a block:
+[horizontal,role="stripes_odd"]
+`_block_number_: u64`:: The number of the block that is currently being executed.
+`_block_timestamp_: u64`:: The timestamp showing the creation time of the block. #Is this in UTC time? Or seconds since the Unix epoch? Or something else?#
+`_sequencer_address_: ContractAddress`:: The address of the Starknet sequencer contract.
+|`_tx_info_: Box<TxInfo>`
+a| Contains the following information about a transaction:
+[horizontal,role="stripes_odd"]
+
+
+|`_caller_address_: ContractAddress` |
+|`_contract_address_: ContractAddress` |
+|`_entry_point_selector_: felt252` |
+
+|===
+// Add return values from
+
+// https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/info.cairo
+
+// For 0.13.0, see https://github.com/starkware-industries/starkware/blob/a57dbc9e0a7ece680bae52dd53216b2332c74618/src/starkware/starknet/common/new_syscalls.cairo#L30.
+
 * A link:https://github.com/starkware-libs/cairo/blob/efbf69d4e93a60faa6e1363fd0152b8fcedbb00a/corelib/src/starknet/info.cairo#L8[struct] containing the execution info.
 
 [discrete]
 ==== Common library
 
 link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L35[`syscalls.cairo`^]
+
+
+[discrete]
+==== Example
+
+This example shows how to pull the block number from the `ExecutionInfo` struct.
+[source,cairo]
+----
+let execution_info = get_execution_info().unbox();
+let block_info = execution_info.block_info.unbox();
+let block number = block_info.block_number;
+----
+
+----
 
 
 [id="call_contract"]
