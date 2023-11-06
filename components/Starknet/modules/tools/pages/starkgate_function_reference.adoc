@@ -1,0 +1,1143 @@
+[id="StarkGate_function_reference"]
+= StarkGate function reference
+
+The StarkGate smart contracts include functions that you use to implement various flows in a dApp.
+
+For information on the movement of funds between Ethereum and Starknet, see xref:starkgate-bridge.adoc[StarkGate bridge overview].
+
+The L1 functions and their interfaces, where available, are defined in the following smart contracts:
+
+[cols=",,",]
+|===
+|Contract |Name |Functions
+
+|https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarkgateManager.sol[`StarkgateManager.sol`] |The StarkGate Manager.
+
+Use the Manager to enroll a new token.
+
+An interface is available through https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/IStarkgateManager.sol[`IStarkgateManager.sol`]. a| * xref:#enrollTokenBridge[`enrollTokenBridge`]
+|https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarkgateRegistry.sol[`StarkgateRegistry.sol`] a|The StarkGate Registry.
+
+Use the Registry to view the addresses of existing bridges and to stop servicing a specific token.
+
+An interface is available through https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/IStarkgateRegistry.sol[`IStarkgateRegistry.sol`].
+a| * xref:#getBridge[`getBridge`]
+* xref:getWithdrawalBridges[`getWithdrawalBridges`]
+* xref:#selfRemove[`selfRemove`]
+
+
+|https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[`StarknetTokenBridge.sol`] |The primary StarkGate bridge contract. The functions and events in this reference that provide the main user bridge functionality are defined in this contract. a|
+* xref:#deposit[`deposit`]
+* xref:#depositCancelRequest[`depositCancelRequest`]
+* xref:#depositReclaim[`depositReclaim`]
+* xref:#depositWithMessage[`depositWithMessage`]
+* xref:#depositWithMessageCancelRequest[`depositWithMessageCancelRequest`]
+* xref:#depositWithMessageReclaim[`depositWithMessageReclaim`]
+* xref:#getStatus[`getStatus`]
+* xref:#withdraw[`withdraw`]
+
+|https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateService.sol[`IStarkgateService.sol`] | An interface to check if a contract is servicing a token. a|
+* xref:#isServicingToken[`isServicingToken`]
+|===
+
+The L2 functions and their interfaces, where available, are defined in the following smart contracts:
+
+[cols=",,",]
+|===
+|Contract |Description |Functions
+
+|https://github.com/starkware-libs/starkgate/blob/dev/src/cairo/token_bridge.cairo[`token_bridge.cairo`] |The StarkGate bridge implementation on L2. This contract includes the standard functions for a token bridge.
+
+An interface is available through https://github.com/starkware-libs/starkgate/blob/dev/src/cairo/token_bridge_interface.cairo[`token_bridge_interface.cairo`]. a|
+* xref:#get_erc20_class_hash[`get_erc20_class_hash`]
+* xref:#get_identity[`get_identity`]
+* xref:#get_l1_token_address[`get_l1_token_address`]
+* xref:#get_l2_token_address[`get_l2_token_address`]
+* xref:#get_remaining_withdrawal_quota[`get_remaining_withdrawal_quota`]
+* xref:#get_version[`get_version`]
+* xref:#initiate_withdraw[`initiate_withdraw`]
+* xref:#on_receive[`on_receive`]
+
+|===
+
+
+// Need to add Backward compatibility bridge.
+
+== L1 function reference
+
+Functions are listed in alphabetical order.
+
+'''
+
+[#deposit]
+=== `deposit`
+
+[discrete]
+==== Description
+
+Deposits the specified amount of an ERC-20 token to the L1 StarkGate bridge contract.
+
+The deposit function does the following:
+
+* Checks that the funds transferred are within the xref:starkgate-bridge.adoc#starkgate_alpha_limitations[Starknet Alpha limitations]
+* Transfers the funds from the caller's account to the Starknet bridge contract
+* Emits the `Deposit` event with the sender's address on L1, the recipient's address on L2, and the amount
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`payable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
+
+`Deposit`
+
+.Event attributes
+[horizontal,role=stripes-odd]
+`address indexed _sender_`:: The L1 address of the account that sent the deposit.
+`address indexed _token_`:: Same as the `address _token_` parameter.
+`uint256 _amount_`:: Same as the `uint256 _amount_` parameter.
+`uint256 indexed _l2Recipient_`:: Same as the `uint256 _l2Recipient_` parameter.
+`uint256 _nonce_`:: The nonce for the L1 transaction.
+`uint256 _fee_`:: The Starknet fee sent with the transaction.
+
+[discrete]
+==== Function and event definitions
+
+Contract: link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol[`StarknetTokenBridge.sol`]
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L290[`deposit`]
+* Event: link:[`Deposit`]
+
+
+
+'''
+
+[#depositCancelRequest]
+=== `depositCancelRequest`
+
+[discrete]
+==== Description
+
+Sends a request to StarkGate to cancel a deposit.
+
+You can send a cancellation request if the funds you transfer from L1 to L2 do not appear on L2 within a reasonable amount of time.
+
+In order to guard against an attack on Starknet, it takes approximately five days to cancel a deposit. When StarkGate receives the cancellation request, a counter begins. When exactly five days have passed, and the funds still do not appear on L2, you can reclaim the deposit using the xref:#depositReclaim[`depositReclaim`] function.
+
+The `depositReclaim` function can only be used once for any deposit cancellation request.
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`nonpayable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256 _nonce_`:: The nonce of the deposit.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
+
+`DepositCancelRequest`
+
+.Event attributes
+[horizontal,labelwidth="30",role=stripes-odd]
+`address indexed _sender_`:: The L1 address of the account that sent the deposit.
+`address indexed _token_`:: Same as the `address _token_` parameter.
+`uint256 _amount_`:: Same as the `uint256 _amount_` parameter.
+`uint256 indexed _l2Recipient_`:: Same as the `uint256 _l2Recipient_` parameter.
+`uint256 _nonce_`:: Same as the `uint256 _nonce_` parameter.
+
+[discrete]
+==== Function and event definitions
+
+Contract: https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol[`StarknetTokenBridge.sol`]
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L531[`depositCancelRequest`]
+* Event: link:https://github.com/starkware-libs/starkgate/blob/94056402acf7eb97458fac2d6e33372ce193c3f0/src/solidity/StarknetTokenBridge.sol#L74[`DepositCancelRequest`]
+
+
+'''
+
+[#depositReclaim]
+=== `depositReclaim`
+
+[discrete]
+==== Description
+
+Reclaims a deposit after a five day period has passed from the time that StarkGate received a deposit cancellation request from the `depositCancelRequest` function.
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`nonpayable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256 _nonce_`:: The nonce of the deposit.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
+
+`event DepositReclaimed`
+
+.Event attributes
+[horizontal,labelwidth="30",role=stripes-odd]
+`address indexed _sender_`:: The L1 address of the account that sent the deposit.
+`address indexed _token_`:: Same as the `address _token_` parameter.
+`uint256 _amount_`:: Same as the `uint256 _amount_` parameter.
+`uint256 indexed _l2Recipient_`:: Same as the `uint256 _l2Recipient_` parameter.
+`uint256 _nonce_`:: Same as the `uint256 _nonce_` parameter.
+
+[discrete]
+==== Function and event definitions
+
+Contract: `StarknetTokenBridge.sol`
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L604[`depositReclaim`]
+* Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L81C11-L81C27[`DepositReclaimed`]
+
+[discrete]
+==== See also
+
+* xref:#depositCancelRequest[`depositCancelRequest`]
+
+'''
+
+[#depositWithMessage]
+=== `depositWithMessage`
+
+[discrete]
+==== Description
+
+Similar to xref:#deposit[`deposit`], with a message attached.
+
+With this function, a deposit transaction can trigger subsequent actions. For example, you can deposit funds and include a message to transfer those funds to another address. `depositWithMessage` lets you execute these two separate transactions with a single user action.
+
+After depositing to another recipient, the L1 handler in `token_bridge.cairo` calls the `on_receive` function in the contract of the recipient.
+
+If `on_receive` returns `true`, then the operation succeeded. If it returns `false`, the transaction is reverted.
+//
+// ##----
+// fn on_receive(
+// self: @ContractState,
+// token_address: ContractAddress,
+// amount: u256,
+// depositor: EthAddress,
+// message: Span<felt252>
+// ) -> bool {
+// ----##
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`payable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256[] calldata _message_`:: The message attached to the deposit.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
+
+`DepositWithMessage`
+
+.Event attributes
+[horizontal,role=stripes-odd]
+`address indexed _sender_`:: The L1 address of the account that sent the deposit.
+`address indexed _token_`:: Same as the `address _token_` parameter.
+`uint256 _amount_`:: Same as the `uint256 _amount_` parameter.
+`uint256 indexed _l2Recipient_`:: Same as the `uint256 _l2Recipient_` parameter.
+`uint256[] _message_`:: Same as the `uint256[] calldata _message_` parameter.
+`uint256 _nonce_`:: The nonce for the L1 transaction.
+`uint256 _fee_`:: The Starknet fee sent with the transaction.
+
+[discrete]
+==== Function and event definitions
+
+Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[StarknetTokenBridge.sol]
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L261[`depositWithMessage`]
+* Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L37[`DepositWithMessage`]
+
+
+'''
+
+
+[#Continue review with Roee here#]
+
+[#depositWithMessageCancelRequest]
+=== `depositWithMessageCancelRequest`
+
+[discrete]
+==== Description
+
+Sends a request to StarkGate to cancel a deposit sent with `depositWithMessage`.
+
+Similar to `depositCancelRequest`.
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`nonpayable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256[] calldata _message_`:: The message attached to the deposit.
+`uint256 _nonce_`:: The nonce of the deposit.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
+
+`DepositWithMessageCancelRequest`
+
+.Event attributes
+[horizontal,role=stripes-odd]
+`address indexed _sender_`:: The L1 address of the account that sent the deposit.
+`address indexed _token_`:: Same as the `address _token_` parameter.
+`uint256 _amount_`:: Same as the `uint256 _amount_` parameter.
+`uint256 indexed _l2Recipient_`:: Same as the `uint256 _l2Recipient_` parameter.
+`uint256[] _message_`:: Same as the `uint256[] calldata _message_` parameter.
+`uint256 _nonce_`:: The nonce for the L1 transaction.
+
+[discrete]
+==== Function and event definitions
+
+Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[StarknetTokenBridge.sol]
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L550[`depositWithMessageCancelRequest`]
+* Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L550[`DepositWithMessageCancelRequest`]
+
+[discrete]
+==== See also
+
+* xref:#depositWithMessage[`depositWithMessage`]
+* xref:#depositCancelRequest[`depositCancelRequest`]
+
+
+
+'''
+
+[#depositWithMessageReclaim]
+=== `depositWithMessageReclaim`
+
+[discrete]
+==== Description
+
+Sends a request to StarkGate to cancel a deposit sent with `depositWithMessage`.
+
+Similar to `depositCancelRequest`.
+
+Reclaims a deposit sent with a message after a five day period has passed from the time that StarkGate received a deposit cancellation request from the `depositWithMessageCancelRequest` function.
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`nonpayable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the deposit.
+`uint256 _l2Recipient_`:: The L2 address of the recipient.
+`uint256 _nonce_`:: The nonce of the deposit.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
+
+`DepositWithMessageCancelRequest`
+
+.Event attributes
+[horizontal,role=stripes-odd]
+`address indexed _sender_`:: The L1 address of the account that sent the deposit.
+`address indexed _token_`:: Same as the `address _token_` parameter.
+`uint256 _amount_`:: Same as the `uint256 _amount_` parameter.
+`uint256 indexed _l2Recipient_`:: Same as the `uint256 _l2Recipient_` parameter.
+`uint256[] _message_`:: Same as the `uint256[] calldata _message_` parameter.
+`uint256 _nonce_`:: The nonce for the L1 transaction.
+
+[discrete]
+==== Function and event definitions
+
+Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarknetTokenBridge.sol[StarknetTokenBridge.sol]
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L580[`depositWithMessageReclaim`]
+* Event: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L54[`DepositWithMessageReclaimed`]
+
+[discrete]
+==== See also
+
+* xref:#depositCancelRequest[`depositCancelRequest`]
+* xref:#depositReclaim[`depositReclaim`]
+* xref:depositWithMessageCancelRequest[`depositWithMessageCancelRequest`]
+
+
+'''
+
+[#enrollTokenBridge]
+=== `enrollTokenBridge`
+
+[discrete]
+==== Description
+
+Creates a Starknet bridge for the specified ERC-20 token contract address in the multi-token bridge contracts and adds the token to the StarkGate Registry.
+
+Does not work for any ERC-20 token bridge's contract address that is already in the registry.
+
+Enrolling a new bridge creates a new ERC-20 contract on L2. You can see the class hash for this contract using xref:#get_erc20_class_hash[`get_erc20_class_hash`].
+
+include::partial$snippet_enrollTokenBridge_note.adoc[]
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`payable`
+
+The message payload needs to include funds to cover the Starknet (L2) fee for executing this transaction. You can include this payload using a standard wrapper such as web3.js.
+
+For the minimum deployment fee, see link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/StarkgateConstants.sol#L22[`MIN_DEPLOYMENT_FEE`] in `StarkgateConstants.sol`.
+
+[`MIN_DEPLOYMENT_FEE`] in `StarkgateConstants.sol` defines the minimum deployment fee. You can call this function to query the value.
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired ERC-20 token.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
+
+`TokenEnrollmentInitiated`
+
+[discrete]
+==== Function and event definition
+
+[horizontal]
+Contract: link:https://github.com/starkware-libs/starkgate/blob/53151ea8d1e775ee114555b3d36443ed2b62fc02/src/solidity/StarkgateManager.sol[`StarkgateManager.sol`] ::
+
+Function: link:https://github.com/starkware-libs/starkgate/blob/53151ea8d1e775ee114555b3d36443ed2b62fc02/src/solidity/StarkgateManager.sol#L125C30-L125C30[`enrollTokenBridge`] in `StarkgateManager.sol`
+
+Contract: link:https://github.com/starkware-libs/starkgate/blob/53151ea8d1e775ee114555b3d36443ed2b62fc02/src/solidity/StarknetTokenBridge.sol[`StarknetTokenBridge.sol`]::
+Event: link:https://github.com/starkware-libs/starkgate/blob/53151ea8d1e775ee114555b3d36443ed2b62fc02/src/solidity/StarknetTokenBridge.sol#L34[`TokenEnrollmentInitiated`]
+
+
+'''
+
+[#getBridge]
+=== `getBridge`
+
+[discrete]
+==== Description
+
+Returns the address of the bridge for the specified token, or a value indicating if the bridge does not exist, is blocked, or is deactivated.
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired ERC-20 token.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`address _address_`:: The address of the bridge for the specified token.
+`Address(0)`:: The bridge does not exist.
+`Address(1)`:: The bridge is blocked or deactivated.
+
+[discrete]
+==== Emitted event
+
+None.
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/ce53961e124c3f8a5e73e9ec2a7f4dcbc1ab6ab9/src/solidity/IStarkgateRegistry.sol#L8[`getBridge`] in `IStarkgateRegistry.sol`
+
+
+'''
+
+[#getRegistry]
+=== `getRegistry`
+
+[discrete]
+==== Description
+
+Returns the address of the StarkGate Registry contract.
+
+Only the Manager uses this function.
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+None
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`address`:: The address of the Registry contract.
+
+[discrete]
+==== Emitted event
+
+None.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/53151ea8d1e775ee114555b3d36443ed2b62fc02/src/solidity/StarkgateManager.sol#L21[`getRegistry`] in `StarkgateManager.sol`
+
+
+
+'''
+
+[#getStatus]
+=== `getStatus`
+
+[discrete]
+==== Description
+
+Returns the status of a token in StarkGate.
+
+`deploy` transaction triggered by the `enrollTokenBridge` API.
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired ERC-20 token.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`TokenStatus`:: One of the following values:
++
+[horizontal]
+0::: Unknown. The bridge does not recognize the token.
+1::: Pending. The token has been enrolled to StarkGate, but the `deploy` transaction has not yet successfully completed. You can deposit funds.
+2::: Active. The `deploy` transaction for this token has completed successfully and StarkGate recognizes the token.
+3::: Deactivated. The token has been removed from StarkGate. You cannot deposit funds.
+
+[discrete]
+==== Emitted event
+
+None.
+
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/757a461fd998f7e2909e8e71031b419d257da3ed/src/solidity/StarknetTokenBridge.sol#L203C23-L203C23[`getStatus`] in `StarknetTokenBridge.sol`
+
+
+
+'''
+
+[#getWithdrawalBridges]
+=== `getWithdrawalBridges`
+
+[discrete]
+==== Description
+
+Retrieves a list of all bridge addresses that have ever facilitated withdrawals for the specified token.
+
+In a case where an inactive bridge for a specific token might still have funds locked, you can use this function to identify all bridges that ever serviced that token.
+
+If you used a bridge for a given token that subsequently was replaced with a new or updated bridge, but you still have funds locked on the first bridge, you might not know the address of the old bridge. This function returns
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address[] memory _bridges_`:: An array of addresses of all bridges that ever serviced `token`.
+
+[discrete]
+==== Emitted event
+
+None.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/53151ea8d1e775ee114555b3d36443ed2b62fc02/src/solidity/StarkgateRegistry.sol#L105[`getWithdrawalBridges`] in `StarkgateRegistry.sol`.
+
+
+
+'''
+[#identify]
+=== `identify`
+
+[discrete]
+==== Description
+
+Returns the name and version of the `StarknetTokenBridge.sol` contract.
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`pure`
+
+[discrete]
+==== Parameters
+
+None.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`string _memory_`:: The name and version of the `StarknetTokenBridge.sol` contract.
+
+[discrete]
+==== Emitted event
+
+None.
+
+[discrete]
+==== Function definition
+link:https://github.com/starkware-libs/starkgate/blob/2f96bca50cc6203645b419a890b4a066d617a1cd/src/solidity/StarknetTokenBridge.sol#L89[`identify`] in `StarknetTokenBridge.sol`
+
+
+
+'''
+
+[#isServicingToken]
+=== `isServicingToken`
+
+[discrete]
+==== Description
+
+Checks whether the calling contract is currently providing a service for the specified token.
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`true`:: The calling contract is currently providing a service for the token.
+`false`:: The calling contract is not currently providing a service for the token.
+
+[discrete]
+==== Emitted event
+
+None.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/solidity/IStarkgateService.sol#L9C14-L9C30[`isServicingToken`] in `IStarkgateService.sol`.
+
+'''
+
+[#selfRemove]
+=== `selfRemove`
+
+[discrete]
+==== Description
+
+Removes enlisting of a specific token bridge from the registry.
+
+Use this function when writing a custom bridge in order to remove the bridge from the registry if you no longer support the specified token.
+
+The bridge must implement the `isServicingToken` function.
+
+If you don’t implement `isServicingToken`, or if it returns `true`, this function fails and the entire transaction is reverted.
+
+
+[discrete]
+==== Visibility
+
+`external`
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`address _token_`:: The address of the token bridge contract to remove.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
+
+None.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/53151ea8d1e775ee114555b3d36443ed2b62fc02/src/solidity/StarkgateRegistry.sol#L113[`selfRemove`] in `StarkgateRegistry.sol`
+
+[discrete]
+==== See also
+
+* xref:#isServicingToken[`isServicingToken`]
+
+'''
+
+[#withdraw]
+=== `withdraw`
+
+[discrete]
+==== Description
+
+Transfers the specified amount of the specified token to the address of the recipient specified in the `l1_recipient` parameter of the `initiate_token_withdraw` function on L2.
+
+Anyone can call this function, but only after the withdraw message has been recorded on the Starknet core contract.
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`address _token_`:: The address of the contract for the desired token.
+`uint256 _amount_`:: The amount of the withdrawal.
+`address _recipient_`:: (Optional) The recipient. If you don't specify this parameter, the withdraw function uses the sender's address.
+
+[discrete]
+==== State mutability
+
+`nonpayable`
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Emitted event
+
+`Withdrawal`
+
+.Event attributes
+[horizontal,role=stripes-odd]
+`address indexed _recipient_`:: Same as the `address _recipient_` parameter.
+`address indexed _token_`:: Same as the paramater `address _token_`.
+`uint256 _amount_`:: Same as the parameter `uint256 _amount_`.
+
+[discrete]
+==== Function and event definition
+
+Contract: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol[`StarknetTokenBridge.sol`]
+
+* Function: link:https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L517C11-L517C11[`withdraw`]
+* Event: https://github.com/starkware-libs/starkgate/blob/44c63434782e45d476622924ec004526f6fe64a0/src/solidity/StarknetTokenBridge.sol#L62[`Withdrawal`]
+
+== L1 Constants
+
+[horizontal,labelwidth=60,role=stripes-odd]
+`uint256 public constant MIN_DEPLOYMENT_FEE`:: The minimum L1 fee required to send a message for deposit.
+`uint256 public constant MIN_DEPLOYMENT_FEE`:: The minimum L1 fee required to send a message for the `deploy` transaction when enrolling a bridge.
+
+[discrete]
+=== See also
+
+* Contract: link:https://github.com/starkware-libs/starkgate/blob/dev/src/solidity/StarkgateConstants.sol[StarkgateConstants.sol]
+
+== L2 function reference
+
+Functions are listed in alphabetical order.
+
+'''
+[#get_erc20_class_hash]
+=== `get_erc20_class_hash`
+
+[discrete]
+==== Description
+
+Returns the current class hash of the implementation used by the ERC-20 contract. Use the class hash as the type when deploying the ERC-20 contract on L2.
+
+[IMPORTANT]
+====
+If StarkWare changes the class hash such that it is no longer the class hash that you used when deploying your bridge contract, this function returns the new class hash. If you want to refer to the class hash that you used when deploying your contract, see your deployed contract on Starknet.
+====
+
+[discrete]
+==== Parameters
+
+None.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`ClassHash`:: The class hash of the ERC-20 token contract.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/f060fd5d1ca49a0014dbcb0777a0c084c12f41d2/src/cairo/token_bridge.cairo#L637C1-L639C10[`get_erc20_class_hash`] in `token_bridge.cairo`.
+
+'''
+
+[#get_identity]
+=== `get_identity`
+
+[discrete]
+==== Description
+
+Returns a string in a felt252 type with the identity of StarkGate.
+
+[discrete]
+==== Parameters
+
+None.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`felt252`:: The identity of StarkGate.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/4bcdf377a34efcef367d6ea541a92deaa2243454/src/cairo/token_bridge_interface.cairo#L8C7-L8C7[`get_identity`] in `token_bridge_interface.cairo`.
+
+
+
+
+'''
+
+[#get_l1_token_address]
+=== `get_l1_token_address`
+
+[discrete]
+==== Description
+
+Returns the L1 address that corresponds to the matching L2 address of an ERC-20 token contract.
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`_l2_token_address_: ContractAddress`:: The L2 address of the ERC-20 token contract.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`EthAddress`:: The L1 address of the ERC-20 token contract.
+`EthAddressZeroable::zero()`:: The token is not found in the bridge.
+
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/4bcdf377a34efcef367d6ea541a92deaa2243454/src/cairo/token_bridge_interface.cairo#L9C11-L9C11[`get_l1_token_address`] in `token_bridge_interface.cairo`.
+
+
+
+'''
+[#get_l2_token_address]
+=== `get_l2_token_address`
+
+[discrete]
+==== Description
+
+Returns the L2 address that corresponds to the matching L1 address of an ERC-20 token contract.
+
+If the token is not found in the bridge, this function returns `0`.
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`l1_token_address`:: The L1 address of the ERC-20 token contract.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="20",role=stripes-odd]
+`ContractAddress _address_`:: The L2 address of the ERC-20 token contract.
+`ContractAddressZeroable::zero()`:: The token is not found in the bridge.
+
+
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/4bcdf377a34efcef367d6ea541a92deaa2243454/src/cairo/token_bridge_interface.cairo#L10[`get_l2_token_address`] in `token_bridge_interface.cairo`.
+
+
+
+
+'''
+
+[#get_remaining_withdrawal_quota]
+=== `get_remaining_withdrawal_quota`
+
+[discrete]
+==== Description
+
+Returns the amount that the user can withdraw within the current 24 hour time period. The time period begins at 00:00 UTC.
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="25",role=stripes-odd]
+`l1_token_address`:: The L1 address of the ERC-20 token contract.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="25",role=stripes-odd]
+`u256`:: The amount that can currently be withdrawn from the bridge, in units defined by the ERC-20 token contract.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/894d822a33fd5aa2b8469606d2d6e363ff06bb2c/src/cairo/token_bridge_interface.cairo#L14C15-L14C15[`get_remaining_withdrawal_quota`] in `token_bridge_interface.cairo`
+
+
+
+
+'''
+
+[#get_version]
+=== `get_version`
+
+[discrete]
+==== Description
+
+Returns the current version of StarkGate.
+
+[discrete]
+==== Parameters
+
+None.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="25",role=stripes-odd]
+`felt252`:: The current version of StarkGate.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/ddc2e72c0394ef378959870a77789bbe05dff76e/src/cairo/token_bridge_interface.cairo#L7[`get_version`] in `token_bridge_interface.cairo`.
+
+
+'''
+
+[#initiate_withdraw]
+=== `initiate_withdraw`
+
+[discrete]
+==== Description
+
+Initiates a withdrawal from L2. After initiating the withdrawal, the function does the following:
+
+. Burns the transferred amount of tokens from the balance of the withdrawal’s initiator.
+. Sends a message to the relevant L1 bridge with the amount to be transferred, and the recipient's address.
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="25",role=stripes-odd]
+`l1_recipient`:: The L1 address of the recipient.
+`EthAddress _token_`:: The L1 address of the ERC-20 token contract.
+`uint256 _amount_`:: The amount to transfer.
+
+[discrete]
+==== Returns
+
+None.
+
+[discrete]
+==== Function definition
+
+link:https://github.com/starkware-libs/starkgate/blob/894d822a33fd5aa2b8469606d2d6e363ff06bb2c/src/cairo/token_bridge_interface.cairo#L18[`initiate_withdraw`] in `token_bridge_interface.cairo`.
+
+=== `on_receive`
+
+#Need this info from Roee#
