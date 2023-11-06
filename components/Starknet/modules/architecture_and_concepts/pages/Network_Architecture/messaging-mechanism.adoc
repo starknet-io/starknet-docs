@@ -122,7 +122,7 @@ Sending an L2 to L1 message always incurs a fixed cost of 20,000 gas, because th
 [id="l1-l2-messages"]
 == L1 → L2 messages
 
-Contracts on L1 can interact asynchronously with contracts on L1 using the _L1→L2_ messaging protocol.
+Contracts on L1 can interact asynchronously with contracts on L2 using the _L1→L2_ messaging protocol.
 
 // What does the protocol consist of? Is it just the syscall?
 
@@ -137,7 +137,7 @@ The Starknet Core Contract hashes the message parameters and updates the L1→L2
  .. The L2 transaction invokes the relevant `l1_handler`.
 . The L1 Handler transaction that was created in the previous step is added to a proof.
 . The state update is received on the Core contract.
-. the message is cleared from the Core contract's storage. At this point, the message is handled.
+. The message is cleared from the Core contract's storage. At this point, the message is handled.
 
 // The above flow is illustrated in the following diagram:
 // THIS IMAGE IS WRONG & MISLEADING AND THUS COMMENTED OUT UNTIL FIXED
@@ -145,8 +145,8 @@ The Starknet Core Contract hashes the message parameters and updates the L1→L2
 
 An L1→L2 message consists of:
 
-* The L1 sender address
-* The recipient contract address on Starknet
+* L1 sender's address
+* L2 recipient's contract address
 * Function selector
 * Calldata array
 * Message nonce
@@ -155,8 +155,9 @@ An L1→L2 message consists of:
 ====
 *Message nonce*
 
-The message nonce is maintained on the Starknet Core contract on L1, and is bumped whenever a message is
-sent to L2. It is used to avoid hash collisions between different L1 handler transactions that are induced by the same message being sent on L1 multiple times (see xref:structure_and_hashing_l1-l2[below]).
+The message nonce is maintained on the Starknet Core contract on L1, and is bumped whenever a message is sent to L2. The nonce is used to avoid hash collisions between different L1 handler transactions that are induced by the same message being sent on L1 multiple times.
+
+For more information, see xref:#l1_l2_message_structure[L1->L2 structure].
 ====
 
 [id="l2-l1_message_cancellation"]
@@ -185,7 +186,8 @@ The fee itself is calculated in the xref:../Network_Architecture/fee-mechanism.a
 "regular" L2 transactions. You can use the xref:documentation:cli:starkli.adoc#starknet-estimate_fee[CLI] to get an estimate of an L1 → L2 message fee.
 
 [id="structure_and_hashing_l1-l2"]
-=== L1 → L2 structure and hashing
+[#l1_l2_message_structure]
+=== L1 → L2 structure
 
 For completeness, we describe the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.
 
@@ -196,6 +198,9 @@ For completeness, we describe the precise structure of both the message as it ap
 
 | `EthereumAddress` | `FieldElement` | `FieldElement` | `List+++<FieldElement>+++` | `FieldElement` |
 |===
+
+[#hashing_l1-l2]
+=== L1 → L2 hashing
 
 The hash of the message is computed on L1 as follows:
 
@@ -217,9 +222,9 @@ keccak256(
 
 [%autowidth.stretch]
 |===
-| Version        | ContractAddress | Selector             | Calldata       | Nonce          |
+| Version #Should this be Version?#       | ContractAddress | Selector             | Calldata       | Nonce          |
 
-| `FieldElement` | `FieldElement`  | `FieldElement` | `List+++<FieldElement>+++` | `FieldElement` |
+| `FieldElement` #Should this be a version number?# | `FieldElement`  | `FieldElement` | `List+++<FieldElement>+++` | `FieldElement` |
 |===
 
 The hash of the corresponding L1 handler transaction on L2 is computed as follows:
@@ -250,5 +255,5 @@ In an `l1_handler` transaction, the first element of the calldata is always the 
 
 == Additional resources
 
-* https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/common/messages.cairo#L4[`send_message_to_L1`] in the source contract
+* xref:Smart_Contracts/system-calls-cairo1.adoc#send_message_to_L1[`send_message_to_L1`] syscall
 * link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract
