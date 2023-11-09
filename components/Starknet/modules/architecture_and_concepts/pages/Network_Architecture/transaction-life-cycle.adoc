@@ -38,7 +38,7 @@ The following are the possible statuses of a transaction from the moment a user 
 
 .4+|*Finality* |`NOT_RECEIVED` |The transaction is not yet known to the sequencer.
 |`RECEIVED` |The transaction was received by the mempool. The transaction now either executes successfully, is rejected, or reverted.
-|`ACCEPTED_ON_L2` |The transaction passed validation and entered an actual created block on L2.
+|`ACCEPTED_ON_L2` |The transaction was executed and entered an actual created block on L2.
 |`ACCEPTED_ON_L1` |The transaction was accepted on Ethereum.
 .3+|*Execution* |`REJECTED` |The transaction was received by the mempool but failed validation in the sequencer. Such transactions are not included in a block.
 |`REVERTED` |The transaction passed validation but failed during execution in the sequencer. It is included in the block with the status `REVERTED`.
@@ -53,18 +53,15 @@ When a transaction is marked as `REVERTED`, the following state implications occ
 [horizontal,labelwidth="20",role="stripes-odd"]
 Nonce increases:: The nonce value for the account of the failed transaction iterates despite the failure.
 
-Fee charge:: A fee is charged for the execution of the transaction up to the point of failure.
+Fee charge:: The sequencer charges a fee for the execution of the transaction up to the point of failure. A `Transfer` event is emitted.
 
-Partial reversion:: All changes that occurred during the `validate` stage are not reverted. However, all changes that occurred during the `execute` stage are reverted, including no messages to L1 or events.
+Partial reversion:: All changes that occurred during the `validate` stage are not reverted. However, all changes that occurred during the `execute` stage are reverted, including all messages to L1 or any events that were emitted during this phase.
++
+Events might still be emitted from the `validate` stage or the fee charge phase.
 
 Fee calculation:: The fee charged for `REVERTED` transactions is calculated as follows:
 +
-#Is this an actual function or pseudo code? If an actual function, then what language is it and where is it defined? If it's pseudo code, then we should probably make it stem formatting.#
-+
-[source,bash]
-----
-fee = Min(max_fee, consumed_resources)
-----
+stem:[\text{fee} = \text{Min(max_fee,consumed_resources)}]
 
 Consumed Resources:: The `consumed_resources` are the resources used for the execution of the transaction up to the point of failure. This includes Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the `validate` and
 `execute` stages.
@@ -78,7 +75,7 @@ The transaction receipt contains:
 * A summary of the execution resources used by the transaction.#Where is this in the example below?#
 * The events emitted. #Where are the events emitted in the example below?#
 * A list of messages sent to L1. #In the example, what is the difference between this item and the next (consumed L1 message)?#
-* A consumed L1 message, if the transaction invokes an L1 handler. #Is this the calldata in the examle below?#
+* A consumed L1 message, if the transaction invokes an L1 handler. #Is this the calldata in the example below?#
 
 The following is an example of a receipt:
 
