@@ -1,11 +1,12 @@
 [id="transaction_structure"]
 = Transaction types
 
-Starknet supports the following transactions:
+Starknet supports the following types of transactions:
 
-* `invoke`
-* `declare`
-* `deploy_account`
+[horizontal,labelwidth="20"]
+_Declare_:: Declares new contract classes, enabling new contract instances.
+_Invoke_:: Invokes an existing function in a contract.
+_Deploy account_:: Deploys new account contracts in smart wallets.
 
 This topic describes the available fields for these transaction types and how each transaction's hash is calculated.
 
@@ -19,20 +20,19 @@ When the fields that comprise a transaction change, either with the addition of 
 Do not submit a transaction that uses an unsupported transaction type, because it cannot be included in a proof, and so cannot become part of a Starknet block.
 ====
 
-.Supported Starknet transaction versions
+.Supported versions of Starknet transaction types
 [cols=",,",]
 |===
 |Transaction name |Current version |Deprecated version
 
-|`invoke` |v1 |v0
-|`declare` |v2 |v1, v0
-|`deploy_account` |v0 |
+|*Invoke* |v1 |v0
+|*Declare* |v2 |v1, v0
+|*Deploy account* |v0 |
+|*Deploy* | Unsupported |v0 |
 |===
 
-#Should `deploy` be in this table? It's not clear if it's supported, deprecated or what.#
-
 [id=invoke_transaction]
-== `invoke` transaction
+== *Invoke* transaction
 
 The invoke transaction is the main transaction type used to invoke contract functions in Starknet.
 
@@ -43,7 +43,7 @@ Invoke transaction version 0 is deprecated and will be removed in a future relea
 
 === v1 transaction fields
 
-.`invoke` transaction fields
+.*Invoke* transaction fields
 
 [%autowidth.stretch]
 |===
@@ -60,7 +60,7 @@ When the fields that comprise a transaction change, either with the addition of 
 
 === v1 hash calculation
 
-The `invoke` v1 transaction hash is calculated as a hash over the given transaction elements,
+The *Invoke* v1 transaction hash is calculated as a hash over the given transaction elements,
 specifically:
 
 [source,cairo,subs="quotes"]
@@ -110,13 +110,13 @@ Where:
 * `_h_` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash
 
 [id="declare-transaction"]
-== `declare` transaction
+== *Declare* transaction
 
-The `declare` transaction is used to introduce new classes into the state of Starknet, enabling other contracts to deploy instances of those classes or use them in a library call. For more information, see xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[contract classes].
+The *Declare* transaction is used to introduce new classes into the state of Starknet, enabling other contracts to deploy instances of those classes or use them in a library call. For more information, see xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[contract classes].
 
 [IMPORTANT]
 ====
-New Cairo 1.0 classes can only be declared via the `declare` v2 transaction.
+New Cairo 1.0 classes can only be declared via the *Declare* v2 transaction.
 
 v1 used to declare Cairo 0 classes are deprecated and will be removed in a future Starknet version.
 
@@ -129,7 +129,7 @@ v0 is no longer supported.
 // todo add flow for invoke /deploy transaction flows examples, from upcoming versions / account
 // abstraction./ Link to flow in AA section.
 
-.`declare`v2` transaction fields
+.*Declare* v2 transaction fields
 
 [%autowidth.stretch]
 |===
@@ -148,7 +148,7 @@ When the fields that comprise a transaction change, either with the addition of 
 
 === v2 hash calculation
 
-The hash of a v2 `declare` transaction is computed as follows:
+The hash of a v2 *Declare* transaction is computed as follows:
 
 [source,cairo,subs="quotes"]
 ----
@@ -181,7 +181,7 @@ include::partial$snippet_transaction_admonition.adoc[]
 
 This transaction version was used to declare Cairo 0 classes.
 
-.`declare` v1 transaction fields
+.*Declare* v1 transaction fields
 [%autowidth.stretch]
 |===
 | Name | Type | Description
@@ -259,22 +259,22 @@ computed.
 
 
 [id=deploy_account_transaction]
-== `deploy_account` transaction
+== *Deploy account* transaction
 
-Since xref:starknet_versions:version_notes.adoc#version0.10.1[StarkNet v0.10.1] the `deploy_account`
-transaction replaces the `deploy` transaction
+Since xref:starknet_versions:version_notes.adoc#version0.10.1[StarkNet v0.10.1] the *Deploy account*
+transaction replaces the *Deploy* transaction
 for deploying account contracts.
 
 To use it, you should first pre-fund your would-be account address so that you could pay the
 transaction fee (see xref:Accounts/deploying_new_accounts.adoc[here] for more details)
-. You can then send the `deploy_account`
+. You can then send the *Deploy account*
 transaction.
 
-A `deploy_account` transaction has the following fields:
+A *Deploy account* transaction has the following fields:
 
 === v0 transaction fields
 
-.`deploy_account` transaction fields
+.*Deploy account* transaction fields
 
 [%autowidth]
 |===
@@ -292,7 +292,7 @@ A `deploy_account` transaction has the following fields:
 
 === v0 hash calculation
 
-The hash of a `deploy_account` transaction is computed as follows:
+The hash of a *Deploy account* transaction is computed as follows:
 
 [source,cairo,subs="quotes"]
 ----
@@ -312,15 +312,11 @@ deploy_account_tx_hash = _h_(
 
 [id="deploy_transaction"]
 
-If you need to retrieve the hash of an existing `deploy` transaction, you can use this information to calculate the hash of the transaction.
+If you need to retrieve the hash of an existing *Deploy* transaction, you can use this information to calculate the hash of the transaction.
 
-=== `deploy` transaction hash calculation
+=== *Deploy* transaction hash calculation
 
-#Why do we inlcude the `deploy` transaction at all?#
-
-#If we need to include it, then why don't we include the fields as well?#
-
-In order to calculate the transaction hash, we first need to obtain the deployed contract address. The Deploy transaction's hash is calculated as follows:
+Before you can calculate the transaction hash, get the deployed contract address. The *Deploy* transaction's hash is calculated as shown in the following pseudo code:
 
 [source,cairo,subs="quotes"]
 ----
