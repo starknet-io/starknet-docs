@@ -25,21 +25,30 @@ Do not submit a transaction that uses an unsupported transaction type, because i
 |===
 |Transaction name |Current version |Deprecated version
 
-|*Invoke* |v1 |v0
-|*Declare* |v2 |v1, v0
-|*Deploy account* |v0 |
-|*Deploy* | Unsupported |v0 |
+|*Invoke* | v3 |v1, v0
+|*Declare* |v3 |v2, v1, v0
+|*Deploy account* | v3 | v0
 |===
+
+[NOTE]
+====
+The *Deploy* transaction type is unsupported. The last supported version was v0.
+====
 
 [id=invoke_transaction]
 == *Invoke* transaction
-
-The invoke transaction is the main transaction type used to invoke contract functions in Starknet.
 
 [IMPORTANT]
 ====
 Invoke transaction version 0 is deprecated and will be removed in a future release of Starknet.
 ====
+
+The Invoke transaction type invokes an existing function in a Starknet smart contract, or a contract instance.
+
+Invoke transactions don't add new functions.
+
+Every Invoke transaction in Starknet undergoes `+__validate__+` and `+__execute__+` stages. The `+__validate__+` step checks the transaction's correctness, similar to a syntax or logic check. After validation, the `+__execute__+` phase processes the transaction.
+
 
 === v1 transaction fields
 
@@ -63,7 +72,7 @@ When the fields that comprise a transaction change, either with the addition of 
 The *Invoke* v1 transaction hash is calculated as a hash over the given transaction elements,
 specifically:
 
-[source,cairo,subs="quotes"]
+[,subs="quotes"]
 ----
 invoke_v1_tx_hash = _h_(
     "invoke",
@@ -112,13 +121,13 @@ Where:
 [id="declare-transaction"]
 == *Declare* transaction
 
-The *Declare* transaction is used to introduce new classes into the state of Starknet, enabling other contracts to deploy instances of those classes or use them in a library call. For more information, see xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[contract classes].
+The *Declare* transaction introduces new contract classes into the state of Starknet, enabling other contracts to deploy instances of those classes or use them in a library call. For more information, see xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[contract classes].
 
 [IMPORTANT]
 ====
-New Cairo 1.0 classes can only be declared via the *Declare* v2 transaction.
+You can only declare Cairo 1.0 classes with the *Declare* v2 transaction type.
 
-v1 used to declare Cairo 0 classes are deprecated and will be removed in a future Starknet version.
+v1, which declares Cairo 0 classes, is deprecated and will be removed in a future Starknet version.
 
 v0 is no longer supported.
 ====
@@ -143,7 +152,7 @@ v0 is no longer supported.
 | `max_fee` | `FieldElement` | The maximum fee that the sender is willing to pay for the transaction.
 | `nonce` | `FieldElement` | The transaction nonce.
 | `version` | `FieldElement` | The transaction's version. The value is 2. +
-When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of Starknet.
+When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 |===
 
 === v2 hash calculation
@@ -192,7 +201,7 @@ This transaction version was used to declare Cairo 0 classes.
 | `signature` | `List<FieldElement>` | Additional information given by the sender, used to validate the transaction.
 | `nonce` | `FieldElement` | The transaction nonce.
 | `version` | `FieldElement` | The transaction's version. Possible values are 1 or 0. +
-When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases. Transaction version 0 is deprecated and will be removed in a future version of Starknet.
+When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 |===
 
 
@@ -201,7 +210,7 @@ When the fields that comprise a transaction change, either with the addition of 
 The hash of a v1 declare transaction is computed as follows:
 
 
-[source,cairo,subs="quotes"]
+[,subs="quotes"]
 ----
 declare_v1_tx_hash = _h_(
     "declare",
@@ -233,7 +242,7 @@ This transaction version was used to declare Cairo 0 classes.
 
 The hash of a v0 declare transaction is computed as follows:
 
-[source,cairo,subs="quotes"]
+[,subs="quotes"]
 ----
 declare_v0_tx_hash = _h_(
     "declare",
@@ -272,7 +281,7 @@ transaction.
 
 A *Deploy account* transaction has the following fields:
 
-=== v0 transaction fields
+=== v1 transaction fields
 
 .*Deploy account* transaction fields
 
@@ -290,11 +299,11 @@ A *Deploy account* transaction has the following fields:
 
 |===
 
-=== v0 hash calculation
+=== v1 hash calculation
 
 The hash of a *Deploy account* transaction is computed as follows:
 
-[source,cairo,subs="quotes"]
+[,subs="quotes"]
 ----
 deploy_account_tx_hash = _h_(
     "deploy_account",
@@ -314,11 +323,11 @@ deploy_account_tx_hash = _h_(
 
 If you need to retrieve the hash of an existing *Deploy* transaction, you can use this information to calculate the hash of the transaction.
 
-=== *Deploy* transaction hash calculation
+== *Deploy* transaction hash calculation
 
 Before you can calculate the transaction hash, get the deployed contract address. The *Deploy* transaction's hash is calculated as shown in the following pseudo code:
 
-[source,cairo,subs="quotes"]
+[,subs="quotes"]
 ----
 deploy_tx_hash = _h_(
     "deploy",
