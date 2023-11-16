@@ -1210,11 +1210,13 @@ When the fields that comprise a transaction change, either with the addition of 
     "declare",
     version,
     sender_address,
-    0,
-    <em>h</em>(class_hash),
-    max_fee,
+    <em>h</em>(tip, l1_gas_bounds, l2_gas_bounds),
+    <em>h</em>(paymaster_data),
     chain_id,
     nonce,
+    data_availability_modes,
+    <em>h</em>(account_deployment_data),
+    class_hash,
     compiled_class_hash
 )</pre>
 </div>
@@ -1225,7 +1227,41 @@ When the fields that comprise a transaction change, either with the addition of 
 <div class="ulist">
 <ul>
 <li>
-<p><code><em>h</em></code> is the <a href="../../Cryptography/hash-functions/#poseidon_hash" class="xref page">Poseidon hash function</a></p>
+<p><code>declare</code> is a constant prefix string, encoded in ASCII.</p>
+</li>
+<li>
+<p><code>chain_id</code> is a constant value that specifies the network to which this transaction is sent. See <a href="#chain-id">Chain-Id</a>.</p>
+</li>
+<li>
+<p><code>l1_gas_bounds</code> is constructed as follows:</p>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{\text{L1_GAS}}_{\text{60 bits}} | \underbrace{\text{max_amount}}_{\text{64 bits}} |
+\underbrace{\text{max_price_per_unit}}_{\text{128 bits}}\]
+</div>
+</div>
+</li>
+<li>
+<p><code>l2_gas_bounds</code> is constructed as follows:</p>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{\text{L2_GAS}}_{\text{60 bits}} | \underbrace{\text{max_amount}}_{\text{64 bits}} |
+\underbrace{\text{max_price_per_unit}}_{\text{128 bits}}\]
+</div>
+</div>
+</li>
+<li>
+<p><code>data_availability_modes</code> is a concatenation of <code>fee_data_availability_mode</code>
+and <code>nonce_data_availability_mode</code>, as follows:</p>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{188 bits}} | \underbrace{\text{nonce_data_availability_mode}}_{\text{32 bits}} |
+\underbrace{\text{fee_data_availability_mode}}_{\text{32 bits}}\]
+</div>
+</div>
+</li>
+<li>
+<p><code><em>h</em></code> is the <a href="../../Cryptography/hash-functions/#poseidon_hash" class="xref page">Poseidon</a> hash.</p>
 </li>
 <li>
 <p><code>class_hash</code> is the hash of the contract class. See <a href="../../Smart_Contracts/class-hash/#computing_the_cairo_1_class_hash" class="xref page">Class Hash</a>
