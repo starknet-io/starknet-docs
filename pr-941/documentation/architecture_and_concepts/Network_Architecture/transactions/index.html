@@ -1390,7 +1390,7 @@ When the fields that comprise a transaction change, either with the addition of 
 </table>
 </div>
 <div class="sect2">
-<h3 id="v1_hash_calculation"><a class="anchor" href="#v1_hash_calculation"></a>v1 hash calculation</h3>
+<h3 id="v1_deprecated_hash_calculation_2"><a class="anchor" href="#v1_deprecated_hash_calculation_2"></a>v1 (deprecated) hash calculation</h3>
 <div class="paragraph">
 <p>The hash of a v1 declare transaction is computed as follows:</p>
 </div>
@@ -1433,7 +1433,7 @@ computed.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="v0_hash_calculation"><a class="anchor" href="#v0_hash_calculation"></a>v0 hash calculation</h3>
+<h3 id="v0_deprecated_hash_calculation_2"><a class="anchor" href="#v0_deprecated_hash_calculation_2"></a>v0 (deprecated) hash calculation</h3>
 <div class="admonitionblock important">
 <table>
 <tr>
@@ -1646,6 +1646,76 @@ When the fields that comprise a transaction change, either with the addition of 
 </table>
 </div>
 <div class="sect2">
+<h3 id="v3_hash_calculation_3"><a class="anchor" href="#v3_hash_calculation_3"></a>v3 hash calculation</h3>
+<div class="paragraph">
+<p>The hash of a <strong>Deploy account</strong> transaction is computed as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>deploy_account_v3_tx_hash = <em>h</em>(
+    "deploy_account",
+    version,
+    sender_address,
+    <em>h</em>(tip, l1_gas_bounds, l2_gas_bounds),
+    <em>h</em>(paymaster_data),
+    chain_id,
+    nonce,
+    data_availability_modes,
+    <em>h</em>(constructor_calldata),
+    class_hash,
+    contract_address_salt
+)</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>deploy_account</code> is a constant prefix string, encoded in ASCII.</p>
+</li>
+<li>
+<p><code>chain_id</code> is a constant value that specifies the network to which this transaction is sent. See <a href="#chain-id">Chain-Id</a>.</p>
+</li>
+<li>
+<p><code>l1_gas_bounds</code> is constructed as follows:</p>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{\text{L1_GAS}}_{\text{60 bits}} | \underbrace{\text{max_amount}}_{\text{64 bits}} |
+\underbrace{\text{max_price_per_unit}}_{\text{128 bits}}\]
+</div>
+</div>
+</li>
+<li>
+<p><code>l2_gas_bounds</code> is constructed as follows:</p>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{\text{L2_GAS}}_{\text{60 bits}} | \underbrace{\text{max_amount}}_{\text{64 bits}} |
+\underbrace{\text{max_price_per_unit}}_{\text{128 bits}}\]
+</div>
+</div>
+</li>
+<li>
+<p><code>data_availability_modes</code> is a concatenation of <code>fee_data_availability_mode</code>
+and <code>nonce_data_availability_mode</code>, as follows:</p>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{188 bits}} | \underbrace{\text{nonce_data_availability_mode}}_{\text{32 bits}} |
+\underbrace{\text{fee_data_availability_mode}}_{\text{32 bits}}\]
+</div>
+</div>
+</li>
+<li>
+<p><code><em>h</em></code> is the <a href="../../Cryptography/hash-functions/#poseidon_hash" class="xref page">Poseidon</a> hash.</p>
+</li>
+<li>
+<p><code>class_hash</code> is the hash of the <a href="../../Smart_Contracts/contract-classes/" class="xref page">contract class</a>. See <a href="../../Smart_Contracts/class-hash/" class="xref page">Class Hash</a> for details about how the hash is computed.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
 <h3 id="v1_transaction_fields_2"><a class="anchor" href="#v1_transaction_fields_2"></a>v1 transaction fields</h3>
 <table class="tableblock frame-all grid-all fit-content">
 <caption class="title">Table 5. <strong>Deploy account</strong> transaction fields</caption>
@@ -1701,13 +1771,13 @@ When the fields that comprise a transaction change, either with the addition of 
 </table>
 </div>
 <div class="sect2">
-<h3 id="v1_hash_calculation_2"><a class="anchor" href="#v1_hash_calculation_2"></a>v1 hash calculation</h3>
+<h3 id="v1_hash_calculation"><a class="anchor" href="#v1_hash_calculation"></a>v1 hash calculation</h3>
 <div class="paragraph">
 <p>The hash of a <strong>Deploy account</strong> transaction is computed as follows:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>deploy_account_tx_hash = <em>h</em>(
+<pre>deploy_account_v1_tx_hash = <em>h</em>(
     "deploy_account",
     version,
     contract_address,
