@@ -80,30 +80,7 @@ invoke_v3_tx_hash = _h_(
 Where:
 
 * `invoke` is a constant prefix string, encoded in ASCII.
-* `chain_id` is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
-* `l1_gas_bounds` is constructed as follows:
-+
-[stem]
-++++
-\underbrace{\text{L1_GAS}}_{\text{60 bits}} | \underbrace{\text{max_amount}}_{\text{64 bits}} |
-\underbrace{\text{max_price_per_unit}}_{\text{128 bits}}
-++++
-* `l2_gas_bounds` is constructed as follows:
-+
-[stem]
-++++
-\underbrace{\text{L2_GAS}}_{\text{60 bits}} | \underbrace{\text{max_amount}}_{\text{64 bits}} |
-\underbrace{\text{max_price_per_unit}}_{\text{128 bits}}
-++++
-* `data_availability_modes` is a concatenation of `fee_data_availability_mode`
-and `nonce_data_availability_mode`, as follows:
-+
-[stem]
-++++
-\underbrace{0\cdots0}_{\text{188 bits}} | \underbrace{\text{nonce_data_availability_mode}}_{\text{32 bits}} |
-\underbrace{\text{fee_data_availability_mode}}_{\text{32 bits}}
-++++
-* `_h_` is the xref:../Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash.
+include::partial$snippet_transaction_params.adoc[]
 
 === v1 (deprecated) transaction fields
 
@@ -205,18 +182,21 @@ declare_v3_tx_hash = _h_(
     "declare",
     version,
     sender_address,
-    0,
-    _h_(class_hash),
-    max_fee,
+    _h_(tip, l1_gas_bounds, l2_gas_bounds),
+    _h_(paymaster_data),
     chain_id,
     nonce,
+    data_availability_modes,
+    _h_(account_deployment_data),
+    class_hash,
     compiled_class_hash
 )
 ----
 
 Where:
 
-* `_h_` is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon hash function]
+* `declare` is a constant prefix string, encoded in ASCII.
+include::partial$snippet_transaction_params.adoc[]
 * `class_hash` is the hash of the contract class. See xref:Smart_Contracts/class-hash.adoc#computing_the_cairo_1_class_hash[Class Hash]
 for details about how the
 hash is computed
