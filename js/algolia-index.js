@@ -7,6 +7,10 @@ const asciidoctor = Asciidoctor();
 const { convert } = require('html-to-text');
 const git = simpleGit(__dirname);
 
+function resolve(...args) {
+  return path.resolve(__dirname, ...args)
+}
+
 if (process.argv.length < 5) {
   throw new Error("Failed to find proper settings for Algolia indexing");
 }
@@ -33,7 +37,7 @@ const startIndexing = (currentBranch) => {
   const algoliaIndex = client.initIndex(
     `${algoliaIndexNamePrefix}-${currentBranch}`
   );
-  const commonPath = path.resolve("../", "components");
+  const commonPath = resolve("../", "components");
 
   fs.readdir(commonPath, "utf8", (err, data) => {
     if (err) {
