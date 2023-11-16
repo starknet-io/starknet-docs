@@ -37,6 +37,7 @@ The *Deploy* transaction type is unsupported. The last supported version was v0.
 
 [id=invoke_transaction]
 == *Invoke* transaction
+
 :invoke:
 
 [IMPORTANT]
@@ -151,7 +152,6 @@ Where:
 * `_h_` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash
 
 :!invoke:
-
 
 [id="declare-transaction"]
 == *Declare* transaction
@@ -273,7 +273,7 @@ When the fields that comprise a transaction change, either with the addition of 
 |===
 
 
-=== v1 hash calculation
+=== v1 (deprecated) hash calculation
 
 The hash of a v1 declare transaction is computed as follows:
 
@@ -302,7 +302,7 @@ computed.
 * `_h_` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash
 
 
-=== v0 hash calculation
+=== v0 (deprecated) hash calculation
 
 include::partial$snippet_transaction_admonition.adoc[]
 
@@ -334,6 +334,8 @@ Where:
 
 :!declare:
 
+ifdef::deploy_account[`deploy_account` is defined]
+
 [id=deploy_account_transaction]
 == *Deploy account* transaction
 :deploy_account:
@@ -352,6 +354,33 @@ A *Deploy account* transaction has the following fields:
 === v3 transaction fields
 
 include::partial$snippet_transaction_fields_master_table.adoc[]
+
+=== v3 hash calculation
+
+The hash of a *Deploy account* transaction is computed as follows:
+
+[,subs="quotes"]
+----
+deploy_account_v3_tx_hash = _h_(
+    "deploy_account",
+    version,
+    sender_address,
+    _h_(tip, l1_gas_bounds, l2_gas_bounds),
+    _h_(paymaster_data),
+    chain_id,
+    nonce,
+    data_availability_modes,
+    _h_(constructor_calldata),
+    class_hash,
+    contract_address_salt
+)
+----
+
+Where:
+
+* `deploy_account` is a constant prefix string, encoded in ASCII.
+include::partial$snippet_transaction_params.adoc[]
+* `class_hash` is the hash of the xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[contract class]. See xref:architecture_and_concepts:Smart_Contracts/class-hash.adoc[Class Hash] for details about how the hash is computed.
 
 === v1 transaction fields
 
@@ -377,7 +406,7 @@ The hash of a *Deploy account* transaction is computed as follows:
 
 [,subs="quotes"]
 ----
-deploy_account_tx_hash = _h_(
+deploy_account_v1_tx_hash = _h_(
     "deploy_account",
     version,
     contract_address,
@@ -397,7 +426,7 @@ Where:
 * `chain_id` is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * `class_hash` is the hash of the xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[contract class]. See xref:architecture_and_concepts:Smart_Contracts/class-hash.adoc[Class Hash] for details about how the hash is computed.
 
-:deploy_account:
+:!deploy_account:
 
 
 [id="deploy_transaction"]
