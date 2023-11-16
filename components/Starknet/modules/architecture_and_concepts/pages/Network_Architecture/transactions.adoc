@@ -55,23 +55,26 @@ include::partial$snippet_transaction_fields_master_table.adoc[]
 
 === v3 hash calculation
 
-The *Invoke* v3 transaction hash is calculated as a hash over the given transaction elements,
+The *Invoke* v3 transaction hash is calculated as a Poseidon hash over the given transaction elements,
 specifically:
 
 [,subs="quotes"]
 ----
 invoke_v3_tx_hash = _h_(
-    "invoke",      // 1. A prefix that depends on the transaction type.
-    version,       // 2. The transaction's version.
-    sender_address, // 3. Sender address.
-    _h_(tip, resource_bounds),      // 4. A hash of the fee-related fields (see `_hash_fee_related_fields()`'s docstring).
-    _h_(paymaster_data), //   5. A hash of the paymaster data.
-    chain_id,      // 6. The network's chain ID.
-    nonce,      // 7. The transaction's nonce.
-    _concatenate_(nonce_data_availability_mode, fee_data_availability_mode)  // 8. A concatenation of the nonce and fee data availability modes.
-    account_deployment_data // 9. Transaction-specific additional data.
-    _h_(calldata),
+    "invoke",
+    version,
+    sender_address,
+     _h_(tip, l1_gas_bounds, l2_gas_bounds),
+    _h_(paymaster_data),
+    chain_id,
+    nonce,
+    data_availability_modes,
+    h(
+      h(account_deployment_data),
+      h(calldata)
+    )
     class_hash
+)
 )
 ----
 
@@ -80,9 +83,16 @@ Where:
 * `invoke` is a constant prefix string, encoded in ASCII.
 // * The placeholder zero is used to align the hash computation for the different types of transactions.
 * `chain_id` is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
-* `_h_` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash
+* tip, l1_gas_bounds, l2_gas_bounds is constructed as follows:
++
+[stem]
+++++
+\underbrace{\text{"L1_GAS"}}_{\text{60 bits}} | \underbrace{\text{max_amount}}_{\text{64 bits}} |
+\underbrace{\text{max_price_per_unit}}_{\text{128 bits}}
+++++
+* `_h_` is the xref:../Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash.
 
-=== v1 transaction fields
+=== v1 (deprecated) transaction fields
 
 .*Invoke* transaction fields
 
@@ -99,7 +109,7 @@ Where:
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 |===
 
-=== v1 hash calculation
+=== v1 (deprecated) hash calculation
 
 The *Invoke* v1 transaction hash is calculated as a hash over the given transaction elements,
 specifically:
