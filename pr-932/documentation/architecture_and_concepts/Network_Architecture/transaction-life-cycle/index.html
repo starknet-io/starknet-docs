@@ -421,7 +421,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../tools/devtools/">Development tools</a>
+     href="../../../tools/devtools/">Developer tools</a>
   </li>
   <li class="nav-item parent" data-depth="2">
     <button class="nav-item-toggle mask-svg-center"></button>
@@ -517,40 +517,30 @@
 </div>
 </div>
 <div class="paragraph">
-<p>The transaction lifecycle in Starknet involves the following high level steps:</p>
+<p>The high-level steps in the Starknet transaction lifecycle are as follows:</p>
 </div>
-<div class="sect2">
-<h3 id="1_transaction_submission"><a class="anchor" href="#1_transaction_submission"></a>1. Transaction Submission</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Transaction submission:</strong> A transaction is submitted to one of the gateways, functioning as the mempool and marks the transaction status as <code>RECEIVED</code>.</p>
+</li>
+<li>
+<p><strong>Mempool validation:</strong>
+The mempool performs a preliminary validation on the transaction. If the transaction is invalid, it does not proceed.</p>
+</li>
+<li>
+<p><strong>Sequencer validation:</strong> The sequencer performs preliminary validation on the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.</p>
 <div class="paragraph">
-<p>A transaction is submitted to one of the gateways, functioning as the Mempool and marks the transaction status as <code>RECEIVED</code>.</p>
+<p>Validation in this context is analogous to Ethereum&#8217;s signature checking, including running the account&#8217;s <code>__validate__</code> function, ensuring that the current account balance exceeds the value of <code>max_fee</code>, and more.</p>
 </div>
-</div>
-<div class="sect2">
-<h3 id="2_validation"><a class="anchor" href="#2_validation"></a>2. Validation</h3>
-<div class="sect3">
-<h4 id="2_1_mempool_validation"><a class="anchor" href="#2_1_mempool_validation"></a>2.1 Mempool validation</h4>
-<div class="paragraph">
-<p>The Mempool performs validation on the transaction to check for its validity. If the transaction is invalid, it will not proceed to the next stages.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="2_2_sequencer_validation"><a class="anchor" href="#2_2_sequencer_validation"></a>2.2 Sequencer validation</h4>
-<div class="paragraph">
-<p>The sequencer performs validation on the transaction prior to execution to ensure that the transaction is still valid. If the transaction is invalid, it will not proceed to the next stages.</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="3_execution"><a class="anchor" href="#3_execution"></a>3. Execution</h3>
-<div class="paragraph">
-<p>The sequencer operation sequentially applies the validated transactions to the state. If a transaction fails during execution, it will be included in the block with the status <code>REVERTED</code>.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="4_proof_generation"><a class="anchor" href="#4_proof_generation"></a>4. Proof Generation</h3>
-<div class="paragraph">
-<p>The Prover stage executes the operating system on the new block, computes the proof, and transmits it to L1.</p>
-</div>
+</li>
+<li>
+<p><strong>Execution:</strong> The sequencer operation sequentially applies all transactions that passed the preliminary validation to the state. If a transaction fails during execution, it is included in the block with the status <code>REVERTED</code>.</p>
+</li>
+<li>
+<p><strong>Proof generation and verfication:</strong> The Prover executes the operating system on the new block, computes the proof, and transmits it to the L1 verifier, which verifies the proof. At this point, the L1 state is updated to include the transaction.</p>
+</li>
+</ol>
 </div>
 </div>
 </div>
@@ -566,97 +556,116 @@
 </div>
 </div>
 <div class="paragraph">
-<p>The following are the possible statuses of a transaction from the moment it&#8217;s sent by the user to the moment it&#8217;s validated by L1:</p>
+<p>The following are the possible statuses of a transaction from the moment a user sends it until the moment it passes the L1 verifier:</p>
 </div>
-<div class="sect2">
-<h3 id="finality_statuses"><a class="anchor" href="#finality_statuses"></a>Finality statuses</h3>
-<div class="sect3">
-<h4 id="not_received"><a class="anchor" href="#not_received"></a>NOT_RECEIVED</h4>
-<div class="paragraph">
-<p>The transaction is not yet known to the sequencer.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="received"><a class="anchor" href="#received"></a>RECEIVED</h4>
-<div class="paragraph">
-<p>The transaction was received by the mempool. The transaction will now either execute successfully, be rejected or be reverted.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="accepted_on_l2"><a class="anchor" href="#accepted_on_l2"></a>ACCEPTED_ON_L2</h4>
-<div class="paragraph">
-<p>The transaction passed validation and entered an actual created block on L2.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="accepted_on_l1"><a class="anchor" href="#accepted_on_l1"></a>ACCEPTED_ON_L1</h4>
-<div class="paragraph">
-<p>The transaction was accepted on Ethereum.</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="execution_statuses"><a class="anchor" href="#execution_statuses"></a>Execution statuses</h3>
-<div class="sect3">
-<h4 id="rejected"><a class="anchor" href="#rejected"></a>REJECTED</h4>
-<div class="paragraph">
-<p>The transaction was received by the Mempool but failed validation in the sequencer. Such transactions will not be included in a block.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="reverted"><a class="anchor" href="#reverted"></a>REVERTED</h4>
-<div class="paragraph">
-<p>The transaction passed validation but failed during execution in the sequencer. They will be included in the block with the status <code>REVERTED</code>.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="succeeded"><a class="anchor" href="#succeeded"></a>SUCCEEDED</h4>
-<div class="paragraph">
-<p>The transaction was successfully executed by the sequencer.</p>
-</div>
-</div>
-</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 28.5714%;">
+<col style="width: 57.1429%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Status type</th>
+<th class="tableblock halign-left valign-top">Status</th>
+<th class="tableblock halign-left valign-top">Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top" rowspan="5"><p class="tableblock"><strong>Finality</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>NOT_RECEIVED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction is not yet known to the sequencer.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RECEIVED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was received by the mempool. The transaction now either executes successfully, is rejected, or reverted.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REJECTED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was received by the mempool but failed validation in the sequencer. Such transactions are not included in a block.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L2</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was executed and entered an actual created block on L2.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was accepted on Ethereum.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top" rowspan="2"><p class="tableblock"><strong>Execution</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REVERTED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction passed validation but failed during execution in the sequencer. It is included in the block with the status <code>REVERTED</code>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SUCCEEDED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by the sequencer. It is included in the block.</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div class="sect1">
-<h2 id="transaction-state-implications"><a class="anchor" href="#transaction-state-implications"></a>State Implications of a <code>REVERTED</code> Transaction</h2>
+<h2 id="transaction-state-implications"><a class="anchor" href="#transaction-state-implications"></a>State implications of a reverted transaction</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>When a transaction is marked as <code>REVERTED</code>, the following state implications occur:</p>
 </div>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">Nonce increases</dt>
-<dd>
-<p>The nonce value for the account of the failed transaction will increase despite the failure.</p>
-</dd>
-<dt class="hdlist1">Fee charge</dt>
-<dd>
-<p>A fee will be charged for the execution of the transaction up to the point of failure.</p>
-</dd>
-<dt class="hdlist1">Partial Reversion</dt>
-<dd>
-<p>All changes that occurred during the <code>validate</code> stage are not reverted. However, all changes that occurred during the <code>execute</code> stage are reverted, including no messages to L1 or events.</p>
-</dd>
-<dt class="hdlist1">Fee Calculation</dt>
-<dd>
-<p>The fee charged for <code>REVERTED</code> transactions will be calculated as follows:</p>
-</dd>
-</dl>
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 20%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+Nonce increases
+</td>
+<td class="hdlist2">
+<p>The nonce value for the account of the failed transaction iterates despite the failure.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Fee charge
+</td>
+<td class="hdlist2">
+<p>The sequencer charges a fee for the execution of the transaction up to the point of failure. A <code>Transfer</code> event is emitted.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Partial reversion
+</td>
+<td class="hdlist2">
+<p>All changes that occurred during the <code>validate</code> stage are not reverted. However, all changes that occurred during the <code>execute</code> stage are reverted, including all messages to L1 or any events that were emitted during this phase.</p>
+<div class="paragraph">
+<p>Events might still be emitted from the <code>validate</code> stage or the fee charge phase.</p>
 </div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">fee = Min(max_fee, consumed_resources)</code></pre>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Fee calculation
+</td>
+<td class="hdlist2">
+<p>The fee charged for <code>REVERTED</code> transactions is calculated as follows:</p>
+<div class="paragraph">
+<p>\(\text{fee} = \text{Min(max_fee,consumed_resources)}\)</p>
 </div>
-</div>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">Consumed Resources</dt>
-<dd>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Consumed Resources
+</td>
+<td class="hdlist2">
 <p>The <code>consumed_resources</code> are the resources used for the execution of the transaction up to the point of failure. This includes Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the <code>validate</code> and
 <code>execute</code> stages.</p>
-</dd>
-</dl>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -669,19 +678,19 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Basic transaction details (block identifiers and the index within the block).</p>
+<p>Basic transaction details, including the block identifier and the index within the block.</p>
 </li>
 <li>
 <p>A summary of the execution resources used by the transaction.</p>
 </li>
 <li>
-<p>The events emitted .</p>
+<p>The events emitted.</p>
 </li>
 <li>
 <p>A list of messages sent to L1.</p>
 </li>
 <li>
-<p>A consumed L1 message (in case the transaction invokes an L1 handler).</p>
+<p>A consumed L1 message, if the transaction invokes an L1 handler.</p>
 </li>
 </ul>
 </div>
