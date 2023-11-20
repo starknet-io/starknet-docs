@@ -7,27 +7,22 @@
 
 image::transaction-flow.png[]
 
-The transaction lifecycle in Starknet involves the following high level steps:
+The high-level steps in the Starknet transaction lifecycle are as follows:
 
-=== 1. Transaction Submission
-A transaction is submitted to one of the gateways, functioning as the Mempool and marks the transaction status as `RECEIVED`.
+. *Transaction submission:* A transaction is submitted to one of the gateways, functioning as the mempool and marks the transaction status as `RECEIVED`.
 
-=== 2. Validation
+. *Mempool validation:*
+The mempool performs a preliminary validation on the transaction. If the transaction is invalid, it does not proceed.
 
-==== 2.1 Mempool validation
-The Mempool performs validation on the transaction to check for its validity. If the transaction is invalid, it will not proceed to the next stages.
+. *Sequencer validation:* The sequencer performs preliminary validation on the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.
++
+Validation in this context is analogous to Ethereum's signature checking, including running the account's `+__validate__+` function, ensuring that the current account balance exceeds the value of `max_fee`, and more.
 
-==== 2.2 Sequencer validation
-The sequencer performs validation on the transaction prior to execution to ensure that the transaction is still valid. If the transaction is invalid, it will not proceed to the next stages.
+. *Execution:* The sequencer operation sequentially applies all transactions that passed the preliminary validation to the state. If a transaction fails during execution, it is included in the block with the status `REVERTED`.
 
-=== 3. Execution
-The sequencer operation sequentially applies the validated transactions to the state. If a transaction fails during execution, it will be included in the block with the status `REVERTED`.
-
-=== 4. Proof Generation
-The Prover stage executes the operating system on the new block, computes the proof, and transmits it to L1.
+. *Proof generation and verfication:* The Prover executes the operating system on the new block, computes the proof, and transmits it to the L1 verifier, which verifies the proof. At this point, the L1 state is updated to include the transaction.
 
 [id="transaction_status"]
-
 == Transaction status
 
 The diagram below illustrates how each transaction status fits into the overall transaction flow:
@@ -35,65 +30,38 @@ The diagram below illustrates how each transaction status fits into the overall 
 image::txn-flow.png[]
 
 
-The following are the possible statuses of a transaction from the moment it's sent by the user to the moment it's validated by L1:
+The following are the possible statuses of a transaction from the moment a user sends it until the moment it passes the L1 verifier:
 
-=== Finality statuses
+[cols="1,2,4",]
+|===
+|Status type |Status |Explanation
 
-[id="not_received"]
-==== NOT_RECEIVED
+.5+|*Finality* |`NOT_RECEIVED` |The transaction is not yet known to the sequencer.
+|`RECEIVED` |The transaction was received by the mempool. The transaction now either executes successfully, is rejected, or reverted.
+|`REJECTED` |The transaction was received by the mempool but failed validation in the sequencer. Such transactions are not included in a block.
+|`ACCEPTED_ON_L2` |The transaction was executed and entered an actual created block on L2.
+|`ACCEPTED_ON_L1` |The transaction was accepted on Ethereum.
+.2+|*Execution* |`REVERTED` |The transaction passed validation but failed during execution in the sequencer. It is included in the block with the status `REVERTED`.
+|`SUCCEEDED` |The transaction was successfully executed by the sequencer. It is included in the block.
+|===
 
-The transaction is not yet known to the sequencer.
-
-[id="received"]
-==== RECEIVED
-
-The transaction was received by the mempool. The transaction will now either execute successfully, be rejected or be reverted.
-
-[id="accepted_on_l2"]
-==== ACCEPTED_ON_L2
-
-The transaction passed validation and entered an actual created block on L2.
-
-[id="accepted_on_l1"]
-==== ACCEPTED_ON_L1
-
-The transaction was accepted on Ethereum.
-
-=== Execution statuses
-
-[id="rejected"]
-==== REJECTED
-
-The transaction was received by the Mempool but failed validation in the sequencer. Such transactions will not be included in a block.
-
-[id="reverted"]
-==== REVERTED
-
-The transaction passed validation but failed during execution in the sequencer. They will be included in the block with the status `REVERTED`.
-
-[id="succeeded"]
-==== SUCCEEDED
-
-The transaction was successfully executed by the sequencer.
 
 [id="transaction-state-implications"]
-== State Implications of a `REVERTED` Transaction
+== State implications of a reverted transaction
 
 When a transaction is marked as `REVERTED`, the following state implications occur:
+[horizontal,labelwidth="20",role="stripes-odd"]
+Nonce increases:: The nonce value for the account of the failed transaction iterates despite the failure.
 
-Nonce increases:: The nonce value for the account of the failed transaction will increase despite the failure.
+Fee charge:: The sequencer charges a fee for the execution of the transaction up to the point of failure. A `Transfer` event is emitted.
 
-Fee charge:: A fee will be charged for the execution of the transaction up to the point of failure.
+Partial reversion:: All changes that occurred during the `validate` stage are not reverted. However, all changes that occurred during the `execute` stage are reverted, including all messages to L1 or any events that were emitted during this phase.
++
+Events might still be emitted from the `validate` stage or the fee charge phase.
 
-Partial Reversion:: All changes that occurred during the `validate` stage are not reverted. However, all changes that occurred during the `execute` stage are reverted, including no messages to L1 or events.
-
-Fee Calculation:: The fee charged for `REVERTED` transactions will be calculated as follows:
-
-[source,bash]
-----
-fee = Min(max_fee, consumed_resources)
-----
-
+Fee calculation:: The fee charged for `REVERTED` transactions is calculated as follows:
++
+stem:[\text{fee} = \text{Min(max_fee,consumed_resources)}]
 
 Consumed Resources:: The `consumed_resources` are the resources used for the execution of the transaction up to the point of failure. This includes Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the `validate` and
 `execute` stages.
@@ -103,12 +71,11 @@ Consumed Resources:: The `consumed_resources` are the resources used for the exe
 
 The transaction receipt contains:
 
-* Basic transaction details (block identifiers and the index within the block).
+* Basic transaction details, including the block identifier and the index within the block.
 * A summary of the execution resources used by the transaction.
-* The events emitted .
+* The events emitted.
 * A list of messages sent to L1.
-* A consumed L1 message (in case the transaction invokes an L1 handler).
-
+* A consumed L1 message, if the transaction invokes an L1 handler.
 
 The following is an example of a receipt:
 
