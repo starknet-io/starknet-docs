@@ -734,13 +734,15 @@ In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, 
 <div class="sect3">
 <h4 id="specifications"><a class="anchor" href="#specifications"></a>Specifications</h4>
 <div class="paragraph">
-<p>As mentioned above, our commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet \((length, path, bottom)\).</p>
+<p>The commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet \((length, path, bottom)\).</p>
 </div>
 <div class="paragraph">
-<p>The actual data is placed in the leaves, and a leaf node with data \(x\) is encoded by the triplet \((0,0,x)\). Empty nodes (leaves or internal) are encoded by the zero triplet \((0,0,0)\). A subtree rooted at a node \((length, path, bottom)\) has a single non-empty subtree, rooted at the node obtained by following the path specified by \(path\).</p>
+<p>The actual data is placed in the leaves, and a leaf node with data \(x\) is encoded by the triplet \((0,0,x)\). Empty nodes , leaves or internal, <mark>What does "leaves or internal" mean here?</mark>
+are encoded by the zero triplet \((0,0,0)\). A subtree rooted at a node \((length, path, bottom)\) has a single non-empty subtree, rooted at the node obtained by following the path specified by \(path\).</p>
 </div>
 <div class="paragraph">
-<p>\(path\) is an integer in \([0, 2^{length}-1]\), and the binary expansion of \(path\) indicates how should we proceed along the tree, where the first step is indicated by the most significant bit, and \(0,1\) are interpreted as left, right correspondingly.</p>
+<p>\(path\) is an integer in \([0, 2^{length}-1]\), and the binary expansion of \(path\) indicates how to proceed along the tree, where the first step is indicated by the most significant bit, \(0,1\) \(0,1\) are interpreted as left or right.
+<mark>What does 0,1 mean here?</mark></p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -750,11 +752,10 @@ In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, 
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The reason that length is specified and cannot be deduced from \(path\) is that we&#8217;re
-dealing with field elements of fixed size (251 bits each).</p>
+<p>Length is specified, and cannot be deduced from \(path\), because the numbers in the triplet \((length, path, bottom)\) are field elements of fixed size, 251 bits each.</p>
 </div>
 <div class="paragraph">
-<p>For a node with \(length&gt;0\), the following \(path\) leads the highest node whose both right and left child are none empty.</p>
+<p>For a node where \(length&gt;0\), \(path\) leads to the highest node whose left and right children are not empty.</p>
 </div>
 </td>
 </tr>
@@ -805,13 +806,13 @@ h(bottom, path) + length, &amp; \text{otherwise}
 </div>
 </div>
 <div class="paragraph">
-<p>Where \(r=h(H(2,2,1),H((2,1,1))\). Note that in our example there is no skipping from the root (length is zero), so the final commitment to the tree will be \(H((0,0,r))=r\).</p>
+<p>Where \(r=h(H(2,2,1),H((2,1,1))\). Notice that the example does not skip from the root, whose length is zero, so the final commitment to the tree is \(H((0,0,r))=r\).</p>
 </div>
 <div class="paragraph">
-<p>Suppose that we want to prove, with respect to the commitment we have just computed, that the value of the leaf whose path is given by \(101\) is \(1\). In a standard Merkle tree, the proof would have consisted of data from three nodes (siblings along the path to the root).</p>
+<p>Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by \(101\) is \(1\). In a standard Merkle tree, the proof would consist of data from three nodes, which are siblings along the path to the root.</p>
 </div>
 <div class="paragraph">
-<p>Here, since the tree is sparse, we only need to send the two children of the root \((2,2,1), (2,1,1)\). This suffices to reproduce the commitment \(r\), and since the height of the tree, \(3\), is known and fixed, we know that the path \(01\) of length \(2\) specified by the right child \((2,1,1)\) leads us to the desired leaf.</p>
+<p>Here, since the tree is sparse, you only need to send the two children of the root \((2,2,1), (2,1,1)\). This suffices to reproduce the commitment \(r\), and since the height of the tree, \(3\), is known and fixed, you know that the path \(01\) of length \(2\) specified by the right child \((2,1,1)\) leads to the desired leaf.</p>
 </div>
 </div>
 </div>
@@ -827,21 +828,20 @@ h(bottom, path) + length, &amp; \text{otherwise}
 characterized by their unique behavior in comparison to traditional contract addresses.</p>
 </div>
 <div class="sect2">
-<h3 id="0x0_address"><a class="anchor" href="#0x0_address"></a><code>0x0</code> address</h3>
+<h3 id="address_0x0"><a class="anchor" href="#address_0x0"></a>Address <code>0x0</code></h3>
 <div class="paragraph">
-<p>Address <code>0x0</code> functions as the default <code>caller_address</code> for external calls, including interactions with the L1Handler or deprecated Deploy transactions. Unlike regular contracts, address <code>0x0</code> does not possess a storage structure and does not
-accommodate storage mapping.</p>
+<p>Address <code>0x0</code> functions as the default <code>caller_address</code> for external calls, including interactions with the L1 handler or deprecated Deploy transactions. Unlike regular contracts, address <code>0x0</code> does not possess a storage structure and does not accommodate storage mapping.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="0x1_address"><a class="anchor" href="#0x1_address"></a><code>0x1</code> address</h3>
+<h3 id="address_0x1"><a class="anchor" href="#address_0x1"></a>Address <code>0x1</code></h3>
 <div class="paragraph">
 <p>Address <code>0x1</code> is another special contract address within Starknet&#8217;s architecture. It functions as a storage space for mapping block numbers to their corresponding block hashes. The storage structure at this address is organized as follows:</p>
 </div>
 <div class="hdlist">
 <table>
 <colgroup>
-<col style="width: 15%;">
+<col style="width: 20%;">
 <col>
 </colgroup>
 <tr>
@@ -849,7 +849,7 @@ accommodate storage mapping.</p>
 Keys
 </td>
 <td class="hdlist2">
-<p>Block numbers between the <code>first_v0_12_0_block</code> and the current block minus 10.</p>
+<p>Block numbers between \(\text{first_v0_12_0_block}\) and \(\text{current_block - 10}\).</p>
 </td>
 </tr>
 <tr>
