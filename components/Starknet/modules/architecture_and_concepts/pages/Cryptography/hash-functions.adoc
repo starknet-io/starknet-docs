@@ -16,22 +16,47 @@ There are three hash functions used throughout Starknet's specifications:
 [id="starknet_keccak"]
 == Starknet Keccak
 
-Starknet keccak, usually denoted by stem:[$sn\_keccak$], is defined as the first 250 bits of the Keccak256 hash (this is just Keccak256 augmented
-in order to fit into a field element).
+Starknet Keccak, usually denoted by stem:[$sn\_keccak$], is defined as the first 250 bits of the Keccak256 hash. For Starknet Keccak, Keccak256 is augmented
+in order to fit into a field element.
 
 [id="pedersen_hash"]
 == Pedersen hash
 
+Pedersen hash makes use of the following STARK friendly elliptic curve over stem:[$\mathbb{F}_p$]:
 
+[stem]
+++++
+y^2=x^3+\alpha x +\beta
+++++
+
+where
+
+* stem:[$\alpha=1$]
+* stem:[$\beta = 3141592653589793238462643383279502884197169399375105820974944592307816406665$]
+
+[id="definition"]
+=== Definition
+
+Given an input stem:[$(a,b)\in\mathbb{F}_p^2$], we begin by breaking it into stem:[$a_{low}, a_{high}, b_{low}, b_{high}$],
+where the low part consists of the low 248 bits of the element and the high part consists of the high 4 bits of the element. Our Pedersen hash is then defined by:
+
+[stem]
+++++
+h(a,b) = \left[shift\_point + a_{low} \cdot P_0 + a_{high} \cdot P1 + b_{low} \cdot P2  + b_{high} \cdot P3\right]_x
+++++
+
+where the values of the constants stem:[$shift\_point, P_0, P_1, P_2, P_3$] can be found in link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/crypto/signature/fast_pedersen_hash.py[fast_pedersen_hash.py^], and stem:[$[P\]_x$] denotes the stem:[$x$] coordinate of the point stem:[$P$].
+
+For more information, see xref:Cryptography/stark-curve.adoc[STARK curve].
 
 [id="poseidon_hash"]
 == Poseidon hash
 
-link:https://www.poseidon-hash.info/[Poseidon] is a family of hash functions designed for being very efficient as algebraic circuits. As such, they may be very useful in ZK proving systems such as STARKs and others.
+_Poseidon_ is a family of hash functions designed to be very efficient as algebraic circuits. As such, they can be very useful in ZK-proving systems such as STARKs.
 
-Poseidon is a sponge construction based on the Hades permutation. Starknet's version of Poseidon is based on a three element state permutation (see exact parameters below).
+Poseidon is a sponge construction based on the Hades permutation. Starknet's version of Poseidon is based on a three-element state permutation.
 
-We define the Poseidon hash of up to 2 elements below, see xref:#poseidon_array_hash[below] the arbitrary number of inputs version.
+A Poseidon hash of up to 2 elements is defined as follows.
 
 [stem]
 ++++
@@ -46,10 +71,10 @@ poseidon_2(x,y) := \left[\text{hades_permutation}(x,y,2)\right]_0
 
 Where latexmath:[[\cdot\]_j] denotes taking the j'th coordinate of a tuple
 
-Useful resources:
-
-* The exact link:https://github.com/starkware-industries/poseidon/blob/main/poseidon3.txt[parameters] defining the permutation used in Starknet
-* A link:https://github.com/CryptoExperts/poseidon[reference implementation] (in c and assembly) of the above by CryptoExperts
+.Additional resources
+* xref:#poseidon_array_hash[Poseidon hash with an arbitrary number of inputs]
+* link:https://github.com/starkware-industries/poseidon/blob/main/poseidon3.txt[Parameters for defining the Poseidon permutation used in Starknet]
+* link:https://github.com/CryptoExperts/poseidon[Reference implementation in C and assembly of the above by CryptoExperts]
 
 
 [id="array_hashing"]

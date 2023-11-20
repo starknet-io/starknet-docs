@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.352](https://github.com/starknet-io/starknet-docs/compare/v0.1.351...v0.1.352) (2023-11-19)
+
+
+### Bug Fixes
+
+* several typos in the documentation ([#929](https://github.com/starknet-io/starknet-docs/issues/929)) ([#937](https://github.com/starknet-io/starknet-docs/issues/937)) ([7caff6d](https://github.com/starknet-io/starknet-docs/commit/7caff6d6a2e1946a613e5939c8230ee6fafb72f1))
+
+### [0.1.351](https://github.com/starknet-io/starknet-docs/compare/v0.1.350...v0.1.351) (2023-11-17)
+
+### [0.1.350](https://github.com/starknet-io/starknet-docs/compare/v0.1.349...v0.1.350) (2023-11-16)
+
+### [0.1.349](https://github.com/starknet-io/starknet-docs/compare/v0.1.348...v0.1.349) (2023-11-15)
+
+### [0.1.348](https://github.com/starknet-io/starknet-docs/compare/v0.1.347...v0.1.348) (2023-11-13)
+
+
+### Bug Fixes
+
+* Add Pederson content back in ([#927](https://github.com/starknet-io/starknet-docs/issues/927)) ([1e25ab9](https://github.com/starknet-io/starknet-docs/commit/1e25ab9dec9bc94378eb3b0da528b91f55a72998))
+* Edit get_block_hash syscall ([#909](https://github.com/starknet-io/starknet-docs/issues/909)) ([3e3c03d](https://github.com/starknet-io/starknet-docs/commit/3e3c03d2861bf382db0a6827afd1537218bf48f4))
+
 ### [0.1.347](https://github.com/starknet-io/starknet-docs/compare/v0.1.346...v0.1.347) (2023-11-08)
 
 ### [0.1.346](https://github.com/starknet-io/starknet-docs/compare/v0.1.345...v0.1.346) (2023-11-07)

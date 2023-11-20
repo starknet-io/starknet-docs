@@ -373,7 +373,7 @@ For example:
 
 * It is no longer enforced that the `Event` enum variants are structs of the same name as the variant, they can now be a struct or an enum of any name.
 * Enum variants inside event ABI entries (entries in the abi with `"type": "event"` and `"kind": "enum"`) now have two possible kinds. Before `v2.3.0` it was always `"kind": "nested"`, now `"kind: "flat"` is also possible.
-* `v2.3.0` is backwards compatible with version ≥ `2.0.0` ABI, so the same structure of the ABI is kept, while allowing flexibility.
+* `v2.3.0` is backward compatible with version ≥ `2.0.0` ABI, so the same structure of the ABI is kept, while allowing flexibility.
 
 [NOTE]
 ====
@@ -386,7 +386,7 @@ With `v2.3.0` onwards, doing so may result in losing information.
 To illustrate this, consider the following example:
 
 ```rust
-// high level code defining the events
+//high-level code defining the events
 
 #[event]
 #[derive(Drop, starknet::Event)]
@@ -470,7 +470,7 @@ When the contract emits the `TestCounterIncreased` event, for example by writing
 
 * One key based on the variant name: `sn_keccak(TestCounterIncreased)`. This information only appears in the `<namespace>::Event` type entry in the ABI,
 as the name `TestCounterIncreased` does not appear in the `"kind": "struct"` ABI entry. This did not matter in previous versions when the variant name and type had to be equal.
-* One data element based on the struct `CounterIncreased` which is associated to `TestCounterIncreased` via one of the `Event` type variants.
+* One data element based on the struct `CounterIncreased` which is associated with `TestCounterIncreased` via one of the `Event` type variants.
 
 === Enum variants inside Event
 
@@ -531,7 +531,7 @@ If a `TestEnum` event is being emitted via `self.emit(Event::TestEnum(MyEnum::Va
 When the event is emitted, the serialization to keys and data happens as follows:
 
 * Since the `TestEnum` variant has `kind` nested, add the first key: `sn_keccak(TestEnum)`, and the rest of the serialization to keys and data is done recursively via the `starknet::event` trait implementation of `MyEnum`.
-* Next, you can handle a `"kind": "nested"` variant (previously it was `TestEnum`, now it’s `Var1`), which means you can add another key depending on the sub variant: `sn_keccak(Var1)`, and proceed to serialize according to the `starknet::event`
+* Next, you can handle a `"kind": "nested"` variant (previously it was `TestEnum`, now it’s `Var1`), which means you can add another key depending on the sub-variant: `sn_keccak(Var1)`, and proceed to serialize according to the `starknet::event`
 implementation of `MyStruct`.
 * Finally, proceed to serialize `MyStruct`, which gives us a single data member.
 
@@ -539,7 +539,7 @@ This results in `keys = [sn_keccak(TestEnum), sn_keccak(Var1)]` and `data=[5]`
 
 [NOTE]
 ====
-Allowing variants which are themselves enums (`TestEnum` is an enum variant here) means further nesting is possible.
+Allowing variants that are themselves enums (`TestEnum` is an enum variant here) means further nesting is possible.
 ====
 
 
@@ -583,7 +583,7 @@ This will look as follows in the ABI (only the relevant parts are shown):
   "name": "<namespace>::Event",
   "kind": "enum",
   "variants": [
-    // ignoring all the other variants for berevity
+    // ignoring all the other variants for brevity
     {
       "name": "TestEnum",
       "type": "<namespace>::MyEnum",
@@ -621,7 +621,7 @@ As `TestEnum`, `Var1` and `Var2` are of kind `nested`, a selector should be adde
 
 === Flattened enum variants
 
-You may not want to nest enums when serializing the event. For example, if you write an ERC20 as a component (not a contract) which is pluggable anywhere, you may not want the contract to modify the keys of known events such as `Transfer`.
+You might not want to nest enums when serializing the event. For example, if you write an ERC-20 as a component, not a contract, that is pluggable anywhere, you might not want the contract to modify the keys of known events such as `Transfer`.
 
 To avoid nesting, write the following high level code:
 
@@ -761,7 +761,7 @@ In Cairo v2, a dedicated type for the contract's events was introduced. Currentl
 
 The `Event` enum variants appear in the ABI under `"type" = "event"` rather than regular structs.
 
-For such entries, each member has an additional `kind` field which specifies how the serialization into keys and data takes place:
+For such entries, each member has an additional `kind` field that specifies how the serialization into keys and data takes place:
 
 * If the kind is `key`, then this member or variant are serialized into the event's keys.
 * If the kind is `data`, then this member or variant are serialized into the event's data.
