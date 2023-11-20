@@ -1,44 +1,55 @@
 [id="validate_and_execute"]
-= Validate and execute
+= The `+__validate__+` and `+__execute__+` functions
 
-As previously stated, Starknet's account structure is not completely arbitrary, but must include the following two functions, which account transactions call:
+A Starknet account is a contract that must include the following two functions:
 
-* `+__validate__+`
-* `+__execute__+`
+[horizontal,labelwidth=15]
+`+__validate__+`:: Initiates the validation stage in the sequencer.
+`+__execute__+`:: Initiates the execution stage in the sequencer.
 
-Separating the `+__validate__+` and `+__execute__+` functions guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.
+When the sequencer receives a transaction request, it calls the `+__validate__+` function with the fields of the transaction request. After the validation stage completes successfully, the sequencer calls the `+__execute__+` function with the fields of the transaction request.
+
+* For more information on the available transaction types and their fields, see xref:architecture_and_concepts:Network_Architecture/transactions.adoc[Transaction types].
+* For more information on the validation and execution stages, see xref:architecture_and_concepts:Network_Architecture/transaction-life-cycle.adoc[Transaction lifecycle].
+
+Separating the validation and execution stages, which correspond to the `+__validate__+` and `+__execute__+` functions, guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.
 
 [id="the_validate_function"]
-== The validate function
+== The `+__validate__+` function
 
 The `+__validate__+` function ensures that any transaction submitted was indeed initiated by the account owner and therefore will not take up unjustified resources during the execution process.
 
-Without this mechanism, a forged transaction can result in the sequencer stealing the user's funds.
-In short, `+__validate__+` ensures that the sequencer may only include transactions that were approved by the account owner.
+Without this mechanism, a forged transaction can result in the sequencer stealing the user's funds. So the `+__validate__+` function ensures that the sequencer can only include transactions that were approved by the account owner.
 
-The arbitrary logic allowed in the `+__validate__+` function gives the account's designer the ability to determine what it means for a transaction to be valid. This gives rise to the usage of different signature schemes
-and other xref:architecture_and_concepts:Accounts/introduction.adoc#examples[exotic accounts].
+The arbitrary logic allowed in the `+__validate__+` function gives the account's designer the ability to determine what it means for a transaction to be valid, enabling different signature schemes and other xref:architecture_and_concepts:Accounts/introduction.adoc#examples[exotic accounts].
 
 [id="invalid_transactions"]
 == Invalid transactions
 
-When the `+__validate__+` function fails, no fee will be taken from the account in question.
+When the `+__validate__+` function fails, no fee is taken from the account in question.
 
 [id="validate_limitations"]
-== Validate limitations
+== `+__validate__+` limitations
 
-* You can't call functions in external contracts, only in your accoutn contract
-* 1 million Cairo steps (add xref to see Limits and triggers page)
-* see https://github.com/starkware-libs/cairo-lang/releases/tag/v0.12.3 for new 0.12.3 limitations
+The `+__validate__+` function has the following limitations:
+
+* You cannot call functions in external contracts, only in your account contract.
+* The maximum number of computational steps, measured in Cairo steps, for a `+__validate__+` function is 1 million.
+* see https://github.com/starkware-libs/cairo-lang/releases/tag/v0.12.3 for new 0.12.3 limitations:
+* Access is restricted to `+sequencer_address+` in the `+get_execution_info+` syscall. - return zero values
+* Restrict access to some syscalls:
+** Cairo contracts: `+get_block_hash+`
+** CairoZero contracts: `+get_sequencer_address+`
+
 * Ask Yoni Ilux for more info.
 
-There are some limitations set on the `+__validate__+` function. The purpose of these limitations is twofold:
+The purpose of these limitations is twofold:
 
-*   We want to avoid the sequencer having to do a lot of work only to discover that the validation failed and the sequencer is then not eligible to charge a fee (if this was possible, the sequencer would be completely exposed to DOS attacks). Validation, while now abstract and in control of the account owner rather than the protocol, should still be a simple operation. This is why in the future, Starknet will place max steps limitation upon the `+__validate__+` function.
+* We want to avoid the sequencer having to do a lot of work only to discover that the validation failed and the sequencer is then not eligible to charge a fee (if this was possible, the sequencer would be completely exposed to DOS attacks). Validation, while now abstract and in control of the account owner rather than the protocol, should still be a simple operation. This is why in the future, Starknet will place max steps limitation upon the `+__validate__+` function.
 
-*   Even if the validation is simple, we could still face the following attack: 
-    **  An attacker fills the mempool with transactions that are valid at time T. 
-    **  A sequencer may start executing them, thinking that at the time he will produce his block, they will still be valid. 
+* Even if the validation is simple, we could still face the following attack:
+  **  An attacker fills the mempool with transactions that are valid at time T.
+  **  A sequencer may start executing them, thinking that at the time he will produce his block, they will still be valid.
     **  However, shortly after, at time T', the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it's included before the sequencer gets to publish his block (the attacker may do this by offering higher fees for this one transaction). 
 
 As a concrete example, think of many `+__validate__+` functions checking that the value of a storage slot is 1 and the attacker's transaction later sets it to 0. To handle this issue, we add some further limitations.
@@ -48,7 +59,7 @@ Currently, Starknet enforces that `+__validate__+` does not call external contra
 NOTE: The property that we achieve with the above restrictions is that a single storage update may only invalidate transactions from a single account (this is the best we can do, an account can always invalidate its own past transactions by changing its keys). Thus, the price (in fees) required to invalidate transactions in the mempool is linear in the number of unique accounts that we want to invalidate.
 
 [id="the_execute_function"]
-== The execute function
+== The `+__execute__+` function
 
 The purpose of the `+__execute__+` function is to abstract away the remaining actions performed by a transaction.
 
