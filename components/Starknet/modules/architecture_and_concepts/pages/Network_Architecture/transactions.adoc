@@ -15,52 +15,80 @@ This topic describes the available fields for these transaction types and how ea
 
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 
+Deprecated transaction versions are still supported, but support will be removed in a future release of Starknet.
+
+.Supported versions of Starknet transaction types
+[cols=",,,",]
+|===
+|Transaction name |Current version |Deprecated versions | Unsupported versions
+
+|*Invoke* | v3 |v1, v0 | N/A
+|*Declare* |v3 |v2, v1 | v0
+|*Deploy account* | v3 | v0 | N/A
+|*Deploy* | N/A | N/A | v0
+|===
+
 [IMPORTANT]
 ====
 Do not submit a transaction that uses an unsupported transaction type, because it cannot be included in a proof, and so cannot become part of a Starknet block.
 ====
 
-.Supported versions of Starknet transaction types
-[cols=",,",]
-|===
-|Transaction name |Current version |Deprecated version
-
-|*Invoke* | v1 |v0
-|*Declare* |v2, v1, |v0
-|*Deploy account* |v1 (first version)|N/A
-// Version 3 transactions. These rows will replace the previous rows.
-// |*Invoke* | v3 |v1, v0
-// |*Declare* |v3 |v2, v1, v0
-// |*Deploy account* | v3 | v0
-|===
-
-
-
-
-
-
-
-[NOTE]
-====
-The *Deploy* transaction type is unsupported. The last supported version was v0.
-====
-
 [id=invoke_transaction]
 == *Invoke* transaction
 
-[IMPORTANT]
+:invoke:
+
+// [IMPORTANT]
+// ====
+// Invoke transaction versions 0 and 1 are deprecated and will be removed in a future release of Starknet.
+// ====
+
+The Invoke transaction type invokes a function in an existing contract instance. The contract code of the account that sends the Invoke transaction determines how to process the transaction.
+
+[NOTE]
 ====
-Invoke transaction version 0 is deprecated and will be removed in a future release of Starknet.
+Because an account's `+__validate__+` and `+__execute__+` functions can contain any logic, the account ultimately determines how to handle the Invoke transaction.
 ====
 
-The Invoke transaction type invokes an existing function in a Starknet smart contract, or a contract instance. Invoke transactions do not add new functions.
-
-Every Invoke transaction in Starknet undergoes the validation and execution stages, initiated by the `+__validate__+` and `+__execute__+` functions. The validation stage checks the transaction's correctness, similar to a syntax or logic check. After validation, the execution stage processes the transaction.
+Every Invoke transaction in Starknet undergoes the validation and execution stages, initiated by the `+__validate__+` and `+__execute__+` functions. The validation stage verifies that the account that sent the transaction approves it.
 
 
-=== v1 transaction fields
+=== v3 transaction fields
 
-.*Invoke* transaction fields
+include::partial$snippet_transaction_fields_master_table.adoc[]
+
+=== v3 hash calculation
+
+The *Invoke* v3 transaction hash is calculated as a Poseidon hash over the given transaction elements,
+specifically:
+
+[,subs="quotes"]
+----
+invoke_v3_tx_hash = _h_(
+    "invoke",
+    version,
+    sender_address,
+    _h_(tip, l1_gas_bounds, l2_gas_bounds),
+    _h_(paymaster_data),
+    chain_id,
+    nonce,
+    data_availability_modes,
+    _h_(
+      _h_(account_deployment_data),
+      _h_(calldata)
+    )
+    class_hash
+)
+----
+
+Where:
+
+* `invoke` is a constant prefix string, encoded in ASCII.
+include::partial$snippet_transaction_params.adoc[]
+
+=== v1 (deprecated) transaction fields
+
+.*Invoke* v1 transaction fields
 
 [%autowidth.stretch]
 |===
@@ -75,7 +103,7 @@ Every Invoke transaction in Starknet undergoes the validation and execution stag
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 |===
 
-=== v1 hash calculation
+=== v1 (deprecated) hash calculation
 
 The *Invoke* v1 transaction hash is calculated as a hash over the given transaction elements,
 specifically:
@@ -104,7 +132,6 @@ Where:
 
 === v0 (deprecated) hash calculation
 
-
 The hash of a v0 invoke transaction is computed as follows:
 
 [,subs="quotes"]
@@ -123,28 +150,63 @@ invoke_v0_tx_hash = _h_(
 Where:
 
 * `invoke` is a constant prefix string, encoded in (ASCII).
-* `chain_id` is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
+* `chain_id` is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id]. v2 and v3
 * `_h_` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash
+
+:!invoke:
 
 [id="declare-transaction"]
 == *Declare* transaction
+:declare:
 
 The *Declare* transaction introduces new contract classes into the state of Starknet, enabling other contracts to deploy instances of those classes or use them in a library call. For more information, see xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[contract classes].
 
-[IMPORTANT]
-====
-You can only declare Cairo 1.0 classes with the *Declare* v2 transaction type.
+// [IMPORTANT]
+// ====
+// You can only declare Cairo classes with v2 and v3 of the *Declare* transaction type.
+//
+// v1, which declares Cairo 0 classes, is deprecated and will be removed in a future Starknet version.
+//
+// v0 is no longer supported.
+// ====
 
-v1, which declares Cairo 0 classes, is deprecated and will be removed in a future Starknet version.
+=== v3 transaction fields
 
-v0 is no longer supported.
-====
+include::partial$snippet_transaction_fields_master_table.adoc[]
+
+=== v3 hash calculation
+
+The hash of a v3 *Declare* transaction is computed as follows:
+
+[,subs="quotes"]
+----
+declare_v3_tx_hash = _h_(
+    "declare",
+    version,
+    sender_address,
+    _h_(tip, l1_gas_bounds, l2_gas_bounds),
+    _h_(paymaster_data),
+    chain_id,
+    nonce,
+    data_availability_modes,
+    _h_(account_deployment_data),
+    class_hash,
+    compiled_class_hash
+)
+----
+
+Where:
+
+* `declare` is a constant prefix string, encoded in ASCII.
+include::partial$snippet_transaction_params.adoc[]
+* `class_hash` is the hash of the contract class. See xref:Smart_Contracts/class-hash.adoc#computing_the_cairo_1_class_hash[Class Hash]
+for details about how the
+hash is computed
+* `compiled_class_hash` is the hash of the xref:starknet_versions:upcoming_versions.adoc#what_to_expect[compiled class]
+generated by the Sierra->Casm compiler that is used in Starknet
 
 [id="declare_v2"]
-=== v2 transaction fields
-
-// todo add flow for invoke /deploy transaction flows examples, from upcoming versions / account
-// abstraction./ Link to flow in AA section.
+=== v2 (deprecated) transaction fields
 
 .*Declare* v2 transaction fields
 
@@ -163,7 +225,7 @@ v0 is no longer supported.
 When the fields that comprise a transaction change, either with the addition of a new field or the removal of an existing field, then the transaction version increases.
 |===
 
-=== v2 hash calculation
+=== v2 (deprecated) hash calculation
 
 The hash of a v2 *Declare* transaction is computed as follows:
 
@@ -192,9 +254,7 @@ hash is computed
 generated by the Sierra->Casm compiler that is used in Starknet
 
 
-=== v1 transaction fields
-
-include::partial$snippet_transaction_admonition.adoc[]
+=== v1 (deprecated) transaction fields
 
 This transaction version was used to declare Cairo 0 classes.
 
@@ -213,10 +273,9 @@ When the fields that comprise a transaction change, either with the addition of 
 |===
 
 
-=== v1 hash calculation
+=== v1 (deprecated) hash calculation
 
 The hash of a v1 declare transaction is computed as follows:
-
 
 [,subs="quotes"]
 ----
@@ -242,9 +301,7 @@ computed.
 * `_h_` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash
 
 
-=== v0 hash calculation
-
-include::partial$snippet_transaction_admonition.adoc[]
+=== v0 (unsupported) hash calculation
 
 This transaction version was used to declare Cairo 0 classes.
 
@@ -272,9 +329,13 @@ Where:
 * `chain_id` is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * `class_hash` is the hash of the xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[contract class]. See xref:architecture_and_concepts:Smart_Contracts/class-hash.adoc[Class Hash] for details about how the hash is computed.
 
+:!declare:
+
+ifdef::deploy_account[`deploy_account` is defined]
 
 [id=deploy_account_transaction]
 == *Deploy account* transaction
+:deploy_account:
 
 Since xref:starknet_versions:version_notes.adoc#version0.10.1[StarkNet v0.10.1] the *Deploy account*
 transaction replaces the *Deploy* transaction
@@ -287,7 +348,38 @@ transaction.
 
 A *Deploy account* transaction has the following fields:
 
-=== v1 transaction fields
+=== v3 transaction fields
+
+include::partial$snippet_transaction_fields_master_table.adoc[]
+
+=== v3 hash calculation
+
+The hash of a *Deploy account* transaction is computed as follows:
+
+[,subs="quotes"]
+----
+deploy_account_v3_tx_hash = _h_(
+    "deploy_account",
+    version,
+    sender_address,
+    _h_(tip, l1_gas_bounds, l2_gas_bounds),
+    _h_(paymaster_data),
+    chain_id,
+    nonce,
+    data_availability_modes,
+    _h_(constructor_calldata),
+    class_hash,
+    contract_address_salt
+)
+----
+
+Where:
+
+* `deploy_account` is a constant prefix string, encoded in ASCII.
+include::partial$snippet_transaction_params.adoc[]
+* `class_hash` is the hash of the xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[contract class]. See xref:architecture_and_concepts:Smart_Contracts/class-hash.adoc[Class Hash] for details about how the hash is computed.
+
+=== v1 (deprecated) transaction fields
 
 .*Deploy account* transaction fields
 
@@ -305,13 +397,13 @@ A *Deploy account* transaction has the following fields:
 
 |===
 
-=== v1 hash calculation
+=== v1 (deprecated) hash calculation
 
 The hash of a *Deploy account* transaction is computed as follows:
 
 [,subs="quotes"]
 ----
-deploy_account_tx_hash = _h_(
+deploy_account_v1_tx_hash = _h_(
     "deploy_account",
     version,
     contract_address,
@@ -331,13 +423,13 @@ Where:
 * `chain_id` is a constant value that specifies the network to which this transaction is sent. See xref:chain-id[Chain-Id].
 * `class_hash` is the hash of the xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[contract class]. See xref:architecture_and_concepts:Smart_Contracts/class-hash.adoc[Class Hash] for details about how the hash is computed.
 
+:!deploy_account:
 
 
 [id="deploy_transaction"]
+== *Deploy* (unsupported) transaction hash calculation
 
 If you need to retrieve the hash of an existing *Deploy* transaction, you can use this information to calculate the hash of the transaction.
-
-== *Deploy* transaction hash calculation
 
 Before you can calculate the transaction hash, get the deployed contract address. The *Deploy* transaction's hash is calculated as shown in the following pseudo code:
 
