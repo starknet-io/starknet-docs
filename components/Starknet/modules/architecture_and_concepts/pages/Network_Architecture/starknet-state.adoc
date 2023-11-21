@@ -3,36 +3,41 @@
 
 :stem: latexmath
 
-The state of Starknet consists of:
+Starknet's state consists of:
 
-* xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[Contract classes]: a mapping
-between class hash and the class definition
-* xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[Contract instances]: a mapping between addresses (251-bit field elements) and the contract's state.
+[horizontal,labelwidth="25",role="stripes-odd"]
+xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[Contract classes]:: a mapping
+between the class hash and the class definition
+xref:architecture_and_concepts:Smart_Contracts/contract-classes.adoc[Contract instances]:: a mapping between addresses (251-bit field elements) and the contract's state
 
-A contract state consists of:
+A contract instance's state consists of:
 
-* xref:Smart_Contracts/class-hash.adoc[Class hash]: defines the functionality of the contract
-* xref:Smart_Contracts/contract-storage.adoc[Contract storage]: a key-value mapping where the key/values are field elements
-* xref:Accounts/approach.adoc#replay_protection[Contract nonce]: the number of transactions sent from this contract
+[horizontal,labelwidth="25",role="stripes-odd"]
+xref:Smart_Contracts/class-hash.adoc[Class hash]:: defines the functionality of the contract
+xref:Smart_Contracts/contract-storage.adoc[Contract storage]:: a key-value mapping where the key/values are field elements
+xref:Accounts/approach.adoc#replay_protection[Contract nonce]:: the number of transactions sent from this contract
 
-With the above definition, we can provide a brief sketch of Starknet's transition function. A transaction stem:[$tx$] transitions the system from state stem:[$S$] to state stem:[$S'$] if:
+[#transitioning_to_a_new_state]
+== Transitioning to a new state
 
-* stem:[$tx$] is an xref:Network_Architecture/transactions.adoc#invoke_transaction[invoke] transaction, and the storage of stem:[$S'$] is the result of executing the target contract code with respect to the previous state stem:[$S$] (the arguments,
-contract
-address, and the specific entry point are part of the transaction)
-* stem:[$tx$] is a xref:Network_Architecture/transactions.adoc#deploy_account_transaction[deploy_account] transaction, and stem:[$S'$] contains the new contract's state at the contract's address. Additionally, the storage of stem:[$S$] is updated
-according to the execution of the contract's constructor.
-* stem:[$tx$] is a xref:Network_Architecture/transactions.adoc#declare-transaction[declare] transaction, and stem:[$S'$] contains the class hash and definition in the contract classes mapping
+A transaction stem:[$tx$] transitions the system from state stem:[$S$] to state stem:[$S'$] if:
+
+* stem:[$tx$] is an xref:Network_Architecture/transactions.adoc#invoke_transaction[Invoke] transaction, and the storage of stem:[$S'$] is the result of executing the target contract code with respect to the previous state stem:[$S$]. The arguments,
+contract instance's address, and the specific function entry point are part of the transaction.
+* stem:[$tx$] is a xref:Network_Architecture/transactions.adoc#deploy_account_transaction[Deploy account] transaction, and stem:[$S'$] contains the new contract instance's state at the contract instance's address. Additionally, the storage of stem:[$S$] is updated
+according to the execution of the contract instance's constructor.
+* stem:[$tx$] is a xref:Network_Architecture/transactions.adoc#declare-transaction[Declare] transaction, and stem:[$S'$] contains the class hash and definition in the contract class's mapping
 
 [id="state_commitment"]
 == State commitment
 
-The state commitment is a digest which uniquely (up to hash collisions) encodes the state.
+The state commitment is a digest that uniquely encodes the state.
+
 In Starknet, the commitment combines the roots of two binary xref:#merkle_patricia_tree[Merkle-Patricia trees] of height 251 in the following manner:
 
-[source,cairo]
+[source,sub="quotes"]
 ----
-state_commitment = ℎ(
+state_commitment = _h_(
     "STARKNET_STATE_V0",
     contracts_tree_root,
     classes_tree_root
@@ -41,57 +46,75 @@ state_commitment = ℎ(
 
 Where:
 
-* stem:[$h$] is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
+* `_h_` is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
 function
 * `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
-* `contracts_tree_root` is the root of the Merkle-Patricia tree whose leaves are the contracts states, see xref:#contracts_tree[below]
-* `classes_tree_root` is the root of the Merkle-Patricia tree whose leaves are the compiled class hashes, see xref:#classes_tree[below]
+* `contracts_tree_root` is the root of the xref:#contracts_tree[_contracts' tree_], a Merkle-Patricia tree whose leaves are the contracts states.
+* `classes_tree_root` is the root of the xref:#classes_tree[_classes tree_], a Merkle-Patricia tree whose leaves are the compiled class hashes.
 
 [id="contracts_tree"]
 === The contracts tree
 
-Like Ethereum, this is a 2-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is:
+As with Ethereum, this tree is a two-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is as follows:
 
-[stem]
-++++
-h(h(h(\text{class_hash}, \text{storage_root}), \text{nonce}),0)
-++++
+// [stem]
+// ++++
+// h(h(h(\text{class_hash}, \text{storage_root}), \text{nonce}),0)
+// ++++
+
+[source,subs="quotes"]
+----
+_h_(
+  _h_(
+    _h_(
+      class_hash,
+      storage_root
+    ),
+    nonce
+  ),
+  0
+)
+----
+
 
 Where:
 
-* stem:[$h$] is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash function.
-* stem:[$\text{class_hash}$] is the hash of the contract's definition discussed xref:../Smart_Contracts/class-hash.adoc[here]
-* stem:[$\text{storage_root}$] is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract's storage
-* stem:[$\text{nonce}$] is the current nonce of the contract
+* `_h_` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash function.
+* `class_hash` is the hash of xref:../Smart_Contracts/class-hash.adoc[the contract's definition].
+* `storage_root` is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract's storage.
+* `nonce` is the current nonce of the contract.
 
 [id="classes_tree"]
 === The classes tree
 
-The classes tree encodes the information about the existing
-xref:../Smart_Contracts/contract-classes.adoc[classes] in the state of Starknet. It maps (Cairo 1.0) xref:Smart_Contracts/class-hash.adoc#cairo1_class[class hashes] to their
-compiled class hashes. The value of a leaf at a path corresponding to some class hash is given by:
+The classes tree encodes the information about all existing
+xref:../Smart_Contracts/contract-classes.adoc[classes] in Starknet's state. This tree maps xref:Smart_Contracts/class-hash.adoc#cairo1_class[class hashes] to their
+compiled class hashes. The information stored in a leaf at a path corresponding to some class hash is as follows:
 
 
-[source,cairo]
+[source,subs="quotes"]
 ----
-ℎ(CONTRACT_CLASS_LEAF_V0, compiled_class_hash)
+_h_(
+    CONTRACT_CLASS_LEAF_V0,
+    compiled_class_hash
+)
 ----
 
 Where:
 
-* stem:[$h$] is the xref:../Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash function
+* `_h_` is the xref:../Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash function
 * `CONTRACT_CLASS_LEAF_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
-* `compiled_class_hash` is the hash of the Cairo assembly resulting from compiling the given class via the Sierra&rarr;Casm compiler
+* `compiled_class_hash` is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler
 
 [NOTE]
 ====
-Cairo 1.0 classes that are part of the commitment are defined with Sierra, an intermediate representation between Cairo 1.0 and Cairo assembly (see xref:Smart_Contracts/system-calls-cairo1.adoc[here] for more information).
+Cairo classes that are part of the commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly. For more information, see xref:Smart_Contracts/system-calls-cairo1.adoc[System calls].
 
-However, the prover only deals with Cairo assembly.
-This means that unless we want the compilation from Sierra to Casm to be part of every block in which the class is used, the commitment must have some information about the associated Cairo assembly.
+However, the prover only deals with Cairo assembly (Casm).
+This means that unless we want the compilation from Sierra to Casm to be part of every block in which the class is used, the commitment must have some information about the corresponding Cairo assembly.
 
-Today, the user signs the `compiled_class_hash` as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare v2] transaction. If the transaction was included in a block, then this `compiled_class_hash` becomes part of the commitment.
-In the future, when Sierra&rarr;Casm compilation becomes part of the Starknet OS, this value may be updated via a proof of the Sierra&rarr;Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.
+Today, the user signs the compiled class hash as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare v3] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the commitment.
+In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.
 ====
 
 [merkle_patricia_tree]
@@ -100,19 +123,20 @@ In the future, when Sierra&rarr;Casm compilation becomes part of the Starknet OS
 [specifications]
 ==== Specifications
 
-As mentioned above, our commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$].
+The commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$].
 
-The actual data is placed in the leaves, and a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes (leaves or internal) are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
+The actual data is placed in the leaves, and a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes , leaves or internal, #What does "leaves or internal" mean here?#
+are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
 
-stem:[$path$] is an integer in stem:[$[0, 2^{length}-1\]$], and the binary expansion of stem:[$path$] indicates how should we proceed along the tree, where the first step is indicated by the most significant bit, and stem:[$0,1$] are interpreted as left, right correspondingly.
+stem:[$path$] is an integer in stem:[$[0, 2^{length}-1\]$], and the binary expansion of stem:[$path$] indicates how to proceed along the tree, where the first step is indicated by the most significant bit, stem:[$0,1$] are interpreted as left or right.
+#What does 0,1 mean here?#
 
 
 [NOTE]
 ====
-The reason that length is specified and cannot be deduced from stem:[$path$] is that we're
-dealing with field elements of fixed size (251 bits each).
+Length is specified, and cannot be deduced from stem:[$path$], because the numbers in the triplet stem:[$(length, path, bottom)$] are field elements of fixed size, 251 bits each.
 
-For a node with stem:[$length>0$], the following stem:[$path$] leads the highest node whose both right and left child are none empty.
+For a node where stem:[$length>0$], stem:[$path$] leads to the highest node whose left and right children are not empty.
 ====
 
 The following rules specify how the tree is constructed from a given set of leaves:
@@ -151,11 +175,11 @@ We now show an example of the construction of a height 3 Merkle-Patricia tree fr
 
 image::trie.png[trie]
 
-Where stem:[$r=h(H(2,2,1),H((2,1,1))$]. Note that in our example there is no skipping from the root (length is zero), so the final commitment to the tree will be stem:[$H((0,0,r))=r$].
+Where stem:[$r=h(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip from the root, whose length is zero, so the final commitment to the tree is stem:[$H((0,0,r))=r$].
 
-Suppose that we want to prove, with respect to the commitment we have just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle tree, the proof would have consisted of data from three nodes (siblings along the path to the root).
+Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle tree, the proof would consist of data from three nodes, which are siblings along the path to the root.
 
-Here, since the tree is sparse, we only need to send the two children of the root stem:[$(2,2,1), (2,1,1)$]. This suffices to reproduce the commitment stem:[$r$], and since the height of the tree, stem:[$3$], is known and fixed, we know that the path stem:[$01$] of length stem:[$2$] specified by the right child stem:[$(2,1,1)$] leads us to the desired leaf.
+Here, since the tree is sparse, you only need to send the two children of the root stem:[$(2,2,1), (2,1,1)$]. This suffices to reproduce the commitment stem:[$r$], and since the height of the tree, stem:[$3$], is known and fixed, you know that the path stem:[$01$] of length stem:[$2$] specified by the right child stem:[$(2,1,1)$] leads to the desired leaf.
 
 
 == Special addresses
@@ -165,16 +189,16 @@ Starknet uses special contract addresses to provide distinct capabilities beyond
 Two such addresses are `0x0` and `0x1`. These addresses are reserved for specific purposes and are
 characterized by their unique behavior in comparison to traditional contract addresses.
 
-=== `0x0` address
+=== Address `0x0`
 
-Address `0x0` functions as the default `caller_address` for external calls, including interactions with the L1Handler or deprecated Deploy transactions. Unlike regular contracts, address `0x0` does not possess a storage structure and does not
-accommodate storage mapping.
+Address `0x0` functions as the default `caller_address` for external calls, including interactions with the L1 handler or deprecated Deploy transactions. Unlike regular contracts, address `0x0` does not possess a storage structure and does not accommodate storage mapping.
 
-=== `0x1` address
+=== Address `0x1`
 
 Address `0x1` is another special contract address within Starknet's architecture. It functions as a storage space for mapping block numbers to their corresponding block hashes. The storage structure at this address is organized as follows:
 
-Keys:: Block numbers between the `first_v0_12_0_block` and the current block minus 10.
+[horizontal,labelwidth="20"]
+Keys:: Block numbers between stem:[\text{first_v0_12_0_block}] and stem:[\text{current_block - 10}].
 Values:: Corresponding block hashes for the specified blocks.
 Default Values:: For all other block numbers, the values are set to `0`.
 
