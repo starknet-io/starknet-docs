@@ -224,7 +224,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../starknet_versions/deprecated/">Deprecated and removed features</a>
+     href="../../../starknet_versions/deprecated/">Deprecated, unsupported, and removed features</a>
   </li>
 </ul>
   </li>
@@ -512,7 +512,7 @@
 <h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>In the current stage of the Alpha, Starknet operates in a ZK-Rollup mode. This means that upon the acceptance of a state update onchain, the state diff between the previous and new state is sent as calldata to Ethereum.</p>
+<p>In the current stage of the Alpha, Starknet operates in Validity Rollup mode, also referred to as ZK Rollup mode. This means that upon the acceptance of a state update onchain, the state diff between the previous and new state is sent as calldata to Ethereum.</p>
 </div>
 <div class="paragraph">
 <p>This data allows anyone that observes Ethereum to reconstruct the current state of Starknet.</p>
@@ -525,7 +525,7 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>To update the Starknet state on L1, it suffices to send a valid proof&#8201;&#8212;&#8201;without information
+<p>To update the Starknet state on L1, it suffices to send a valid proof, without information
 on the transactions or particular changes that this update caused.</p>
 </div>
 <div class="paragraph">
@@ -546,7 +546,7 @@ on the transactions or particular changes that this update caused.</p>
 <p>The state diffs contain information on every contract whose storage was updated and additional information on contract deployments.</p>
 </div>
 <div class="paragraph">
-<p>Each affected contract has the following:</p>
+<p>Each affected contract has the following <mark>Is this a hash or calldata or what?</mark>:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -554,13 +554,15 @@ on the transactions or particular changes that this update caused.</p>
 <p>The contract address</p>
 </li>
 <li>
-<p>A single word that encodes:</p>
+<p>A single word that encodes the following:</p>
+<div class="openblock">
+<div class="content">
 <div class="ulist">
 <ul>
 <li>
-<p>class information flag, where:</p>
+<p>class information flag, whose value is one of the following:</p>
 <div class="paragraph">
-<p>0: Storage updates only.
+<p>0: Storage updates only.<br>
 1: contract was deployed or replaced in this state update.</p>
 </div>
 <div class="paragraph">
@@ -572,15 +574,14 @@ updates section.</p>
 <p>nonce</p>
 </li>
 <li>
-<p>num_of_storage_updates</p>
+<p>number of storage updates</p>
 </li>
 </ul>
 </div>
-</li>
-</ul>
+</div>
 </div>
 <div class="paragraph">
-<p>See below for the expected format:</p>
+<p>The expected format:</p>
 </div>
 <div class="stemblock">
 <div class="content">
@@ -590,8 +591,11 @@ updates section.</p>
 \underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}\]
 </div>
 </div>
+</li>
+</ul>
+</div>
 <div class="paragraph">
-<p>For each storage update:</p>
+<p>Each storage update includes the following:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -604,22 +608,22 @@ updates section.</p>
 </ul>
 </div>
 <div class="paragraph">
-<p>Next, we have information about newly declared classes:</p>
+<p>Newly declared classes include the following:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>The # of (Cairo 1.0) classes that were declared in the block</p>
+<p>The number of Cairo classes that were declared in the block</p>
 </li>
 <li>
-<p>For each class we have:</p>
+<p>Each class includes the following:</p>
 <div class="ulist">
 <ul>
 <li>
 <p>The class hash</p>
 </li>
 <li>
-<p><a href="../../../starknet_versions/upcoming_versions/" class="xref page">The compiled class hash</a></p>
+<p><a href="../../Smart_Contracts/class-hash/" class="xref page">The compiled class hash</a></p>
 </li>
 </ul>
 </div>
@@ -628,10 +632,9 @@ updates section.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="v0.11.0_example"><a class="anchor" href="#v0.11.0_example"></a>v0.11.0 example</h3>
+<h3 id="v0.11.0_example"><a class="anchor" href="#v0.11.0_example"></a>v0.11.0 example of onchain data</h3>
 <div class="paragraph">
-<p>Below we show an example of on chain data that was extracted from L1, and proceed to decode it
-according to the <a href="#v0.11.0_format">above format</a>.</p>
+<p>Consider the following onchain data that was extracted from L1:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -650,45 +653,35 @@ according to the <a href="#v0.11.0_format">above format</a>.</p>
 <div class="ulist">
 <ul>
 <li>
-<p>The first element, <code>1</code>, is the number of contracts whose state was updated</p>
+<p>The first element, <code>1</code>, is the number of contracts whose state was updated.</p>
 </li>
 <li>
-<p>The second element, <code>2019172390095051323869047481075102003731246132997057518965927979101413600827</code>, is the address of the first (and only) contract whose state changed</p>
+<p>The second element, <code>2019172390095051323869047481075102003731246132997057518965927979101413600827</code>, is the address of the first, and only, contract whose state changed.</p>
 </li>
 <li>
-<p>The third element, <code>18446744073709551617</code>, which is \(2^{64}+1\), encodes the following:</p>
+<p>The third element, <code>18446744073709551617</code>, which is 2<sup>64</sup>+1, encodes the following:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>The class information flag is <code>0</code>, that is, the contract was not just deployed or replaced, so we shouldn&#8217;t treat the next word as the class hash</p>
+<p>The class information flag is <code>0</code>, that is, the contract was not deployed or replaced just now, so you shouldn&#8217;t treat the next word as the class hash.</p>
 </li>
 <li>
-<p>The new nonce is <code>1</code></p>
+<p>The new nonce is <code>1</code>.</p>
 </li>
 <li>
-<p>One storage cell was updated</p>
+<p>One storage cell was updated.</p>
 </li>
 </ul>
 </div>
 </li>
 <li>
-<p>The next two elements, <code>100</code> and <code>200</code> encode the storage update (the value of key <code>100</code> was set
-to <code>200</code>)</p>
+<p>The next two elements, <code>100</code> and <code>200</code>, encode the storage update, where the value of key <code>100</code> is set to <code>200</code>.</p>
 </li>
 <li>
-<p>Next we have the new declare section: <code>1</code>
-means that we had a single</p>
+<p>he new declare section: <code>1</code> includes a single <a href="../transactions/#declare_v2" class="xref page">declare v2</a> transaction in this state update, and the next two elements
+encode <a href="../../Smart_Contracts/class-hash/" class="xref page">the class hash</a> and the compiled class hash of the declared class.</p>
 </li>
 </ul>
-</div>
-<div class="paragraph">
-<p><a href="../transactions/#declare_v2" class="xref page">declare v2</a> in this state update, and the next two elements
-encode</p>
-</div>
-<div class="paragraph">
-<p><a href="../../Smart_Contracts/class-hash/" class="xref page">the class hash</a> and
-<a href="../../../starknet_versions/upcoming_versions/#what_to_expect" class="xref page">compiled class hash</a> of the declared
-class</p>
 </div>
 </div>
 </div>
