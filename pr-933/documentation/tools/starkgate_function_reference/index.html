@@ -2618,7 +2618,14 @@ Contract: <a href="https://github.com/starkware-libs/starkgate/blob/53151ea8d1e7
 <h3 id="on_receive"><a class="anchor" href="#on_receive"></a><code>on_receive</code></h3>
 <h4 id="description_23" class="discrete">Description</h4>
 <div class="paragraph">
-<p>An interface to an implementation of the <code>on_receive</code> function that you provide in your L2 contract. When calling the <code>DepositWithMessage</code> function, the resulting transaction triggers an <code>on_receive</code> function that you need to implement in your application.</p>
+<p>The L2 contract that receives the message that is sent with the <code>depositWithMessage</code> function must implement a callback function named <code>on_receive</code>.</p>
+</div>
+<div class="paragraph">
+<p>Upon completion, the <code>depositWithMessage</code> function triggers a call to the <code>on_receive</code> callback function on the receiving L2 contract. The <code>on_receive</code> function receives the deposit message as input, and it must return <code>true</code> for the deposit to succeed.</p>
+</div>
+<div class="paragraph">
+<p>If <code>on_receive</code> returns <code>false</code>, or if the receiving contract does not implement <code>on_receive</code>,
+The <code>depositWithMessage</code> L1 handler fails, and the user must recover their funds using the <a href="#depositWithMessageCancelRequest"><code>depositWithMessageCancelRequest</code></a> function.</p>
 </div>
 <h4 id="parameters_23" class="discrete">Parameters</h4>
 <div class="hdlist stripes-odd">
@@ -2656,7 +2663,7 @@ Contract: <a href="https://github.com/starkware-libs/starkgate/blob/53151ea8d1e7
 <code><em>message</em>: Span&lt;felt252&gt;</code>
 </td>
 <td class="hdlist2">
-<p>The message that was sent with the <code>DepositWithMessage</code> function.</p>
+<p>The message that was sent with the <code>depositWithMessage</code> function.</p>
 </td>
 </tr>
 </table>
@@ -2673,7 +2680,7 @@ Contract: <a href="https://github.com/starkware-libs/starkgate/blob/53151ea8d1e7
 <code>true</code>
 </td>
 <td class="hdlist2">
-<p>The recipient L2 contract of the <code>DepositWithMessage</code> function accepts the funds on L2.</p>
+<p>The recipient L2 contract of the <code>depositWithMessage</code> function accepts the funds on L2.</p>
 </td>
 </tr>
 <tr>
@@ -2681,7 +2688,15 @@ Contract: <a href="https://github.com/starkware-libs/starkgate/blob/53151ea8d1e7
 <code>false</code>
 </td>
 <td class="hdlist2">
-<p>The recipient L2 contract of the <code>DepositWithMessage</code> function does not accept the funds on L2, or the <code>on_receive</code> function is not implemented in the recipients&#8217;s smart contract.</p>
+<p>The recipient L2 contract of the <code>depositWithMessage</code> function does not accept the funds on L2.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+No value
+</td>
+<td class="hdlist2">
+<p>If the recipients&#8217;s smart contractdoes not implement the <code>on_receive</code> function, the call fails to execute and no value is returned.</p>
 </td>
 </tr>
 </table>
