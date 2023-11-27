@@ -39,8 +39,8 @@ In Starknet, the commitment combines the roots of two binary xref:#merkle_patric
 ----
 state_commitment = _h_~Pos~(
     "STARKNET_STATE_V0",
-    contracts_tree_root,
-    classes_tree_root
+    contract_tree_root,
+    class_tree_root
 )
 ----
 
@@ -49,11 +49,11 @@ Where:
 * `_h_~Pos~ is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
 function.
 * `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
-* `contracts_tree_root` is the root of the xref:#contracts_tree[_contracts' tree_], a Merkle-Patricia tree whose leaves are the contracts states.
-* `classes_tree_root` is the root of the xref:#classes_tree[_classes tree_], a Merkle-Patricia tree whose leaves are the compiled class hashes.
+* `contract_tree_root` is the root of the xref:#contracts_tree[_contract tree_], a Merkle-Patricia tree whose leaves are the contracts' states.
+* `class_tree_root` is the root of the xref:#classes_tree[_class tree_], a Merkle-Patricia tree whose leaves are the compiled class hashes.
 
 [id="contracts_tree"]
-=== The contracts tree
+=== The contract tree
 
 As with Ethereum, this tree is a two-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is as follows:
 
@@ -85,9 +85,9 @@ Where:
 * `nonce` is the current nonce of the contract.
 
 [id="classes_tree"]
-=== The classes tree
+=== The class tree
 
-The classes tree encodes the information about all existing
+The class tree encodes the information about all existing
 xref:../Smart_Contracts/contract-classes.adoc[classes] in Starknet's state. This tree maps xref:Smart_Contracts/class-hash.adoc#cairo1_class[class hashes] to their
 compiled class hashes. The information stored in a leaf at a path corresponding to some class hash is as follows:
 
@@ -138,11 +138,14 @@ In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, 
 The commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$].
 #What do length, path and bottom mean?#
 
+#From the above and next paragraphs, it sounds like _bottom_=_x_. Is that correct? If so, then can we just stick with one?#
+
 The actual data is placed in the leaves, where a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes, whether they are leaf nodes or internal nodes, are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
 
 #What does _empty_ mean (in "empty node")? This is about how to compute an empty node, but not what an empty node actually _is_. Is an empty node one whose triplet is 0,0,0?#
 
 stem:[$path$] is an integer in the set stem:[$\{0,\ldots,2^{length}-1\}$], and the binary expansion of stem:[$path$] indicates how to proceed along the tree, where the first step is indicated by the most significant bit, using the bits stem:[$0$] and stem:[$1$] to indicate left and right, respectively.
+#Using bits 0 and 1? Or using the value of a certain bit, where it is either 0 or 1? If the former, then which bits are 0 and 1? Bits in what entity?#
 
 [NOTE]
 ====
@@ -216,7 +219,7 @@ Address `0x0` functions as the default `caller_address` for external calls, incl
 
 Address `0x1` is another special contract address within Starknet's architecture. It functions as a storage space for mapping block numbers to their corresponding block hashes. The storage structure at this address is organized as follows:
 
-[horizontal,labelwidth="20"]
+[horizontal,labelwidth="20",role="stripes-odd"]
 Keys:: Block numbers between stem:[\text{first_v0_12_0_block}] and stem:[\text{current_block - 10}].
 Values:: Corresponding block hashes for the specified blocks.
 Default Values:: For all other block numbers, the values are set to `0`.
