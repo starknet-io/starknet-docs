@@ -35,7 +35,7 @@ The state commitment is a digest that uniquely encodes the state.
 
 In Starknet, the commitment combines the roots of two binary xref:#merkle_patricia_tree[Merkle-Patricia trees] of height 251 in the following manner:
 
-[source,sub="quotes"]
+[,,subs="quotes"]
 ----
 state_commitment = _h_(
     "STARKNET_STATE_V0",
@@ -47,7 +47,7 @@ state_commitment = _h_(
 Where:
 
 * `_h_` is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
-function
+function #Gil suggested that I add the first 3 letters or *Poseidon* or *Pedersen* as subscript of the _h_ everywhere.#
 * `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
 * `contracts_tree_root` is the root of the xref:#contracts_tree[_contracts' tree_], a Merkle-Patricia tree whose leaves are the contracts states.
 * `classes_tree_root` is the root of the xref:#classes_tree[_classes tree_], a Merkle-Patricia tree whose leaves are the compiled class hashes.
@@ -123,13 +123,18 @@ In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, 
 [specifications]
 ==== Specifications
 
+#What does _encoding_ vs _representation_ mean? Are they the same thing?
+
 The commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$].
+#What do length, path and bottom mean?#
 
-The actual data is placed in the leaves, and a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes , leaves or internal, #What does "leaves or internal" mean here?#
-are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
+The actual data is placed in the leaves, where a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes, whether they are leaves or internal nodes, are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
 
-stem:[$path$] is an integer in stem:[$[0, 2^{length}-1\]$], and the binary expansion of stem:[$path$] indicates how to proceed along the tree, where the first step is indicated by the most significant bit, stem:[$0,1$] are interpreted as left or right.
-#What does 0,1 mean here?#
+#What does _empty_ mean (in "empty node")? This is about how to compute an empty node, but not what an empty node actually _is_. Is an empty node one whose triplet is 0,0,0?#
+
+#Should we use _trie_ or _tree_?#
+
+stem:[$path$] is an integer in the set stem:[$\{0,\ldots,2^{length}-1\}$], and the binary expansion of stem:[$path$] indicates how to proceed along the tree, where the first step is indicated by the most significant bit, using the bits stem:[$0$] and stem:[$1$] to indicate left and right, respectively.
 
 
 [NOTE]
@@ -151,7 +156,12 @@ h(bottom, path) + length, & \text{otherwise}
 \end{cases}
 ++++
 
-Note that any arithmetic operations in the above are done in our field.
+[NOTE]
+====
+All arithmetic operations in the above description of stem:[$H$] are done in the STARK field, as described in xref:Cryptography/p-value.adoc[Field element type].
+
+#Is STARK field an appropriate terms for this field?#
+====
 
 We can now proceed to recursively define the nodes in the tree. The triplet represents the parent of the nodes
 stem:[$left=(\ell_L, p_L, b_L)$], stem:[$right=(\ell_R, p_R, b_R)$] is given by:
@@ -167,13 +177,14 @@ parent=
 \end{cases}
 ++++
 
-[id="example_trie"]
-
+[#example_trie]
 === Example trie
 
-We now show an example of the construction of a height 3 Merkle-Patricia tree from the leaves stem:[$[0,0,1,0,0,1,0,0\]$]:
+The diagram xref:#3-level-high_tree[] illustrates  the construction of a three-level-high Merkle-Patricia tree from the leaves whose x values are stem:[$(0,0,1,0,0,1,0,0)$]:
 
-image::trie.png[trie]
+[#3-level-high_tree]
+.A Three-level-high Merkle tree.
+image::trie.png[3-level-high Merkle tree]
 
 Where stem:[$r=h(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip from the root, whose length is zero, so the final commitment to the tree is stem:[$H((0,0,r))=r$].
 
