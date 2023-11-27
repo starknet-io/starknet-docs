@@ -113,7 +113,8 @@ Cairo classes that are part of the commitment are defined with Sierra, an interm
 However, the prover only deals with Cairo assembly (Casm).
 This means that unless we want the compilation from Sierra to Casm to be part of every block in which the class is used, the commitment must have some information about the corresponding Cairo assembly.
 
-Today, the user signs the compiled class hash as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare v2] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the commitment.
+Today, the user signs the compiled class hash as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the commitment.
+
 In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.
 ====
 
@@ -123,19 +124,18 @@ In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, 
 [specifications]
 ==== Specifications
 
-#What does _encoding_ vs _representation_ mean? Are they the same thing?
+#What does _encoding_ vs _representation_ mean? Are they the same thing?#
 
 The commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$].
 #What do length, path and bottom mean?#
 
-The actual data is placed in the leaves, where a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes, whether they are leaves or internal nodes, are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
+The actual data is placed in the leaves, where a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes, whether they are leaf nodes or internal nodes, are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
 
 #What does _empty_ mean (in "empty node")? This is about how to compute an empty node, but not what an empty node actually _is_. Is an empty node one whose triplet is 0,0,0?#
 
 #Should we use _trie_ or _tree_?#
 
 stem:[$path$] is an integer in the set stem:[$\{0,\ldots,2^{length}-1\}$], and the binary expansion of stem:[$path$] indicates how to proceed along the tree, where the first step is indicated by the most significant bit, using the bits stem:[$0$] and stem:[$1$] to indicate left and right, respectively.
-
 
 [NOTE]
 ====
@@ -190,8 +190,9 @@ Where stem:[$r=h(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip fr
 
 Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle tree, the proof would consist of data from three nodes, which are siblings along the path to the root.
 
-Here, since the tree is sparse, you only need to send the two children of the root stem:[$(2,2,1), (2,1,1)$]. This suffices to reproduce the commitment stem:[$r$], and since the height of the tree, stem:[$3$], is known and fixed, you know that the path stem:[$01$] of length stem:[$2$] specified by the right child stem:[$(2,1,1)$] leads to the desired leaf.
+Here, since the tree is sparse, you only need to send the two children of the root, which are stem:[$(2,2,1)$] and stem:[$(2,1,1)$]. This suffices to reproduce the commitment stem:[$r$], and since the height of the tree, stem:[$3$], is known and fixed, you know that the path stem:[$01$] of length stem:[$2$] specified by the right child stem:[$(2,1,1)$] leads to the desired leaf.
 
+#So what is the predefined height of the state committment trie in Starknet? Don't we need to state that there?#
 
 == Special addresses
 
