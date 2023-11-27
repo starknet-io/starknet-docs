@@ -11,7 +11,7 @@ Paste here the specific URL(s) of the content that this PR addresses.
 
 ### Check List
 
-- [ ] Changes have been done against dev branch, and PR does not conflict
+- [ ] Changes have been done against master branch, and PR does not conflict
 - [ ] PR title follows the convention: `<docs/feat/fix/chore>(optional scope): <description>`, e.g: `fix: minor typos in code`
 
 

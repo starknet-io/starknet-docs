@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.358](https://github.com/starknet-io/starknet-docs/compare/v0.1.357...v0.1.358) (2023-11-23)
+
+### [0.1.357](https://github.com/starknet-io/starknet-docs/compare/v0.1.356...v0.1.357) (2023-11-23)
+
+### [0.1.356](https://github.com/starknet-io/starknet-docs/compare/v0.1.355...v0.1.356) (2023-11-22)
+
+### [0.1.355](https://github.com/starknet-io/starknet-docs/compare/v0.1.354...v0.1.355) (2023-11-22)
+
+### [0.1.354](https://github.com/starknet-io/starknet-docs/compare/v0.1.353...v0.1.354) (2023-11-21)
+
+
+### Bug Fixes
+
+* typo in docs releasing-starknet-docs-on-github ([#931](https://github.com/starknet-io/starknet-docs/issues/931)) ([#950](https://github.com/starknet-io/starknet-docs/issues/950)) ([5447bd2](https://github.com/starknet-io/starknet-docs/commit/5447bd2a1bf439f1819084df7bc5d9343855ae25))
+
+### [0.1.353](https://github.com/starknet-io/starknet-docs/compare/v0.1.352...v0.1.353) (2023-11-21)
+
+
+### Bug Fixes
+
+* Minor edits in simplified_transaction_flow.adoc ([#944](https://github.com/starknet-io/starknet-docs/issues/944)) ([e7921a0](https://github.com/starknet-io/starknet-docs/commit/e7921a013fb7c3c92a53732ff2c74efb596a3882))
+
+### [0.1.352](https://github.com/starknet-io/starknet-docs/compare/v0.1.351...v0.1.352) (2023-11-19)
+
+
+### Bug Fixes
+
+* several typos in the documentation ([#929](https://github.com/starknet-io/starknet-docs/issues/929)) ([#937](https://github.com/starknet-io/starknet-docs/issues/937)) ([7caff6d](https://github.com/starknet-io/starknet-docs/commit/7caff6d6a2e1946a613e5939c8230ee6fafb72f1))
+
+### [0.1.351](https://github.com/starknet-io/starknet-docs/compare/v0.1.350...v0.1.351) (2023-11-17)
+
 ### [0.1.350](https://github.com/starknet-io/starknet-docs/compare/v0.1.349...v0.1.350) (2023-11-16)
 
 ### [0.1.349](https://github.com/starknet-io/starknet-docs/compare/v0.1.348...v0.1.349) (2023-11-15)
