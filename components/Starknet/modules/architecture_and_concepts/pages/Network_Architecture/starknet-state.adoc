@@ -37,7 +37,7 @@ In Starknet, the commitment combines the roots of two binary xref:#merkle_patric
 
 [,,subs="quotes"]
 ----
-state_commitment = _h_(
+state_commitment = _h_~Pos~(
     "STARKNET_STATE_V0",
     contracts_tree_root,
     classes_tree_root
@@ -46,8 +46,8 @@ state_commitment = _h_(
 
 Where:
 
-* `_h_` is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
-function #Gil suggested that I add the first 3 letters or *Poseidon* or *Pedersen* as subscript of the _h_ everywhere.#
+* `_h_~Pos~ is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
+function.
 * `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
 * `contracts_tree_root` is the root of the xref:#contracts_tree[_contracts' tree_], a Merkle-Patricia tree whose leaves are the contracts states.
 * `classes_tree_root` is the root of the xref:#classes_tree[_classes tree_], a Merkle-Patricia tree whose leaves are the compiled class hashes.
@@ -64,9 +64,9 @@ As with Ethereum, this tree is a two-level structure where the contract address 
 
 [source,subs="quotes"]
 ----
-_h_(
-  _h_(
-    _h_(
+_h_~Ped~(
+  _h_~Ped~(
+    _h_~Ped~(
       class_hash,
       storage_root
     ),
@@ -79,7 +79,7 @@ _h_(
 
 Where:
 
-* `_h_` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash function.
+* `_h_~Ped~` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash function.
 * `class_hash` is the hash of xref:../Smart_Contracts/class-hash.adoc[the contract's definition].
 * `storage_root` is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract's storage.
 * `nonce` is the current nonce of the contract.
@@ -94,7 +94,7 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 
 [source,subs="quotes"]
 ----
-_h_(
+_h_~Pos~(
     CONTRACT_CLASS_LEAF_V0,
     compiled_class_hash
 )
@@ -102,7 +102,7 @@ _h_(
 
 Where:
 
-* `_h_` is the xref:../Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash function
+* `_h_~Pos~` is the xref:../Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash function
 * `CONTRACT_CLASS_LEAF_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
 * `compiled_class_hash` is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler
 
@@ -152,7 +152,7 @@ The hash of a node stem:[$N =(length, path, bottom)$], denoted by stem:[$H(N)$],
 ++++
 H(N)=\begin{cases}
 bottom, & \text{if } length = 0 \\
-h(bottom, path) + length, & \text{otherwise}
+h_{Ped}(bottom, path) + length, & \text{otherwise}
 \end{cases}
 ++++
 
@@ -173,7 +173,7 @@ parent=
 (0,0,0), & \text{if } left=right=(0,0,0)\\
 (\ell_L + 1, p_L, b_L), & \text{if } right=(0,0,0) \text{ and } left \neq (0,0,0)\\
 (\ell_R + 1, p_R + 2^{\ell_R}, b_R), & \text{if } right\neq (0,0,0) \text{ and } left = (0,0,0)\\
-(0, 0, h(H(left), H(right))), & \text{otherwise}
+(0, 0, h_{Ped}(H(left), H(right))), & \text{otherwise}
 \end{cases}
 ++++
 
@@ -183,10 +183,10 @@ parent=
 The diagram xref:#3-level-high_tree[] illustrates  the construction of a three-level-high Merkle-Patricia tree from the leaves whose x values are stem:[$(0,0,1,0,0,1,0,0)$]:
 
 [#3-level-high_tree]
-.A Three-level-high Merkle tree.
+.A Three-level-high Merkle-Patricia tree
 image::trie.png[3-level-high Merkle tree]
 
-Where stem:[$r=h(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip from the root, whose length is zero, so the final commitment to the tree is stem:[$H((0,0,r))=r$].
+Where stem:[$r=h_{Ped}(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip from the root, whose length is zero, so the final commitment to the tree is stem:[$H((0,0,r))=r$].
 
 Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle tree, the proof would consist of data from three nodes, which are siblings along the path to the root.
 
