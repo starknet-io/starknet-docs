@@ -2,6 +2,54 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.366](https://github.com/starknet-io/starknet-docs/compare/v0.1.365...v0.1.366) (2023-11-28)
+
+
+### Bug Fixes
+
+* apply new cairo syntax for Contract storage (Previously [#959](https://github.com/starknet-io/starknet-docs/issues/959), then [#960](https://github.com/starknet-io/starknet-docs/issues/960)) ([#975](https://github.com/starknet-io/starknet-docs/issues/975)) ([76a3156](https://github.com/starknet-io/starknet-docs/commit/76a3156e3dfef2607a507c1463219c527f67dc2c))
+
+### [0.1.365](https://github.com/starknet-io/starknet-docs/compare/v0.1.364...v0.1.365) (2023-11-28)
+
+
+### Bug Fixes
+
+* Rewrote Contract tree hash ([#972](https://github.com/starknet-io/starknet-docs/issues/972)) ([df04d0c](https://github.com/starknet-io/starknet-docs/commit/df04d0ca9c7c0a85e01e090a104ade8c3dab4007))
+
+### [0.1.364](https://github.com/starknet-io/starknet-docs/compare/v0.1.363...v0.1.364) (2023-11-28)
+
+### [0.1.363](https://github.com/starknet-io/starknet-docs/compare/v0.1.362...v0.1.363) (2023-11-27)
+
+### [0.1.362](https://github.com/starknet-io/starknet-docs/compare/v0.1.361...v0.1.362) (2023-11-27)
+
+### [0.1.361](https://github.com/starknet-io/starknet-docs/compare/v0.1.360...v0.1.361) (2023-11-23)
+
+### [0.1.360](https://github.com/starknet-io/starknet-docs/compare/v0.1.359...v0.1.360) (2023-11-23)
+
+### [0.1.359](https://github.com/starknet-io/starknet-docs/compare/v0.1.357...v0.1.359) (2023-11-23)
+
+### [0.1.358](https://github.com/starknet-io/starknet-docs/compare/v0.1.357...v0.1.358) (2023-11-23)
+
+### [0.1.357](https://github.com/starknet-io/starknet-docs/compare/v0.1.356...v0.1.357) (2023-11-23)
+
+### [0.1.356](https://github.com/starknet-io/starknet-docs/compare/v0.1.355...v0.1.356) (2023-11-22)
+
+### [0.1.355](https://github.com/starknet-io/starknet-docs/compare/v0.1.354...v0.1.355) (2023-11-22)
+
+### [0.1.354](https://github.com/starknet-io/starknet-docs/compare/v0.1.353...v0.1.354) (2023-11-21)
+
+
+### Bug Fixes
+
+* typo in docs releasing-starknet-docs-on-github ([#931](https://github.com/starknet-io/starknet-docs/issues/931)) ([#950](https://github.com/starknet-io/starknet-docs/issues/950)) ([5447bd2](https://github.com/starknet-io/starknet-docs/commit/5447bd2a1bf439f1819084df7bc5d9343855ae25))
+
+### [0.1.353](https://github.com/starknet-io/starknet-docs/compare/v0.1.352...v0.1.353) (2023-11-21)
+
+
+### Bug Fixes
+
+* Minor edits in simplified_transaction_flow.adoc ([#944](https://github.com/starknet-io/starknet-docs/issues/944)) ([e7921a0](https://github.com/starknet-io/starknet-docs/commit/e7921a013fb7c3c92a53732ff2c74efb596a3882))
+
 ### [0.1.352](https://github.com/starknet-io/starknet-docs/compare/v0.1.351...v0.1.352) (2023-11-19)
 
 
