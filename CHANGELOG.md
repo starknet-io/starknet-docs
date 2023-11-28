@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.369](https://github.com/starknet-io/starknet-docs/compare/v0.1.368...v0.1.369) (2023-11-28)
+
+
+### Bug Fixes
+
+* normalize file path in Algolia index file ([#939](https://github.com/starknet-io/starknet-docs/issues/939)) ([2586169](https://github.com/starknet-io/starknet-docs/commit/2586169a94f68132168cf32f52f6cc030133611c)), closes [#910](https://github.com/starknet-io/starknet-docs/issues/910)
+
 ### [0.1.368](https://github.com/starknet-io/starknet-docs/compare/v0.1.367...v0.1.368) (2023-11-28)
 
 
