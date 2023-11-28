@@ -115,7 +115,7 @@
   </ul>
 </nav>
   <div class="edit-this-page">
-    <a href="https://github.com/starknet-io/starknet-docs/edit/dev/components/Starknet/modules/architecture_and_concepts/pages/Network_Architecture/starknet-state.adoc"><img class="pencil">Edit this Page</a>
+    <a href="https://github.com/starknet-io/starknet-docs/edit/master/components/Starknet/modules/architecture_and_concepts/pages/Network_Architecture/starknet-state.adoc"><img class="pencil">Edit this Page</a>
   </div>
 </div>
 <div class="body">
@@ -224,7 +224,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../starknet_versions/deprecated/">Deprecated and removed features</a>
+     href="../../../starknet_versions/deprecated/">Deprecated, unsupported, and removed features</a>
   </li>
 </ul>
   </li>
@@ -368,7 +368,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Smart_Contracts/contract-syntax/">Contract migration guide</a>
+     href="../../Smart_Contracts/contract-syntax/">Migrating a contract from Cairo 0 to Cairo</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -511,51 +511,88 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>The state of Starknet consists of:</p>
+<p>Starknet&#8217;s state consists of:</p>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="../../Smart_Contracts/contract-classes/" class="xref page">Contract classes</a>: a mapping
-between class hash and the class definition</p>
-</li>
-<li>
-<p><a href="../../Smart_Contracts/contract-classes/" class="xref page">Contract instances</a>: a mapping between addresses (251-bit field elements) and the contract&#8217;s state.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>A contract state consists of:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="../../Smart_Contracts/class-hash/" class="xref page">Class hash</a>: defines the functionality of the contract</p>
-</li>
-<li>
-<p><a href="../../Smart_Contracts/contract-storage/" class="xref page">Contract storage</a>: a key-value mapping where the key/values are field elements</p>
-</li>
-<li>
-<p><a href="../../Accounts/approach/#replay_protection" class="xref page">Contract nonce</a>: the number of transactions sent from this contract</p>
-</li>
-</ul>
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 25%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<a href="../../Smart_Contracts/contract-classes/" class="xref page">Contract classes</a>
+</td>
+<td class="hdlist2">
+<p>a mapping
+between the class hash and the class definition</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<a href="../../Smart_Contracts/contract-classes/" class="xref page">Contract instances</a>
+</td>
+<td class="hdlist2">
+<p>a mapping between addresses (251-bit field elements) and the contract&#8217;s state</p>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>With the above definition, we can provide a brief sketch of Starknet&#8217;s transition function. A transaction \(tx\) transitions the system from state \(S\) to state \(S'\) if:</p>
+<p>A contract instance&#8217;s state consists of:</p>
+</div>
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 25%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<a href="../../Smart_Contracts/class-hash/" class="xref page">Class hash</a>
+</td>
+<td class="hdlist2">
+<p>defines the functionality of the contract</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<a href="../../Smart_Contracts/contract-storage/" class="xref page">Contract storage</a>
+</td>
+<td class="hdlist2">
+<p>a key-value mapping where the key/values are field elements</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<a href="../../Accounts/approach/#replay_protection" class="xref page">Contract nonce</a>
+</td>
+<td class="hdlist2">
+<p>the number of transactions sent from this contract</p>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="transitioning_to_a_new_state"><a class="anchor" href="#transitioning_to_a_new_state"></a>Transitioning to a new state</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A transaction \(tx\) transitions the system from state \(S\) to state \(S'\) if:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>\(tx\) is an <a href="../transactions/#invoke_transaction" class="xref page">invoke</a> transaction, and the storage of \(S'\) is the result of executing the target contract code with respect to the previous state \(S\) (the arguments,
-contract
-address, and the specific entry point are part of the transaction)</p>
+<p>\(tx\) is an <a href="../transactions/#invoke_transaction" class="xref page">Invoke</a> transaction, and the storage of \(S'\) is the result of executing the target contract code with respect to the previous state \(S\). The arguments,
+contract instance&#8217;s address, and the specific function entry point are part of the transaction.</p>
 </li>
 <li>
-<p>\(tx\) is a <a href="../transactions/#deploy_account_transaction" class="xref page">deploy_account</a> transaction, and \(S'\) contains the new contract&#8217;s state at the contract&#8217;s address. Additionally, the storage of \(S\) is updated
-according to the execution of the contract&#8217;s constructor.</p>
+<p>\(tx\) is a <a href="../transactions/#deploy_account_transaction" class="xref page">Deploy account</a> transaction, and \(S'\) contains the new contract instance&#8217;s state at the contract instance&#8217;s address. Additionally, the storage of \(S\) is updated
+according to the execution of the contract instance&#8217;s constructor.</p>
 </li>
 <li>
-<p>\(tx\) is a <a href="../transactions/#declare-transaction" class="xref page">declare</a> transaction, and \(S'\) contains the class hash and definition in the contract classes mapping</p>
+<p>\(tx\) is a <a href="../transactions/#declare-transaction" class="xref page">Declare</a> transaction, and \(S'\) contains the class hash and definition in the contract class&#8217;s mapping</p>
 </li>
 </ul>
 </div>
@@ -565,12 +602,14 @@ according to the execution of the contract&#8217;s constructor.</p>
 <h2 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State commitment</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The state commitment is a digest which uniquely (up to hash collisions) encodes the state.
-In Starknet, the commitment combines the roots of two binary <a href="#merkle_patricia_tree">Merkle-Patricia trees</a> of height 251 in the following manner:</p>
+<p>The state commitment is a digest that uniquely encodes the state.</p>
+</div>
+<div class="paragraph">
+<p>In Starknet, the commitment combines the roots of two binary <a href="#merkle_patricia_tree">Merkle-Patricia trees</a> of height 251 in the following manner:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">state_commitment = ℎ(
+<pre class="highlightjs highlight"><code class="language-none hljs">state_commitment = _h_(
     "STARKNET_STATE_V0",
     contracts_tree_root,
     classes_tree_root
@@ -583,28 +622,33 @@ In Starknet, the commitment combines the roots of two binary <a href="#merkle_pa
 <div class="ulist">
 <ul>
 <li>
-<p>\(h\) is the <a href="../../Cryptography/hash-functions/#poseidon_hash" class="xref page">Poseidon</a> hash
+<p><code><em>h</em></code> is the <a href="../../Cryptography/hash-functions/#poseidon_hash" class="xref page">Poseidon</a> hash
 function</p>
 </li>
 <li>
 <p><code>STARKNET_STATE_V0</code> is a constant prefix string encoded in ASCII (and represented as a field element).</p>
 </li>
 <li>
-<p><code>contracts_tree_root</code> is the root of the Merkle-Patricia tree whose leaves are the contracts states, see <a href="#contracts_tree">below</a></p>
+<p><code>contracts_tree_root</code> is the root of the <a href="#contracts_tree"><em>contracts' tree</em></a>, a Merkle-Patricia tree whose leaves are the contracts states.</p>
 </li>
 <li>
-<p><code>classes_tree_root</code> is the root of the Merkle-Patricia tree whose leaves are the compiled class hashes, see <a href="#classes_tree">below</a></p>
+<p><code>classes_tree_root</code> is the root of the <a href="#classes_tree"><em>classes tree</em></a>, a Merkle-Patricia tree whose leaves are the compiled class hashes.</p>
 </li>
 </ul>
 </div>
 <div class="sect2">
-<h3 id="contracts_tree"><a class="anchor" href="#contracts_tree"></a>The contracts tree</h3>
+<h3 id="contracts_tree"><a class="anchor" href="#contracts_tree"></a>The contract tree</h3>
 <div class="paragraph">
-<p>Like Ethereum, this is a 2-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is:</p>
+<p>As with Ethereum, this tree is a two-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is as follows:</p>
 </div>
-<div class="stemblock">
+<div class="listingblock">
 <div class="content">
-\[h(h(h(\text{class_hash}, \text{storage_root}), \text{nonce}),0)\]
+<pre><em>h</em>(
+    class_hash,
+    storage_root,
+    nonce,
+    0
+)</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -613,16 +657,16 @@ function</p>
 <div class="ulist">
 <ul>
 <li>
-<p>\(h\) is the <a href="../../Cryptography/hash-functions/#pedersen_hash" class="xref page">Pedersen</a> hash function.</p>
+<p><code><em>h</em></code> is the <a href="../../Cryptography/hash-functions/#pedersen_hash" class="xref page">Pedersen</a> hash function.</p>
 </li>
 <li>
-<p>\(\text{class_hash}\) is the hash of the contract&#8217;s definition discussed <a href="../../Smart_Contracts/class-hash/" class="xref page">here</a></p>
+<p><code>class_hash</code> is the hash of <a href="../../Smart_Contracts/class-hash/" class="xref page">the contract&#8217;s definition</a>.</p>
 </li>
 <li>
-<p>\(\text{storage_root}\) is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract&#8217;s storage</p>
+<p><code>storage_root</code> is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract&#8217;s storage.</p>
 </li>
 <li>
-<p>\(\text{nonce}\) is the current nonce of the contract</p>
+<p><code>nonce</code> is the current nonce of the contract.</p>
 </li>
 </ul>
 </div>
@@ -630,13 +674,16 @@ function</p>
 <div class="sect2">
 <h3 id="classes_tree"><a class="anchor" href="#classes_tree"></a>The classes tree</h3>
 <div class="paragraph">
-<p>The classes tree encodes the information about the existing
-<a href="../../Smart_Contracts/contract-classes/" class="xref page">classes</a> in the state of Starknet. It maps (Cairo 1.0) <a href="../../Smart_Contracts/class-hash/#cairo1_class" class="xref page">class hashes</a> to their
-compiled class hashes. The value of a leaf at a path corresponding to some class hash is given by:</p>
+<p>The classes tree encodes the information about all existing
+<a href="../../Smart_Contracts/contract-classes/" class="xref page">classes</a> in Starknet&#8217;s state. This tree maps <a href="../../Smart_Contracts/class-hash/#cairo1_class" class="xref page">class hashes</a> to their
+compiled class hashes. The information stored in a leaf at a path corresponding to some class hash is as follows:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">ℎ(CONTRACT_CLASS_LEAF_V0, compiled_class_hash)</code></pre>
+<pre class="highlightjs highlight"><code class="language-none hljs"><em>h</em>(
+    CONTRACT_CLASS_LEAF_V0,
+    compiled_class_hash
+)</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -645,13 +692,13 @@ compiled class hashes. The value of a leaf at a path corresponding to some class
 <div class="ulist">
 <ul>
 <li>
-<p>\(h\) is the <a href="../../Cryptography/hash-functions/#poseidon_hash" class="xref page">Poseidon</a> hash function</p>
+<p><code><em>h</em></code> is the <a href="../../Cryptography/hash-functions/#poseidon_hash" class="xref page">Poseidon</a> hash function</p>
 </li>
 <li>
 <p><code>CONTRACT_CLASS_LEAF_V0</code> is a constant prefix string encoded in ASCII (and represented as a field element).</p>
 </li>
 <li>
-<p><code>compiled_class_hash</code> is the hash of the Cairo assembly resulting from compiling the given class via the Sierra&rarr;Casm compiler</p>
+<p><code>compiled_class_hash</code> is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler</p>
 </li>
 </ul>
 </div>
@@ -663,15 +710,15 @@ compiled class hashes. The value of a leaf at a path corresponding to some class
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Cairo 1.0 classes that are part of the commitment are defined with Sierra, an intermediate representation between Cairo 1.0 and Cairo assembly (see <a href="../../Smart_Contracts/system-calls-cairo1/" class="xref page">here</a> for more information).</p>
+<p>Cairo classes that are part of the commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly. For more information, see <a href="../../Smart_Contracts/system-calls-cairo1/" class="xref page">System calls</a>.</p>
 </div>
 <div class="paragraph">
-<p>However, the prover only deals with Cairo assembly.
-This means that unless we want the compilation from Sierra to Casm to be part of every block in which the class is used, the commitment must have some information about the associated Cairo assembly.</p>
+<p>However, the prover only deals with Cairo assembly (Casm).
+This means that unless we want the compilation from Sierra to Casm to be part of every block in which the class is used, the commitment must have some information about the corresponding Cairo assembly.</p>
 </div>
 <div class="paragraph">
-<p>Today, the user signs the <code>compiled_class_hash</code> as part of a <a href="../transactions/#declare_v2" class="xref page">declare v2</a> transaction. If the transaction was included in a block, then this <code>compiled_class_hash</code> becomes part of the commitment.
-In the future, when Sierra&rarr;Casm compilation becomes part of the Starknet OS, this value may be updated via a proof of the Sierra&rarr;Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.</p>
+<p>Today, the user signs the compiled class hash as part of a <a href="../transactions/#declare_v2" class="xref page">declare</a> transaction. If the transaction is included in a block, then the compiled class hash becomes part of the commitment.
+In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.</p>
 </div>
 </td>
 </tr>
@@ -683,13 +730,14 @@ In the future, when Sierra&rarr;Casm compilation becomes part of the Starknet OS
 <div class="sect3">
 <h4 id="specifications"><a class="anchor" href="#specifications"></a>Specifications</h4>
 <div class="paragraph">
-<p>As mentioned above, our commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet \((length, path, bottom)\).</p>
+<p>The commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet \((length, path, bottom)\).</p>
 </div>
 <div class="paragraph">
-<p>The actual data is placed in the leaves, and a leaf node with data \(x\) is encoded by the triplet \((0,0,x)\). Empty nodes (leaves or internal) are encoded by the zero triplet \((0,0,0)\). A subtree rooted at a node \((length, path, bottom)\) has a single non-empty subtree, rooted at the node obtained by following the path specified by \(path\).</p>
+<p>The actual data is placed in the leaves, and a leaf node with data \(x\) is encoded by the triplet \((0,0,x)\). Empty nodes, whether they are leaf nodes or internal nodes,
+are encoded by the zero triplet \((0,0,0)\). A subtree rooted at a node \((length, path, bottom)\) has a single non-empty subtree, rooted at the node obtained by following the path specified by \(path\).</p>
 </div>
 <div class="paragraph">
-<p>\(path\) is an integer in \([0, 2^{length}-1]\), and the binary expansion of \(path\) indicates how should we proceed along the tree, where the first step is indicated by the most significant bit, and \(0,1\) are interpreted as left, right correspondingly.</p>
+<p>\(path\) is an integer in the set \(\{0,\ldots,2^{length}-1\}\), and the binary expansion of \(path\) indicates how to proceed along the tree, where the first step is indicated by the most significant bit, using the bits \(0\) and \(1\) to indicate left and right, respectively.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -699,11 +747,10 @@ In the future, when Sierra&rarr;Casm compilation becomes part of the Starknet OS
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The reason that length is specified and cannot be deduced from \(path\) is that we&#8217;re
-dealing with field elements of fixed size (251 bits each).</p>
+<p>Length is specified, and cannot be deduced from \(path\), because the numbers in the triplet \((length, path, bottom)\) are field elements of fixed size, 251 bits each.</p>
 </div>
 <div class="paragraph">
-<p>For a node with \(length&gt;0\), following \(path\) leads the highest node whose both right and left child are none empty.</p>
+<p>For a node where \(length&gt;0\), \(path\) leads to the highest node whose left and right children are not empty.</p>
 </div>
 </td>
 </tr>
@@ -754,13 +801,13 @@ h(bottom, path) + length, &amp; \text{otherwise}
 </div>
 </div>
 <div class="paragraph">
-<p>Where \(r=h(H(2,2,1),H((2,1,1))\). Note that in our example there is no skipping from the root (length is zero), so the final commitment to the tree will be \(H((0,0,r))=r\).</p>
+<p>Where \(r=h(H(2,2,1),H((2,1,1))\). Notice that the example does not skip from the root, whose length is zero, so the final commitment to the tree is \(H((0,0,r))=r\).</p>
 </div>
 <div class="paragraph">
-<p>Suppose that we want to prove, with respect to the commitment we have just computed, that the value of the leaf whose path is given by \(101\) is \(1\). In a standard Merkle tree, the proof would have consisted of data from three nodes (siblings along the path to the root).</p>
+<p>Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by \(101\) is \(1\). In a standard Merkle tree, the proof would consist of data from three nodes, which are siblings along the path to the root.</p>
 </div>
 <div class="paragraph">
-<p>Here, since the tree is sparse, we only need to send the two children of the root \((2,2,1), (2,1,1)\). This suffices to reproduce the commitment \(r\), and since the height of the tree, \(3\), is known and fixed, we know that the path \(01\) of length \(2\) specified by the right child \((2,1,1)\) leads us to the desired leaf.</p>
+<p>Here, since the tree is sparse, you only need to send the two children of the root \((2,2,1), (2,1,1)\). This suffices to reproduce the commitment \(r\), and since the height of the tree, \(3\), is known and fixed, you know that the path \(01\) of length \(2\) specified by the right child \((2,1,1)\) leads to the desired leaf.</p>
 </div>
 </div>
 </div>
@@ -776,32 +823,47 @@ h(bottom, path) + length, &amp; \text{otherwise}
 characterized by their unique behavior in comparison to traditional contract addresses.</p>
 </div>
 <div class="sect2">
-<h3 id="0x0_address"><a class="anchor" href="#0x0_address"></a><code>0x0</code> address</h3>
+<h3 id="address_0x0"><a class="anchor" href="#address_0x0"></a>Address <code>0x0</code></h3>
 <div class="paragraph">
-<p>Address <code>0x0</code> functions as the default <code>caller_address</code> for external calls, including interactions with the L1Handler or deprecated Deploy transactions. Unlike regular contracts, address <code>0x0</code> does not possess a storage structure and does not
-accommodate storage mapping.</p>
+<p>Address <code>0x0</code> functions as the default <code>caller_address</code> for external calls, including interactions with the L1 handler or deprecated Deploy transactions. Unlike regular contracts, address <code>0x0</code> does not possess a storage structure and does not accommodate storage mapping.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="0x1_address"><a class="anchor" href="#0x1_address"></a><code>0x1</code> address</h3>
+<h3 id="address_0x1"><a class="anchor" href="#address_0x1"></a>Address <code>0x1</code></h3>
 <div class="paragraph">
 <p>Address <code>0x1</code> is another special contract address within Starknet&#8217;s architecture. It functions as a storage space for mapping block numbers to their corresponding block hashes. The storage structure at this address is organized as follows:</p>
 </div>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">Keys</dt>
-<dd>
-<p>Block numbers between the <code>first_v0_12_0_block</code> and the current block minus 10.</p>
-</dd>
-<dt class="hdlist1">Values</dt>
-<dd>
+<div class="hdlist">
+<table>
+<colgroup>
+<col style="width: 20%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+Keys
+</td>
+<td class="hdlist2">
+<p>Block numbers between \(\text{first_v0_12_0_block}\) and \(\text{current_block - 10}\).</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Values
+</td>
+<td class="hdlist2">
 <p>Corresponding block hashes for the specified blocks.</p>
-</dd>
-<dt class="hdlist1">Default Values</dt>
-<dd>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Default Values
+</td>
+<td class="hdlist2">
 <p>For all other block numbers, the values are set to <code>0</code>.</p>
-</dd>
-</dl>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>The storage organization of address <code>0x1</code> supports the efficient retrieval of block hashes based on block numbers within a defined range and is also used by the <a href="../../Smart_Contracts/system-calls-cairo1/#get_block_hash" class="xref page"><code>get_block_hash</code></a> system call.</p>
@@ -822,6 +884,7 @@ accommodate storage mapping.</p>
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
+    <strong>Mainnet: 0.12.2 | Sepolia testnet: 0.12.3 | Goerli testnet: 0.12.3</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->
