@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.365](https://github.com/starknet-io/starknet-docs/compare/v0.1.364...v0.1.365) (2023-11-28)
+
+
+### Bug Fixes
+
+* Rewrote Contract tree hash ([#972](https://github.com/starknet-io/starknet-docs/issues/972)) ([df04d0c](https://github.com/starknet-io/starknet-docs/commit/df04d0ca9c7c0a85e01e090a104ade8c3dab4007))
+
 ### [0.1.364](https://github.com/starknet-io/starknet-docs/compare/v0.1.363...v0.1.364) (2023-11-28)
 
 ### [0.1.363](https://github.com/starknet-io/starknet-docs/compare/v0.1.362...v0.1.363) (2023-11-27)
