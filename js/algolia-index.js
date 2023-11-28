@@ -37,7 +37,7 @@ const startIndexing = (currentBranch) => {
   const algoliaIndex = client.initIndex(
     `${algoliaIndexNamePrefix}-${currentBranch}`
   );
-  const commonPath = resolve("../", "components");
+  const commonPath = resolvePath("../", "components");
 
   fs.readdir(commonPath, "utf8", (err, data) => {
     if (err) {
