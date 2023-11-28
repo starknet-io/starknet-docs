@@ -7,7 +7,7 @@ const asciidoctor = Asciidoctor();
 const { convert } = require('html-to-text');
 const git = simpleGit(__dirname);
 
-function resolve(...args) {
+function resolvePath(...args) {
   return path.resolve(__dirname, ...args)
 }
 
