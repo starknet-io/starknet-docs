@@ -115,7 +115,7 @@
   </ul>
 </nav>
   <div class="edit-this-page">
-    <a href="https://github.com/starknet-io/starknet-docs/edit/dev/components/Starknet/modules/architecture_and_concepts/pages/Network_Architecture/transaction-life-cycle.adoc"><img class="pencil">Edit this Page</a>
+    <a href="https://github.com/starknet-io/starknet-docs/edit/master/components/Starknet/modules/architecture_and_concepts/pages/Network_Architecture/transaction-life-cycle.adoc"><img class="pencil">Edit this Page</a>
   </div>
 </div>
 <div class="body">
@@ -224,7 +224,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../starknet_versions/deprecated/">Deprecated and removed features</a>
+     href="../../../starknet_versions/deprecated/">Deprecated, unsupported, and removed features</a>
   </li>
 </ul>
   </li>
@@ -368,7 +368,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Smart_Contracts/contract-syntax/">Contract migration guide</a>
+     href="../../Smart_Contracts/contract-syntax/">Migrating a contract from Cairo 0 to Cairo</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -421,7 +421,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../tools/devtools/">Development tools</a>
+     href="../../../tools/devtools/">Developer tools</a>
   </li>
   <li class="nav-item parent" data-depth="2">
     <button class="nav-item-toggle mask-svg-center"></button>
@@ -517,40 +517,30 @@
 </div>
 </div>
 <div class="paragraph">
-<p>The transaction lifecycle in Starknet involves the following high level steps:</p>
+<p>The high-level steps in the Starknet transaction lifecycle are as follows:</p>
 </div>
-<div class="sect2">
-<h3 id="1_transaction_submission"><a class="anchor" href="#1_transaction_submission"></a>1. Transaction Submission</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Transaction submission:</strong> A transaction is submitted to one of the gateways, functioning as the mempool and marks the transaction status as <code>RECEIVED</code>.</p>
+</li>
+<li>
+<p><strong>Mempool validation:</strong>
+The mempool performs a preliminary validation on the transaction. If the transaction is invalid, it does not proceed.</p>
+</li>
+<li>
+<p><strong>Sequencer validation:</strong> The sequencer performs preliminary validation on the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.</p>
 <div class="paragraph">
-<p>A transaction is submitted to one of the gateways, functioning as the Mempool and marks the transaction status as <code>RECEIVED</code>.</p>
+<p>Validation in this context is analogous to Ethereum&#8217;s signature checking, including running the account&#8217;s <code>__validate__</code> function, ensuring that the current account balance exceeds the value of <code>max_fee</code>, and more.</p>
 </div>
-</div>
-<div class="sect2">
-<h3 id="2_validation"><a class="anchor" href="#2_validation"></a>2. Validation</h3>
-<div class="sect3">
-<h4 id="2_1_mempool_validation"><a class="anchor" href="#2_1_mempool_validation"></a>2.1 Mempool validation</h4>
-<div class="paragraph">
-<p>The Mempool performs validation on the transaction to check for its validity. If the transaction is invalid, it will not proceed to the next stages.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="2_2_sequencer_validation"><a class="anchor" href="#2_2_sequencer_validation"></a>2.2 Sequencer validation</h4>
-<div class="paragraph">
-<p>The sequencer performs validation on the transaction prior to execution to ensure that the transaction is still valid. If the transaction is invalid, it will not proceed to the next stages.</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="3_execution"><a class="anchor" href="#3_execution"></a>3. Execution</h3>
-<div class="paragraph">
-<p>The sequencer operation sequentially applies the validated transactions to the state. If a transaction fails during execution, it will be included in the block with the status <code>REVERTED</code>.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="4_proof_generation"><a class="anchor" href="#4_proof_generation"></a>4. Proof Generation</h3>
-<div class="paragraph">
-<p>The Prover stage executes the operating system on the new block, computes the proof, and transmits it to L1.</p>
-</div>
+</li>
+<li>
+<p><strong>Execution:</strong> The sequencer operation sequentially applies all transactions that passed the preliminary validation to the state. If a transaction fails during execution, it is included in the block with the status <code>REVERTED</code>.</p>
+</li>
+<li>
+<p><strong>Proof generation and verfication:</strong> The Prover executes the operating system on the new block, computes the proof, and transmits it to the L1 verifier, which verifies the proof. At this point, the L1 state is updated to include the transaction.</p>
+</li>
+</ol>
 </div>
 </div>
 </div>
@@ -566,97 +556,116 @@
 </div>
 </div>
 <div class="paragraph">
-<p>The following are the possible statuses of a transaction from the moment it&#8217;s sent by the user to the moment it&#8217;s validated by L1:</p>
+<p>The following are the possible statuses of a transaction from the moment a user sends it until the moment it passes the L1 verifier:</p>
 </div>
-<div class="sect2">
-<h3 id="finality_statuses"><a class="anchor" href="#finality_statuses"></a>Finality statuses</h3>
-<div class="sect3">
-<h4 id="not_received"><a class="anchor" href="#not_received"></a>NOT_RECEIVED</h4>
-<div class="paragraph">
-<p>The transaction is not yet known to the sequencer.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="received"><a class="anchor" href="#received"></a>RECEIVED</h4>
-<div class="paragraph">
-<p>The transaction was received by the mempool. The transaction will now either execute successfully, be rejected or be reverted.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="accepted_on_l2"><a class="anchor" href="#accepted_on_l2"></a>ACCEPTED_ON_L2</h4>
-<div class="paragraph">
-<p>The transaction passed validation and entered an actual created block on L2.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="accepted_on_l1"><a class="anchor" href="#accepted_on_l1"></a>ACCEPTED_ON_L1</h4>
-<div class="paragraph">
-<p>The transaction was accepted on Ethereum.</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="execution_statuses"><a class="anchor" href="#execution_statuses"></a>Execution statuses</h3>
-<div class="sect3">
-<h4 id="rejected"><a class="anchor" href="#rejected"></a>REJECTED</h4>
-<div class="paragraph">
-<p>The transaction was received by the Mempool but failed validation in the sequencer. Such transactions will not be included in a block.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="reverted"><a class="anchor" href="#reverted"></a>REVERTED</h4>
-<div class="paragraph">
-<p>The transaction passed validation but failed during execution in the sequencer. They will be included in the block with the status <code>REVERTED</code>.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="succeeded"><a class="anchor" href="#succeeded"></a>SUCCEEDED</h4>
-<div class="paragraph">
-<p>The transaction was successfully executed by the sequencer.</p>
-</div>
-</div>
-</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 28.5714%;">
+<col style="width: 57.1429%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Status type</th>
+<th class="tableblock halign-left valign-top">Status</th>
+<th class="tableblock halign-left valign-top">Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top" rowspan="5"><p class="tableblock"><strong>Finality</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>NOT_RECEIVED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction is not yet known to the sequencer.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RECEIVED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was received by the mempool. The transaction now either executes successfully, is rejected, or reverted.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REJECTED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was received by the mempool but failed validation in the sequencer. Such transactions are not included in a block.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L2</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was executed and entered an actual created block on L2.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was accepted on Ethereum.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top" rowspan="2"><p class="tableblock"><strong>Execution</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REVERTED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction passed validation but failed during execution in the sequencer. It is included in the block with the status <code>REVERTED</code>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SUCCEEDED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by the sequencer. It is included in the block.</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div class="sect1">
-<h2 id="transaction-state-implications"><a class="anchor" href="#transaction-state-implications"></a>State Implications of a <code>REVERTED</code> Transaction</h2>
+<h2 id="transaction-state-implications"><a class="anchor" href="#transaction-state-implications"></a>State implications of a reverted transaction</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>When a transaction is marked as <code>REVERTED</code>, the following state implications occur:</p>
 </div>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">Nonce increases</dt>
-<dd>
-<p>The nonce value for the account of the failed transaction will increase despite the failure.</p>
-</dd>
-<dt class="hdlist1">Fee charge</dt>
-<dd>
-<p>A fee will be charged for the execution of the transaction up to the point of failure.</p>
-</dd>
-<dt class="hdlist1">Partial Reversion</dt>
-<dd>
-<p>All changes that occurred during the <code>validate</code> stage are not reverted. However, all changes that occurred during the <code>execute</code> stage are reverted, including no messages to L1 or events.</p>
-</dd>
-<dt class="hdlist1">Fee Calculation</dt>
-<dd>
-<p>The fee charged for <code>REVERTED</code> transactions will be calculated as follows:</p>
-</dd>
-</dl>
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 20%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+Nonce increases
+</td>
+<td class="hdlist2">
+<p>The nonce value for the account of the failed transaction iterates despite the failure.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Fee charge
+</td>
+<td class="hdlist2">
+<p>The sequencer charges a fee for the execution of the transaction up to the point of failure. A <code>Transfer</code> event is emitted.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Partial reversion
+</td>
+<td class="hdlist2">
+<p>All changes that occurred during the validation stage are not reverted. However, all changes that occurred during the execution stage are reverted, including all messages to L1 or any events that were emitted during this stage.</p>
+<div class="paragraph">
+<p>Events might still be emitted from the validation stage or the fee charge stage.</p>
 </div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">fee = Min(max_fee, consumed_resources)</code></pre>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Fee calculation
+</td>
+<td class="hdlist2">
+<p>The fee charged for <code>REVERTED</code> transactions is calculated as follows:</p>
+<div class="paragraph">
+<p>\(\text{fee} = \text{Min(max_fee,consumed_resources)}\)</p>
 </div>
-</div>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">Consumed Resources</dt>
-<dd>
-<p>The <code>consumed_resources</code> are the resources used for the execution of the transaction up to the point of failure. This includes Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the <code>validate</code> and
-<code>execute</code> stages.</p>
-</dd>
-</dl>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Consumed Resources
+</td>
+<td class="hdlist2">
+<p>The <code>consumed_resources</code> are the resources used for the execution of the transaction up to the point of failure. This includes Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the validation and
+execution stages.</p>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -664,26 +673,98 @@
 <h2 id="transaction_receipt"><a class="anchor" href="#transaction_receipt"></a>Transaction receipt</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The transaction receipt contains:</p>
+<p>To get a receipt, use the JSON RPC method <code>starknet_getTransactionReceipt</code>.</p>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p>Basic transaction details (block identifiers and the index within the block).</p>
-</li>
-<li>
-<p>A summary of the execution resources used by the transaction.</p>
-</li>
-<li>
-<p>The events emitted .</p>
-</li>
-<li>
+<div class="paragraph">
+<p>The transaction receipt contains the following fields:</p>
+</div>
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 25%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<code>transaction_hash</code>
+</td>
+<td class="hdlist2">
+<p>The hash of the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>actual_fee</code>
+</td>
+<td class="hdlist2">
+<p>The actual fee paid for the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>finality_status</code>
+</td>
+<td class="hdlist2">
+<p>The finality status of the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>execution_status</code>
+</td>
+<td class="hdlist2">
+<p>The execution status of the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>block_hash</code>
+</td>
+<td class="hdlist2">
+<p>The hash of the block that includes the transaction</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>block_number</code>
+</td>
+<td class="hdlist2">
+<p>The sequential number of the block that includes the transaction</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>messages_sent</code>
+</td>
+<td class="hdlist2">
 <p>A list of messages sent to L1.</p>
-</li>
-<li>
-<p>A consumed L1 message (in case the transaction invokes an L1 handler).</p>
-</li>
-</ul>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>events</code>
+</td>
+<td class="hdlist2">
+<p>The events emitted.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>execution_resource</code>
+</td>
+<td class="hdlist2">
+<p>A summary of the execution resources used by the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>type</code>
+</td>
+<td class="hdlist2">
+<p>The type of the transaction.</p>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>The following is an example of a receipt:</p>
@@ -691,33 +772,67 @@
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
-  "execution_status": "SUCCEEDED",
-  "finality_status": "ACCEPTED_ON_L2",
-  "block_hash": "0x65fd9e8926b116fb51bf0955cc431cf6720ccea1afdc3769cbd39c1f5fc4973",
-  "block_number": 307039,
-  "transaction_index": 0,
-  "transaction": {
-    "transaction_hash": "0x7b5de063c4f341dacca79ceae12ff309da719a79e50e9b54b9f7c2dae3d6893",
-    "version": "0x1",
-    "max_fee": "0x2386f26fc10000",
-    "signature": [
-      "0x7bd8d271a6eef3dba6da8c5380ab880ea17b27a3c05af7ad8a3b4035dbebb64",
-      "0x3c5c432d64fd4777df8198baa5e40a02b532e0ba7553b913177de08478e8d4c"
+  "jsonrpc": "2.0",
+  "result": {
+    "actual_fee": "0x221db5dbf6db",
+    "block_hash": "0x301fc0d09c5810600af7bb9610be10596ad6f4e6d28a60d397dd148f0962a88",
+    "block_number": 906096,
+    "events": [
+      {
+        "data": [
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
+          "0x0",
+          "0x9184e72a000",
+          "0x0"
+        ],
+        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "keys": [
+          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+        ]
+      },
+      {
+        "data": [
+          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
+          "0x9184e72a000",
+          "0x0",
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7"
+        ],
+        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
+        "keys": [
+          "0x194fc63c49b0f07c8e7a78476844837255213824bd6cb81e0ccfb949921aad1"
+        ]
+      },
+      {
+        "data": [
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
+          "0x1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
+          "0x221db5dbf6db",
+          "0x0"
+        ],
+        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "keys": [
+          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+        ]
+      }
     ],
-    "nonce": "0x1739",
-    "sender_address": "0x219937256cd88844f9fdc9c33a2d6d492e253ae13814c2dc0ecab7f26919d46",
-    "calldata": [
-      "0x1",
-      "0x7812357541c81dd9a320c2339c0c76add710db15f8cc29e8dde8e588cad4455",
-      "0x3d7905601c217734671143d457f0db37f7f8883112abd34b92c4abfeafde0c3",
-      "0x0",
-      "0x2",
-      "0x2",
-      "0x4ebba09c4dd53270868365e0064826264ea916e6901af7e05bb1758b1bf5adc",
-      "0x106ffe440d7c2192ec5f377b82538816e009b862a9afa9059c2e57c6a7c2242"
+    "execution_status": "SUCCEEDED",
+    "finality_status": "ACCEPTED_ON_L2",
+    "messages_sent": [
+      {
+        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
+        "payload": [
+          "0x0",
+          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
+          "0x9184e72a000",
+          "0x0"
+        ],
+        "to_address": "0xc3511006c04ef1d78af4c8e0e74ec18a6e64ff9e"
+      }
     ],
-    "type": "INVOKE_FUNCTION"
-  }
+    "transaction_hash": "0xdeadbeef",
+    "type": "INVOKE"
+  },
+  "id": 1
 }</code></pre>
 </div>
 </div>
