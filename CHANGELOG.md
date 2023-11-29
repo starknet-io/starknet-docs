@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.377](https://github.com/starknet-io/starknet-docs/compare/v0.1.376...v0.1.377) (2023-11-29)
+
+
+### Bug Fixes
+
+* More minor edits in account interface ([#982](https://github.com/starknet-io/starknet-docs/issues/982)) ([44289fb](https://github.com/starknet-io/starknet-docs/commit/44289fb4683c6f9faed053c6173477d9a0fc5643))
+
 ### [0.1.376](https://github.com/starknet-io/starknet-docs/compare/v0.1.375...v0.1.376) (2023-11-29)
 
 ### [0.1.375](https://github.com/starknet-io/starknet-docs/compare/v0.1.374...v0.1.375) (2023-11-29)
