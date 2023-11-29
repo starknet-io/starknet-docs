@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.373](https://github.com/starknet-io/starknet-docs/compare/v0.1.372...v0.1.373) (2023-11-29)
+
+
+### Bug Fixes
+
+* Minor edits in approach.adoc ([#978](https://github.com/starknet-io/starknet-docs/issues/978)) ([20196c1](https://github.com/starknet-io/starknet-docs/commit/20196c10d29e0a44341812922eed54987089eb0c))
+
 ### [0.1.372](https://github.com/starknet-io/starknet-docs/compare/v0.1.371...v0.1.372) (2023-11-29)
 
 ### [0.1.371](https://github.com/starknet-io/starknet-docs/compare/v0.1.370...v0.1.371) (2023-11-29)
