@@ -31,16 +31,16 @@ according to the execution of the contract instance's constructor.
 [id="state_commitment"]
 == State commitment
 
-The state commitment is a digest that uniquely encodes the state.
+The state commitment is a digest that uniquely represents the state.
 
-In Starknet, the commitment combines the roots of two binary xref:#merkle_patricia_tree[Merkle-Patricia trees] of height 251 in the following manner:
+In Starknet, the commitment combines the roots of two binary xref:#merkle_patricia_trie[Merkle-Patricia tries] of height 251 in the following manner:
 
 [,,subs="quotes"]
 ----
 state_commitment = _h_~Pos~(
     "STARKNET_STATE_V0",
-    contract_tree_root,
-    class_tree_root
+    contract_trie_root,
+    class_trie_root
 )
 ----
 
@@ -49,13 +49,13 @@ Where:
 * `_h_~Pos~ is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
 function.
 * `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
-* `contract_tree_root` is the root of the xref:#contracts_tree[_contract tree_], a Merkle-Patricia tree whose leaves are the contracts' states.
-* `class_tree_root` is the root of the xref:#classes_tree[_class tree_], a Merkle-Patricia tree whose leaves are the compiled class hashes.
+* `contract_trie_root` is the root of the xref:#contracts_trie[_contract trie_], a Merkle-Patricia trie whose leaves are the contracts' states.
+* `class_trie_root` is the root of the xref:#classes_trie[_class trie_], a Merkle-Patricia trie whose leaves are the compiled class hashes.
 
-[id="contracts_tree"]
-=== The contract tree
+[id="contracts_trie"]
+=== The contract trie
 
-As with Ethereum, this tree is a two-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is as follows:
+As with Ethereum, this trie is a two-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is as follows:
 
 // [stem]
 // ++++
@@ -77,14 +77,14 @@ Where:
 
 * `_h_~Ped~` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash function.
 * `class_hash` is the hash of xref:../Smart_Contracts/class-hash.adoc[the contract's definition].
-* `storage_root` is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract's storage.
+* `storage_root` is the root of another Merkle-Patricia trie of height 251 that is constructed from the contract's storage.
 * `nonce` is the current nonce of the contract.
 
-[id="classes_tree"]
-=== The class tree
+[id="classes_trie"]
+=== The class trie
 
-The class tree encodes the information about all existing
-xref:../Smart_Contracts/contract-classes.adoc[classes] in Starknet's state. This tree maps xref:Smart_Contracts/class-hash.adoc#cairo1_class[class hashes] to their
+The class trie encodes the information about all existing
+xref:../Smart_Contracts/contract-classes.adoc[classes] in Starknet's state. This trie maps xref:Smart_Contracts/class-hash.adoc#cairo1_class[class hashes] to their
 compiled class hashes. The information stored in a leaf at a path corresponding to some class hash is as follows:
 
 
@@ -108,77 +108,73 @@ Cairo classes that are part of the commitment are defined with Sierra, an interm
 
 However, the prover only deals with Cairo assembly (Casm).
 
-So unless you want the compilation from Sierra to Casm to be part of every block in which the class is used #Is this ever desirable?#, the commitment must have some information about the corresponding Cairo assembly.
-
-
-#Alternative for previous paragraph:#
-
-#So in order to prevent the compilation from Sierra to Casm in every block in which the class is used, the commitment must have some information about the corresponding Cairo assembly.#
+So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the commitment must have some information about the corresponding Cairo assembly.
 
 Today, the user signs the compiled class hash as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the commitment.
 
 In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.
 ====
 
-[merkle_patricia_tree]
-=== Merkle-Patricia tree
+[merkle_patricia_trie]
+=== Merkle-Patricia trie
 
-#Should we use _trie_ or _tree_?#
+The commitment scheme uses a binary Merkle-Patricia trie with the Pedersen hash function.
 
-[specifications]
-==== Specifications
-#Why "Specification**s**" instead singular?#
+==== About nodes
 
-#What does _encoding_ vs _representation_ mean? Are they the same thing?#
+Each node in the trie is represented by a triplet stem:[$(length, path, value)$], where:
 
-The commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$].
-#What do length, path and bottom mean?#
+[horizontal,labelwidth=10,role="stripes-odd"]
+stem:[$length$]:: is the length of the path, measured in nodes.
 
-#From the above and next paragraphs, it sounds like _bottom_=_x_. Is that correct? If so, then can we just stick with one?#
+stem:[$path$]:: is the path from the current node to its unique non-empty subtrie.
++
+stem:[$path$] is an integer in the set stem:[$\{0,\ldots,2^{length}-1\}$], and the binary expansion of stem:[$path$] indicates how to proceed along the trie, as follows:
++
+. Expand stem:[$path$] to its binary representation.
+. Starting with the most significant bit, representing the root of the trie, traverse the tree node by node, where the bit values stem:[$0$] and stem:[$1$] indicate left and right, respectively.
 
-The actual data is placed in the leaves, where a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes, whether they are leaf nodes or internal nodes, are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
+stem:[$value$]:: is the value of the node, which can be either data, or the hash of two non-empty child nodes.
 
-#What does _empty_ mean (in "empty node")? This is about how to compute an empty node, but not what an empty node actually _is_. Is an empty node one whose triplet is 0,0,0?#
-
-stem:[$path$] is an integer in the set stem:[$\{0,\ldots,2^{length}-1\}$], and the binary expansion of stem:[$path$] indicates how to proceed along the tree, where the first step is indicated by the most significant bit, using the bits stem:[$0$] and stem:[$1$] to indicate left and right, respectively.
-#Using bits 0 and 1? Or using the value of a certain bit, where it is either 0 or 1? If the former, then which bits are 0 and 1? Bits in what entity?#
+An empty node is one whose triplet values are stem:[$(0,0,0)$]. Leaf nodes and internal nodes can be empty. A subtrie rooted at a node stem:[$(length, path, value)$] has a single non-empty subtrie, rooted at the node obtained by following the path specified by stem:[$path$].
 
 [NOTE]
 ====
-Length is specified, and cannot be deduced from stem:[$path$], because the numbers in the triplet stem:[$(length, path, bottom)$] are field elements of fixed size, 251 bits each.
+Length is specified, and cannot be deduced from stem:[$path$], because the numbers in the triplet stem:[$(length, path, value)$] are field elements of fixed size, 251 bits each.
 
 For a node where stem:[$length>0$], stem:[$path$] leads to the highest node whose left and right children are not empty.
 ====
 
-The following rules specify how the tree is constructed from a given set of leaves:
+==== Trie construction
 
-The hash of a node stem:[$N =(length, path, bottom)$], denoted by stem:[$H(N)$], is:
+The following rules specify how the trie is constructed from a given set of leaves:
+
+The hash of a node stem:[$N =(length, path, value)$], denoted by stem:[$H(N)$], is:
 
 [stem]
 ++++
 H(N)=\begin{cases}
-bottom, & \text{if } length = 0 \\
-h_{Ped}(bottom, path) + length, & \text{otherwise}
+value, & \text{if } length = 0 \\
+h_{Ped}(value, path) + length, & \text{otherwise}
 \end{cases}
 ++++
 
 [NOTE]
 ====
-All arithmetic operations in the above description of stem:[$H$] are done in the STARK field, as described in xref:Cryptography/p-value.adoc[Field element type].
-
-#Is STARK field an appropriate terms for this field?#
+All arithmetic operations in the above description of stem:[$H$] are done in the STARK field, as described in xref:Cryptography/p-value.adoc[STARK field].
 ====
 
-We can now proceed to recursively define the nodes in the tree. The triplet represents the parent of the nodes
-stem:[$left=(\ell_L, p_L, b_L)$], stem:[$right=(\ell_R, p_R, b_R)$] is given by:
+==== Definition of the nodes in the trie
+
+The triplet representing the parent of the nodes stem:[$left=(\ell_L, p_L, v_L)$], stem:[$right=(\ell_R, p_R, v_R)$] is defined as follows:
 
 [stem]
 ++++
 parent=
 \begin{cases}
 (0,0,0), & \text{if } left=right=(0,0,0)\\
-(\ell_L + 1, p_L, b_L), & \text{if } right=(0,0,0) \text{ and } left \neq (0,0,0)\\
-(\ell_R + 1, p_R + 2^{\ell_R}, b_R), & \text{if } right\neq (0,0,0) \text{ and } left = (0,0,0)\\
+(\ell_L + 1, p_L, v_L), & \text{if } right=(0,0,0) \text{ and } left \neq (0,0,0)\\
+(\ell_R + 1, p_R + 2^{\ell_R}, v_R), & \text{if } right\neq (0,0,0) \text{ and } left = (0,0,0)\\
 (0, 0, h_{Ped}(H(left), H(right))), & \text{otherwise}
 \end{cases}
 ++++
@@ -186,19 +182,17 @@ parent=
 [#example_trie]
 === Example trie
 
-The diagram xref:#3-level-high_tree[] illustrates  the construction of a three-level-high Merkle-Patricia tree from the leaves whose x values are stem:[$(0,0,1,0,0,1,0,0)$]:
+The diagram xref:#3-level-high_trie[] illustrates  the construction of a three-level-high Merkle-Patricia trie from the leaves whose values are stem:[$(0,0,1,0,0,1,0,0)$]:
 
-[#3-level-high_tree]
-.A Three-level-high Merkle-Patricia tree
-image::trie.png[3-level-high Merkle tree]
+[#3-level-high_trie]
+.A three-level-high Merkle-Patricia trie
+image::trie.png[3-level-high Merkle-Patricia trie]
 
-Where stem:[$r=h_{Ped}(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip from the root, whose length is zero, so the final commitment to the tree is stem:[$H((0,0,r))=r$].
+Where stem:[$r=h_{Ped}(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip from the root, whose length is zero, so the final commitment to the trie is stem:[$H((0,0,r))=r$].
 
-Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle tree, the proof would consist of data from three nodes, which are siblings along the path to the root.
+Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle trie, the proof would consist of data from three nodes, which are siblings along the path to the root.
 
-Here, since the tree is sparse, you only need to send the two children of the root, which are stem:[$(2,2,1)$] and stem:[$(2,1,1)$]. This suffices to reproduce the commitment stem:[$r$], and since the height of the tree, stem:[$3$], is known and fixed, you know that the path stem:[$01$] of length stem:[$2$] specified by the right child stem:[$(2,1,1)$] leads to the desired leaf.
-
-#So what is the predefined height of the state committment trie in Starknet? Don't we need to state that there?#
+In a Merkle-Patricia trie, because the trie is sparse, you only need to send the two children of the root, which are stem:[$(2,2,1)$] and stem:[$(2,1,1)$]. These two children are enough to reproduce the commitment stem:[$r$], and because you know that the height of the trie is three, and that it is fixed, you know that the path stem:[$01$] of length stem:[$2$] specified by the right-hand child, stem:[$(2,1,1)$], leads to the desired leaf.
 
 == Special addresses
 
