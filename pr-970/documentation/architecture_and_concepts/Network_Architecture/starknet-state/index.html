@@ -312,7 +312,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Accounts/approach/">Starknet account structure</a>
+     href="../../Accounts/approach/">Starknet account interface</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -602,17 +602,17 @@ according to the execution of the contract instance&#8217;s constructor.</p>
 <h2 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State commitment</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The state commitment is a digest that uniquely encodes the state.</p>
+<p>The state commitment is a digest that uniquely represents the state.</p>
 </div>
 <div class="paragraph">
-<p>In Starknet, the commitment combines the roots of two binary <a href="#merkle_patricia_tree">Merkle-Patricia trees</a> of height 251 in the following manner:</p>
+<p>In Starknet, the commitment combines the roots of two binary <a href="#merkle_patricia_trie">Merkle-Patricia tries</a> of height 251 in the following manner:</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre>state_commitment = <em>h</em><sub>Pos</sub>(
     "STARKNET_STATE_V0",
-    contract_tree_root,
-    class_tree_root
+    contract_trie_root,
+    class_trie_root
 )</pre>
 </div>
 </div>
@@ -629,17 +629,17 @@ function.</p>
 <p><code>STARKNET_STATE_V0</code> is a constant prefix string encoded in ASCII (and represented as a field element).</p>
 </li>
 <li>
-<p><code>contract_tree_root</code> is the root of the <a href="#contracts_tree"><em>contract tree</em></a>, a Merkle-Patricia tree whose leaves are the contracts' states.</p>
+<p><code>contract_trie_root</code> is the root of the <a href="#contracts_trie"><em>contract trie</em></a>, a Merkle-Patricia trie whose leaves are the contracts' states.</p>
 </li>
 <li>
-<p><code>class_tree_root</code> is the root of the <a href="#classes_tree"><em>class tree</em></a>, a Merkle-Patricia tree whose leaves are the compiled class hashes.</p>
+<p><code>class_trie_root</code> is the root of the <a href="#classes_trie"><em>class trie</em></a>, a Merkle-Patricia trie whose leaves are the compiled class hashes.</p>
 </li>
 </ul>
 </div>
 <div class="sect2">
-<h3 id="contracts_tree"><a class="anchor" href="#contracts_tree"></a>The contract tree</h3>
+<h3 id="contracts_trie"><a class="anchor" href="#contracts_trie"></a>The contract trie</h3>
 <div class="paragraph">
-<p>As with Ethereum, this tree is a two-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is as follows:</p>
+<p>As with Ethereum, this trie is a two-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is as follows:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -663,7 +663,7 @@ function.</p>
 <p><code>class_hash</code> is the hash of <a href="../../Smart_Contracts/class-hash/" class="xref page">the contract&#8217;s definition</a>.</p>
 </li>
 <li>
-<p><code>storage_root</code> is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract&#8217;s storage.</p>
+<p><code>storage_root</code> is the root of another Merkle-Patricia trie of height 251 that is constructed from the contract&#8217;s storage.</p>
 </li>
 <li>
 <p><code>nonce</code> is the current nonce of the contract.</p>
@@ -672,10 +672,10 @@ function.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="classes_tree"><a class="anchor" href="#classes_tree"></a>The class tree</h3>
+<h3 id="classes_trie"><a class="anchor" href="#classes_trie"></a>The class trie</h3>
 <div class="paragraph">
-<p>The class tree encodes the information about all existing
-<a href="../../Smart_Contracts/contract-classes/" class="xref page">classes</a> in Starknet&#8217;s state. This tree maps <a href="../../Smart_Contracts/class-hash/#cairo1_class" class="xref page">class hashes</a> to their
+<p>The class trie encodes the information about all existing
+<a href="../../Smart_Contracts/contract-classes/" class="xref page">classes</a> in Starknet&#8217;s state. This trie maps <a href="../../Smart_Contracts/class-hash/#cairo1_class" class="xref page">class hashes</a> to their
 compiled class hashes. The information stored in a leaf at a path corresponding to some class hash is as follows:</p>
 </div>
 <div class="listingblock">
@@ -716,13 +716,7 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 <p>However, the prover only deals with Cairo assembly (Casm).</p>
 </div>
 <div class="paragraph">
-<p>So unless you want the compilation from Sierra to Casm to be part of every block in which the class is used <mark>Is this ever desirable?</mark>, the commitment must have some information about the corresponding Cairo assembly.</p>
-</div>
-<div class="paragraph">
-<p><mark>Alternative for previous paragraph:</mark></p>
-</div>
-<div class="paragraph">
-<p><mark>So in order to prevent the compilation from Sierra to Casm in every block in which the class is used, the commitment must have some information about the corresponding Cairo assembly.</mark></p>
+<p>So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the commitment must have some information about the corresponding Cairo assembly.</p>
 </div>
 <div class="paragraph">
 <p>Today, the user signs the compiled class hash as part of a <a href="../transactions/#declare_v2" class="xref page">declare</a> transaction. If the transaction is included in a block, then the compiled class hash becomes part of the commitment.</p>
@@ -736,34 +730,62 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 </div>
 </div>
 <div class="sect2">
-<h3 id="merkle_patricia_tree"><a class="anchor" href="#merkle_patricia_tree"></a>Merkle-Patricia tree</h3>
+<h3 id="merkle_patricia_trie"><a class="anchor" href="#merkle_patricia_trie"></a>Merkle-Patricia trie</h3>
 <div class="paragraph">
-<p><mark>Should we use <em>trie</em> or <em>tree</em>?</mark></p>
+<p>The commitment scheme uses a binary Merkle-Patricia trie with the Pedersen hash function.</p>
 </div>
 <div class="sect3">
-<h4 id="specifications"><a class="anchor" href="#specifications"></a>Specifications</h4>
+<h4 id="about_nodes"><a class="anchor" href="#about_nodes"></a>About nodes</h4>
 <div class="paragraph">
-<p><mark>Why "Specification<strong>s</strong>" instead singular?</mark></p>
+<p>Each node in the trie is represented by a triplet \((length, path, value)\), where:</p>
+</div>
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 10%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+\(length\)
+</td>
+<td class="hdlist2">
+<p>is the length of the path, measured in nodes.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+\(path\)
+</td>
+<td class="hdlist2">
+<p>is the path from the current node to its unique non-empty subtrie.</p>
+<div class="paragraph">
+<p>\(path\) is an integer in the set \(\{0,\ldots,2^{length}-1\}\), and the binary expansion of \(path\) indicates how to proceed along the trie, as follows:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Expand \(path\) to its binary representation.</p>
+</li>
+<li>
+<p>Starting with the most significant bit, representing the root of the trie, traverse the tree node by node, where the bit values \(0\) and \(1\) indicate left and right, respectively.</p>
+</li>
+</ol>
+</div>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+\(value\)
+</td>
+<td class="hdlist2">
+<p>is the value of the node, which can be either data, or the hash of two non-empty child nodes.</p>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p><mark>What does <em>encoding</em> vs <em>representation</em> mean? Are they the same thing?</mark></p>
-</div>
-<div class="paragraph">
-<p>The commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet \((length, path, bottom)\).
-<mark>What do length, path and bottom mean?</mark></p>
-</div>
-<div class="paragraph">
-<p><mark>From the above and next paragraphs, it sounds like <em>bottom</em>=<em>x</em>. Is that correct? If so, then can we just stick with one?</mark></p>
-</div>
-<div class="paragraph">
-<p>The actual data is placed in the leaves, where a leaf node with data \(x\) is encoded by the triplet \((0,0,x)\). Empty nodes, whether they are leaf nodes or internal nodes, are encoded by the zero triplet \((0,0,0)\). A subtree rooted at a node \((length, path, bottom)\) has a single non-empty subtree, rooted at the node obtained by following the path specified by \(path\).</p>
-</div>
-<div class="paragraph">
-<p><mark>What does <em>empty</em> mean (in "empty node")? This is about how to compute an empty node, but not what an empty node actually <em>is</em>. Is an empty node one whose triplet is 0,0,0?</mark></p>
-</div>
-<div class="paragraph">
-<p>\(path\) is an integer in the set \(\{0,\ldots,2^{length}-1\}\), and the binary expansion of \(path\) indicates how to proceed along the tree, where the first step is indicated by the most significant bit, using the bits \(0\) and \(1\) to indicate left and right, respectively.
-<mark>Using bits 0 and 1? Or using the value of a certain bit, where it is either 0 or 1? If the former, then which bits are 0 and 1? Bits in what entity?</mark></p>
+<p>An empty node is one whose triplet values are \((0,0,0)\). Leaf nodes and internal nodes can be empty. A subtrie rooted at a node \((length, path, value)\) has a single non-empty subtrie, rooted at the node obtained by following the path specified by \(path\).</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -773,7 +795,7 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Length is specified, and cannot be deduced from \(path\), because the numbers in the triplet \((length, path, bottom)\) are field elements of fixed size, 251 bits each.</p>
+<p>Length is specified, and cannot be deduced from \(path\), because the numbers in the triplet \((length, path, value)\) are field elements of fixed size, 251 bits each.</p>
 </div>
 <div class="paragraph">
 <p>For a node where \(length&gt;0\), \(path\) leads to the highest node whose left and right children are not empty.</p>
@@ -782,17 +804,20 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 </tr>
 </table>
 </div>
+</div>
+<div class="sect3">
+<h4 id="trie_construction"><a class="anchor" href="#trie_construction"></a>Trie construction</h4>
 <div class="paragraph">
-<p>The following rules specify how the tree is constructed from a given set of leaves:</p>
+<p>The following rules specify how the trie is constructed from a given set of leaves:</p>
 </div>
 <div class="paragraph">
-<p>The hash of a node \(N =(length, path, bottom)\), denoted by \(H(N)\), is:</p>
+<p>The hash of a node \(N =(length, path, value)\), denoted by \(H(N)\), is:</p>
 </div>
 <div class="stemblock">
 <div class="content">
 \[H(N)=\begin{cases}
-bottom, &amp; \text{if } length = 0 \\
-h_{Ped}(bottom, path) + length, &amp; \text{otherwise}
+value, &amp; \text{if } length = 0 \\
+h_{Ped}(value, path) + length, &amp; \text{otherwise}
 \end{cases}\]
 </div>
 </div>
@@ -804,26 +829,25 @@ h_{Ped}(bottom, path) + length, &amp; \text{otherwise}
 </td>
 <td class="content">
 <div class="paragraph">
-<p>All arithmetic operations in the above description of \(H\) are done in the STARK field, as described in <a href="../../Cryptography/p-value/" class="xref page">Field element type</a>.</p>
-</div>
-<div class="paragraph">
-<p><mark>Is STARK field an appropriate terms for this field?</mark></p>
+<p>All arithmetic operations in the above description of \(H\) are done in the STARK field, as described in <a href="../../Cryptography/p-value/" class="xref page">STARK field</a>.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+</div>
+<div class="sect3">
+<h4 id="definition_of_the_nodes_in_the_trie"><a class="anchor" href="#definition_of_the_nodes_in_the_trie"></a>Definition of the nodes in the trie</h4>
 <div class="paragraph">
-<p>We can now proceed to recursively define the nodes in the tree. The triplet represents the parent of the nodes
-\(left=(\ell_L, p_L, b_L)\), \(right=(\ell_R, p_R, b_R)\) is given by:</p>
+<p>The triplet representing the parent of the nodes \(left=(\ell_L, p_L, v_L)\), \(right=(\ell_R, p_R, v_R)\) is defined as follows:</p>
 </div>
 <div class="stemblock">
 <div class="content">
 \[parent=
 \begin{cases}
 (0,0,0), &amp; \text{if } left=right=(0,0,0)\\
-(\ell_L + 1, p_L, b_L), &amp; \text{if } right=(0,0,0) \text{ and } left \neq (0,0,0)\\
-(\ell_R + 1, p_R + 2^{\ell_R}, b_R), &amp; \text{if } right\neq (0,0,0) \text{ and } left = (0,0,0)\\
+(\ell_L + 1, p_L, v_L), &amp; \text{if } right=(0,0,0) \text{ and } left \neq (0,0,0)\\
+(\ell_R + 1, p_R + 2^{\ell_R}, v_R), &amp; \text{if } right\neq (0,0,0) \text{ and } left = (0,0,0)\\
 (0, 0, h_{Ped}(H(left), H(right))), &amp; \text{otherwise}
 \end{cases}\]
 </div>
@@ -833,25 +857,22 @@ h_{Ped}(bottom, path) + length, &amp; \text{otherwise}
 <div class="sect2">
 <h3 id="example_trie"><a class="anchor" href="#example_trie"></a>Example trie</h3>
 <div class="paragraph">
-<p>The diagram <a href="#3-level-high_tree">A Three-level-high Merkle-Patricia tree</a> illustrates  the construction of a three-level-high Merkle-Patricia tree from the leaves whose x values are \((0,0,1,0,0,1,0,0)\):</p>
+<p>The diagram <a href="#3-level-high_trie">A three-level-high Merkle-Patricia trie</a> illustrates  the construction of a three-level-high Merkle-Patricia trie from the leaves whose values are \((0,0,1,0,0,1,0,0)\):</p>
 </div>
-<div id="3-level-high_tree" class="imageblock">
+<div id="3-level-high_trie" class="imageblock">
 <div class="content">
-<img src="../../_images/trie.png" alt="3-level-high Merkle tree">
+<img src="../../_images/trie.png" alt="3-level-high Merkle-Patricia trie">
 </div>
-<div class="title">Figure 1. A Three-level-high Merkle-Patricia tree</div>
-</div>
-<div class="paragraph">
-<p>Where \(r=h_{Ped}(H(2,2,1),H((2,1,1))\). Notice that the example does not skip from the root, whose length is zero, so the final commitment to the tree is \(H((0,0,r))=r\).</p>
+<div class="title">Figure 1. A three-level-high Merkle-Patricia trie</div>
 </div>
 <div class="paragraph">
-<p>Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by \(101\) is \(1\). In a standard Merkle tree, the proof would consist of data from three nodes, which are siblings along the path to the root.</p>
+<p>Where \(r=h_{Ped}(H(2,2,1),H((2,1,1))\). Notice that the example does not skip from the root, whose length is zero, so the final commitment to the trie is \(H((0,0,r))=r\).</p>
 </div>
 <div class="paragraph">
-<p>Here, since the tree is sparse, you only need to send the two children of the root, which are \((2,2,1)\) and \((2,1,1)\). This suffices to reproduce the commitment \(r\), and since the height of the tree, \(3\), is known and fixed, you know that the path \(01\) of length \(2\) specified by the right child \((2,1,1)\) leads to the desired leaf.</p>
+<p>Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by \(101\) is \(1\). In a standard Merkle trie, the proof would consist of data from three nodes, which are siblings along the path to the root.</p>
 </div>
 <div class="paragraph">
-<p><mark>So what is the predefined height of the state committment trie in Starknet? Don&#8217;t we need to state that there?</mark></p>
+<p>In a Merkle-Patricia trie, because the trie is sparse, you only need to send the two children of the root, which are \((2,2,1)\) and \((2,1,1)\). These two children are enough to reproduce the commitment \(r\), and because you know that the height of the trie is three, and that it is fixed, you know that the path \(01\) of length \(2\) specified by the right-hand child, \((2,1,1)\), leads to the desired leaf.</p>
 </div>
 </div>
 </div>
@@ -928,6 +949,7 @@ Default Values
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
+    <strong>Mainnet: 0.12.2 | Sepolia testnet: 0.12.3 | Goerli testnet: 0.12.3</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->
