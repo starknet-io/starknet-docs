@@ -297,7 +297,7 @@ With this function, a deposit transaction can trigger subsequent actions. For ex
 
 After depositing to another recipient, the L1 handler in `token_bridge.cairo` calls the `on_receive` function in the contract of the recipient.
 
-If `on_receive` returns `true`, then the operation succeeded. If it returns `false`, or if it doesn't return any value because the `on_receive` function is not implemented in the recipient contract, the transaction is reverted.
+If `on_receive` returns `true`, then the `on_receive` function succeeded. If it returns `false`, or if it doesn't return any value because the `on_receive` function is not implemented in the recipient contract, the operation fails and the transaction is reverted.
 
 //
 // ##----
@@ -1201,14 +1201,15 @@ link:https://github.com/starkware-libs/starkgate/blob/894d822a33fd5aa2b8469606d2
 [discrete]
 ==== Description
 
+An interface to an implementation of the `on_receive` function that you must provide in your L2 contract in order to enable the `depositWithMessage` function to succeed.
+
+// When calling the `depositWithMessage` function, the resulting transaction triggers an `on_receive` function that you need to implement in your application.
+//
 The L2 contract that receives the message that is sent with the `depositWithMessage` function must implement a callback function named `on_receive`.
 
 Upon completion, the `depositWithMessage` function triggers a call to the `on_receive` callback function on the receiving L2 contract. The `on_receive` function receives the deposit message as input, and it must return `true` for the deposit to succeed.
 
-If `on_receive` returns `false`, or if the receiving contract does not implement `on_receive`,
-The `depositWithMessage` L1 handler fails, and the user can only recover their funds using the xref:#depositWithMessageCancelRequest[`depositWithMessageCancelRequest`] function.
-
-// An interface to an implementation of the `on_receive` function that you provide in your L2 contract. When calling the `depositWithMessage` function, the resulting transaction triggers an `on_receive` function that you need to implement in your application.
+If `on_receive` returns `false`, or if the receiving contract does not implement `on_receive`, the `depositWithMessage` L1 handler fails, and the user can only recover their funds using the xref:#depositWithMessageCancelRequest[`depositWithMessageCancelRequest`] function.
 
 [discrete]
 ==== Parameters
@@ -1226,7 +1227,7 @@ The `depositWithMessage` L1 handler fails, and the user can only recover their f
 `true`:: The `on_receive` function completed successfully.
 `false`:: The `on_receive` function did not complete successfully. The transaction is reverted.
 // The recipient L2 contract of the `depositWithMessage` function does not accept the funds on L2.
-No value:: If the recipients's smart contract does not implement the `on_receive` function, the call fails to execute and no value is returned. The transaction is reverted.
+No value:: If the recipients's smart contract does not implement the `on_receive` function, the call fails to execute, and the transaction is reverted.
 
 [discrete]
 ==== Function definition
