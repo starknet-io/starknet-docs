@@ -17,7 +17,7 @@ Separating the validation and execution stages, which correspond to the `+__vali
 [id="the_validate_function"]
 == The `+__validate__+` function
 
-The `+__validate__+` function ensures that any transaction submitted was indeed initiated by the account owner and therefore will not take up unjustified resources during the execution process.
+The `+__validate__+` function ensures that any transaction submitted was indeed initiated by the account owner and therefore does not take up unjustified resources during the execution process.
 
 Without this mechanism, a forged transaction can result in the sequencer stealing the user's funds. So the `+__validate__+` function ensures that the sequencer can only include transactions that were approved by the account owner.
 
@@ -34,29 +34,32 @@ When the `+__validate__+` function fails, no fee is taken from the account in qu
 The `+__validate__+` function has the following limitations:
 
 * You cannot call functions in external contracts, only in your account contract.
-* The maximum number of computational steps, measured in Cairo steps, for a `+__validate__+` function is 1 million.
-* see https://github.com/starkware-libs/cairo-lang/releases/tag/v0.12.3 for new 0.12.3 limitations:
-* Access is restricted to `+sequencer_address+` in the `+get_execution_info+` syscall. - return zero values
-* Restrict access to some syscalls:
-** Cairo contracts: `+get_block_hash+`
-** CairoZero contracts: `+get_sequencer_address+`
+* The maximum number of computational steps, measured in Cairo steps, for a `+__validate__+` function is 1,000,000.
+* Access is restricted to `+sequencer_address+` in the `+get_execution_info+` syscall. The syscall returns zero values for `+sequencer_address+`.
+* Access is restricted to the following syscalls:
+** `+get_block_hash+` for Cairo contracts
+** `+get_sequencer_address+` for Cairo 0 contracts
 
-* Ask Yoni Ilux for more info.
+[NOTE]
+====
+Validation, while now abstract and in control of the account owner rather than the protocol, should still be a simple operation. So in the future, the `+__validate__+` function will have a limitation of a maximum number of Cairo steps.
+====
 
-The purpose of these limitations is twofold:
+These limitations prevent the following attacks:
 
-* We want to avoid the sequencer having to do a lot of work only to discover that the validation failed and the sequencer is then not eligible to charge a fee (if this was possible, the sequencer would be completely exposed to DoS attacks). Validation, while now abstract and in control of the account owner rather than the protocol, should still be a simple operation. This is why in the future, Starknet will place max steps limitation upon the `+__validate__+` function.
+* Denial of Service (DoS) attacks. Without these limitations, an attack could cause the sequencer to perform a large amount of work before a transaction fails validation. This work would not be eligible for fee payment.
 
-* Even if the validation is simple, we could still face the following attack:
-  **  An attacker fills the mempool with transactions that are valid at time T.
-  **  A sequencer may start executing them, thinking that at the time he will produce his block, they will still be valid.
-    **  However, shortly after, at time T', the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it's included before the sequencer gets to publish his block (the attacker may do this by offering higher fees for this one transaction). 
+* Even if the validation is simple, the following attack could still be possible:
+  . An attacker fills the mempool with transactions that are valid at the time they are sent.
+  . A sequencer starts executing them, thinking that by the time it produces a  block, they will still be valid.
+  . However, shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it's included in the block, by offering higher fees for this one transaction, before the sequencer can publish the block.
 
-As a concrete example, think of many `+__validate__+` functions checking that the value of a storage slot is 1 and the attacker's transaction later sets it to 0. To handle this issue, we add some further limitations.
+* Consider many `+__validate__+` functions checking that the value of a storage slot is `1`, and the attacker's transaction later sets it to `0`. To handle this issue, we add some further limitations. This attack is prevented by Starknet restricting `+__validate__+` from calling external contracts.
 
-Currently, Starknet enforces that `+__validate__+` does not call external contracts.
-
-NOTE: The property that we achieve with the above restrictions is that a single storage update may only invalidate transactions from a single account (this is the best we can do, an account can always invalidate its own past transactions by changing its keys). Thus, the price (in fees) required to invalidate transactions in the mempool is linear in the number of unique accounts that we want to invalidate.
+[NOTE]
+====
+These restrictions enforce a single storage update being able to invalidate only transactions from a single account. However, be aware that an account can always invalidate its own past transactions by changing its keys. Thus, the price, in fees, required to invalidate transactions in the mempool is linear in the number of unique accounts that we want to invalidate.
+====
 
 [id="the_execute_function"]
 == The `+__execute__+` function
