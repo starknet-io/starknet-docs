@@ -558,7 +558,7 @@
 <h2 id="the_validate_function"><a class="anchor" href="#the_validate_function"></a>The <code>__validate__</code> function</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The <code>__validate__</code> function ensures that any transaction submitted was indeed initiated by the account owner and therefore will not take up unjustified resources during the execution process.</p>
+<p>The <code>__validate__</code> function ensures that any transaction submitted was indeed initiated by the account owner and therefore does not take up unjustified resources during the execution process.</p>
 </div>
 <div class="paragraph">
 <p>Without this mechanism, a forged transaction can result in the sequencer stealing the user&#8217;s funds. So the <code>__validate__</code> function ensures that the sequencer can only include transactions that were approved by the account owner.</p>
@@ -588,63 +588,25 @@
 <p>You cannot call functions in external contracts, only in your account contract.</p>
 </li>
 <li>
-<p>The maximum number of computational steps, measured in Cairo steps, for a <code>__validate__</code> function is 1 million.</p>
+<p>The maximum number of computational steps, measured in Cairo steps, for a <code>__validate__</code> function is 1,000,000.</p>
 </li>
 <li>
-<p>see <a href="https://github.com/starkware-libs/cairo-lang/releases/tag/v0.12.3" class="bare">https://github.com/starkware-libs/cairo-lang/releases/tag/v0.12.3</a> for new 0.12.3 limitations:</p>
+<p>Access is restricted to <code>sequencer_address</code> in the <code>get_execution_info</code> syscall. The syscall returns zero values for <code>sequencer_address</code>.</p>
 </li>
 <li>
-<p>Access is restricted to <code>sequencer_address</code> in the <code>get_execution_info</code> syscall. - return zero values</p>
-</li>
-<li>
-<p>Restrict access to some syscalls:</p>
+<p>Access is restricted to the following syscalls:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>Cairo contracts: <code>get_block_hash</code></p>
+<p><code>get_block_hash</code> for Cairo contracts</p>
 </li>
 <li>
-<p>CairoZero contracts: <code>get_sequencer_address</code></p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>Ask Yoni Ilux for more info.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>The purpose of these limitations is twofold:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>We want to avoid the sequencer having to do a lot of work only to discover that the validation failed and the sequencer is then not eligible to charge a fee (if this was possible, the sequencer would be completely exposed to DoS attacks). Validation, while now abstract and in control of the account owner rather than the protocol, should still be a simple operation. This is why in the future, Starknet will place max steps limitation upon the <code>__validate__</code> function.</p>
-</li>
-<li>
-<p>Even if the validation is simple, we could still face the following attack:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>An attacker fills the mempool with transactions that are valid at time T.</p>
-</li>
-<li>
-<p>A sequencer may start executing them, thinking that at the time he will produce his block, they will still be valid.</p>
-</li>
-<li>
-<p>However, shortly after, at time T', the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it&#8217;s included before the sequencer gets to publish his block (the attacker may do this by offering higher fees for this one transaction).</p>
+<p><code>get_sequencer_address</code> for Cairo 0 contracts</p>
 </li>
 </ul>
 </div>
 </li>
 </ul>
-</div>
-<div class="paragraph">
-<p>As a concrete example, think of many <code>__validate__</code> functions checking that the value of a storage slot is 1 and the attacker&#8217;s transaction later sets it to 0. To handle this issue, we add some further limitations.</p>
-</div>
-<div class="paragraph">
-<p>Currently, Starknet enforces that <code>__validate__</code> does not call external contracts.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -653,7 +615,52 @@
 <i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
-The property that we achieve with the above restrictions is that a single storage update may only invalidate transactions from a single account (this is the best we can do, an account can always invalidate its own past transactions by changing its keys). Thus, the price (in fees) required to invalidate transactions in the mempool is linear in the number of unique accounts that we want to invalidate.
+<div class="paragraph">
+<p>Validation, while now abstract and in control of the account owner rather than the protocol, should still be a simple operation. So in the future, the <code>__validate__</code> function will have a limitation of a maximum number of Cairo steps.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>These limitations prevent the following attacks:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Denial of Service (DoS) attacks. Without these limitations, an attack could cause the sequencer to perform a large amount of work before a transaction fails validation. This work would not be eligible for fee payment.</p>
+</li>
+<li>
+<p>Even if the validation is simple, the following attack could still be possible:</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>An attacker fills the mempool with transactions that are valid at the time they are sent.</p>
+</li>
+<li>
+<p>A sequencer starts executing them, thinking that by the time it produces a  block, they will still be valid.</p>
+</li>
+<li>
+<p>However, shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it&#8217;s included in the block, by offering higher fees for this one transaction, before the sequencer can publish the block.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Consider many <code>__validate__</code> functions checking that the value of a storage slot is <code>1</code>, and the attacker&#8217;s transaction later sets it to <code>0</code>. To handle this issue, we add some further limitations. This attack is prevented by Starknet restricting <code>__validate__</code> from calling external contracts.</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>These restrictions enforce a single storage update being able to invalidate only transactions from a single account. However, be aware that an account can always invalidate its own past transactions by changing its keys. Thus, the price, in fees, required to invalidate transactions in the mempool is linear in the number of unique accounts that we want to invalidate.</p>
+</div>
 </td>
 </tr>
 </table>
