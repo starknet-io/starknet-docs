@@ -1,60 +1,66 @@
 [id="deploying_new_accounts"]
-= Deploying new accounts
+= Deploying a new account
 
-Starknet provides the `deploy_account` transaction in order to deploy new accounts to the
-network.
+The `DEPLOY_ACCOUNT` transaction deploys new accounts to the network.
 
-== Deploy account transaction
+Upon receiving a `DEPLOY_ACCOUNT` transaction, the sequencer performs the following steps:
 
-In order to deploy a new account on StarkNet you need to complete the following steps:
+. Verifies that the address has funds to pay for the deployment.
+. Executes the constructor with the given arguments.
+. Executes the `+__validate_deploy__+` entry point. For more information, see xref:#validate_deploy[].
+. Charges fees from the new account address.
+. Sets the account's nonce to `1`.
+
+.Procedure
 
 . Decide on the account contract that you want to deploy.
 . Compute your offchain account address.
+// How do I do that?
 . Send funds to this address.
+// How do I do that?
+. When the address has enough funds to pay for the deployment, send a `DEPLOY_ACCOUNT` transaction.
+// How do I do that?
 
-. When the address has enough funds to pay for the deployment, send a _Deploy account_ transaction.
+After the deployment has completed successfully, it is recommended to validate the account deployment.
 
-== Transaction flow
+[#validate_deploy]
+== Validating a `DEPLOY_ACCOUNT` transaction
 
-Upon receiving a `deploy_account` transaction, the sequencer will:
+Two potential issues with sending a `DEPLOY_ACCOUNT` transaction without any validation are:
 
-* Verify that the address has funds to pay for the deployment
-* Execute the constructor with the given arguments
-* Execute the `+__validate_deploy__+` entry point (See below)
-* Charge fee from the new account address
-* Advance the nonce to 1
+* Sequencers can charge arbitrarily high fees, potentially draining user funds from a pre-funded account.
+* A bad actor can carry out a Denial of Service (DoS) attack on the sequencer by sending multiple, invalid `DEPLOY_ACCOUNT` transactions, which would result in the sequencer not being compensated for work completed.
 
-== Validate deploy
+You can prevent both issues by using a validation entrypoint called `+__validate_deploy__+`.
+//Where do I put this entry point? Example?
 
-Two issues might arise from sending a `deploy_account` transaction without any extra validation:
-
-* Sequencers having the ability to charge arbitrarily high fees, thus potentially draining user funds from a pre-funded account
-* A bad actor having the ability to carry out a sequencer DOS attack by sending multiple, invalid `deploy_account` transactions. This would result in the sequencer not being compensated for work completed.
-
-
-To prevent the scenario described in the first point, a new optional validation entrypoint is provided: `+__validate_deploy__+`.
-
-The following limitations on the constructor and `+__validate_deploy__+` executions prevent a potential DoS attack from the second point:
+`+__validate_deploy__+` prevents sequencers from charging arbitrarily high fees, and the following limitations on the constructor and `+__validate_deploy__+` executions prevent a potential DoS attack:
 
 * Limited number of Cairo steps.
 * Limited number of builtin applications.
-* No external contract calls. Library calls and self-calls are allowed.
+* External contract calls are not allowed. Library calls and self-calls are allowed.
 
-This entrypoint should be included in any accounts or contracts that wish to allow this new deployment flow.
+Include the `+__validate_deploy__+` entrypoint in any accounts or contracts that can enable deploying a new account.
 
-=== Using validate deploy
+== `+__validate_deploy__+`
 
-`+__validate_deploy__+` expects the following arguments:
+[discrete]
+=== Parameters
 
-* class hash
-* contract address salt
-* constructor arguments - the arguments expected by the contract’s constructor (this will be enforced in the compiler).
+[horizontal,labelwidth="30",role="stripes-odd"]
+`class_hash: _felt_`:: The class hash.
+`contract_address_salt: _felt_`:: The contract address salt.
+#What is the parameter for this?#:: constructor arguments - the arguments expected by the contract’s constructor. The compiler enforces this constructor. #I don't see this parameter in the examples.#
+
+#What about `_public_key: felt`?#
 
 [NOTE]
 ====
-In determining the contract address, deployer address 0 will be used.
+In determining the contract address, the deployer address `0x0` is used.
 ====
 
+[discrete]
+=== Example
 Consider an account with the following constructor signature:
 
 [#constructor_signature]
@@ -66,7 +72,7 @@ func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 )
 ----
 
-Then the signature of `+__validate_deploy__+` must be:
+The signature of `+__validate_deploy__+` must be:
 
 [#call_validate_deploy]
 [source,cairo,sub="quotes"]
@@ -78,5 +84,5 @@ func __validate_deploy__{
 
 [NOTE]
 ====
-The transaction hash and `max_fee` are accessible through the `get_tx_info` system call.
+You can access the transaction hash and value for `max_fee` with the `get_tx_info` system call.
 ====
