@@ -31,9 +31,9 @@ according to the execution of the contract instance's constructor.
 [id="state_commitment"]
 == State commitment
 
-The state commitment is a digest that uniquely represents the state.
+The state commitment is a digest that represents the state.
 
-In Starknet, the commitment combines the roots of two binary xref:#merkle_patricia_trie[Merkle-Patricia tries] of height 251 in the following manner:
+In Starknet, the state commitment combines the roots of two binary xref:#merkle_patricia_trie[Merkle-Patricia tries] of height 251 in the following manner:
 
 [,,subs="quotes"]
 ----
@@ -46,7 +46,7 @@ state_commitment = _h_~Pos~(
 
 Where:
 
-* `_h_~Pos~ is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
+* `_h_~Pos~` is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
 function.
 * `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
 * `contract_trie_root` is the root of the xref:#contracts_trie[_contract trie_], a Merkle-Patricia trie whose leaves are the contracts' states.
@@ -55,7 +55,9 @@ function.
 [id="contracts_trie"]
 === The contract trie
 
-As with Ethereum, this trie is a two-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is as follows:
+As with Ethereum, this trie is a two-level structure, whose leaves correspond to distinct contracts. The address of each contract determines the path from the trie’s root to its corresponding leaf, whose content encodes the contract’s state.
+
+The information stored in the leaf is as follows:
 
 // [stem]
 // ++++
@@ -104,13 +106,13 @@ Where:
 
 [NOTE]
 ====
-Cairo classes that are part of the commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly. For more information, see xref:Smart_Contracts/system-calls-cairo1.adoc[System calls].
+Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly. For more information, see xref:Smart_Contracts/system-calls-cairo1.adoc[System calls].
 
 However, the prover only deals with Cairo assembly (Casm).
 
-So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the commitment must have some information about the corresponding Cairo assembly.
+So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly.
 
-Today, the user signs the compiled class hash as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the commitment.
+Today, the user signs the compiled class hash as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.
 
 In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.
 ====
@@ -118,7 +120,7 @@ In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, 
 [merkle_patricia_trie]
 == Merkle-Patricia trie
 
-The commitment scheme uses a binary Merkle-Patricia trie with the Pedersen hash function.
+The state commitment scheme uses a binary Merkle-Patricia trie with the Pedersen hash function.
 
 === About nodes
 
@@ -182,17 +184,17 @@ parent=
 [#example_trie]
 === Example trie
 
-The diagram xref:#3-level-high_trie[] illustrates  the construction of a three-level-high Merkle-Patricia trie from the leaves whose values are stem:[$(0,0,1,0,0,1,0,0)$]:
+The diagram xref:#3-level_trie[] illustrates  the construction of a three-level-high Merkle-Patricia trie from the leaves whose values are stem:[$(0,0,1,0,0,1,0,0)$]:
 
-[#3-level-high_trie]
-.A three-level-high Merkle-Patricia trie
+[#3-level_trie]
+.A three-level Merkle-Patricia trie
 image::trie.png[3-level-high Merkle-Patricia trie]
 
-Where stem:[$r=h_{Ped}(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip from the root, whose length is zero, so the final commitment to the trie is stem:[$H((0,0,r))=r$].
+Where stem:[$r=h_{Ped}(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip from the root, whose length is zero, so the final state commitment to the trie is stem:[$H((0,0,r))=r$].
 
-Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle trie, the proof would consist of data from three nodes, which are siblings along the path to the root.
+Suppose that you want to prove, with respect to the state commitment just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle trie, the proof would consist of data from three nodes, which are siblings along the path to the root.
 
-In a Merkle-Patricia trie, because the trie is sparse, you only need to send the two children of the root, which are stem:[$(2,2,1)$] and stem:[$(2,1,1)$]. These two children are enough to reproduce the commitment stem:[$r$], and because you know that the height of the trie is three, and that it is fixed, you know that the path stem:[$01$] of length stem:[$2$] specified by the right-hand child, stem:[$(2,1,1)$], leads to the desired leaf.
+In a Merkle-Patricia trie, because the trie is sparse, you only need to send the two children of the root, which are stem:[$(2,2,1)$] and stem:[$(2,1,1)$]. These two children are enough to reproduce the state commitment stem:[$r$], and because you know that the height of the trie is three, and that it is fixed, you know that the path stem:[$01$] of length stem:[$2$] specified by the right-hand child, stem:[$(2,1,1)$], leads to the desired leaf.
 
 == Special addresses
 
