@@ -75,14 +75,54 @@ jobs:
       - name: "Commit changes"
         run: |
           set -euo pipefail
+
+          # Debug information
+          echo "Current directory: $(pwd)"
+          echo "Contents of the repository:"
+          ls -al
+          echo "Git status:"
+          git status
+          
           git config user.name "GitHub Actions"
           git config user.email noreply@github.com
           git add .
+          
+          
           if ! git diff-index --quiet HEAD --; then
-            git commit -m "Adding or updating preview build for PR ${{ steps.pr.outputs.PR_ID }}"
-            git push --set-upstream origin gh-pages
+            # Debug information
+            echo "Changes detected. Committing and pushing changes."
+
+            commit_message="Adding or updating preview build for PR ${{ steps.pr.outputs.PR_ID }}"
+          
+            # Debug message
+            echo "Commit message: $commit_message"
+          
+            # Commit changes
+            git commit -m "$commit_message"
+          
+            # Check if commit was successful
+            if [ $? -eq 0 ]; then
+              # Debug information
+              echo "Commit successful. Pushing changes."
+          
+              # Push changes
+              git push --set-upstream origin gh-pages
+          
+              # Check if push was successful
+              if [ $? -eq 0 ]; then
+                # Debug information
+                echo "Push successful."
+              else
+                # Debug information
+                echo "Error: Push failed."
+              fi
+            else
+              # Debug information
+              echo "Error: Commit failed."
+            fi
           else
-            echo -e "No changes found."
+            # Debug information
+            echo "No changes found."
           fi
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
