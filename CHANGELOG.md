@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.411](https://github.com/starknet-io/starknet-docs/compare/v0.1.410...v0.1.411) (2023-12-14)
+
+### [0.1.410](https://github.com/starknet-io/starknet-docs/compare/v0.1.409...v0.1.410) (2023-12-14)
+
+### [0.1.409](https://github.com/starknet-io/starknet-docs/compare/v0.1.408...v0.1.409) (2023-12-14)
+
+
+### Features
+
+* 0.13.0 now on Goerli and Sepolia ([#1024](https://github.com/starknet-io/starknet-docs/issues/1024)) ([5538549](https://github.com/starknet-io/starknet-docs/commit/553854989cd16886011d72d9703539bc61930d11)), closes [PR#1023](https://github.com/starknet-io/PR/issues/1023)
+
 ### [0.1.408](https://github.com/starknet-io/starknet-docs/compare/v0.1.407...v0.1.408) (2023-12-11)
 
 ### [0.1.407](https://github.com/starknet-io/starknet-docs/compare/v0.1.406...v0.1.407) (2023-12-11)
