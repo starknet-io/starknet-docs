@@ -277,21 +277,10 @@
   </li>
 </ul>
   </li>
-  <li class="nav-item parent" data-depth="3">
-    <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">L1-L2 messaging</span>
-<ul class="nav-list">
-  <li class="nav-item" data-depth="4">
+  <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
      href="../messaging-mechanism/">L1-L2 messaging</a>
-  </li>
-  <li class="nav-item" data-depth="4">
-    <a 
-       class="nav-link"
-     href="../token-bridge/">StarkGate bridge</a>
-  </li>
-</ul>
   </li>
 </ul>
   </li>
@@ -475,6 +464,58 @@
        class="nav-link"
      href="../../../tools/audit/">Audit providers</a>
   </li>
+  <li class="nav-item parent" data-depth="2">
+    <button class="nav-item-toggle mask-svg-center"></button>
+    <span class="nav-text">StarkGate bridge developer&#8217;s guide</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../../../tools/starkgate-bridge/">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../../../tools/starkgate_architecture/">StarkGate architecture</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../../../tools/starkgate-automated_actions_with_bridging/">Automated actions with bridging</a>
+  </li>
+  <li class="nav-item parent" data-depth="3">
+    <button class="nav-item-toggle mask-svg-center"></button>
+    <span class="nav-text">Procedures</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="4">
+    <a 
+       class="nav-link"
+     href="../../../tools/starkgate-adding_a_token/">Adding a token</a>
+  </li>
+  <li class="nav-item" data-depth="4">
+    <a 
+       class="nav-link"
+     href="../../../tools/starkgate-removing_a_token/">Removing a token</a>
+  </li>
+  <li class="nav-item" data-depth="4">
+    <a 
+       class="nav-link"
+     href="../../../tools/starkgate-cancelling%20a%20deposit/">Cancelling a deposit</a>
+  </li>
+  <li class="nav-item" data-depth="4">
+    <a 
+       class="nav-link"
+     href="../../../tools/starkgate-estimating_fees/">Estimating StarkGate fees</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../../../tools/starkgate_function_reference/">StarkGate function reference</a>
+  </li>
+</ul>
+  </li>
 </ul>
   </li>
 </ul>
@@ -567,7 +608,7 @@ and the maximum price per unit of that resource that the user is willing to pay.
 <h2 id="fee_units"><a class="anchor" href="#fee_units"></a>Fee units</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The fee is denominated in ETH (this may change in future versions). Each transaction is associated with a gas estimate (explained below), and combining this with the gas price yields the estimated fee.</p>
+<p>The fee is denominated in ETH (this might change in future versions). Each transaction is associated with an estimate of the amount of gas used. Combining this estimate with the price of gas yields the estimated fee.</p>
 </div>
 </div>
 </div>
@@ -676,10 +717,10 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 <p>Where \(k\) here enumerates the Cairo resource components, i.e. the number of steps and builtins used.</p>
 </div>
 <div class="paragraph">
-<p>The weights are listed in the table <a href="#gas_cost_per_cairo_step_or_builtin_step">Gas cost per Cairo step or Cairo builtin</a>.</p>
+<p>The weights are listed in the table <a href="#gas_cost_per_cairo_step_or_builtin_step">Amount of gas used per Cairo step or per each time a Cairo builtin is applied</a>.</p>
 </div>
 <table id="gas_cost_per_cairo_step_or_builtin_step" class="tableblock frame-all grid-all stripes-even fit-content">
-<caption class="title">Table 1. Gas cost per Cairo step or Cairo builtin</caption>
+<caption class="title">Table 1. Amount of gas used per Cairo step or per each time a Cairo builtin is applied</caption>
 <colgroup>
 <col>
 <col>
@@ -748,24 +789,26 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 <div class="sect3">
 <h4 id="storage_updates"><a class="anchor" href="#storage_updates"></a>Storage updates</h4>
 <div class="paragraph">
-<p>Whenever a transaction updates a key at the storage of some contract, the following data
-reaches L1:</p>
+<p>Whenever a transaction updates a key <mark>Does <em>updates a key</em> mean that the address changes?</mark> at the storage <mark><em>at the storage</em> I don&#8217;t understand what <em>at</em> means here. Should it be <em>updates the storage address of some contract</em>?</mark> of some contract, the following data elements reach L1 within a word:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Contract_address</p>
+<p>contract address</p>
 </li>
 <li>
-<p>Number of updated keys in that contract</p>
+<p>number of updated keys <mark>In Data availability, this is referred to as number of storage updates, not number of updated keys. Why the discrepancy?</mark> in that contract and the new nonce</p>
 </li>
 <li>
-<p>Key to update</p>
+<p>key to update</p>
 </li>
 <li>
-<p>New value</p>
+<p>new value</p>
 </li>
 </ul>
+</div>
+<div class="paragraph">
+<p>For more information on the construction of this word, see <a href="../on-chain-data/#v0.11.0_format" class="xref page">architecture_and_concepts:Network_Architecture/on-chain-data.adoc#v0.11.0_format</a></p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -775,22 +818,52 @@ reaches L1:</p>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Note that only the most recent value reaches L1. That is, the transaction&#8217;s fee only depends on the number of <strong>unique</strong> storage updates (if the same storage cell is updated multiple times within the transaction, the fee remains that of a single update).</p>
+<p>Only the most recent value reaches L1. That is, the transaction&#8217;s fee only depends on the number of <em>unique</em> storage updates (if the same storage cell is updated multiple times within the transaction, the fee remains that of a single update).</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>Consequently, the associated storage update fee for a transaction updating \(n\) unique contracts and \(m\) unique keys is:</p>
+<p>Consequently, the following formula describes the storage update fee for a transaction, where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(n\) is the number of unique contracts</p>
+</li>
+<li>
+<p>\(m\) is the number of unique keys</p>
+</li>
+<li>
+<p>\(\text{calldata_cost}\) is the calldata cost, in gas, per 32-byte word.</p>
+</li>
+<li>
+<p>\(200\) The cost of the onchain storage update, in gas. This value accounts for bytes whose value is 0. Assumes three non-zero bytes for the nonce, two non-zero bytes for storage updates, and one non-zero byte for the deployment flag.</p>
+</li>
+<li>
+<p>\(\text{account_balance_update_cost}\) is a constant whose value is 272, which assumes a balance of at most 12 non-zero bytes, which is 1.2 billion ETH or STRK, where the cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. 12 * 16 + 20* 4 = 272</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><mark>Why did you choose c<sub>w</sub> and c'<sub>w</sub>? What does <code>c</code> stand for? What does <code>w</code> stand for?</mark></p>
 </div>
 <div class="stemblock">
 <div class="content">
-\[\text{gas_price}\cdot c_w\cdot\underbrace{(2n+2m)}_{\text{number of words}}\]
+\[\underbrace{\textit{gas_price}(\text{calldata_cost} \cdot n + 200 \cdot n)}_{\text{contract addresses +  new nonce and number of storage updates
+}} \\
+
++ \\
+
+\underbrace{\textit{gas_price} \cdot \textit{calldata_cost}(2(m-1)+\text{account_balance_update_cost})}_{\text{storage updates}}\]
 </div>
 </div>
 <div class="paragraph">
-<p>where \(c_w\) is the calldata cost, in gas, per 32-byte word.</p>
+<p><mark>Does <code>gas_price</code> mean <em>the cost of gas in ETH/wei/gwei</em>, or does it mean the <em>amount of gas</em>?</mark></p>
+</div>
+<div class="paragraph">
+<p><mark>What actually does c'<sub>w</sub> stand for, if c<sub>w</sub> is calldata?</mark></p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -854,10 +927,7 @@ reaches L1:</p>
 <p>contract address</p>
 </li>
 <li>
-<p>new nonce</p>
-</li>
-<li>
-<p>number of storage updates</p>
+<p>number of storage updates and the new nonce</p>
 </li>
 <li>
 <p>class hash</p>
@@ -912,11 +982,24 @@ reaches L1:</p>
 </div>
 <div class="stemblock">
 <div class="content">
-\[F = \text{gas_price}\cdot\left(\max_k v_k w_k + c_w\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)\right)\]
+\[F = 0.9 \cdot \text{gas_price}\cdot\left(\max_k v_k w_k + c_w\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)\right)\]
 </div>
 </div>
 <div class="paragraph">
-<p>where \(w\) is the weights vector discussed <a href="#general_case">above</a> and \(c_w\) is the calldata cost, in gas, per 32-byte word.</p>
+<p>where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(0.9\) is a 10% cost reduction</p>
+</li>
+<li>
+<p>\(w\) is the <a href="#general_case"><code>CairoResourceFeeWeights</code></a> vector discussed above</p>
+</li>
+<li>
+<p>\(c_w\) is the calldata cost, in gas, per 32-byte word</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -941,7 +1024,7 @@ reaches L1:</p>
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
-    <strong>Mainnet: 0.12.2 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
+    <strong>Mainnet: 0.12.3 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->
