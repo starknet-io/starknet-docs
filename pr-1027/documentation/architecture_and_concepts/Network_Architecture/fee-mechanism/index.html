@@ -719,18 +719,15 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 <div class="paragraph">
 <p>The weights are listed in the table <a href="#gas_cost_per_cairo_step_or_builtin_step">Amount of gas used per Cairo step or per each time a Cairo builtin is applied</a>.</p>
 </div>
-<div class="paragraph">
-<p><mark>Review</mark></p>
-</div>
-<table id="gas_cost_per_cairo_step_or_builtin_step" class="tableblock frame-all grid-all stripes-even fit-content">
+<table id="gas_cost_per_cairo_step_or_builtin_step" class="tableblock frame-all grid-all stripes-even" style="width: 80%;">
 <caption class="title">Table 1. Amount of gas used per Cairo step or per each time a Cairo builtin is applied</caption>
 <colgroup>
-<col>
-<col>
+<col style="width: 50%;">
+<col style="width: 50%;">
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Step</th>
+<th class="tableblock halign-left valign-top">Step or builtin</th>
 <th class="tableblock halign-left valign-top">Gas cost</th>
 </tr>
 </thead>
@@ -833,20 +830,41 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 <p>\(m\) is the number of unique values updated. Be aware that the account balance is always updated, because the account needs to pay a fee. A discount is applied to the account balance update to consider that the value of the account balance most likely does not use the full 32 bytes allotted to it.</p>
 </li>
 <li>
-<p>\(\text{calldata_cost}\) is the calldata cost, 512 gas per 32-byte word.</p>
+<p>\(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
 </li>
 <li>
-<p>\(200\) is the cost of the onchain storage update meta information, in gas. This value accounts for the fact that out of 32 bytes in the meta information, only 6 bytes are non-zero. The cost of a non-zero byte is 16 gas, while cost of a byte of zeroes is 4 gas. Assumes three non-zero bytes for the nonce, two non-zero bytes for storage updates, and one non-zero byte for the deployment flag. <mark>So out of 32 bytes in a uint256, we&#8217;re only charging for 6 bytes. See Slack</mark></p>
+<p>\(200\) is the cost of the onchain storage update&#8217;s meta information and nonce, in gas. This value accounts for the fact that out of 32 bytes in the meta information, only the following six bytes are non-zero:</p>
+<div class="openblock">
+<div class="content">
+<div class="ulist">
+<ul>
+<li>
+<p>three bytes for the nonce</p>
 </li>
 <li>
-<p>\(\text{272}\) is a constant whose value is 272, which assumes a balance of at most 12 non-zero bytes, which is enough for 1.2 billion ETH or STRK, where the cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. 12 * 16 + 20* 4 = 272</p>
+<p>two bytes for storage updates</p>
+</li>
+<li>
+<p>one byte for the deployment flag</p>
 </li>
 </ul>
 </div>
+</div>
+</div>
 <div class="paragraph">
-<p><mark>Why did you choose c<sub>w</sub> and c'<sub>w</sub>? What does <code>c</code> stand for? What does <code>w</code> stand for?</mark></p>
+<p>The cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. So 6 non-zero bytes @ 16 gas per byte + 26 bytes of zeros @ 4 gas per byte results in 200 gas.</p>
+</div>
+</li>
+<li>
+<p>\(\text{272}\) is the cost of updating the balance, in gas. This value assumes a balance of at most 12 non-zero bytes, which is enough for 1.2 billion ETH or STRK.</p>
+<div class="paragraph">
+<p>The cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. So 12 non-zero bytes @ 16 gas per byte + 20 bytes of zeros @ 4 gas per byte results in 272 gas.</p>
+</div>
+</li>
+</ul>
 </div>
 <div class="stemblock">
+<div class="title">Storage update fee for a transaction</div>
 <div class="content">
 \[\underbrace{\textit{gas_price}(\text{calldata_cost} \cdot n + 200 \cdot n)}_{\text{contract addresses +  new nonce and number of storage updates
 }} \\
