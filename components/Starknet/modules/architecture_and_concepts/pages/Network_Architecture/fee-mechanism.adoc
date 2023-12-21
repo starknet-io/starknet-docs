@@ -89,12 +89,11 @@ Where stem:[$k$] here enumerates the Cairo resource components, i.e. the number 
 
 The weights are listed in the table xref:#gas_cost_per_cairo_step_or_builtin_step[].
 
-#Review#
 [#gas_cost_per_cairo_step_or_builtin_step]
 .Amount of gas used per Cairo step or per each time a Cairo builtin is applied
-[%autowidth,cols="2,2",options="header",stripes=even]
+[width=80%,cols="2,2",options="header",stripes=even]
 |===
-| Step | Gas cost
+| Step or builtin | Gas cost
 
 | Cairo step | 0.005 gas/step
 | Pedersen | 0.16 gas/application
@@ -118,42 +117,19 @@ The onchain data associated with a transaction is composed of three parts
 
 ==== Storage updates
 
-Whenever a transaction updates a key #Does _updates a key_ mean that the address changes?# at the storage #_at the storage_ I don't understand what _at_ means here. Should it be _updates the storage address of some contract_?# of some contract, the following data elements reach L1 within a word:
+Whenever a transaction updates some value in the storage location of some contract, data is sent to L1, as follows:
 
-* contract address
-* number of updated keys #In Data availability, this is referred to as number of storage updates, not number of updated keys. Why the discrepancy?# in that contract and the new nonce
-* key to update
-* new value
+* two 32-byte words per contract
+* two 32-byte words for every updated storage value
 
-For more information on the construction of this word, see xref:architecture_and_concepts:Network_Architecture/on-chain-data.adoc#v0.11.0_format[Data availability]
+For information on the exact data and its construction, see xref:architecture_and_concepts:Network_Architecture/on-chain-data.adoc#v0.11.0_format[Data availability].
 
 [NOTE]
 ====
 Only the most recent value reaches L1. So the transaction's fee only depends on the number of _unique_ storage updates. If the same storage cell is updated multiple times within the transaction, the fee remains that of a single update.
 ====
 
-#START REVIEW#
-Consequently, the following formula describes the storage update fee for a transaction, where:
-
-* stem:[$n$] is the number of unique contracts
-* stem:[$m$] is the number of unique keys
-* stem:[$\text{calldata_cost}$] is the calldata cost, in gas, per 32-byte word.
-* stem:[$200$] The cost of the onchain storage update, in gas. This value accounts for bytes whose value is 0. Assumes three non-zero bytes for the nonce, two non-zero bytes for storage updates, and one non-zero byte for the deployment flag.
-// * stem:[$c_w'$] accounts for bytes whose value is 0. Assumes three non-zero bytes for the nonce, two non-zero bytes for storage updates, and one non-zero byte for the deployment flag.
-* stem:[$\text{account_balance_update_cost}$] is a constant whose value is 272, which assumes a balance of at most 12 non-zero bytes, which is 1.2 billion ETH or STRK, where the cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. 12 * 16 + 20* 4 = 272
-
-#Why did you choose c~w~ and c'~w~? What does `c` stand for? What does `w` stand for?#
-
-
-// [stem]
-// ++++
-// \underbrace{\text{gas_price}(c_w \cdot n + c_w' \cdot n)}_{\text{contract addresses +  new nonce and number of storage updates
-// }} \\
-//
-// + \\
-//
-// \underbrace{\text{gas_price} \cdot c_w(2(m-1)+\text{account_balance_update_cost})}_{\text{storage updates}}
-// ++++
+The following formula describes the storage update fee for a transaction:
 
 [stem]
 ++++
@@ -162,14 +138,29 @@ Consequently, the following formula describes the storage update fee for a trans
 
 + \\
 
-\underbrace{\textit{gas_price} \cdot \textit{calldata_cost}(2(m-1)+\text{account_balance_update_cost})}_{\text{storage updates}}
+\underbrace{\textit{gas_price} \cdot (\text{calldata_cost}(2m-1)+272)}_{\text{storage updates}}
 ++++
 
-#Does `gas_price` mean _the cost of gas in ETH/wei/gwei_, or does it mean the _amount of gas_?#
+where:
+
+* stem:[$n$] is the number of unique contracts updated.
+* stem:[$m$] is the number of unique values updated. Be aware that the account balance is always updated, because the account needs to pay a fee. A discount is applied to the account balance update to consider that the value of the account balance most likely does not use the full 32 bytes allotted to it.
+* stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
+* stem:[$200$] is the cost of the onchain storage update's meta information and nonce, in gas. This value accounts for the fact that out of 32 bytes in the meta information, only the following six bytes are non-zero:
++
+--
+** three bytes for the nonce
+** two bytes for storage updates
+** one byte for the deployment flag
+--
++
+The cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. So 6 non-zero bytes @ 16 gas per byte + 26 bytes of zeros @ 4 gas per byte results in 200 gas.
+
+* stem:[$\text{272}$] is the cost of updating the balance, in gas. This value assumes a balance of at most 12 non-zero bytes, which is enough for 1.2 billion ETH or STRK.
++
+The cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. So 12 non-zero bytes @ 16 gas per byte + 20 bytes of zeros @ 4 gas per byte results in 272 gas.
 
 
-
-#What actually does c'~w~ stand for, if c~w~ is calldata?#
 
 [NOTE]
 ====
@@ -192,10 +183,10 @@ Consequently, the fee associated with a single L2→L1 message is:
 
 [stem]
 ++++
-\text{gas_price}\cdot c_w\cdot(3+\text{payload_size})
+\textit{gas_price}\cdot \text{calldata_cost}\cdot(3+\text{payload_size})
 ++++
 
-where stem:[$c_w$] is the calldata cost, in gas, per 32-byte word.
+where stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
 
 ==== Deployed contracts
 
@@ -205,39 +196,36 @@ When a transaction that raises the `deploy` syscall is included in a state updat
 * number of storage updates and the new nonce
 * class hash
 
-Consequently, the fee associated with a single deployment is:
+The following formula describes the fee for a single deployment:
 
 [stem]
 ++++
-\text{gas_price}\cdot 3 c_w
+\textit{gas_price}\cdot 3 \cdot \text{calldata_cost}
 ++++
 
-where stem:[$c_w$] is the calldata cost, in gas, per 32-byte word.
+where stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
 
 For more information on data saved on L1, see xref:architecture_and_concepts:Network_Architecture/on-chain-data.adoc[Data availability].
 
 == Overall fee
 
-The fee for a transaction with:
-
-* Cairo usage represented by the vector stem:[$v$] (the entries of stem:[$v$] correspond to the number of steps and number of applications per builtin)
-* stem:[$n$] unique contract updates
-* stem:[$m$] unique key updates
-* stem:[$t$] messages with payload sizes stem:[$q_1,...,q_t$]
-* stem:[$\ell$] contract deployments
-
-is given by:
+The following formula describes the fee for a transaction:
 
 [stem]
 ++++
-F = 0.9 \cdot \text{gas_price}\cdot\left(\max_k v_k w_k + c_w\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)\right)
+F = 0.9 \cdot \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)\right)
 ++++
 
 where:
 
-* stem:[$0.9$] is a 10% cost reduction
-* stem:[$w$] is the xref:general_case[`CairoResourceFeeWeights`] vector discussed above
-* stem:[$c_w$] is the calldata cost, in gas, per 32-byte word
+* stem:[$v$] is a vector that represents Cairo usage stem:[$v$], where the entries of stem:[$v$] correspond to #the number of steps and number of applications of each builtin#.
+* stem:[$n$] is #the number of# unique contract updates.
+* stem:[$m$] is #the number of unique values updated.#
+* stem:[$t$] is #the number of# messages with payload sizes stem:[$q_1,...,q_t$].
+* stem:[$\ell$] is #the number of# contract deployments.
+* stem:[$0.9$] is a 10% cost reduction that considers that you only pay once for repeated updates to the same storage location within a single block. Each transaction incurs the cost of the update.
+* stem:[$w$] is the xref:general_case[`CairoResourceFeeWeights`] vector discussed above.
+* stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
 
 == When is the fee charged?
 
