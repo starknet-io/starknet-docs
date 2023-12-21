@@ -549,6 +549,26 @@
 </aside>
 <article class="doc">
 <h1 class="page">Gas and transaction fees (Starting in Starknet 0.13.0)</h1>
+<div id="toc" class="toc">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#overall_fee">Overall transaction fee</a></li>
+<li><a href="#when_is_the_fee_charged">When is the fee charged?</a></li>
+<li><a href="#fee_overview">Fee overview</a></li>
+<li><a href="#fee_units">Fee units</a></li>
+<li><a href="#fee_calculation">Fee calculation</a>
+<ul class="sectlevel2">
+<li><a href="#computation_without_builtins">Computation without builtins</a></li>
+<li><a href="#computation_with_builtins">Computation with builtins</a></li>
+<li><a href="#calculation_of_computation_costs">Calculation of computation costs</a></li>
+<li><a href="#onchain_data_components">Onchain data components</a></li>
+<li><a href="#storage_updates">Onchain data: Storage updates</a></li>
+<li><a href="#l_2→l_1_messages">Onchain data: L2&#8594;L1 messages</a></li>
+<li><a href="#deployed_contracts">Onchain data: Deployed contracts</a></li>
+</ul>
+</li>
+</ul>
+</div>
 <div id="preamble">
 <div class="sectionbody">
 <div class="admonitionblock important">
@@ -590,7 +610,7 @@
 <div class="ulist">
 <ul>
 <li>
-<p>\(k\) enumerates the Cairo resource components, that is, <a href="#general_case">the number of <mark>Cairo</mark> steps and builtins used</a>.</p>
+<p>\(k\) enumerates the Cairo resource components, that is, <a href="#calculation_of_computation_costs">the number of <mark>Cairo</mark> steps and builtins used</a>.</p>
 </li>
 <li>
 <p>\(v\) is a vector that represents Cairo usage \(v\), where the entries of \(v\) correspond to <mark>the number of steps and number of applications of each builtin</mark>.</p>
@@ -611,7 +631,7 @@
 <p>\(0.9\) is a 10% cost reduction that considers that you only pay once for repeated updates to the same storage location within a single block. Each transaction incurs the cost of the update.</p>
 </li>
 <li>
-<p>\(w\) is the <a href="#general_case"><code>CairoResourceFeeWeights</code></a> vector.</p>
+<p>\(w\) is the <a href="#calculation_of_computation_costs"><code>CairoResourceFeeWeights</code></a> vector.</p>
 </li>
 <li>
 <p>\(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
@@ -669,10 +689,10 @@ and the maximum price per unit of that resource that the user is willing to pay.
 <div class="ulist">
 <ul>
 <li>
-<p><a href="#computation">Computational complexity</a>: A transaction&#8217;s portion of the proof verification cost is proportional to its complexity.</p>
+<p><a href="#computation_without_builtins">Computational complexity</a>: A transaction&#8217;s portion of the proof verification cost is proportional to its complexity.+</p>
 </li>
 <li>
-<p><a href="#_on_chain_data">Onchain data</a>: L1 calldata cost originating from <a href="../on-chain-data/" class="xref page">data availability</a> and L2→L1 messages.</p>
+<p><a href="#onchain_data_components">Onchain data</a>: L1 calldata cost originating from <a href="../on-chain-data/" class="xref page">data availability</a> and L2→L1 messages.</p>
 </li>
 </ul>
 </div>
@@ -687,7 +707,7 @@ and the maximum price per unit of that resource that the user is willing to pay.
 </div>
 </div>
 <div class="sect1">
-<h2 id="how_much_fee_is_charged"><a class="anchor" href="#how_much_fee_is_charged"></a>How much fee is charged?</h2>
+<h2 id="fee_calculation"><a class="anchor" href="#fee_calculation"></a>Fee calculation</h2>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="computation_without_builtins"><a class="anchor" href="#computation_without_builtins"></a>Computation without builtins</h3>
@@ -708,10 +728,10 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 <div class="sect2">
 <h3 id="computation_with_builtins"><a class="anchor" href="#computation_with_builtins"></a>Computation with builtins</h3>
 <div class="paragraph">
-<p>The Cairo execution trace is separated&#8201;&#8212;&#8201;and each builtin has its own slot. We have to mind this slot allocation when determining the fee.</p>
+<p>In the Cairo execution trace each builtin has its own slot, which is important to consider when determining the fee.</p>
 </div>
 <div class="paragraph">
-<p>Let&#8217;s go over a concrete example first. For example, imagine the following trace that the prover will occupy:</p>
+<p>For example, consider that the prover can process a trace with the following limits:</p>
 </div>
 <table class="tableblock frame-all grid-all fit-content">
 <colgroup>
@@ -722,21 +742,24 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">(up to) 500,000,000 Cairo Steps</th>
-<th class="tableblock halign-left valign-top">(up to) 20,000,000 Pedersen hashes</th>
-<th class="tableblock halign-left valign-top">(up to) 4,000,000 signature verifications</th>
-<th class="tableblock halign-left valign-top">(up to) 10,000,000 range checks</th>
+<th class="tableblock halign-left valign-top">up to 500,000,000 Cairo Steps</th>
+<th class="tableblock halign-left valign-top">up to 20,000,000 Pedersen hashes</th>
+<th class="tableblock halign-left valign-top">up to 4,000,000 signature verifications</th>
+<th class="tableblock halign-left valign-top">up to 10,000,000 range checks</th>
 </tr>
 </thead>
 </table>
 <div class="paragraph">
-<p>The proof is closed and sent to L1 when any of these components becomes full.</p>
+<p>The proof is closed and sent to L1 when any of these slots is filled.</p>
 </div>
 <div class="paragraph">
-<p>Suppose, for example, that a transaction uses 10,000 Cairo steps and 500 Pedersen hashes. We can squeeze at most 40,000 such transactions into our hypothetical trace (20,000,000/500). Therefore, its gas price will be correlated with 1/40,000 of the cost of submitting proof.</p>
+<p>Suppose that a transaction uses 10,000 Cairo steps and 500 Pedersen hashes. At most 40,000 such transactions can fit into the hypothetical trace (20,000,000/500). Therefore, its gas price correlates with 1/40,000 of the cost of submitting proof.</p>
 </div>
 <div class="paragraph">
-<p>Notice we completely ignored the number of Cairo steps in this transaction performance estimation, as it is not the limiting factor (since 500,000,000/10,000 &gt; 20,000,000/500). With this example in mind, we can now formulate the exact fee associated with L2 computation.</p>
+<p>Notice that this estimate ignores the number of Cairo steps, as it is not the limiting factor, since 500,000,000/10,000 &gt; 20,000,000/500.</p>
+</div>
+<div class="paragraph">
+<p>With this example in mind, it is possible to formulate the exact fee associated with L2 computation.</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -746,7 +769,7 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The allocation of resources among built-in operations must be predetermined; it&#8217;s not possible to decide post-execution to include only 20,000,001 Pedersen hashes without additional components.</p>
+<p>The allocation of resources among builtin operations must be predetermined; it is not possible to decide, post-execution, to include only 20,000,001 Pedersen hashes without additional components.</p>
 </div>
 <div class="paragraph">
 <p>This safeguards fairness and prevents manipulation, ensuring integrity in proof generation and fee determination.</p>
@@ -757,17 +780,17 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </div>
 </div>
 <div class="sect2">
-<h3 id="general_case"><a class="anchor" href="#general_case"></a>General case</h3>
+<h3 id="calculation_of_computation_costs"><a class="anchor" href="#calculation_of_computation_costs"></a>Calculation of computation costs</h3>
 <div class="paragraph">
-<p>For each transaction, the sequencer calculates a vector <code>CairoResourceUsage</code> holding:</p>
+<p>For each transaction, the sequencer calculates a vector, <code>CairoResourceUsage</code>, that contains the following:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Number of Cairo steps</p>
+<p>The number of Cairo steps.</p>
 </li>
 <li>
-<p>Number of applications of each Cairo builtin. For example, five range checks and two Pedersen hashes.</p>
+<p>The number of applications of each Cairo builtin. For example, five range checks and two Pedersen hashes.</p>
 </li>
 </ul>
 </div>
@@ -840,7 +863,7 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </table>
 </div>
 <div class="sect2">
-<h3 id="on_chain_data"><a class="anchor" href="#on_chain_data"></a>Onchain data: Overview</h3>
+<h3 id="onchain_data_components"><a class="anchor" href="#onchain_data_components"></a>Onchain data components</h3>
 <div class="paragraph">
 <p>The onchain data associated with a transaction is composed of three parts</p>
 </div>
