@@ -1,13 +1,43 @@
 [id="gas-and-transaction-fees"]
-= Gas and transaction fees
+= Gas and transaction fees (Starting in Starknet 0.13.0)
 :--auto-ids:
 :stem: latexmath
 
-In this section, we will review Starknet Alpha fee mechanism. If you want to skip the motivation and deep dive into the mechanism, you can skip directly to the final xref:overall_fee[formula].
+[IMPORTANT]
+====
+For information on v0.12.3 and earlier, see xref:architecture_and_concepts:Network_Architecture/fee-mechanism-pre-v0.13.0.adoc[].
+====
 
-This section focuses on fees paid by an account on L2. For information about messaging fees that are paid on L1, see xref:Network_Architecture/messaging-mechanism.adoc#l1-l2-message-fees[L1 → L2 message fees].
+This section describes fees that are paid on L2. For information about messaging fees that are paid on L1, see xref:Network_Architecture/messaging-mechanism.adoc#l1-l2-message-fees[L1 → L2 message fees].
 
-== Introduction
+[#overall_fee]
+== Overall transaction fee
+
+The motivation
+
+The following formula describes the overall fee for a transaction:
+
+[stem]
+++++
+F = 0.9 \cdot \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)\right)
+++++
+
+where:
+
+* stem:[$v$] is a vector that represents Cairo usage stem:[$v$], where the entries of stem:[$v$] correspond to #the number of steps and number of applications of each builtin#.
+* stem:[$n$] is #the number of# unique contract updates.
+* stem:[$m$] is #the number of unique values updated.#
+* stem:[$t$] is #the number of# messages with payload sizes stem:[$q_1,...,q_t$].
+* stem:[$\ell$] is #the number of# contract deployments.
+* stem:[$0.9$] is a 10% cost reduction that considers that you only pay once for repeated updates to the same storage location within a single block. Each transaction incurs the cost of the update.
+* stem:[$w$] is the xref:general_case[`CairoResourceFeeWeights`] vector discussed above.
+* stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
+
+== When is the fee charged?
+
+The fee is charged atomically with the transaction execution on L2. The Starknet OS injects a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.
+
+== Fee overview
 
 Users can specify the maximum fee that they are willing to pay for a transaction.
 
@@ -17,32 +47,31 @@ For transaction versions before v3 transactions, the `max_fee` field specifies t
 
 The only limitation on the sequencer, which is enforced by the Starknet OS, is that the actual fee charged is bounded by `max_fee`, but for now, StarkWare's sequencer only charges the fee required to cover the proof cost, which is potentially less than the maximum fee.
 
-Presently, the sequencer only takes into account L1 costs involving proof submission. There are two components affecting the L1 footprint of a transaction:
+Currently, the sequencer only takes into account L1 costs involving proof submission. The following two components affect the L1 footprint of a transaction:
 
-* xref:computation[Computational complexity]: the heavier the transaction, the larger its portion in the proof verification cost.
+* xref:computation[Computational complexity]: A transaction's portion of the proof verification cost is proportional to its complexity.
 * xref:_on_chain_data[Onchain data]: L1 calldata cost originating from xref:Network_Architecture/on-chain-data.adoc[data availability] and L2→L1 messages.
 
 == Fee units
 
-The fee is denominated in ETH (this might change in future versions). Each transaction is associated with an estimate of the amount of gas used. Combining this estimate with the price of gas yields the estimated fee.
+The fee is denominated in #STRK#. Each transaction is associated with an estimate of the amount of gas used. Combining this estimate with the price of gas yields the estimated fee.
 
-== How much fee is charged? High-level overview
+== How much fee is charged?
 
-[id="computation"]
-=== Computation
+[#computation_without_builtins]
+=== Computation without builtins
 
-Let's analyze the correct metric for measuring transaction complexity. For simplicity, we will ignore Cairo's builtins for the sake of the explanation, and later see how to address them.
+Let's analyze the correct metric for measuring transaction complexity. For simplicity, we will ignore Cairo's builtins, and address them later.
 
-==== Without builtins
+A Cairo program execution yields an execution trace. When proving a Starknet block, we aggregate all the transactions appearing in that block to the execution trace.
 
-Recall that a Cairo program execution yields an execution trace. When proving a Starknet block, we aggregate all the transactions appearing in that block to the execution trace.
-
-Starknet's prover generates proofs for execution traces, up to some maximal length stem:[$L$] (Derived from the specs of the proving machine and the desired proof latency).
+Starknet's prover generates proofs for execution traces, up to some maximal length stem:[$L$], derived from the specs of the proving machine and the desired proof latency.
 
 Tracking the execution trace length associated with each transaction is simple.
-Each assertion over field elements (such as verifying addition/multiplication over the field) requires the same, constant number of trace cells (this is where our "`no-builtins`" assumption kicks in! Obviously Pedersen occupies more trace cells than addition). Therefore, in a world without builtins, the fee of the transaction stem:[$tx$] is correlated with stem:[$\text{TraceCells}[tx\]/L$].
+Each assertion over field elements, such as verifying addition/multiplication over the field, requires the same, constant number of trace cells, which is where our "no-builtins" assumption kicks in: Pedersen occupies more trace cells than addition. Therefore, in a world without builtins, the fee of the transaction stem:[$tx$] is correlated with stem:[$\text{TraceCells}[tx\]/L$].
 
-==== Adding builtins
+[#computation_with_builtins]
+=== Computation with builtins
 
 The Cairo execution trace is separated -- and each builtin has its own slot. We have to mind this slot allocation when determining the fee.
 
@@ -67,25 +96,25 @@ The allocation of resources among built-in operations must be predetermined; it'
 This safeguards fairness and prevents manipulation, ensuring integrity in proof generation and fee determination.
 ====
 
-==== General case
+=== General case
 
 For each transaction, the sequencer calculates a vector `CairoResourceUsage` holding:
 
 * Number of Cairo steps
-* Number of applications of each Cairo builtin (e.g., five range checks and two Pedersen hashes)
+* Number of applications of each Cairo builtin. For example, five range checks and two Pedersen hashes.
 
-The sequencer crosses this information with the `CairoResourceFeeWeights` vector. For each resource type (step or a specific builtin application), `CairoResourceFeeWeights` has an entry that specifies the relative gas cost of that component in the proof.
+The sequencer crosses this information with the `CairoResourceFeeWeights` vector. For each resource type, either a #Cairo# step or a specific builtin application, `CairoResourceFeeWeights` has an entry that specifies the relative gas cost of that component in the proof.
 
-Going back to the above example, if the cost of submitting a proof with 20,000,000 Pedersen hashes is roughly 5m gas, then the weight of the Pedersen builtin is 0.25 gas per application (5,000,000/20,000,000). The sequencer has a pre-defined weights vector, in accordance with the proof parameters.
+Going back to the above example, if the cost of submitting a proof with 20,000,000 Pedersen hashes is roughly 5m gas, then the weight of the Pedersen builtin is 0.25 gas per application (5,000,000/20,000,000). The sequencer has a predefined weights vector, in accordance with the proof parameters.
 
-The sequencer will charge only according to the limiting factor! Therefore the fee is correlated with:
+The sequencer charges only according to the limiting factor. Therefore the fee is correlated with:
 
 [stem]
 ++++
 \max_k[\text{CairoResourceUsage}_k \cdot \text{CairoResourceFeeWeights}_k]
 ++++
 
-Where stem:[$k$] here enumerates the Cairo resource components, i.e. the number of steps and builtins used.
+where stem:[$k$] enumerates the Cairo resource components, that is the number of #Cairo# steps and builtins used.
 
 The weights are listed in the table xref:#gas_cost_per_cairo_step_or_builtin_step[].
 
@@ -207,27 +236,4 @@ where stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
 
 For more information on data saved on L1, see xref:architecture_and_concepts:Network_Architecture/on-chain-data.adoc[Data availability].
 
-== Overall fee
-
-The following formula describes the fee for a transaction:
-
-[stem]
-++++
-F = 0.9 \cdot \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)\right)
-++++
-
-where:
-
-* stem:[$v$] is a vector that represents Cairo usage stem:[$v$], where the entries of stem:[$v$] correspond to #the number of steps and number of applications of each builtin#.
-* stem:[$n$] is #the number of# unique contract updates.
-* stem:[$m$] is #the number of unique values updated.#
-* stem:[$t$] is #the number of# messages with payload sizes stem:[$q_1,...,q_t$].
-* stem:[$\ell$] is #the number of# contract deployments.
-* stem:[$0.9$] is a 10% cost reduction that considers that you only pay once for repeated updates to the same storage location within a single block. Each transaction incurs the cost of the update.
-* stem:[$w$] is the xref:general_case[`CairoResourceFeeWeights`] vector discussed above.
-* stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
-
-== When is the fee charged?
-
-The fee is charged atomically with the transaction execution on L2. The Starknet OS injects a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.
 
