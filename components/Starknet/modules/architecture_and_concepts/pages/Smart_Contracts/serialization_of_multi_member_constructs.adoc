@@ -1,0 +1,88 @@
+[id="serialization_of_cairo_types"]
+= Serialization of multi-member constructs in Cairo
+
+When you interact with contracts, especially if you are a library or SDK developer that wants to create transactions, you need to understand how Cairo handles multi-member data structures, such as arrays and structs, and even integers larger than 252 bits.
+
+The field element (`felt252`), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as `uint256` or arrays, are ultimately represented by a list of felts.
+
+To interact with a contract, you need to know how the types in the contract’s function signature are serialized, so you can correctly formulate the calldata in the transaction. This calldata is usually encapsulated by an SDK, such as `starknet.js`. So if you use an SDK, you don’t necessarily need to know that `u256`, for example, is represented by two felts. You simply specify a `uint256`, and the SDK properly encodes it.
+
+== Affected data types
+
+The following data types are serialized:
+
+* addresses: `ContractAddress`, `EthAddress`, `StorageAddress`, `ClassHash`
+* all integer types
+* array
+* enum
+* struct
+* string, represented by the `ByteArray` type
+
+
+== How these data types are serialized in Cairo
+
+With a structure that includes multiple members, you need to represent each member as a serialized set of field elements, where each field element can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a _word_.
+
+[NOTE]
+====
+Both a byte and a character contain 8-bits. Keep this in mind when referring to strings, which are represented by the `ByteArray` type: 31 bytes is the same as 31 characters.
+====
+
+For example, a string is represented in Cairo as a `ByteArray` type. The first byte of each word in the byte array is the most significant byte in the word. A byte array has the following structure:
+
+// This felt252 actually represents a bytes31, with < 31 bytes.
+// It is represented as a felt252 to improve performance of building the byte array.
+// The number of bytes in here is specified in `pending_word_len`.
+// The first byte is the most significant byte among the `pending_word_len` bytes in the word.
+// Should be in range [0, 30].
+// pub(crate) pending_word_len: usize,
+
+[horizontal,labelwidth="20"]
+1st member:: The number of 31-byte words in the array construct. #Is this a separate `felt252`?#
+middle members:: The data. One or more field elements, where the last, or only, element is less than or equal to 30 bytes. An element of 30 bytes or less is a _pending word_.
+last member:: The number of bytes of the pending word. #Is this a separate `felt252`?#
+
+.Example 1: A string shorter than 31 characters
+
+Consider the string `"hello"`, which is represented by the 5-byte hex value `0x68656c6c6f`. The resulting byte array is serialized as follows:
+
+[source,cairo]
+----
+...
+    0, // Number of 31-byte words in the array construct.
+    0x68656c6c6f, // Pending word
+    5 // Length of the pending word, in bytes
+...
+----
+
+
+// [horizontal,labelwidth="20"]
+// 1st member:: `0`, the number of 31-byte chunks
+// middle member:: `0x68656c6c6f`, 5-byte pending word. One member, which is also the pending word.
+// last member:: `5`, the number of bytes in the pending word.
+//
+
+.Example 2: A string longer than 31 characters
+
+Consider the string `"Long string, more than 31 characters."`, which is represented by the following hex values:
+
+* 0x4c6f6e6720737472696e672c206d6f7265207468616e203331206368617261 (31-byte word)
+* 0x63746572732e (6-byte pending word)
+
+The resulting byte array is serialized as follows:
+
+[source,cairo]
+----
+...
+    1, // Number of 31-byte words in the array construct.
+    0x4c6f6e6720737472696e672c206d6f7265207468616e203331206368617261, // 31-byte word.
+    0x63746572732e, // Pending word
+    6 // Length of the pending word, in bytes
+...
+----
+
+
+== Additional resources
+
+* link:https://book.cairo-lang.org/ch02-02-data-types.html#integer-types[Integer types] in _The Cairo Programming Language_.
+
