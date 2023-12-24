@@ -548,50 +548,52 @@
 </aside>
 <article class="doc">
 <h1 class="page">Serialization of multi-member constructs in Cairo</h1>
-<div class="sect1">
-<h2 id="which_types_are_affected"><a class="anchor" href="#which_types_are_affected"></a>Which types are affected?</h2>
+<div id="preamble">
 <div class="sectionbody">
+<div class="paragraph">
+<p>When you interact with contracts, especially if you are a library or SDK developer that wants to create transactions, you need to understand how Cairo handles multi-member data structures, such as arrays and structs, and even integers larger than 252 bits.</p>
+</div>
+<div class="paragraph">
+<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as <code>uint256</code> or arrays, are ultimately represented by a list of felts.</p>
+</div>
+<div class="paragraph">
+<p>To interact with a contract, you need to know how the types in the contract’s function signature are serialized, so you can correctly formulate the calldata in the transaction. This calldata is usually encapsulated by an SDK, such as <code>starknet.js</code>. So if you use an SDK, you don’t necessarily need to know that <code>u256</code>, for example, is represented by two felts. You simply specify a number, and the SDK properly encodes it.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="affected_data_types"><a class="anchor" href="#affected_data_types"></a>Affected data types</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following data types</p>
+</div>
 <div class="ulist">
 <ul>
 <li>
-<p>Addresses: <code>ContractAddress</code>, <code>EthAddress</code>, <code>StorageAddress</code>, <code>ClassHash</code></p>
+<p>addresses: <code>ContractAddress</code>, <code>EthAddress</code>, <code>StorageAddress</code>, <code>ClassHash</code></p>
 </li>
 <li>
-<p>all <code>uints</code>, all <code>ints</code></p>
+<p>all integer types</p>
 </li>
 <li>
 <p>array</p>
 </li>
 <li>
-<p>Enum</p>
+<p>enum</p>
 </li>
 <li>
-<p>Struct</p>
+<p>struct</p>
 </li>
 <li>
-<p>bytearray (string)</p>
+<p>string, represented by the <code>ByteArray</code> type</p>
 </li>
 </ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="who_is_the_audience_for_this_topic"><a class="anchor" href="#who_is_the_audience_for_this_topic"></a>Who is the audience for this topic?</h2>
+<h2 id="how_these_data_types_are_serialized_in_cairo"><a class="anchor" href="#how_these_data_types_are_serialized_in_cairo"></a>How these data types are serialized in Cairo</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>People who want to know how to interact with contracts, especially lib/sdk developers that want to create transactions.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="what_is_the_issue"><a class="anchor" href="#what_is_the_issue"></a>What is the issue</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Field elements (<code>felt252</code>), which contain 252 bits, are the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as <code>uint256</code> or arrays, are ultimately represented by a list of felts.</p>
-</div>
-<div class="paragraph">
-<p>To interact with a contract, you need to know how exactly the types in the contract’s function signature are serialized, in order to appropriately formulate the calldata in the transaction. This calldata is usually encapsulated by an SDK, such as <code>starknet.js</code>. So if you use an SDK, you don’t necessarily need to know that <code>u256</code> is represented by two felts. You specify a number, and the SDK properly encodes it.</p>
-</div>
 <div class="paragraph">
 <p>However, when you have a structure that includes multiple members, you need to represent each member as a serialized set of field elements, where each field element can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a <em>word</em></p>
 </div>
