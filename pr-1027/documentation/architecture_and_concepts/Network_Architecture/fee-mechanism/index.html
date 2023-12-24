@@ -549,26 +549,6 @@
 </aside>
 <article class="doc">
 <h1 class="page">Gas and transaction fees (Starting in Starknet 0.13.0)</h1>
-<div id="toc" class="toc">
-<div id="toctitle">Table of Contents</div>
-<ul class="sectlevel1">
-<li><a href="#overall_fee">Overall transaction fee</a></li>
-<li><a href="#when_is_the_fee_charged">When is the fee charged?</a></li>
-<li><a href="#fee_overview">Fee overview</a></li>
-<li><a href="#fee_units">Fee units</a></li>
-<li><a href="#fee_calculation">Fee calculation</a>
-<ul class="sectlevel2">
-<li><a href="#computation_without_builtins">Computation without builtins</a></li>
-<li><a href="#computation_with_builtins">Computation with builtins</a></li>
-<li><a href="#calculation_of_computation_costs">Calculation of computation costs</a></li>
-<li><a href="#onchain_data_components">Onchain data components</a></li>
-<li><a href="#storage_updates">Onchain data: Storage updates</a></li>
-<li><a href="#l_2→l_1_messages">Onchain data: L2&#8594;L1 messages</a></li>
-<li><a href="#deployed_contracts">Onchain data: Deployed contracts</a></li>
-</ul>
-</li>
-</ul>
-</div>
 <div id="preamble">
 <div class="sectionbody">
 <div class="admonitionblock important">
@@ -594,14 +574,17 @@
 <h2 id="overall_fee"><a class="anchor" href="#overall_fee"></a>Overall transaction fee</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This section shows the formula for determining a transaction&#8217;s fee. The following sections describe <mark>how this formula was derived</mark>.</p>
+<p>This section shows the formula for determining a transaction&#8217;s fee. The following sections describe how this formula was derived.</p>
 </div>
 <div class="paragraph">
 <p>The following formula describes the overall fee for a transaction:</p>
 </div>
+<div class="paragraph">
+<p><mark>PLEASE REVIEW THE FORMULA</mark></p>
+</div>
 <div class="stemblock">
 <div class="content">
-\[F = 0.9 \cdot \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)\right)\]
+\[F = 0.9 \cdot \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left((n+2m-1) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)+n \cdot 200 + 272\right)\]
 </div>
 </div>
 <div class="paragraph">
@@ -610,22 +593,22 @@
 <div class="ulist">
 <ul>
 <li>
-<p>\(k\) enumerates the Cairo resource components, that is, <a href="#calculation_of_computation_costs">the number of <mark>Cairo</mark> steps and builtins used</a>.</p>
+<p>\(v\) is a vector that represents resource usage, where each of its entries, \(v_k\), correspond to different resource types: Cairo steps and number of applications of each builtin.</p>
+<div class="paragraph">
+<p>For more information see <a href="#calculation_of_computation_costs">Calculation of computation costs</a>.</p>
+</div>
 </li>
 <li>
-<p>\(v\) is a vector that represents Cairo usage \(v\), where the entries of \(v\) correspond to <mark>the number of steps and number of applications of each builtin</mark>.</p>
+<p>\(n\) is <a href="#storage_updates">the number of unique contracts updated</a>.</p>
 </li>
 <li>
-<p>\(n\) is <a href="#storage_updates"><mark>the number of</mark> unique contract updates</a>.</p>
+<p>\(m\) is the number of values updated, not counting multiple updates for the same key.</p>
 </li>
 <li>
-<p>\(m\) is <mark>the number of unique values updated.</mark></p>
+<p>\(t\) is the number of L2&#8594;L1 messages sent, where the corresponding payload sizes are denoted by \(q_1,...,q_t\).</p>
 </li>
 <li>
-<p>\(t\) is <mark>the number of</mark> messages with payload sizes \(q_1,...,q_t\).</p>
-</li>
-<li>
-<p>\(\ell\) is <mark>the number of</mark> contract deployments.</p>
+<p>\(\ell\) is the number of contract deployments.</p>
 </li>
 <li>
 <p>\(0.9\) is a 10% cost reduction that considers that you only pay once for repeated updates to the same storage location within a single block. Each transaction incurs the cost of the update.</p>
@@ -635,6 +618,9 @@
 </li>
 <li>
 <p>\(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
+</li>
+<li>
+<p>\(200\) and \(272\) are gas costs associated with storage updates. For more information, see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
 </li>
 </ul>
 </div>
@@ -649,7 +635,7 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="fee_overview"><a class="anchor" href="#fee_overview"></a>Fee overview</h2>
+<h2 id="fee_limitations"><a class="anchor" href="#fee_limitations"></a>Fee limitations</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Users can specify the maximum fee that they are willing to pay for a transaction.</p>
@@ -689,7 +675,7 @@ and the maximum price per unit of that resource that the user is willing to pay.
 <div class="ulist">
 <ul>
 <li>
-<p><a href="#computation_without_builtins">Computational complexity</a>: A transaction&#8217;s portion of the proof verification cost is proportional to its complexity.+</p>
+<p><a href="#computation_without_builtins">Computational complexity</a>: A transaction&#8217;s portion of the proof verification cost is proportional to its complexity.</p>
 </li>
 <li>
 <p><a href="#onchain_data_components">Onchain data</a>: L1 calldata cost originating from <a href="../on-chain-data/" class="xref page">data availability</a> and L2→L1 messages.</p>
@@ -702,7 +688,10 @@ and the maximum price per unit of that resource that the user is willing to pay.
 <h2 id="fee_units"><a class="anchor" href="#fee_units"></a>Fee units</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The fee is denominated in <mark>STRK</mark>. Each transaction is associated with an estimate of the amount of gas used. Combining this estimate with the price of gas yields the estimated fee.</p>
+<p><mark>Each transaction is associated with an estimate of the amount of gas used. Combining this estimate with the price of gas yields the estimated fee.</mark></p>
+</div>
+<div class="paragraph">
+<p><mark>For transactions prior to v3, the fee is denominated in WEI. Transactions v3 and later, the fee is denominated in STRK.</mark></p>
 </div>
 </div>
 </div>
