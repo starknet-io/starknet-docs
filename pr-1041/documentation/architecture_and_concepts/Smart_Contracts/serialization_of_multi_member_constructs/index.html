@@ -557,7 +557,7 @@
 <p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as <code>uint256</code> or arrays, are ultimately represented by a list of felts.</p>
 </div>
 <div class="paragraph">
-<p>To interact with a contract, you need to know how the types in the contract’s function signature are serialized, so you can correctly formulate the calldata in the transaction. This calldata is usually encapsulated by an SDK, such as <code>starknet.js</code>. So if you use an SDK, you don’t necessarily need to know that <code>u256</code>, for example, is represented by two felts. You simply specify a number, and the SDK properly encodes it.</p>
+<p>To interact with a contract, you need to know how the types in the contract’s function signature are serialized, so you can correctly formulate the calldata in the transaction. This calldata is usually encapsulated by an SDK, such as <code>starknet.js</code>. So if you use an SDK, you don’t necessarily need to know that <code>u256</code>, for example, is represented by two felts. You simply specify a <code>uint256</code>, and the SDK properly encodes it.</p>
 </div>
 </div>
 </div>
@@ -565,7 +565,7 @@
 <h2 id="affected_data_types"><a class="anchor" href="#affected_data_types"></a>Affected data types</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following data types</p>
+<p>The following data types are serialized:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -595,17 +595,24 @@
 <h2 id="how_these_data_types_are_serialized_in_cairo"><a class="anchor" href="#how_these_data_types_are_serialized_in_cairo"></a>How these data types are serialized in Cairo</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>However, when you have a structure that includes multiple members, you need to represent each member as a serialized set of field elements, where each field element can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a <em>word</em></p>
+<p>With a structure that includes multiple members, you need to represent each member as a serialized set of field elements, where each field element can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a <em>word</em>.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Both a byte and a character contain 8-bits. Keep this in mind when referring to strings, which are represented by the <code>ByteArray</code> type: 31 bytes is the same as 31 characters.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>For example, a string is represented in Cairo as a <code>ByteArray</code> type. The first byte of each word in the byte array is the most significant byte in the word.</p>
-</div>
-<div class="paragraph">
-<p>pub(crate) data: Array&lt;bytes31&gt;,
-pub(crate) pending_word: felt252,</p>
-</div>
-<div class="paragraph">
-<p>with the following structure:</p>
+<p>For example, a string is represented in Cairo as a <code>ByteArray</code> type. The first byte of each word in the byte array is the most significant byte in the word. A byte array has the following structure:</p>
 </div>
 <div class="hdlist">
 <table>
@@ -618,7 +625,7 @@ pub(crate) pending_word: felt252,</p>
 1st member
 </td>
 <td class="hdlist2">
-<p>The number of 31-byte words in the array construct.</p>
+<p>The number of 31-byte words in the array construct. <mark>Is this a separate <code>felt252</code>?</mark></p>
 </td>
 </tr>
 <tr>
@@ -626,7 +633,7 @@ pub(crate) pending_word: felt252,</p>
 middle members
 </td>
 <td class="hdlist2">
-<p>The data. One or more field elements, where the last, or only, element is up to 30 bytes. An element of 30 bytes or less is a <em>pending word</em>.</p>
+<p>The data. One or more field elements, where the last, or only, element is less than or equal to 30 bytes. An element of 30 bytes or less is a <em>pending word</em>.</p>
 </td>
 </tr>
 <tr>
