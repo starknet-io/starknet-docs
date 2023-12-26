@@ -4,20 +4,19 @@
 [id="introduction"]
 == Introduction
 
-In the current stage of the Alpha, Starknet operates in a ZK-Rollup mode. This means that upon the acceptance of a state update onchain, the state diff between the previous and new state is sent as calldata to Ethereum.
+In the current stage of the Alpha, Starknet operates in Validity Rollup mode, also referred to as ZK-Rollup mode. So when the onchain state update is accepted, the state diff between the previous and new state is sent as calldata to Ethereum.
 
 This data allows anyone that observes Ethereum to reconstruct the current state of Starknet.
 
-
 [NOTE]
 ====
-To update the Starknet state on L1, it suffices to send a valid proof -- without information
+To update the Starknet state on L1, it suffices to send a valid proof, without information
 on the transactions or particular changes that this update caused.
 
 Consequently, more information must be provided in order to allow other parties to locally track Starknet's state.
 ====
 
-== Data availability: post v0.11.0
+== Data availability: v0.11.0 and forward
 
 
 [id="v0.11.0_format"]
@@ -25,19 +24,24 @@ Consequently, more information must be provided in order to allow other parties 
 
 The state diffs contain information on every contract whose storage was updated and additional information on contract deployments.
 
-For each affected contract, we have:
+For each affected contract, the following information is sent as calldata on L1:
 
 * The contract address
-* A single word that encodes:
+* A single 32-byte word that includes the nonce and the following meta information about the update:
++
+** class information flag, whose value is one of the following:
++
 
-** class information flag (0 = Storage updates only / 1 = contract was deployed or replaced in
-this state update). When this flag is on, we will have an additional word before the storage
-updates section, which contains the new class hash
-** nonce
-** num_of_storage_updates
+[horizontal,labelwidth="2"]
+`0`:: Storage updates only.
+`1`:: The contract was deployed or replaced in this state update.
++
+When this flag is set to 1, the new class hash occupies an additional word before the storage updates section.
 
-See below for the expected format:
-
+** number of storage updates
++
+The expected format of this 32-byte word is as follows:
++
 [stem]
 ++++
 \underbrace{0\cdots0}_{\text{127 bits}}|
@@ -46,23 +50,22 @@ See below for the expected format:
 \underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}
 ++++
 
-For each storage update:
+Each storage update includes the following:
 
 * key - the address inside the contract’s storage where the value is updated
 * value - the new value
 
-Next, we have information about newly declared classes:
+Newly declared classes include the following:
 
-* The # of (Cairo 1.0) classes that were declared in the block
-* For each class we have:
+* The number of Cairo classes that were declared in the block
+* Each class includes the following:
 ** The class hash
-** xref:starknet_versions:upcoming_versions.adoc[The compiled class hash]
+** xref:Smart_Contracts/class-hash.adoc[The compiled class hash]
 
 [id="v0.11.0_example"]
-=== v0.11.0 example
+=== v0.11.0 example of onchain data
 
-Below we show an example of on chain data that was extracted from L1, and proceed to decode it
-according to the xref:#v0.11.0_format[above format].
+Consider the following onchain data that was extracted from L1:
 
 [source,json]
 ----
@@ -78,23 +81,15 @@ according to the xref:#v0.11.0_format[above format].
 ]
 ----
 
-* The first element, `1`, is the number of contracts whose state was updated
-* The second element, `2019172390095051323869047481075102003731246132997057518965927979101413600827`, is the address of the first (and only) contract whose state changed
-* The third element, `18446744073709551617`, which is stem:[$2^{64}+1$], encodes the following:
-** The class information flag is `0`, that is, the contract was not just deployed or replaced, so we shouldn't treat the next word as the class hash
-** The new nonce is `1`
-** One storage cell was updated
-* The next two elements, `100` and `200` encode the storage update (the value of key `100` was set
-to `200`)
-* Next we have the new declare section: `1`
-means that we had a single
-
-xref:Network_Architecture/transactions.adoc#declare_v2[declare v2] in this state update, and the next two elements
-encode
-
-xref:../Smart_Contracts/class-hash.adoc[the class hash] and
-xref:starknet_versions:upcoming_versions.adoc#what_to_expect[compiled class hash] of the declared
-class
+* The first element, `1`, is the number of contracts whose state was updated.
+* The second element, `2019172390095051323869047481075102003731246132997057518965927979101413600827`, is the address of the first, and only, contract whose state changed.
+* The third element, `18446744073709551617`, which is 2^64^+1, encodes the following:
+** The class information flag is `0`, that is, the contract was not deployed or replaced just now, so you shouldn't treat the next word as the class hash.
+** The new nonce is `1`.
+** One storage cell was updated.
+* The next two elements, `100` and `200`, encode the storage update, where the value of key `100` is set to `200`.
+* the new declare section: `1` includes a single xref:Network_Architecture/transactions.adoc#declare_v2[declare v2] transaction in this state update, and the next two elements
+encode xref:../Smart_Contracts/class-hash.adoc[the class hash] and the compiled class hash of the declared class.
 
 == Data availability: pre v0.11.0
 
@@ -104,31 +99,33 @@ class
 The state diffs contain information on every contract whose storage was updated and additional information on contract deployments. Those differences are sent as `uint256[]` array as part of the calldata, and are encoded as follows:
 
 * Number of cells that encode contract deployments
-* For each deployed contract, we have:
+* Each deployed contract has the following:
 
-xref:Smart_Contracts/contract-address.adoc
+** `contract_address` - the xref:Smart_Contracts/contract-address[address]  of the deployed contract. See also xref:Network_Architecture/on-chain-data.adoc[Data availability].
+** `contract_hash` - the xref:../Smart_Contracts/class-hash.adoc[hash] of the class
+* Number of contracts whose storage is updated.
++
+Each such contract has the following:
 
- ** `contract_address` - the xref:Network_Architecture/on-chain-data.adoc[address] of the deployed contract
- ** `contract_hash` - the xref:../Smart_Contracts/class-hash.adoc[hash] of the class
-* Number of contracts whose storage is updated
-* For each such contract, we have:
- ** `contract_address` - the xref:../Network_Architecture/on-chain-data.adoc[address] of the contract
- ** `num_of_storage_updates` - number of storage updates
- ** `nonce, num of storage updates ` - a uint256 value that encodes both the number of storage updates for that contract and the updated nonce:
+** `contract_address` - the xref:../Network_Architecture/on-chain-data.adoc[address] of the contract
+** `num_of_storage_updates` - number of storage updates
+** `nonce, num of storage updates` - a `uint256` value that encodes both the number of storage updates for that contract and the updated nonce:
 +
 [stem]
 ++++
 \underbrace{0\cdots0}_{\text{128 bits}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |
 {\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}
 ++++
- ** For each storage update:
-  *** `key` - the address inside the contract's storage where the value is updated
-  *** `value` - the new value
++
+For each storage update:
+
+*** `key` - the address inside the contract's storage where the value is updated
+*** `value` - the new value
 
 [id="pre_v0.11.0_example"]
 ===  Pre v0.11.0 example
 
-Below we show an example of on chain data which was extracted from L1, and proceed to decode it according to the above format.
+The example below shows onchain data that was extracted from L1. An explanation follows, according to the above format.
 
 [source,json]
 ----
@@ -174,29 +171,29 @@ Below we show an example of on chain data which was extracted from L1, and proce
 
 * The first element, `2`, is the number of cells that encode contracts deployment.
 * The next two elements describe a single contract deployment with the following parameters:
- ** `contract_address`:
+** `contract_address`:
 +
 ----
 2472939307328371039455977650994226407024607754063562993856224077254594995194
 ----
 
- ** `contract_hash`:
+** `contract_hash`:
 +
 ----
 1336043477925910602175429627555369551262229712266217887481529642650907574765
 ----
 
 * The next element, `5` (index 3 in the array), is the number of contracts whose storage was updated. We will take only the first contract as an example.
- ** `contract_address`:
+** `contract_address`:
 +
 ----
 2019172390095051323869047481075102003731246132997057518965927979101413600827
 ----
 
 **  Following the above contract address, we have `18446744073709551617` (index 8 in the array), which is stem:[$2^{64}+1$], thus:
-  *** The new contract nonce is `1`
-  *** One storage key is updated
-  *** The value at key `5` was changed to `102`
+*** The new contract nonce is `1`
+*** One storage key is updated
+*** The value at key `5` was changed to `102`
 
 The next 4 contract storage updates are interpreted in the same manner.
 

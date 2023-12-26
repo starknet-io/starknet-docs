@@ -1,0 +1,34 @@
+name: Delete pull request preview workflow
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  delete-site-preview:
+    name: Delete Site Preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          node-version: 16
+          ref: gh-pages
+          USER_TOKEN: ${{ secrets.USER_TOKEN }}
+      - name: Fetch all branches
+        run: git fetch --all
+      - name: Identify and remove preview build directory
+        run: |
+          PR_ID=pr-${{ github.event.pull_request.number }}
+          PREVIEW_PATH=${PR_ID}
+          git checkout gh-pages
+          if [ -d $PREVIEW_PATH ]; then
+            rm -rf $PREVIEW_PATH
+            git config user.name "GitHub Actions"
+            git config user.email noreply@github.com
+            git add .
+            git commit -m "Delete preview build for PR $PR_ID after merging to master"
+            git push origin gh-pages
+          fi
+        env:
+          USER_TOKEN: "${{ secrets.USER_TOKEN }}"
