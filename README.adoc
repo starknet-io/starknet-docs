@@ -36,7 +36,7 @@ There are a few different ways you can contribute to Starknet documentation:
 
 *What happens when you submit a PR?*
 
-When you submit a PR, the https://github.com/orgs/starknet-io/teams/starknet-docs[Starknet Docs team] reviews the PR and arranges further technical reviews as necessary. If the PR requires changes, the reviewers add comments in the PR. We might request that you make the changes, or let you know that we incorporated your content in a different PR. Occasionally, we might add commits to the original PR directly. When the PR has been reviewed and all updates are complete, the documentation team merges the PR and applies it to the valid version(s).
+When you submit a PR, the https://github.com/orgs/starknet-io/teams/starknet-docs[Starknet Docs team] reviews the PR and arranges further technical reviews as necessary. If the PR requires changes, the reviewers add comments to the PR. We might request that you make the changes, or let you know that we incorporated your content in a different PR. Occasionally, we might add commits to the original PR directly. When the PR has been reviewed and all updates are complete, the documentation team merges the PR and applies it to the valid version(s).
 
 
 == Tips on authoring
@@ -50,7 +50,7 @@ For information on writing in AsciiDoc, see:
 
 [NOTE]
 ====
-There are multiple ways of coding ids, source code blocks, cross references, and links. In general we use the most explicit coding conventions for coding in order to prioritize code readability. Most of these coding conventions are listed in link:https://redhat-documentation.github.io/asciidoc-markup-conventions/[AsciiDoc Mark-up Quick Reference for Red Hat Documentation]
+There are multiple ways of coding ids, source code blocks, cross-references, and links. In general we use the most explicit coding conventions for coding in order to prioritize code readability. Most of these coding conventions are listed in link:https://redhat-documentation.github.io/asciidoc-markup-conventions/[AsciiDoc Mark-up Quick Reference for Red Hat Documentation]
 ====
 
 == Building and previewing content locally
@@ -95,51 +95,34 @@ Hit CTRL-C to stop the server
 == Releasing Starknet docs on Github
 _The high-level process for releasing documentation changes in this repository._
 
-During the course of content development, writers merge branches with changes into `dev`, where these changes wait until we are ready to release them—that is, post them to link:https://docs.starknet.io[docs.starknet.io].
+During the course of content development, writers merge branches with changes either directly into `master`, into a secondary branch as needed, where these changes wait until we are ready to release them—that is, post them to link:https://docs.starknet.io[docs.starknet.io].
 
 Github actions create Git tags and releases that appear at the repo’s link:https://github.com/starknet-community-libs/starknet-docs/releases[Releases] and link:https://github.com/starknet-community-libs/starknet-docs/tags[Tags] pages.
 
-When the `dev` branch is merged into the `master` branch, a github action creates a tag and release, and updates `CHANGELOG.md`.
-
-[NOTE]
-====
-Previously, this repo used Pre-release tags in addition to Release tags. This functionality is useful for application development, which requires validating multiple release candidates. This usage model does not typically apply to documentation.
-====
+When a feature branch is merged into the `master` branch, a github action creates a release tag in the format `v<version>.<major_update>.<minor_update>` and updates `CHANGELOG.md`. It then publishes the new content to docs.starknet.io.
 
 === Procedure
 
-. Checkout the `master` branch.
-. Fetch the latest changes from the main repo, `origin`. If your origin is a fork of the main repo, update this command appropriately:
-+
-[source,bash]
-----
-starknet-docs (master) $ git fetch origin
-----
-. Merge `dev` into `master` on your local starknet-docs repo:
-//. Rebase `dev` into `master` on your local starknet-docs repo:
-+
-[source,bash]
-----
-starknet-docs (master) $ git merge origin/dev
-----
+Merging a feature branch to `master` automatically publishes changes in the feature branch. No additional steps are required.
 
-+
-Your local version of `master` now includes all the changes from the remote version of `dev`.
-. Push the local version of `master` to Github:
-+
-[source,bash]
-----
-starknet-docs (master) $ git push origin master
-----
-+
 Github increments the version numbers in `package.json` and `package-lock.json`, and updates `CHANGELOG.md` with the descriptions of each PR that was just merged into `master`.
-. Update your local `dev` branch from the remote `master` branch:
+. Update your local `master` branch from the remote `master` branch using one of the following:
+
+* Pull the changes:
 +
 [source,bash]
 ----
-starknet-docs (master) $ git checkout dev
-starknet-docs (dev) $ git fetch origin
-starknet-docs (dev) $ git rebase origin/master
-starknet-docs (dev) $ git push origin dev
+starknet-docs (master) git pull
 ----
+* Do a rebase from `git@github.com:starknet-io/starknet-docs.git`:
+[source,bash]
+----
+starknet-docs (master) git fetch origin
+starknet-docs (master) git rebase origin/master
+----
++
+[NOTE]
+====
+If you are using a fork, then your forked repo is `origin` by default, in which case you would assign the name `upstream` to `git@github.com:starknet-io/starknet-docs.git`. So when rebasing, use `upstream` instead of `origin` in the above commands.
+====
 

@@ -31,70 +31,68 @@ according to the execution of the contract instance's constructor.
 [id="state_commitment"]
 == State commitment
 
-The state commitment is a digest that uniquely encodes the state.
+The state commitment is a digest that represents the state.
 
-In Starknet, the commitment combines the roots of two binary xref:#merkle_patricia_tree[Merkle-Patricia trees] of height 251 in the following manner:
+In Starknet, the state commitment combines the roots of two binary xref:#merkle_patricia_trie[Merkle-Patricia tries] of height 251 in the following manner:
 
-[source,sub="quotes"]
+[,,subs="quotes"]
 ----
-state_commitment = _h_(
+state_commitment = _h_~Pos~(
     "STARKNET_STATE_V0",
-    contracts_tree_root,
-    classes_tree_root
+    contract_trie_root,
+    class_trie_root
 )
 ----
 
 Where:
 
-* `_h_` is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
-function
+* `_h_~Pos~` is the xref:Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash
+function.
 * `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
-* `contracts_tree_root` is the root of the xref:#contracts_tree[_contracts' tree_], a Merkle-Patricia tree whose leaves are the contracts states.
-* `classes_tree_root` is the root of the xref:#classes_tree[_classes tree_], a Merkle-Patricia tree whose leaves are the compiled class hashes.
+* `contract_trie_root` is the root of the xref:#contracts_trie[_contract trie_], a Merkle-Patricia trie whose leaves are the contracts' states.
+* `class_trie_root` is the root of the xref:#classes_trie[_class trie_], a Merkle-Patricia trie whose leaves are the compiled class hashes.
 
-[id="contracts_tree"]
-=== The contracts tree
+[id="contracts_trie"]
+=== The contract trie
 
-As with Ethereum, this tree is a two-level structure where the contract address determines the path from the root to the leaf encoding the contract state. The information stored in the leaf is as follows:
+As with Ethereum, this trie is a two-level structure, whose leaves correspond to distinct contracts. The address of each contract determines the path from the trie’s root to its corresponding leaf, whose content encodes the contract’s state.
+
+The information stored in the leaf is as follows:
 
 // [stem]
 // ++++
 // h(h(h(\text{class_hash}, \text{storage_root}), \text{nonce}),0)
 // ++++
 
-[source,subs="quotes"]
+[,,subs="quotes"]
 ----
-_h_(
-  _h_(
-    _h_(
-      class_hash,
-      storage_root
-    ),
-    nonce
-  ),
-  0
+_h_~Ped~(
+    class_hash,
+    storage_root,
+    nonce,
+    0
 )
 ----
 
 
 Where:
 
-* `_h_` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash function.
+* `_h_~Ped~` is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash function.
 * `class_hash` is the hash of xref:../Smart_Contracts/class-hash.adoc[the contract's definition].
-* `storage_root` is the root of another Merkle-Patricia tree of height 251 that is constructed from the contract's storage.
+* `storage_root` is the root of another Merkle-Patricia trie of height 251 that is constructed from the contract's storage.
 * `nonce` is the current nonce of the contract.
 
-[id="classes_tree"]
-=== The classes tree
+[id="classes_trie"]
+=== The class trie
 
-The classes tree encodes the information about all existing
-xref:../Smart_Contracts/contract-classes.adoc[classes] in Starknet's state. This tree maps xref:Smart_Contracts/class-hash.adoc#cairo1_class[class hashes] to their
+The class trie encodes the information about all existing
+xref:../Smart_Contracts/contract-classes.adoc[classes] in Starknet's state. This trie maps xref:Smart_Contracts/class-hash.adoc#cairo1_class[class hashes] to their
 compiled class hashes. The information stored in a leaf at a path corresponding to some class hash is as follows:
 
 
 [source,subs="quotes"]
 ----
-_h_(
+_h_~Pos~(
     CONTRACT_CLASS_LEAF_V0,
     compiled_class_hash
 )
@@ -102,85 +100,101 @@ _h_(
 
 Where:
 
-* `_h_` is the xref:../Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash function
+* `_h_~Pos~` is the xref:../Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash function
 * `CONTRACT_CLASS_LEAF_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
 * `compiled_class_hash` is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler
 
 [NOTE]
 ====
-Cairo classes that are part of the commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly. For more information, see xref:Smart_Contracts/system-calls-cairo1.adoc[System calls].
+Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly. For more information, see xref:Smart_Contracts/system-calls-cairo1.adoc[System calls].
 
 However, the prover only deals with Cairo assembly (Casm).
-This means that unless we want the compilation from Sierra to Casm to be part of every block in which the class is used, the commitment must have some information about the corresponding Cairo assembly.
 
-Today, the user signs the compiled class hash as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare v3] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the commitment.
+So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly.
+
+Today, the user signs the compiled class hash as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.
+
 In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.
 ====
 
-[merkle_patricia_tree]
-=== Merkle-Patricia tree
+[merkle_patricia_trie]
+== Merkle-Patricia trie
 
-[specifications]
-==== Specifications
+The state commitment scheme uses a binary Merkle-Patricia trie with the Pedersen hash function.
 
-The commitment scheme uses a binary Merkle-Patricia tree with the Pedersen hash function. Each node in the tree is represented by a triplet stem:[$(length, path, bottom)$].
+=== About nodes
 
-The actual data is placed in the leaves, and a leaf node with data stem:[$x$] is encoded by the triplet stem:[$(0,0,x)$]. Empty nodes , leaves or internal, #What does "leaves or internal" mean here?#
-are encoded by the zero triplet stem:[$(0,0,0)$]. A subtree rooted at a node stem:[$(length, path, bottom)$] has a single non-empty subtree, rooted at the node obtained by following the path specified by stem:[$path$].
+Each node in the trie is represented by a triplet stem:[$(length, path, value)$], where:
 
-stem:[$path$] is an integer in stem:[$[0, 2^{length}-1\]$], and the binary expansion of stem:[$path$] indicates how to proceed along the tree, where the first step is indicated by the most significant bit, stem:[$0,1$] are interpreted as left or right.
-#What does 0,1 mean here?#
+[horizontal,labelwidth=10,role="stripes-odd"]
+stem:[$length$]:: is the length of the path, measured in nodes.
 
+stem:[$path$]:: is the path from the current node to its unique non-empty subtrie.
++
+stem:[$path$] is an integer in the set stem:[$\{0,\ldots,2^{length}-1\}$], and the binary expansion of stem:[$path$] indicates how to proceed along the trie, as follows:
++
+. Expand stem:[$path$] to its binary representation.
+. Starting with the most significant bit, representing the root of the trie, traverse the tree node by node, where the bit values stem:[$0$] and stem:[$1$] indicate left and right, respectively.
+
+stem:[$value$]:: is the value of the node, which can be either data, or the hash of two non-empty child nodes.
+
+An empty node is one whose triplet values are stem:[$(0,0,0)$]. Leaf nodes and internal nodes can be empty. A subtrie rooted at a node stem:[$(length, path, value)$] has a single non-empty subtrie, rooted at the node obtained by following the path specified by stem:[$path$].
 
 [NOTE]
 ====
-Length is specified, and cannot be deduced from stem:[$path$], because the numbers in the triplet stem:[$(length, path, bottom)$] are field elements of fixed size, 251 bits each.
+Length is specified, and cannot be deduced from stem:[$path$], because the numbers in the triplet stem:[$(length, path, value)$] are field elements of fixed size, 251 bits each.
 
 For a node where stem:[$length>0$], stem:[$path$] leads to the highest node whose left and right children are not empty.
 ====
 
-The following rules specify how the tree is constructed from a given set of leaves:
+=== Trie construction
 
-The hash of a node stem:[$N =(length, path, bottom)$], denoted by stem:[$H(N)$], is:
+The following rules specify how the trie is constructed from a given set of leaves:
+
+The hash of a node stem:[$N =(length, path, value)$], denoted by stem:[$H(N)$], is:
 
 [stem]
 ++++
 H(N)=\begin{cases}
-bottom, & \text{if } length = 0 \\
-h(bottom, path) + length, & \text{otherwise}
+value, & \text{if } length = 0 \\
+h_{Ped}(value, path) + length, & \text{otherwise}
 \end{cases}
 ++++
 
-Note that any arithmetic operations in the above are done in our field.
+[NOTE]
+====
+All arithmetic operations in the above description of stem:[$H$] are done in the STARK field, as described in xref:Cryptography/p-value.adoc[The STARK field].
+====
 
-We can now proceed to recursively define the nodes in the tree. The triplet represents the parent of the nodes
-stem:[$left=(\ell_L, p_L, b_L)$], stem:[$right=(\ell_R, p_R, b_R)$] is given by:
+=== Mathematical definition of the nodes in the trie
+
+The triplet representing the parent of the nodes stem:[$left=(\ell_L, p_L, v_L)$], stem:[$right=(\ell_R, p_R, v_R)$] is defined as follows:
 
 [stem]
 ++++
 parent=
 \begin{cases}
 (0,0,0), & \text{if } left=right=(0,0,0)\\
-(\ell_L + 1, p_L, b_L), & \text{if } right=(0,0,0) \text{ and } left \neq (0,0,0)\\
-(\ell_R + 1, p_R + 2^{\ell_R}, b_R), & \text{if } right\neq (0,0,0) \text{ and } left = (0,0,0)\\
-(0, 0, h(H(left), H(right))), & \text{otherwise}
+(\ell_L + 1, p_L, v_L), & \text{if } right=(0,0,0) \text{ and } left \neq (0,0,0)\\
+(\ell_R + 1, p_R + 2^{\ell_R}, v_R), & \text{if } right\neq (0,0,0) \text{ and } left = (0,0,0)\\
+(0, 0, h_{Ped}(H(left), H(right))), & \text{otherwise}
 \end{cases}
 ++++
 
-[id="example_trie"]
-
+[#example_trie]
 === Example trie
 
-We now show an example of the construction of a height 3 Merkle-Patricia tree from the leaves stem:[$[0,0,1,0,0,1,0,0\]$]:
+The diagram xref:#3-level_trie[] illustrates  the construction of a three-level-high Merkle-Patricia trie from the leaves whose values are stem:[$(0,0,1,0,0,1,0,0)$]:
 
-image::trie.png[trie]
+[#3-level_trie]
+.A three-level Merkle-Patricia trie
+image::trie.png[3-level-high Merkle-Patricia trie]
 
-Where stem:[$r=h(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip from the root, whose length is zero, so the final commitment to the tree is stem:[$H((0,0,r))=r$].
+Where stem:[$r=h_{Ped}(H(2,2,1),H((2,1,1))$]. Notice that the example does not skip from the root, whose length is zero, so the final state commitment to the trie is stem:[$H((0,0,r))=r$].
 
-Suppose that you want to prove, with respect to the commitment just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle tree, the proof would consist of data from three nodes, which are siblings along the path to the root.
+Suppose that you want to prove, with respect to the state commitment just computed, that the value of the leaf whose path is given by stem:[$101$] is stem:[$1$]. In a standard Merkle trie, the proof would consist of data from three nodes, which are siblings along the path to the root.
 
-Here, since the tree is sparse, you only need to send the two children of the root stem:[$(2,2,1), (2,1,1)$]. This suffices to reproduce the commitment stem:[$r$], and since the height of the tree, stem:[$3$], is known and fixed, you know that the path stem:[$01$] of length stem:[$2$] specified by the right child stem:[$(2,1,1)$] leads to the desired leaf.
-
+In a Merkle-Patricia trie, because the trie is sparse, you only need to send the two children of the root, which are stem:[$(2,2,1)$] and stem:[$(2,1,1)$]. These two children are enough to reproduce the state commitment stem:[$r$], and because you know that the height of the trie is three, and that it is fixed, you know that the path stem:[$01$] of length stem:[$2$] specified by the right-hand child, stem:[$(2,1,1)$], leads to the desired leaf.
 
 == Special addresses
 
@@ -197,7 +211,7 @@ Address `0x0` functions as the default `caller_address` for external calls, incl
 
 Address `0x1` is another special contract address within Starknet's architecture. It functions as a storage space for mapping block numbers to their corresponding block hashes. The storage structure at this address is organized as follows:
 
-[horizontal,labelwidth="20"]
+[horizontal,labelwidth="20",role="stripes-odd"]
 Keys:: Block numbers between stem:[\text{first_v0_12_0_block}] and stem:[\text{current_block - 10}].
 Values:: Corresponding block hashes for the specified blocks.
 Default Values:: For all other block numbers, the values are set to `0`.
