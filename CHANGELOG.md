@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.428](https://github.com/starknet-io/starknet-docs/compare/v0.1.427...v0.1.428) (2023-12-26)
+
+
+### Bug Fixes
+
+* Fixed bugs in formulas on Gas and transaction fees. Update fees and formulas ([#1027](https://github.com/starknet-io/starknet-docs/issues/1027)) ([69c272b](https://github.com/starknet-io/starknet-docs/commit/69c272b6f3badbef064d15b573db45402e0720ba))
+
 ### [0.1.427](https://github.com/starknet-io/starknet-docs/compare/v0.1.426...v0.1.427) (2023-12-25)
 
 ### [0.1.426](https://github.com/starknet-io/starknet-docs/compare/v0.1.425...v0.1.426) (2023-12-25)
