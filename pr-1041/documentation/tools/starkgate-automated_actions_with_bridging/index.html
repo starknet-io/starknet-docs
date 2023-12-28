@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Automated actions with bridging :: Starknet documentation</title>
+    <title>Performing a Smart Deposit :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/tools/starkgate-automated_actions_with_bridging/">
     <link rel="prev" href="../starkgate_architecture/">
     <link rel="next" href="../starkgate-adding_a_token/">
@@ -110,7 +110,8 @@
     <li><a href="../../">Starknet</a></li>
     <li>Developer tools and resources</li>
     <li>StarkGate bridge developer&#8217;s guide</li>
-    <li><a href="./">Automated actions with bridging</a></li>
+    <li>Procedures</li>
+    <li><a href="./">Performing a Smart Deposit</a></li>
   </ul>
 </nav>
   <div class="edit-this-page">
@@ -256,7 +257,12 @@
   <li class="nav-item" data-depth="4">
     <a 
        class="nav-link"
-     href="../../architecture_and_concepts/Network_Architecture/fee-mechanism/">Gas and transaction fees</a>
+     href="../../architecture_and_concepts/Network_Architecture/fee-mechanism/">Gas and transaction fees (Starting in Starknet 0.13.0)</a>
+  </li>
+  <li class="nav-item" data-depth="4">
+    <a 
+       class="nav-link"
+     href="../../architecture_and_concepts/Network_Architecture/fee-mechanism-pre-v0.13.0/">Gas and transaction fees (Prior to Starknet 0.13.0)</a>
   </li>
 </ul>
   </li>
@@ -451,16 +457,6 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../important_addresses/">Important addresses</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="../limits_and_triggers/">Current limits and triggers</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
      href="../ref_block_explorers/">Block explorers</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -482,15 +478,15 @@
        class="nav-link"
      href="../starkgate_architecture/">StarkGate architecture</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="3">
-    <a 
-       class="nav-link"
-     href="./">Automated actions with bridging</a>
-  </li>
   <li class="nav-item parent" data-depth="3">
     <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">Procedures</span>
 <ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="4">
+    <a 
+       class="nav-link"
+     href="./">Performing a Smart Deposit</a>
+  </li>
   <li class="nav-item" data-depth="4">
     <a 
        class="nav-link"
@@ -522,6 +518,27 @@
   </li>
 </ul>
   </li>
+  <li class="nav-item parent" data-depth="1">
+    <button class="nav-item-toggle mask-svg-center"></button>
+    <span class="nav-text">Important addresses</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../important_addresses/">Starknet contracts and sequencer addresses</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../bridged_tokens/">Bridged tokens</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a 
+       class="nav-link"
+     href="../limits_and_triggers/">Current limits</a>
+  </li>
 </ul>
   </li>
 </ul>
@@ -547,18 +564,29 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Automated actions with bridging</h1>
+<h1 class="page">Performing a Smart Deposit</h1>
 <div class="paragraph">
-<p>A single user action can move funds from L1 to L2 and then trigger subsequent actions. For example, a user can deposit funds and transfer those funds to another recipient, such as an exchange.</p>
+<p>A <em>Smart Deposit</em> is a deposit that moves funds from L1 to L2 and then triggers subsequent actions. For example, a user can deposit funds and transfer those funds to another recipient, such as an exchange.</p>
 </div>
 <div class="paragraph">
-<p>To enable this feature in your application, you can use the <code>depositWithMessage</code> function. <code>depositWithMessage</code> is similar to a <code>deposit</code> function, with an additional 256-bit message, which can contain instructions for executing additional actions.</p>
+<p>The <code>depositWithMessage</code> function enables a Smart Deposit. <code>depositWithMessage</code> is similar to the <code>deposit</code> function, with an additional 256-bit message, which can contain instructions for executing additional actions.</p>
 </div>
 <div class="paragraph">
-<p>Upon completion, the <code>depositWithMessage</code> function triggers a call to a callback function, named <code>on_receive</code>, on the receiving L2 contract. The <code>on_receive</code> function receives the deposit message as input.</p>
+<p>Upon completion, the <code>depositWithMessage</code> function triggers a call to a callback function, named <code>on_receive</code>, on the L2 contract that receives the deposit. The <code>on_receive</code> function receives the deposit message as input.</p>
 </div>
 <div class="paragraph">
 <p><code>on_receive</code> must return <code>true</code> for the deposit to succeed. If <code>on_receive</code> returns <code>false</code>, or if the recipient contract does not include the <code>on_receive</code> function, the <code>depositWithMessage</code> function&#8217;s L1 handler fails. The user can recover their funds using the <code>depositWithMessageCancelRequest</code> function.</p>
+</div>
+<div class="olist arabic">
+<div class="title">To enable Smart Deposits in your application:</div>
+<ol class="arabic">
+<li>
+<p>Implement the <code>on_receive</code> function in the L2 contract that should receive deposits.</p>
+</li>
+<li>
+<p>Use the <code>depositWithMessage</code> function to transfer funds from L1 to L2.</p>
+</li>
+</ol>
 </div>
 <h2 id="additional_resources" class="discrete">Additional resources</h2>
 <div class="ulist">
