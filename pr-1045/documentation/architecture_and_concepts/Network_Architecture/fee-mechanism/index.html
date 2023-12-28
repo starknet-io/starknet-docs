@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Gas and transaction fees :: Starknet documentation</title>
+    <title>Gas and transaction fees (Starting in Starknet 0.13.0) :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/fee-mechanism/">
     <link rel="prev" href="../transactions/">
-    <link rel="next" href="../starknet-state/">
+    <link rel="next" href="../fee-mechanism-pre-v0.13.0/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -111,7 +111,7 @@
     <li>Architecture</li>
     <li>Blockchain architecture</li>
     <li>Blocks and transactions</li>
-    <li><a href="./">Gas and transaction fees</a></li>
+    <li><a href="./">Gas and transaction fees (Starting in Starknet 0.13.0)</a></li>
   </ul>
 </nav>
   <div class="edit-this-page">
@@ -257,7 +257,12 @@
   <li class="nav-item is-current-page" data-depth="4">
     <a 
        class="nav-link"
-     href="./">Gas and transaction fees</a>
+     href="./">Gas and transaction fees (Starting in Starknet 0.13.0)</a>
+  </li>
+  <li class="nav-item" data-depth="4">
+    <a 
+       class="nav-link"
+     href="../fee-mechanism-pre-v0.13.0/">Gas and transaction fees (Prior to Starknet 0.13.0)</a>
   </li>
 </ul>
   </li>
@@ -447,16 +452,6 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../tools/important_addresses/">Important addresses</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="../../../tools/limits_and_triggers/">Current limits and triggers</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
      href="../../../tools/ref_block_explorers/">Block explorers</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -478,15 +473,15 @@
        class="nav-link"
      href="../../../tools/starkgate_architecture/">StarkGate architecture</a>
   </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../tools/starkgate-automated_actions_with_bridging/">Automated actions with bridging</a>
-  </li>
   <li class="nav-item parent" data-depth="3">
     <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">Procedures</span>
 <ul class="nav-list">
+  <li class="nav-item" data-depth="4">
+    <a 
+       class="nav-link"
+     href="../../../tools/starkgate-automated_actions_with_bridging/">Performing a Smart Deposit</a>
+  </li>
   <li class="nav-item" data-depth="4">
     <a 
        class="nav-link"
@@ -518,6 +513,27 @@
   </li>
 </ul>
   </li>
+  <li class="nav-item parent" data-depth="1">
+    <button class="nav-item-toggle mask-svg-center"></button>
+    <span class="nav-text">Important addresses</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../../../tools/important_addresses/">Starknet contracts and sequencer addresses</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../../../tools/bridged_tokens/">Bridged tokens</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a 
+       class="nav-link"
+     href="../../../tools/limits_and_triggers/">Current limits</a>
+  </li>
 </ul>
   </li>
 </ul>
@@ -543,19 +559,91 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Gas and transaction fees</h1>
+<h1 class="page">Gas and transaction fees (Starting in Starknet 0.13.0)</h1>
 <div id="preamble">
 <div class="sectionbody">
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>In this section, we will review Starknet Alpha fee mechanism. If you want to skip the motivation and deep dive into the mechanism, you can skip directly to the final <a href="#overall_fee">formula</a>.</p>
+<p>For information on v0.12.3 and earlier, see <a href="../fee-mechanism-pre-v0.13.0/" class="xref page">Gas and transaction fees (Prior to Starknet 0.13.0)</a>.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>This section focuses on fees paid by an account on L2. For information about messaging fees that are paid on L1, see <a href="../messaging-mechanism/#l1-l2-message-fees" class="xref page">L1 → L2 message fees</a>.</p>
+<p>This section describes fees that are paid on L2. For information about messaging fees that are paid on L1, see <a href="../messaging-mechanism/#l1-l2-message-fees" class="xref page">L1 → L2 message fees</a>.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
+<h2 id="overall_fee"><a class="anchor" href="#overall_fee"></a>Overall transaction fee</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This section shows the formula for determining a transaction&#8217;s fee. The following sections describe how this formula was derived.</p>
+</div>
+<div class="paragraph">
+<p>The following formula describes the overall fee for a transaction:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[F = 0.9 \cdot \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left((n+2m-1) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)+n \cdot 200 + 272\right)\]
+</div>
+</div>
+<div class="paragraph">
+<p>where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(v\) is a vector that represents resource usage, where each of its entries, \(v_k\), correspond to different resource types: Cairo steps and number of applications of each builtin.</p>
+<div class="paragraph">
+<p>For more information see <a href="#calculation_of_computation_costs">Calculation of computation costs</a>.</p>
+</div>
+</li>
+<li>
+<p>\(n\) is <a href="#storage_updates">the number of unique contracts updated</a>.</p>
+</li>
+<li>
+<p>\(m\) is the number of values updated, not counting multiple updates for the same key.</p>
+</li>
+<li>
+<p>\(t\) is the number of L2&#8594;L1 messages sent, where the corresponding payload sizes are denoted by \(q_1,...,q_t\).</p>
+</li>
+<li>
+<p>\(\ell\) is the number of contract deployments.</p>
+</li>
+<li>
+<p>\(0.9\) is a 10% cost reduction that considers that the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.</p>
+</li>
+<li>
+<p>\(w\) is the <a href="#calculation_of_computation_costs"><code>CairoResourceFeeWeights</code></a> vector.</p>
+</li>
+<li>
+<p>\(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
+</li>
+<li>
+<p>\(200\) and \(272\) are gas costs associated with storage updates. For more information, see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="when_is_the_fee_charged"><a class="anchor" href="#when_is_the_fee_charged"></a>When is the fee charged?</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The fee is charged atomically with the transaction execution on L2. The Starknet OS injects a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="fee_limitations"><a class="anchor" href="#fee_limitations"></a>Fee limitations</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Users can specify the maximum fee that they are willing to pay for a transaction.</p>
@@ -590,15 +678,15 @@ and the maximum price per unit of that resource that the user is willing to pay.
 <p>The only limitation on the sequencer, which is enforced by the Starknet OS, is that the actual fee charged is bounded by <code>max_fee</code>, but for now, StarkWare&#8217;s sequencer only charges the fee required to cover the proof cost, which is potentially less than the maximum fee.</p>
 </div>
 <div class="paragraph">
-<p>Presently, the sequencer only takes into account L1 costs involving proof submission. There are two components affecting the L1 footprint of a transaction:</p>
+<p>Currently, the sequencer only takes into account L1 costs involving proof submission. The following two components affect the L1 footprint of a transaction:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><a href="#computation">Computational complexity</a>: the heavier the transaction, the larger its portion in the proof verification cost.</p>
+<p><a href="#computation_without_builtins">Computational complexity</a>: A transaction&#8217;s portion of the proof verification cost is proportional to its complexity.</p>
 </li>
 <li>
-<p><a href="#_on_chain_data">Onchain data</a>: L1 calldata cost originating from <a href="../on-chain-data/" class="xref page">data availability</a> and L2→L1 messages.</p>
+<p><a href="#onchain_data_components">Onchain data</a>: L1 calldata cost originating from <a href="../on-chain-data/" class="xref page">data availability</a> and L2→L1 messages.</p>
 </li>
 </ul>
 </div>
@@ -608,38 +696,39 @@ and the maximum price per unit of that resource that the user is willing to pay.
 <h2 id="fee_units"><a class="anchor" href="#fee_units"></a>Fee units</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The fee is denominated in ETH (this may change in future versions). Each transaction is associated with a gas estimate (explained below), and combining this with the gas price yields the estimated fee.</p>
+<p>Each transaction is associated with an estimate of the amount of gas used. Combining this estimate with the price of gas yields the estimated fee.</p>
+</div>
+<div class="paragraph">
+<p>For transactions prior to v3, the fee is denominated in WEI. For transactions v3 and later, the fee is denominated in STRK.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="how_much_fee_is_charged_high_level_overview"><a class="anchor" href="#how_much_fee_is_charged_high_level_overview"></a>How much fee is charged? High-level overview</h2>
+<h2 id="fee_calculation"><a class="anchor" href="#fee_calculation"></a>Fee calculation</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="computation"><a class="anchor" href="#computation"></a>Computation</h3>
+<h3 id="computation_without_builtins"><a class="anchor" href="#computation_without_builtins"></a>Computation without builtins</h3>
 <div class="paragraph">
-<p>Let&#8217;s analyze the correct metric for measuring transaction complexity. For simplicity, we will ignore Cairo&#8217;s builtins for the sake of the explanation, and later see how to address them.</p>
-</div>
-<div class="sect3">
-<h4 id="without_builtins"><a class="anchor" href="#without_builtins"></a>Without builtins</h4>
-<div class="paragraph">
-<p>Recall that a Cairo program execution yields an execution trace. When proving a Starknet block, we aggregate all the transactions appearing in that block to the execution trace.</p>
+<p>Let&#8217;s analyze the correct metric for measuring transaction complexity. For simplicity, we will ignore Cairo&#8217;s builtins, and address them later.</p>
 </div>
 <div class="paragraph">
-<p>Starknet&#8217;s prover generates proofs for execution traces, up to some maximal length \(L\) (Derived from the specs of the proving machine and the desired proof latency).</p>
+<p>A Cairo program execution yields an execution trace. When proving a Starknet block, we aggregate all the transactions appearing in that block to the execution trace.</p>
+</div>
+<div class="paragraph">
+<p>Starknet&#8217;s prover generates proofs for execution traces, up to some maximal length \(L\), derived from the specs of the proving machine and the desired proof latency.</p>
 </div>
 <div class="paragraph">
 <p>Tracking the execution trace length associated with each transaction is simple.
-Each assertion over field elements (such as verifying addition/multiplication over the field) requires the same, constant number of trace cells (this is where our &#8220;no-builtins&#8221; assumption kicks in! Obviously Pedersen occupies more trace cells than addition). Therefore, in a world without builtins, the fee of the transaction \(tx\) is correlated with \(\text{TraceCells}[tx]/L\).</p>
+Each assertion over field elements, such as verifying addition/multiplication over the field, requires the same, constant number of trace cells, which is where our "no-builtins" assumption kicks in: Pedersen occupies more trace cells than addition. Therefore, in a world without builtins, the fee of the transaction \(tx\) is correlated with \(\text{TraceCells}[tx]/L\).</p>
 </div>
 </div>
-<div class="sect3">
-<h4 id="adding_builtins"><a class="anchor" href="#adding_builtins"></a>Adding builtins</h4>
+<div class="sect2">
+<h3 id="computation_with_builtins"><a class="anchor" href="#computation_with_builtins"></a>Computation with builtins</h3>
 <div class="paragraph">
-<p>The Cairo execution trace is separated&#8201;&#8212;&#8201;and each builtin has its own slot. We have to mind this slot allocation when determining the fee.</p>
+<p>In the Cairo execution trace each builtin has its own slot, which is important to consider when determining the fee.</p>
 </div>
 <div class="paragraph">
-<p>Let&#8217;s go over a concrete example first. For example, imagine the following trace that the prover will occupy:</p>
+<p>For example, consider that the prover can process a trace with the following limits:</p>
 </div>
 <table class="tableblock frame-all grid-all fit-content">
 <colgroup>
@@ -650,21 +739,24 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">(up to) 500,000,000 Cairo Steps</th>
-<th class="tableblock halign-left valign-top">(up to) 20,000,000 Pedersen hashes</th>
-<th class="tableblock halign-left valign-top">(up to) 4,000,000 signature verifications</th>
-<th class="tableblock halign-left valign-top">(up to) 10,000,000 range checks</th>
+<th class="tableblock halign-left valign-top">up to 500,000,000 Cairo Steps</th>
+<th class="tableblock halign-left valign-top">up to 20,000,000 Pedersen hashes</th>
+<th class="tableblock halign-left valign-top">up to 4,000,000 signature verifications</th>
+<th class="tableblock halign-left valign-top">up to 10,000,000 range checks</th>
 </tr>
 </thead>
 </table>
 <div class="paragraph">
-<p>The proof is closed and sent to L1 when any of these components becomes full.</p>
+<p>The proof is closed and sent to L1 when any of these slots is filled.</p>
 </div>
 <div class="paragraph">
-<p>Suppose, for example, that a transaction uses 10,000 Cairo steps and 500 Pedersen hashes. We can squeeze at most 40,000 such transactions into our hypothetical trace (20,000,000/500). Therefore, its gas price will be correlated with 1/40,000 of the cost of submitting proof.</p>
+<p>Suppose that a transaction uses 10,000 Cairo steps and 500 Pedersen hashes. At most 40,000 such transactions can fit into the hypothetical trace (20,000,000/500). Therefore, its gas price correlates with 1/40,000 of the cost of submitting proof.</p>
 </div>
 <div class="paragraph">
-<p>Notice we completely ignored the number of Cairo steps in this transaction performance estimation, as it is not the limiting factor (since 500,000,000/10,000 &gt; 20,000,000/500). With this example in mind, we can now formulate the exact fee associated with L2 computation.</p>
+<p>Notice that this estimate ignores the number of Cairo steps, as it is not the limiting factor, since 500,000,000/10,000 &gt; 20,000,000/500.</p>
+</div>
+<div class="paragraph">
+<p>With this example in mind, it is possible to formulate the exact fee associated with L2 computation.</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -674,7 +766,7 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The allocation of resources among built-in operations must be predetermined; it&#8217;s not possible to decide post-execution to include only 20,000,001 Pedersen hashes without additional components.</p>
+<p>The allocation of resources among builtin operations must be predetermined; it is not possible to decide, post-execution, to include only 20,000,001 Pedersen hashes without additional components.</p>
 </div>
 <div class="paragraph">
 <p>This safeguards fairness and prevents manipulation, ensuring integrity in proof generation and fee determination.</p>
@@ -684,29 +776,29 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 </table>
 </div>
 </div>
-<div class="sect3">
-<h4 id="general_case"><a class="anchor" href="#general_case"></a>General case</h4>
+<div class="sect2">
+<h3 id="calculation_of_computation_costs"><a class="anchor" href="#calculation_of_computation_costs"></a>Calculation of computation costs</h3>
 <div class="paragraph">
-<p>For each transaction, the sequencer calculates a vector <code>CairoResourceUsage</code> holding:</p>
+<p>For each transaction, the sequencer calculates a vector, <code>CairoResourceUsage</code>, that contains the following:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Number of Cairo steps</p>
+<p>The number of Cairo steps.</p>
 </li>
 <li>
-<p>Number of applications of each Cairo builtin (e.g., five range checks and two Pedersen hashes)</p>
+<p>The number of applications of each Cairo builtin. For example, five range checks and two Pedersen hashes.</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>The sequencer crosses this information with the <code>CairoResourceFeeWeights</code> vector. For each resource type (step or a specific builtin application), <code>CairoResourceFeeWeights</code> has an entry that specifies the relative gas cost of that component in the proof.</p>
+<p>The sequencer crosses this information with the <code>CairoResourceFeeWeights</code> vector. For each resource type, either a Cairo step or a specific builtin application, <code>CairoResourceFeeWeights</code> has an entry that specifies the relative gas cost of that component in the proof.</p>
 </div>
 <div class="paragraph">
-<p>Going back to the above example, if the cost of submitting a proof with 20,000,000 Pedersen hashes is roughly 5m gas, then the weight of the Pedersen builtin is 0.25 gas per application (5,000,000/20,000,000). The sequencer has a pre-defined weights vector, in accordance with the proof parameters.</p>
+<p>Going back to the above example, if the cost of submitting a proof with 20,000,000 Pedersen hashes is roughly 5m gas, then the weight of the Pedersen builtin is 0.25 gas per application (5,000,000/20,000,000). The sequencer has a predefined weights vector, in accordance with the proof parameters.</p>
 </div>
 <div class="paragraph">
-<p>The sequencer will charge only according to the limiting factor! Therefore the fee is correlated with:</p>
+<p>The sequencer charges only according to the limiting factor. Therefore the fee is correlated with:</p>
 </div>
 <div class="stemblock">
 <div class="content">
@@ -714,61 +806,61 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 </div>
 </div>
 <div class="paragraph">
-<p>Where \(k\) here enumerates the Cairo resource components, i.e. the number of steps and builtins used.</p>
+<p>where \(k\) enumerates the Cairo resource components, that is the number of Cairo steps and builtins used.</p>
 </div>
 <div class="paragraph">
-<p>The weights are:</p>
+<p>The weights are listed in the table <a href="#gas_cost_per_cairo_step_or_builtin_step">Amount of gas used per Cairo step or per each time a Cairo builtin is applied</a>.</p>
 </div>
-<table class="tableblock frame-all grid-all stripes-even fit-content">
+<table id="gas_cost_per_cairo_step_or_builtin_step" class="tableblock frame-all grid-all stripes-even" style="width: 80%;">
+<caption class="title">Table 1. Amount of gas used per Cairo step or per each time a Cairo builtin is applied</caption>
 <colgroup>
-<col>
-<col>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Step</th>
+<th class="tableblock halign-left valign-top">Step or builtin</th>
 <th class="tableblock halign-left valign-top">Gas cost</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Cairo step</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0.01 gas/step</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.005 gas/step</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Pedersen</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0.32 gas/application</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Poseidon</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0.32 gas/application</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Range check</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0.16 gas/application</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Poseidon</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.16 gas/application</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Range check</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.08 gas/application</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">ECDSA</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">20.48 gas/application</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">10.24 gas/application</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Keccak</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">20.48 gas/application</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">10.24 gas/application</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Bitwise</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0.64 gas/application</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.32 gas/application</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">EC_OP</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">10.24 gas/application</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5.12 gas/application</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-</div>
 <div class="sect2">
-<h3 id="_on_chain_data"><a class="anchor" href="#_on_chain_data"></a>Onchain data</h3>
+<h3 id="onchain_data_components"><a class="anchor" href="#onchain_data_components"></a>Onchain data components</h3>
 <div class="paragraph">
 <p>The onchain data associated with a transaction is composed of three parts</p>
 </div>
@@ -785,25 +877,94 @@ Each assertion over field elements (such as verifying addition/multiplication ov
 </li>
 </ul>
 </div>
-<div class="sect3">
-<h4 id="storage_updates"><a class="anchor" href="#storage_updates"></a>Storage updates</h4>
+</div>
+<div class="sect2">
+<h3 id="storage_updates"><a class="anchor" href="#storage_updates"></a>Onchain data: Storage updates</h3>
 <div class="paragraph">
-<p>Whenever a transaction updates a key at the storage of some contract, the following data
-reaches L1:</p>
+<p>Whenever a transaction updates some value in the storage of some contract, the following data is sent to L1:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Contract_address</p>
+<p>two 32-byte words per contract</p>
 </li>
 <li>
-<p>Number of updated keys in that contract</p>
+<p>two 32-byte words for every updated storage value</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>For information on the exact data and its construction, see <a href="../on-chain-data/#v0.11.0_format" class="xref page">Data availability</a>.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Only the most recent value reaches L1. So the transaction&#8217;s fee only depends on the number of <em>unique</em> storage updates. If the same storage cell is updated multiple times within the transaction, the fee remains that of a single update.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>The following formula describes the storage update fee for a transaction:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{\textit{gas_price}(\text{calldata_cost} \cdot n + 200 \cdot n)}_{\text{contract addresses +  new nonce and number of storage updates
+}} \\
+
++ \\
+
+\underbrace{\textit{gas_price} \cdot (\text{calldata_cost}(2m-1)+272)}_{\text{storage updates}}\]
+</div>
+</div>
+<div class="paragraph">
+<p>where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(n\) is the number of unique contracts updated.</p>
 </li>
 <li>
-<p>Key to update</p>
+<p>\(m\) is the number of unique values updated. Be aware that the account balance is always updated, because the account needs to pay a fee. A discount is applied to the account balance update to consider that the value of the account balance most likely does not use the full 32 bytes allotted to it.</p>
 </li>
 <li>
-<p>New value</p>
+<p>\(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
+</li>
+<li>
+<p>\(200\) is the cost of the onchain storage update&#8217;s meta information and nonce, in gas. This value accounts for the fact that out of 32 bytes in the meta information, only the following six bytes are non-zero:</p>
+<div class="openblock">
+<div class="content">
+<div class="ulist">
+<ul>
+<li>
+<p>three bytes for the nonce</p>
+</li>
+<li>
+<p>two bytes for storage updates</p>
+</li>
+<li>
+<p>one byte for the class information flag</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>The cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. So 6 non-zero bytes @ 16 gas per byte + 26 bytes of zeros @ 4 gas per byte results in 200 gas.</p>
+</div>
+</li>
+<li>
+<p>\(\text{272}\) is the cost of updating the balance, in gas. This value assumes a balance of at most 12 non-zero bytes, which is enough for 1.2 billion ETH or STRK.</p>
+<div class="paragraph">
+<p>The cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. So 12 non-zero bytes @ 16 gas per byte + 20 bytes of zeros @ 4 gas per byte results in 272 gas.</p>
+</div>
 </li>
 </ul>
 </div>
@@ -815,43 +976,18 @@ reaches L1:</p>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Note that only the most recent value reaches L1. That is, the transaction&#8217;s fee only depends on the number of <strong>unique</strong> storage updates (if the same storage cell is updated multiple times within the transaction, the fee remains that of a single update).</p>
-</div>
-</td>
-</tr>
-</table>
+<p>Improvements to the above pessimistic estimation might be gradually implemented in future versions of Starknet.</p>
 </div>
 <div class="paragraph">
-<p>Consequently, the associated storage update fee for a transaction updating \(n\) unique contracts and \(m\) unique keys is:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[\text{gas_price}\cdot c_w\cdot\underbrace{(2n+2m)}_{\text{number of words}}\]
-</div>
-</div>
-<div class="paragraph">
-<p>where \(c_w\) is the calldata cost (in gas) per 32-byte word.</p>
-</div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-tip" title="Tip"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Note that there are many possible improvements to the above pessimistic estimation that will be gradually presented in future versions of Starknet.</p>
-</div>
-<div class="paragraph">
-<p>For example, if different transactions within the same block update the same storage cell, there is no need to charge both of them (only the latest value reaches L1). In the future, Starknet may include a refund mechanism for such cases.</p>
+<p>For example, if different transactions within the same block update the same storage cell, there is no need to charge for both transactions, because only the last value reaches L1. In the future, Starknet might include a refund mechanism for such cases.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 </div>
-<div class="sect3">
-<h4 id="l2l1_messages"><a class="anchor" href="#l2l1_messages"></a>L2→L1 messages</h4>
+<div class="sect2">
+<h3 id="l_2→l_1_messages"><a class="anchor" href="#l_2→l_1_messages"></a>Onchain data: L2&#8594;L1 messages</h3>
 <div class="paragraph">
 <p>When a transaction that raises the <code>send_message_to_l1</code> syscall is included in a state update, the following data reaches L1:</p>
 </div>
@@ -876,92 +1012,51 @@ reaches L1:</p>
 </div>
 <div class="stemblock">
 <div class="content">
-\[\text{gas_price}\cdot c_w\cdot(3+\text{payload_size})\]
+\[\textit{gas_price}\cdot \text{calldata_cost}\cdot(3+\text{payload_size})\]
 </div>
 </div>
 <div class="paragraph">
-<p>where \(c_w\) is the calldata cost (in gas) per 32-byte word.</p>
+<p>where \(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
 </div>
 </div>
-<div class="sect3">
-<h4 id="deployed_contracts"><a class="anchor" href="#deployed_contracts"></a>Deployed contracts</h4>
+<div class="sect2">
+<h3 id="deployed_contracts"><a class="anchor" href="#deployed_contracts"></a>Onchain data: Deployed contracts</h3>
 <div class="paragraph">
 <p>When a transaction that raises the <code>deploy</code> syscall is included in a state update, the following data reaches L1:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Contract address</p>
+<p>contract address</p>
 </li>
 <li>
-<p>Class hash</p>
+<p>number of storage updates and the new nonce</p>
+</li>
+<li>
+<p>class hash</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>Consequently, the fee associated with a single deployment is:</p>
+<p>The following formula describes the fee for a single deployment:</p>
 </div>
 <div class="stemblock">
 <div class="content">
-\[\text{gas_price}\cdot 2 c_w\]
+\[\textit{gas_price}\cdot 3 \cdot \text{calldata_cost}\]
 </div>
 </div>
 <div class="paragraph">
-<p>where \(c_w\) is the calldata cost (in gas) per 32-byte word.</p>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="overall_fee"><a class="anchor" href="#overall_fee"></a>Overall fee</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The fee for a transaction with:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Cairo usage represented by the vector \(v\) (the entries of \(v\) correspond to the number of steps and number of applications per builtin)</p>
-</li>
-<li>
-<p>\(n\) unique contract updates</p>
-</li>
-<li>
-<p>\(m\) unique key updates</p>
-</li>
-<li>
-<p>\(t\) messages with payload sizes \(q_1,...,q_t\)</p>
-</li>
-<li>
-<p>\(\ell\) contract deployments</p>
-</li>
-</ul>
+<p>where \(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
 </div>
 <div class="paragraph">
-<p>is given by:</p>
+<p>For more information on data saved on L1, see <a href="../on-chain-data/" class="xref page">Data availability</a>.</p>
 </div>
-<div class="stemblock">
-<div class="content">
-\[F = \text{gas_price}\cdot\left(\max_k v_k w_k + c_w\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i + 2\ell\right)\right)\]
-</div>
-</div>
-<div class="paragraph">
-<p>where \(w\) is the weights vector discussed <a href="#general_case">above</a> and \(c_w\) is the calldata cost (in gas) per 32-byte word.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="when_is_the_fee_charged"><a class="anchor" href="#when_is_the_fee_charged"></a>When is the fee charged?</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The fee is charged atomically with the transaction execution on L2. The Starknet OS injects a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.</p>
 </div>
 </div>
 </div>
 <nav class="pagination">
   <span class="prev"><a href="../transactions/">Transaction types</a></span>
-  <span class="next"><a href="../starknet-state/">Starknet state</a></span>
+  <span class="next"><a href="../fee-mechanism-pre-v0.13.0/">Gas and transaction fees (Prior to Starknet 0.13.0)</a></span>
 </nav>
 </article>
   </div>
