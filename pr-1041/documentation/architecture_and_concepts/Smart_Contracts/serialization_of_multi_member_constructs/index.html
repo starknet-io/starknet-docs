@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Serialization of multi-member constructs in Cairo :: Starknet documentation</title>
+    <title>Serialization of types in Cairo :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Smart_Contracts/serialization_of_multi_member_constructs/">
     <link rel="prev" href="../system-calls-cairo1/">
     <link rel="next" href="../../Cryptography/p-value/">
@@ -114,7 +114,7 @@
   </ul>
 </nav>
   <div class="edit-this-page">
-    <a href="https://github.com/starknet-io/starknet-docs/edit/master/components/Starknet/modules/architecture_and_concepts/pages/Smart_Contracts/serialization_of_multi_member_constructs.adoc"><img class="pencil">Edit this Page</a>
+    <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture_and_concepts/pages/Smart_Contracts/serialization_of_multi_member_constructs.adoc"><img class="pencil">Edit this Page</a>
   </div>
 </div>
 <div class="body">
@@ -563,47 +563,212 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Serialization of multi-member constructs in Cairo</h1>
+<h1 class="page">Serialization of types in Cairo</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>When you interact with contracts, especially if you are a library or SDK developer that wants to create transactions, you need to understand how Cairo handles multi-member data structures, such as arrays and structs, and even integers larger than 252 bits.</p>
+<p>When you interact with contracts, especially if you are a library or SDK developer that wants to create transactions, you need to understand how Cairo handles types that are larger than 252 bits so you can correctly formulate the calldata in a transaction.</p>
 </div>
 <div class="paragraph">
-<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as <code>uint256</code> or arrays, are ultimately represented by a list of felts.</p>
+<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as <code>u256</code> or arrays, are ultimately represented by a list of felts.</p>
 </div>
 <div class="paragraph">
-<p>To interact with a contract, you need to know how the types in the contract’s function signature are serialized, so you can correctly formulate the calldata in the transaction. This calldata is usually encapsulated by an SDK, such as <code>starknet.js</code>. So if you use an SDK, you don’t necessarily need to know that <code>u256</code>, for example, is represented by two felts. You simply specify a <code>uint256</code>, and the SDK properly encodes it.</p>
+<p>In order to interact with a contract, you need to know how the felts in these lists are serialized in the Cairo VM so you can correctly formulate the calldata in the transaction. SDKs, such as starknet.js, serialize these values for you, so you can simply specify any type and the SDK properly formulates the calldata. For example, you don’t need to know that a <code>u256</code> value is represented by two <code>felt252</code> values. You can simply specify a <code>u256</code> value in your code, and the SDK takes care of the serialization and encoding.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="affected_data_types"><a class="anchor" href="#affected_data_types"></a>Affected data types</h2>
+<h2 id="data_types_with_trivial_serialization"><a class="anchor" href="#data_types_with_trivial_serialization"></a>Data types with trivial serialization</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following data types are serialized:</p>
+<p>The following types are smaller than 252 bits. For these types, each value is represented by a single-member list, whose only member is a <code>felt252</code> value.</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>addresses: <code>ContractAddress</code>, <code>EthAddress</code>, <code>StorageAddress</code>, <code>ClassHash</code></p>
+<p>Signed integers smaller than 252 bits: <code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code>, and <code>i128</code>.</p>
+<div class="paragraph">
+<p>A negative value, \(-x\), is serialized as \(P-x\), where:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[P = 2^{251} + 17*2^{192} + 1\]
+</div>
+</div>
+<div class="paragraph">
+<p>For example, <code>-5</code> is serialized as \(P-5\). For more information on the value of \(P\), see <a href="../../Cryptography/p-value/" class="xref page">The STARK field</a>.</p>
+</div>
 </li>
 <li>
-<p>all integer types</p>
+<p><code>ContractAddress</code></p>
 </li>
 <li>
-<p>array</p>
+<p><code>EthAddress</code></p>
 </li>
 <li>
-<p>enum</p>
+<p><code>StorageAddress</code></p>
 </li>
 <li>
-<p>struct</p>
+<p><code>ClassHash</code></p>
 </li>
 <li>
-<p>string, represented by the <code>ByteArray</code> type</p>
+<p>Unsigned integers smaller than 252 bits: <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, and <code>usize</code></p>
+</li>
+<li>
+<p><code>byte31</code></p>
+</li>
+<li>
+<p><code>felt252</code></p>
 </li>
 </ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="data_types_that_require_serialization"><a class="anchor" href="#data_types_that_require_serialization"></a>Data types that require serialization</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following data types require serialization:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Unsigned integer types 252 bits or larger: <code>u252</code> and <code>u512</code>.</p>
+</li>
+<li>
+<p><code>array</code></p>
+</li>
+<li>
+<p><code>enum</code></p>
+</li>
+<li>
+<p><code>struct</code></p>
+</li>
+<li>
+<p><code>ByteArray</code>, which represents strings</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="serialization_of_unsigned_integers"><a class="anchor" href="#serialization_of_unsigned_integers"></a>Serialization of unsigned integers</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>For <code>u256</code> and <code>u512</code> values, serialization is necessary.</p>
+</div>
+<div class="sect2">
+<h3 id="serialization_in_u256_values"><a class="anchor" href="#serialization_in_u256_values"></a>Serialization in <code>u256</code> values</h3>
+<div class="paragraph">
+<p>A <code>u256</code> value in Cairo is serialized across two <code>felt252</code> values, each containing 128 meaningful bits. The most significant bit is in the first 128-bit <code>felt252</code> value. For example:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A <code>u256</code> variable whose decimal value is <code>2</code> is serialized as <code>(0,2)</code><sub>decimal</sub> using two <code>felt252</code> values, each with 128 meaningful bits, as follows:</p>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top"><code>felt252</code><sub>1</sub> = <code>0</code><sub>binary</sub> = <code>0</code><sub>decimal</sub></th>
+<th class="tableblock halign-left valign-top"><code>felt252</code><sub>2</sub> = <code>10</code><sub>binary</sub> = <code>2<sub>decimal</sub></code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots0}_{\text{128 bits}}\]
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots10}_{\text{128 bits}}\]
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</li>
+<li>
+<p>A <code>u256</code> variable whose decimal value is <code>2<sup>128</sup></code> is serialized as <code>(1,0)</code><sub>decimal</sub> using two <code>felt252</code> values, each with 128 meaningful bits, as follows:</p>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top"><code>felt252</code><sub>1</sub> = <code>1</code><sub>binary</sub> = <code>1</code><sub>decimal</sub></th>
+<th class="tableblock halign-left valign-top"><code>felt252</code><sub>2</sub> = <code>0</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots1}_{\text{128 bits}}\]
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots0}_{\text{128 bits}}\]
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</li>
+<li>
+<p>A <code>u256</code> variable whose decimal value is <code>2<sup>129</sup>+2<sup>129</sup>+20</code>, is serialized as <code>(3,20)</code><sub>decimal</sub> using two <code>felt252</code> values, each with 128 meaningful bits, as follows:</p>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top"><code>felt252</code><sub>1</sub> = <code>11</code><sub>binary</sub> = <code>3</code><sub>decimal</sub></th>
+<th class="tableblock halign-left valign-top"><code>felt252</code><sub>2</sub> = <code>10100</code><sub>binary</sub> = <code>20</code><sub>decimal</sub></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots11}_{\text{128 bits}}\]
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots10100}_{\text{128 bits}}\]
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="serialization_in_u512_values"><a class="anchor" href="#serialization_in_u512_values"></a>Serialization of <code>u512</code> values</h3>
+<div class="paragraph">
+<p>A <code>u512</code> value in Cairo is serialized similarly to a <code>u256</code> value, but it requires four <code>felt252</code> values, each with 128 bits. The most significant bit is in the first 128-bit value.</p>
+</div>
+<hr>
+<hr>
+<hr>
+<hr>
 </div>
 </div>
 </div>
