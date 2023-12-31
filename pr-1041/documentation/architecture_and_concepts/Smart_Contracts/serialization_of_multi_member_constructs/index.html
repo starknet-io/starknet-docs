@@ -788,10 +788,228 @@
 </div>
 <div class="stemblock">
 <div class="content">
-\[\underbrace{3}_{\text{number_of_array_members}}
+\[\underbrace{3}_{\text{number_of_array_members}} ,
 \underbrace{0,10}_{\text{serialized_member_0}}
 \underbrace{0,20}_{\text{serialized_member_1}}
 \underbrace{1,0}_{\text{serialized_member_2}}\]
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="serialization_of_enums"><a class="anchor" href="#serialization_of_enums"></a>Serialization of enums</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>An enum is serialized as follows when encoded as calldata:</p>
+</div>
+<div class="paragraph">
+<p><code>&lt;index_of_enum_variant&gt;,&lt;serialized_variant_type&gt;</code></p>
+</div>
+<div class="paragraph">
+<p>For example, consider the following enum:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">enum WeekEnd \{
+    Saturday: (), // index=0, no associated value
+    Sunday: u256, // index=1, two 128-bit felts.
+                  //The most significant bit is first.
+}
+
+...
+
+fn process(self: WeekEnd) \{
+    match self \{
+        WeekEnd::Sunday, // index=0, no associated value
+        WeekEnd::Monday(5) // index=1, two 128-bit felts.
+                           //The most significant bit is first.
+        }
+    }</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The calldata for this enum is serialized as follows:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Instance</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Values to pass in calldata</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>WeekEnd::Sunday</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">index=<code>0</code>, no corresponding value.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>0</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>WeekEnd::Monday(5)</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>index=<code>1</code></p>
+</div>
+<div class="paragraph">
+<p>One <code>u256</code> value=two <code>felt252</code> values of 128-bits each.</p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1,0,5</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="serialization_of_structs"><a class="anchor" href="#serialization_of_structs"></a>Serialization of structs</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You need to represent each member of a struct as a serialized set of <code>felt252</code> values, where each field value can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a word.</p>
+</div>
+<div class="paragraph">
+<p>You serialize a struct by serializing its members one at a time.</p>
+</div>
+<div class="paragraph">
+<p>The values of a struct in calldata are serialized according to its members, in the order in which they appear in the <em>definition</em> of the struct, even if the members appear out of order in the instantiation of the struct.</p>
+</div>
+<div class="paragraph">
+<p>For example, consider the following definition of the struct <code>myStruct</code> and its instantiation as <code>struct</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">struct myStruct {
+    a: u256,
+    b: felt252,
+    c: Array&lt;felt252&gt;
+}
+
+...
+
+fn main() {
+    let struct1 = myStruct {
+        a: 2, b: 5, c: [1,2,3]
+    };
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The calldata for is the same for both of the following instantiations of the struct&#8217;s variants:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>b: 5, c: [1,2,3], a: 2</code></p>
+</li>
+<li>
+<p><code>a: 2, b: 5, c: [1,2,3]</code></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The serialized calldata for this struct is determined as shown in the table <a href="#calldata_serialization_for_a_struct_in_cairo">Calldata serialization for a struct in Cairo</a>.</p>
+</div>
+<table id="calldata_serialization_for_a_struct_in_cairo" class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 1. Calldata serialization for a struct in Cairo</caption>
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Member</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Values to pass in calldata</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>a: 2</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A <code>u256</code> value is serialized as two <code>felt252</code> values, the most significant bit is first.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>0,2</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>b: 5</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">One <code>felt252</code> value</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>5</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>c: [1,2,3]</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">An array of three <code>felt252</code> values</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>3,1,2,3</code></p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>These are the serialized values in calldata: <code>0,2,5,3,1,2,3</code></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="serialization_of_ByteArray_values"><a class="anchor" href="#serialization_of_ByteArray_values"></a>Serialization of <code>ByteArray</code> values</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A string is represented in Cairo as a <code>ByteArray</code> type. The first byte of each word in the byte array is the most significant byte in the word. A byte array has the following structure:</p>
+</div>
+<div class="hdlist">
+<table>
+<tr>
+<td class="hdlist1">
+1st member
+</td>
+<td class="hdlist2">
+<p>The number of 31-byte words in the array construct.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+middle members
+</td>
+<td class="hdlist2">
+<p>The data. One or more field values, each containing at most 31 bytes. where the last, or only, value is less than or equal to 30 bytes. A value of 30 bytes or less is a pending word.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+last member
+</td>
+<td class="hdlist2">
+<p>The number of bytes of the pending word.</p>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Example 1: A string shorter than 31 characters
+Consider the string <code>hello</code>, which is represented by the 5-byte hex value <code>0x68656c6c6f</code>. The resulting byte array is serialized as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">...
+    0, // Number of 31-byte words in the array construct.
+    0x68656c6c6f, // Pending word
+    5 // Length of the pending word, in bytes
+...</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<div class="title">Example 2: A string longer than 31 bytes</div>
+<p>Consider the string <code>Long string, more than 31 characters.</code>, which is represented by the following hex values:
+0x4c6f6e6720737472696e672c206d6f7265207468616e203331206368617261 (31-byte word)
+0x63746572732e (6-byte pending word)</p>
+</div>
+<div class="paragraph">
+<p>The resulting byte array is serialized as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">...
+    1, // Number of 31-byte words in the array construct.
+    0x4c6f6e6720737472696e672c206d6f7265207468616e203331206368617261, // 31-byte word.
+    0x63746572732e, // Pending word
+    6 // Length of the pending word, in bytes
+...</code></pre>
 </div>
 </div>
 <hr>
