@@ -1,50 +1,262 @@
-[id="serialization_of_cairo_types"]
-= Serialization of multi-member constructs in Cairo
+[id="serialization_of_types_in_Cairo"]
+= Serialization of types in Cairo
 
-When you interact with contracts, especially if you are a library or SDK developer that wants to create transactions, you need to understand how Cairo handles multi-member data structures, such as arrays and structs, and even integers larger than 252 bits.
+When you interact with contracts, especially if you are a library or SDK developer that wants to create transactions, you need to understand how Cairo handles types that are larger than 252 bits so you can correctly formulate the calldata in a transaction.
 
-The field element (`felt252`), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as `uint256` or arrays, are ultimately represented by a list of felts.
+The field element (`felt252`), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as `u256` or arrays, are ultimately represented by a list of felts.
 
-To interact with a contract, you need to know how the types in the contract’s function signature are serialized, so you can correctly formulate the calldata in the transaction. This calldata is usually encapsulated by an SDK, such as `starknet.js`. So if you use an SDK, you don’t necessarily need to know that `u256`, for example, is represented by two felts. You simply specify a `uint256`, and the SDK properly encodes it.
-
-== Affected data types
-
-The following data types are serialized:
-
-* addresses: `ContractAddress`, `EthAddress`, `StorageAddress`, `ClassHash`
-* all integer types
-* array
-* enum
-* struct
-* string, represented by the `ByteArray` type
+In order to interact with a contract, you need to know how the felts in these lists are serialized in the Cairo VM so you can correctly formulate the calldata in the transaction. SDKs, such as starknet.js, serialize these values for you, so you can simply specify any type and the SDK properly formulates the calldata. For example, you don’t need to know that a `u256` value is represented by two `felt252` values. You can simply specify a `u256` value in your code, and the SDK takes care of the serialization and encoding.
 
 
-== How these data types are serialized in Cairo
+[#data_types_with_trivial_serialization]
+== Data types with trivial serialization
 
-With a structure that includes multiple members, you need to represent each member as a serialized set of field elements, where each field element can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a _word_.
+The following types are smaller than 252 bits. For these types, each value is represented by a single-member list, whose only member is a `felt252` value.
 
-[NOTE]
-====
-Both a byte and a character contain 8-bits. Keep this in mind when referring to strings, which are represented by the `ByteArray` type: 31 bytes is the same as 31 characters.
-====
+* Signed integers smaller than 252 bits: `i8`, `i16`, `i32`, `i64`, and `i128`.
++
+A negative value, stem:[-x], is serialized as stem:[P-x], where:
++
+[stem]
+++++
+P = 2^{251} + 17*2^{192} + 1
+++++
++
+For example, `-5` is serialized as stem:[P-5]. For more information on the value of stem:[P], see xref:architecture_and_concepts:Cryptography/p-value.adoc[The STARK field].
 
-For example, a string is represented in Cairo as a `ByteArray` type. The first byte of each word in the byte array is the most significant byte in the word. A byte array has the following structure:
+* `ContractAddress`
+* `EthAddress`
+* `StorageAddress`
+* `ClassHash`
+* Unsigned integers smaller than 252 bits: `u8`, `u16`, `u32`, `u64`, `u128`, and `usize`
+* `byte31`
+* `felt252`
 
-// This felt252 actually represents a bytes31, with < 31 bytes.
-// It is represented as a felt252 to improve performance of building the byte array.
-// The number of bytes in here is specified in `pending_word_len`.
-// The first byte is the most significant byte among the `pending_word_len` bytes in the word.
-// Should be in range [0, 30].
-// pub(crate) pending_word_len: usize,
+[#data_types_that_require_serialization]
+== Data types that require serialization
 
-[horizontal,labelwidth="20"]
-1st member:: The number of 31-byte words in the array construct. #Is this a separate `felt252`?#
-middle members:: The data. One or more field elements, where the last, or only, element is less than or equal to 30 bytes. An element of 30 bytes or less is a _pending word_.
-last member:: The number of bytes of the pending word. #Is this a separate `felt252`?#
+The following data types require serialization:
 
-.Example 1: A string shorter than 31 characters
+* Unsigned integer types 252 bits or larger: `u252` and `u512`.
+* `array`
+* `enum`
+* `struct`
+* `ByteArray`, which represents strings
 
-Consider the string `"hello"`, which is represented by the 5-byte hex value `0x68656c6c6f`. The resulting byte array is serialized as follows:
+
+[#serialization_of_unsigned_integers]
+== Serialization of unsigned integers
+
+For `u256` and `u512` values, serialization is necessary.
+
+[#serialization_in_u256_values]
+=== Serialization in `u256` values
+
+A `u256` value in Cairo is serialized across two `felt252` values, each containing 128 meaningful bits. The most significant bit is in the first 128-bit `felt252` value. For example:
+
+* A `u256` variable whose decimal value is `2` is serialized as `(0,2)`~decimal~ using two `felt252` values, each with 128 meaningful bits, as follows:
++
+[cols="2"]
+|===
+|`felt252`~1~ = `0`~binary~ = `0`~decimal~|`felt252`~2~ = `10`~binary~ = `2~decimal~`
+
+a|//`0b000...000`
+[stem]
+++++
+\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots0}_{\text{128 bits}}
+++++
+a| //`0b000...000`
+[stem]
+++++
+\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots10}_{\text{128 bits}}
+++++
+|===
+
+* A `u256` variable whose decimal value is `2^128^` is serialized as `(1,0)`~decimal~ using two `felt252` values, each with 128 meaningful bits, as follows:
++
+[cols="2"]
+|===
+|`felt252`~1~ = `1`~binary~ = `1`~decimal~|`felt252`~2~ = `0`
+
+a|//`0b000...000`
+[stem]
+++++
+\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots1}_{\text{128 bits}}
+++++
+a| //`0b000...000`
+[stem]
+++++
+\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots0}_{\text{128 bits}}
+++++
+|===
+
+* A `u256` variable whose decimal value is `2^129^+2^129^+20`, is serialized as `(3,20)`~decimal~ using two `felt252` values, each with 128 meaningful bits, as follows:
++
+[cols="2"]
+|===
+|`felt252`~1~ = `11`~binary~ = `3`~decimal~|`felt252`~2~ = `10100`~binary~ = `20`~decimal~
+
+a|//`0b000...000`
+[stem]
+++++
+\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots11}_{\text{128 bits}}
+++++
+a| //`0b000...000`
+[stem]
+++++
+\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots10100}_{\text{128 bits}}
+++++
+|===
+
+[#serialization_in_u512_values]
+=== Serialization of `u512` values
+
+A `u512` value in Cairo is serialized similarly to a `u256` value, but it requires four `felt252` values, each with 128 bits. The most significant bit is in the first 128-bit value.
+
+[#serialization_of_arrays]
+== Serialization of arrays
+
+An array is serialized as follows when encoded as calldata:
+
+`<number_of_array_members>, <serialized_member_0>,..., <serialized_member_n>`
+
+For example, consider the following array of `u256` values:
+
+`Array<u256>[10,20,2^128^]`
+
+Each `u256` value in the array is represented by two `felt252` values. So the calldata for the array above is serialized as follows:
+
+// `3,0,10,0,20,1,0`
+
+[stem]
+++++
+\underbrace{3}_{\text{number_of_array_members}} ,
+\underbrace{0,10}_{\text{serialized_member_0}}
+\underbrace{0,20}_{\text{serialized_member_1}}
+\underbrace{1,0}_{\text{serialized_member_2}}
+++++
+
+
+[#serialization_of_enums]
+== Serialization of enums
+
+An enum is serialized as follows when encoded as calldata:
+
+`<index_of_enum_variant>,<serialized_variant_type>`
+
+For example, consider the following enum:
+
+[source,cairo]
+----
+enum WeekEnd \{
+    Saturday: (), // index=0, no associated value
+    Sunday: u256, // index=1, two 128-bit felts.
+                  //The most significant bit is first.
+}
+
+...
+
+fn process(self: WeekEnd) \{
+    match self \{
+        WeekEnd::Sunday, // index=0, no associated value
+        WeekEnd::Monday(5) // index=1, two 128-bit felts.
+                           //The most significant bit is first.
+        }
+    }
+----
+
+The calldata for this enum is serialized as follows:
+
+[cols=",,",]
+|===
+|Instance |Description |Values to pass in calldata
+
+|`WeekEnd::Sunday` |index=`0`, no corresponding value. |`0`
+|`WeekEnd::Monday(5)` a|
+index=`1`
+
+One `u256` value=two `felt252` values of 128-bits each.
+
+|`1,0,5`
+|===
+
+
+
+[#serialization_of_structs]
+== Serialization of structs
+You need to represent each member of a struct as a serialized set of `felt252` values, where each field value can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a word.
+
+You serialize a struct by serializing its members one at a time.
+
+The values of a struct in calldata are serialized according to its members, in the order in which they appear in the _definition_ of the struct, even if the members appear out of order in the instantiation of the struct.
+
+For example, consider the following definition of the struct `myStruct` and its instantiation as `struct`:
+
+[source,cairo]
+----
+struct myStruct {
+    a: u256,
+    b: felt252,
+    c: Array<felt252>
+}
+
+...
+
+fn main() {
+    let struct1 = myStruct {
+        a: 2, b: 5, c: [1,2,3]
+    };
+}
+----
+
+The calldata for is the same for both of the following instantiations of the struct's variants:
+
+* `b: 5, c: [1,2,3], a: 2`
+* `a: 2, b: 5, c: [1,2,3]`
+
+The serialized calldata for this struct is determined as shown in the table xref:#calldata_serialization_for_a_struct_in_cairo[].
+
+[#calldata_serialization_for_a_struct_in_cairo]
+.Calldata serialization for a struct in Cairo
+[cols="3"]
+|===
+| Member | Description | Values to pass in calldata
+| `a: 2`
+| A `u256` value is serialized as two `felt252` values, the most significant bit is first.
+| `0,2`
+| `b: 5`
+| One `felt252` value
+| `5`
+| `c: [1,2,3]`
+| An array of three `felt252` values
+| `3,1,2,3`
+|===
+
+These are the serialized values in calldata: `0,2,5,3,1,2,3`
+
+
+
+[#serialization_of_ByteArray_values]
+== Serialization of `ByteArray` values
+
+A string is represented in Cairo as a `ByteArray` type. The first byte of each word in the byte array is the most significant byte in the word. A byte array has the following structure:
+
+[horizontal]
+1st member::
+The number of 31-byte words in the array construct.
+middle members::
+The data. One or more field values, each containing at most 31 bytes. where the last, or only, value is less than or equal to 30 bytes. A value of 30 bytes or less is a pending word.
+last member::
+The number of bytes of the pending word.
+
+Example 1: A string shorter than 31 characters
+Consider the string `hello`, which is represented by the 5-byte hex value `0x68656c6c6f`. The resulting byte array is serialized as follows:
 
 [source,cairo]
 ----
@@ -54,20 +266,10 @@ Consider the string `"hello"`, which is represented by the 5-byte hex value `0x6
     5 // Length of the pending word, in bytes
 ...
 ----
-
-
-// [horizontal,labelwidth="20"]
-// 1st member:: `0`, the number of 31-byte chunks
-// middle member:: `0x68656c6c6f`, 5-byte pending word. One member, which is also the pending word.
-// last member:: `5`, the number of bytes in the pending word.
-//
-
-.Example 2: A string longer than 31 characters
-
-Consider the string `"Long string, more than 31 characters."`, which is represented by the following hex values:
-
-* 0x4c6f6e6720737472696e672c206d6f7265207468616e203331206368617261 (31-byte word)
-* 0x63746572732e (6-byte pending word)
+.Example 2: A string longer than 31 bytes
+Consider the string `Long string, more than 31 characters.`, which is represented by the following hex values:
+0x4c6f6e6720737472696e672c206d6f7265207468616e203331206368617261 (31-byte word)
+0x63746572732e (6-byte pending word)
 
 The resulting byte array is serialized as follows:
 
@@ -80,7 +282,6 @@ The resulting byte array is serialized as follows:
     6 // Length of the pending word, in bytes
 ...
 ----
-
 
 == Additional resources
 
