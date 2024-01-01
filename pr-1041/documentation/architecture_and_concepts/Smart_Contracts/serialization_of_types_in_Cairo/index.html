@@ -775,7 +775,7 @@
 <p>An array is serialized as follows when encoded as calldata:</p>
 </div>
 <div class="paragraph">
-<p><code>&lt;_number_of_array_members_&gt;, &lt;_serialized_member_0_&gt;,&#8230;&#8203;, &lt;_serialized_member_n_&gt;</code></p>
+<p><code>&lt;<em>number_of_array_members</em>&gt;, &lt;<em>serialized_member_0</em>&gt;,&#8230;&#8203;, &lt;<em>serialized_member_n</em>&gt;</code></p>
 </div>
 <div class="paragraph">
 <p>For example, consider the following array of <code>u256</code> values:</p>
@@ -803,7 +803,7 @@
 <p>An enum is serialized as follows when encoded as calldata:</p>
 </div>
 <div class="paragraph">
-<p><code>&lt;index_of_enum_variant&gt;,&lt;serialized_variant_type&gt;</code></p>
+<p><code>&lt;<em>index_of_enum_variant</em>&gt;,&lt;<em>serialized_variant_type</em>&gt;</code></p>
 </div>
 <div class="paragraph">
 <p>For example, consider the following enum:</p>
@@ -867,13 +867,13 @@ fn process(self: WeekEnd) \{
 <h2 id="serialization_of_structs"><a class="anchor" href="#serialization_of_structs"></a>Serialization of structs</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>You need to represent each member of a struct as a serialized set of <code>felt252</code> values, where each field value can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a word.</p>
+<p>You need to represent each variant of a struct as a serialized set of <code>felt252</code> values, where each field value can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a word.</p>
 </div>
 <div class="paragraph">
-<p>You serialize a struct by serializing its members one at a time.</p>
+<p>You serialize a struct by serializing its variants one at a time.</p>
 </div>
 <div class="paragraph">
-<p>The values of a struct in calldata are serialized according to its members, in the order in which they appear in the <em>definition</em> of the struct, even if the members appear out of order in the instantiation of the struct.</p>
+<p>The values of a struct in calldata are serialized according to its variants, in the order in which they appear in the <em>definition</em> of the struct, even if the variants appear out of order in the instantiation of the struct.</p>
 </div>
 <div class="paragraph">
 <p>For example, consider the following definition of the struct <code>myStruct</code> and its instantiation as <code>struct</code>:</p>
@@ -884,30 +884,36 @@ fn process(self: WeekEnd) \{
     a: u256,
     b: felt252,
     c: Array&lt;felt252&gt;
-}
-
-...
-
-fn main() {
-    let struct1 = myStruct {
-        a: 2, b: 5, c: [1,2,3]
-    };
 }</code></pre>
 </div>
 </div>
 <div class="paragraph">
 <p>The calldata for is the same for both of the following instantiations of the struct&#8217;s variants:</p>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>b: 5, c: [1,2,3], a: 2</code></p>
-</li>
-<li>
-<p><code>a: 2, b: 5, c: [1,2,3]</code></p>
-</li>
-</ul>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let struct1 = myStruct {
+    a: 2, b: 5, c: [1,2,3]
+};</code></pre>
 </div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let struct1 = myStruct {
+    b: 5, c: [1,2,3], a: 2
+};</code></pre>
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
 <div class="paragraph">
 <p>The serialized calldata for this struct is determined as shown in the table <a href="#calldata_serialization_for_a_struct_in_cairo">Calldata serialization for a struct in Cairo</a>.</p>
 </div>
