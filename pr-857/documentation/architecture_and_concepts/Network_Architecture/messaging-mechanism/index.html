@@ -574,7 +574,7 @@
 <p>During the execution of a transaction, a contract on Starknet sends a message from L2 to L1 by calling the <code>send_message_to_L1</code> syscall.</p>
 </li>
 <li>
-<p><mark>The sequencer</mark> attaches the message parameters to the state update that includes the syscall invocation. The message parameters include the address of the recipient contract on L1 and the message data.</p>
+<p>The sequencer attaches the message parameters to the state update that includes the syscall invocation. The message parameters include the address of the recipient contract on L1 and the message data.</p>
 <div class="paragraph">
 <p>For example:</p>
 </div>
@@ -596,11 +596,10 @@ send_message_to_l1_syscall(to_address: to_address.into(), payload: payload.span(
 <p>The sequencer updates the L1 state.</p>
 </li>
 <li>
-<p>The message is stored on L1 in the Starknet Core Contract and the relevant counter is increased<br>
-<mark>What counter? How is it increased? I don&#8217;t see any mention of a counter anywhere else.</mark></p>
+<p>The message is stored on L1 in the Starknet <mark>Core Contract</mark> <mark>CHECK ETHERSCAN FOR CASING</mark> and a counter on the Core Contract increases by one.<br></p>
 </li>
 <li>
-<p><mark>The <code>processMessage</code> function, part of the Starknet Core Contract, emits the <code>LogMessageToL1</code> event</mark>, which contains the message parameters.</p>
+<p>The <code>processMessage</code> function, which is part of the Starknet Core Contract, emits the <code>LogMessageToL1</code> event, which contains the message parameters.</p>
 </li>
 <li>
 <p>The message recipient on L1 can access and consume the message by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119"><code>consumeMessageFromL2</code></a> function, which includes the message parameters within the transaction.
@@ -613,7 +612,7 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 <li>
 <p>The entity calling the function is indeed the recipient on L1.</p>
 <div class="paragraph">
-<p>In such a case, the reference count corresponding to the message hash in the Starknet Core Contract decreases by one. <mark>For more information, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L130C7-L130C7</mark>"><code>consumeMessageFromL2</code></a> function in <code>StarknetMessaging.sol</code>.</p>
+<p>In such a case, the counter corresponding to the message hash in the Starknet Core Contract decreases by one. For more information, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L130C7-L130C7#"><code>consumeMessageFromL2</code></a> function in <code>StarknetMessaging.sol</code>.</p>
 </div>
 </li>
 </ul>
@@ -667,43 +666,40 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 <div class="sect2">
 <h3 id="l2_l1_message_structure"><a class="anchor" href="#l2_l1_message_structure"></a>L2 &#8594; L1 message structure</h3>
 <div class="paragraph">
-<p><a href="#structure_l2-l1">L2 &#8594; L1 message structure</a> illustrates the structure of an L2 &#8594; L1 message.</p>
+<p>An L2 &#8594; L1 message structure is described as follows in the <a href="https://github.com/starkware-libs/starknet-specs/blob/b5c43955b1868b8e19af6d1736178e02ec84e678/api/starknet_api_openrpc.json#L3145"><code>starknet_api_openrpc.json</code></a>:</p>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p><mark>Better to show code than this table. Or show it together with code. The table shows a FromAddress, but in the example at the top of the page, I don&#8217;t see where the From address comes from.</mark></p>
-</li>
-<li>
-<p><mark>The ToAddress is <code>EthereumAddress</code>. Where can I see this type? The code at the top of the page shows <code>EthAddress</code>, not <code>EthereumAddress</code>.</mark></p>
-</li>
-<li>
-<p><mark>Same question for other items in the table.</mark></p>
-</li>
-</ul>
-</div>
-<table id="structure_l2-l1" class="tableblock frame-all grid-all fit-content stretch">
-<caption class="title">Table 1. L2 &#8594; L1 message structure</caption>
+<div class="hdlist stripes-odd">
+<table>
 <colgroup>
-<col>
-<col>
+<col style="width: 30%;">
 <col>
 </colgroup>
-<thead>
 <tr>
-<th class="tableblock halign-left valign-top"><code>FromAddress</code></th>
-<th class="tableblock halign-left valign-top"><code>ToAddress</code></th>
-<th class="tableblock halign-left valign-top"><code>Payload</code></th>
+<td class="hdlist1">
+from_address (<code>felt252</code>)
+</td>
+<td class="hdlist2">
+<p>The address of the L2 contract sending the message.</p>
+</td>
 </tr>
-</thead>
-<tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>EthereumAddress</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Payload</code></p></td>
+<td class="hdlist1">
+<code>to_address</code> (<code>EthAddress</code>)
+</td>
+<td class="hdlist2">
+<p>The target L1 address the message is sent to.</p>
+</td>
 </tr>
-</tbody>
+<tr>
+<td class="hdlist1">
+<code>payload</code> (Span&lt;`felt252`&gt;) 
+</td>
+<td class="hdlist2">
+<p>The payload of the message.</p>
+</td>
+</tr>
 </table>
+</div>
 </div>
 <div class="sect2">
 <h3 id="hashing_l2-l1"><a class="anchor" href="#hashing_l2-l1"></a>L2 &#8594; L1 message hashing</h3>
@@ -751,7 +747,7 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>An L1 contract initiates a message to an L2 contract on Starknet by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract with the message parameters. <mark>What is the up-to-date link for this function? This link is Cairo 0.</mark></p>
+<p>An L1 contract initiates a message to an L2 contract on Starknet by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract with the message parameters.</p>
 <div class="paragraph">
 <p>The Starknet Core Contract hashes the message parameters and updates the L1&#8594;L2 message mapping to indicate that a message with this hash was indeed sent. In fact, <mark>What does "in fact" refer to?</mark> the L1 contract records the fee that the sender paid. For more information, see <a href="#l1-l2-message-fees">L1 &#8594; L2 message fees</a>.</p>
 </div>
@@ -868,7 +864,7 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 <p>For completeness, we describe the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.</p>
 </div>
 <table class="tableblock frame-all grid-all fit-content stretch">
-<caption class="title">Table 2. L1 &#8594; L2 Message</caption>
+<caption class="title">Table 1. L1 &#8594; L2 Message</caption>
 <colgroup>
 <col>
 <col>
@@ -919,7 +915,7 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 </div>
 </div>
 <table class="tableblock frame-all grid-all fit-content stretch">
-<caption class="title">Table 3. L1 handler transaction</caption>
+<caption class="title">Table 2. L1 handler transaction</caption>
 <colgroup>
 <col>
 <col>
