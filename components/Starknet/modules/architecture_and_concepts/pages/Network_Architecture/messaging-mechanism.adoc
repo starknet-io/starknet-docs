@@ -9,7 +9,7 @@ Contracts on L2 can interact asynchronously with contracts on L1 using the L2->L
 The protocol consists of the following stages:
 
 . During the execution of a transaction, a contract on Starknet sends a message from L2 to L1 by calling the `send_message_to_L1` syscall.
-. #The sequencer# attaches the message parameters to the state update that includes the syscall invocation. The message parameters include the address of the recipient contract on L1 and the message data.
+. The sequencer attaches the message parameters to the state update that includes the syscall invocation. The message parameters include the address of the recipient contract on L1 and the message data.
 +
 For example:
 +
@@ -25,9 +25,8 @@ send_message_to_l1_syscall(to_address: to_address.into(), payload: payload.span(
 // The sequence is as follows:
 . The prover proves the state update that includes this transaction.
 . The sequencer updates the L1 state.
-. The message is stored on L1 in the Starknet Core Contract and the relevant counter is increased +
-#What counter? How is it increased? I don't see any mention of a counter anywhere else.#
-. #The `processMessage` function, part of the Starknet Core Contract, emits the `LogMessageToL1` event#, which contains the message parameters.
+. The message is stored on L1 in the Starknet #Core Contract# #CHECK ETHERSCAN FOR CASING# and a counter on the Core Contract increases by one. +
+. The `processMessage` function, which is part of the Starknet Core Contract, emits the `LogMessageToL1` event, which contains the message parameters.
 . The message recipient on L1 can access and consume the message by calling the link:https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119[`consumeMessageFromL2`] function, which includes the message parameters within the transaction.
 This function, which is part of the Starknet Core Contract, verifies the following:
 
@@ -38,7 +37,7 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 * The entity calling the function is indeed the recipient on L1.
 +
 // We need to separate out these functions into a reference.
-In such a case, the reference count corresponding to the message hash in the Starknet Core Contract decreases by one. #For more information, see the link:https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L130C7-L130C7#[`consumeMessageFromL2`] function in `StarknetMessaging.sol`.
+In such a case, the counter corresponding to the message hash in the Starknet Core Contract decreases by one. For more information, see the link:https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L130C7-L130C7#[`consumeMessageFromL2`] function in `StarknetMessaging.sol`.
 
 #*Diagram comments*:#
 
@@ -61,20 +60,14 @@ image::l2l1.png[L2->L1 message mechanism]
 
 === L2 -> L1 message structure
 
-xref:#structure_l2-l1[] illustrates the structure of an L2 -> L1 message.
+// xref:#structure_l2-l1[] illustrates the structure of an L2 -> L1 message.
 
-* #Better to show code than this table. Or show it together with code. The table shows a FromAddress, but in the example at the top of the page, I don't see where the From address comes from.#
-* #The ToAddress is `EthereumAddress`. Where can I see this type? The code at the top of the page shows `EthAddress`, not `EthereumAddress`.#
-* #Same question for other items in the table.#
+An L2 -> L1 message structure is described as follows in the link:https://github.com/starkware-libs/starknet-specs/blob/b5c43955b1868b8e19af6d1736178e02ec84e678/api/starknet_api_openrpc.json#L3145[`starknet_api_openrpc.json`]:
 
-[#structure_l2-l1]
-.L2 -> L1 message structure
-[%autowidth.stretch]
-|===
-| `FromAddress`    | `ToAddress`         | `Payload`
-
-| `FieldElement` | `EthereumAddress` | `Payload`
-|===
+[horizontal,labelwidth="30",role="stripes-odd"]
+from_address (`felt252`):: The address of the L2 contract sending the message.
+`to_address` (`EthAddress`):: The target L1 address the message is sent to.
+`payload` (Span<`felt252`>) :: The payload of the message.
 
 [#hashing_l2-l1]
 === L2 -> L1 message hashing
@@ -105,34 +98,33 @@ Contracts on L1 can interact asynchronously with contracts on L2 using the _L1->
 
 The protocol consists of the following stages:
 
-. An L1 contract initiates a message to an L2 contract on Starknet by calling the link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract with the message parameters. #What is the up-to-date link for this function? This link is Cairo 0.#
+. An L1 contract initiates a message to an L2 contract on Starknet by calling the link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract with the message parameters.
 +
 The Starknet Core Contract hashes the message parameters and updates the L1->L2 message mapping to indicate that a message with this hash was indeed sent. In fact, #What does "in fact" refer to?# the L1 contract records the fee that the sender paid. For more information, see xref:#l1-l2-message-fees[L1 -> L2 message fees].
 . The message is then decoded into a Starknet transaction that invokes a function annotated with the `l1_handler` decorator on the target contract. Transactions like this on L2 are called *_L1 handler transactions_*.
  .. The Starknet sequencer, upon seeing enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction.
 // What does this mean: "upon seeing enough L1 confirmations..."? Is this talking about waiting for a batch?
- .. The L2 transaction invokes the relevant `l1_handler`.
+ .. The L2 transaction invokes the relevant `l1_handler` function.
 . The L1 Handler transaction that was created in the previous step is added to a proof.
-. The state update is received on the Core contract.
+. The Core contract receives the state update.
 . The message is cleared from the Core contract's storage. At this point, the message is handled.
 
-// The above flow is illustrated in the following diagram:
-// THIS IMAGE IS WRONG & MISLEADING AND THUS COMMENTED OUT UNTIL FIXED
-// image::l1l2.png[l1l2]
+The above flow is illustrated in the following diagram:
+#THIS IMAGE IS WRONG & MISLEADING#
 
-An L1->L2 message consists of:
+image::l1l2.png[l1l2]
+
+An L1->L2 message consists of #Where is an example of an L1->L2 message?#:
 
 * L1 sender's address
 * L2 recipient's contract address
 * Function selector
 * Calldata array
 * Message nonce
-
++
 [NOTE]
 ====
-*Message nonce*
-
-The message nonce is maintained on the Starknet Core contract on L1, and is bumped whenever a message is sent to L2. The nonce is used to avoid hash collisions between different L1 handler transactions that are induced by the same message being sent on L1 multiple times.
+The message nonce is maintained on the Starknet Core contract on L1, and is #incremented# whenever a message is sent to L2. The nonce is used to avoid hash collisions between different L1 handler transactions that are #caused# [.line-through]#induced# by the same message being sent on L1 multiple times.
 
 For more information, see xref:#l1_l2_message_structure[L1->L2 structure].
 ====
@@ -140,7 +132,7 @@ For more information, see xref:#l1_l2_message_structure[L1->L2 structure].
 [id="l2-l1_message_cancellation"]
 === L1 -> L2 message cancellation
 
-Imagine a scenario where a user transfers an asset from L1 to L2. The flow starts with the user sending the asset to a Starknet bridge and the corresponding L1->L2 message generation. Now, imagine that the L2 message consumption doesn't function (this might happen due to a bug in the dApp's Cairo contract). This could result in the user losing custody over their asset forever.
+Imagine a scenario where a user transfers an asset from L1 to L2. The flow starts with the user sending the asset to a Starknet bridge and the corresponding L1->L2 message generation. Now, imagine that the L2 message consumption doesn't function, which might happen due to a bug in the dApp's Cairo contract. This could result in the user losing custody over their asset forever.
 
 To mitigate this risk, we allow the contract that initiated the L1->L2 message to cancel it after declaring the intent and waiting a suitable amount of time.
 
