@@ -2,6 +2,49 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.441](https://github.com/starknet-io/starknet-docs/compare/v0.1.440...v0.1.441) (2024-01-01)
+
+### [0.1.440](https://github.com/starknet-io/starknet-docs/compare/v0.1.439...v0.1.440) (2023-12-31)
+
+### [0.1.439](https://github.com/starknet-io/starknet-docs/compare/v0.1.438...v0.1.439) (2023-12-31)
+
+### [0.1.438](https://github.com/starknet-io/starknet-docs/compare/v0.1.437...v0.1.438) (2023-12-31)
+
+### [0.1.437](https://github.com/starknet-io/starknet-docs/compare/v0.1.436...v0.1.437) (2023-12-28)
+
+### [0.1.436](https://github.com/starknet-io/starknet-docs/compare/v0.1.435...v0.1.436) (2023-12-28)
+
+### [0.1.435](https://github.com/starknet-io/starknet-docs/compare/v0.1.434...v0.1.435) (2023-12-28)
+
+### [0.1.434](https://github.com/starknet-io/starknet-docs/compare/v0.1.433...v0.1.434) (2023-12-28)
+
+### [0.1.433](https://github.com/starknet-io/starknet-docs/compare/v0.1.432...v0.1.433) (2023-12-28)
+
+### [0.1.432](https://github.com/starknet-io/starknet-docs/compare/v0.1.431...v0.1.432) (2023-12-27)
+
+### [0.1.431](https://github.com/starknet-io/starknet-docs/compare/v0.1.430...v0.1.431) (2023-12-26)
+
+### [0.1.430](https://github.com/starknet-io/starknet-docs/compare/v0.1.429...v0.1.430) (2023-12-26)
+
+### [0.1.429](https://github.com/starknet-io/starknet-docs/compare/v0.1.428...v0.1.429) (2023-12-26)
+
+### [0.1.428](https://github.com/starknet-io/starknet-docs/compare/v0.1.427...v0.1.428) (2023-12-26)
+
+
+### Bug Fixes
+
+* Fixed bugs in formulas on Gas and transaction fees. Update fees and formulas ([#1027](https://github.com/starknet-io/starknet-docs/issues/1027)) ([69c272b](https://github.com/starknet-io/starknet-docs/commit/69c272b6f3badbef064d15b573db45402e0720ba))
+
+### [0.1.427](https://github.com/starknet-io/starknet-docs/compare/v0.1.426...v0.1.427) (2023-12-25)
+
+### [0.1.426](https://github.com/starknet-io/starknet-docs/compare/v0.1.425...v0.1.426) (2023-12-25)
+
+### [0.1.425](https://github.com/starknet-io/starknet-docs/compare/v0.1.424...v0.1.425) (2023-12-25)
+
+### [0.1.424](https://github.com/starknet-io/starknet-docs/compare/v0.1.423...v0.1.424) (2023-12-25)
+
+### [0.1.423](https://github.com/starknet-io/starknet-docs/compare/v0.1.422...v0.1.423) (2023-12-25)
+
 ### [0.1.422](https://github.com/starknet-io/starknet-docs/compare/v0.1.421...v0.1.422) (2023-12-21)
 
 ### [0.1.421](https://github.com/starknet-io/starknet-docs/compare/v0.1.420...v0.1.421) (2023-12-21)
