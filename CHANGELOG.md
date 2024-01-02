@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.443](https://github.com/starknet-io/starknet-docs/compare/v0.1.442...v0.1.443) (2024-01-02)
+
+
+### Bug Fixes
+
+* Update title and add :description: to StarkGate function and event reference ([#1063](https://github.com/starknet-io/starknet-docs/issues/1063)) ([9a0b909](https://github.com/starknet-io/starknet-docs/commit/9a0b909f25496eadfb160b6745b95d9b164f067b))
+
 ### [0.1.442](https://github.com/starknet-io/starknet-docs/compare/v0.1.441...v0.1.442) (2024-01-02)
 
 ### [0.1.441](https://github.com/starknet-io/starknet-docs/compare/v0.1.440...v0.1.441) (2024-01-01)
