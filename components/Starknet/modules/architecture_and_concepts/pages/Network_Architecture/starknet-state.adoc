@@ -101,17 +101,39 @@ Where:
 
 * `_h_~Pos~` is the xref:../Cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash function
 * `CONTRACT_CLASS_LEAF_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
-* `compiled_class_hash` is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler
+* `compiled_class_hash` is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler.
 
+[#note_compiled_class_hash]
 [NOTE]
 ====
-Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly. For more information, see xref:Smart_Contracts/system-calls-cairo1.adoc[System calls].
+.Compiled class hash
 
-However, the prover only deals with Cairo assembly (Casm).
+The compiled class hash identifies the output of a specific Casm compilation as unique.
 
-So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly.
+Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly (Casm). However, the prover only works with Casm.
 
-Today, the user signs the compiled class hash as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.
+So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly. The compiled class hash provides this information.
+
+For more information, see xref:architecture_and_concepts:Smart_Contracts/cairo-and-sierra.adoc[Cairo and Sierra].
+=====
+
+* Or is the Casm also stored in Starknet storage, and the compiled class hash is an identifier for the leaf in the trie that also includes the storage address for the Casm code?
+
+> The Casm is stored by the sequencer, we load it to execute the contract entrypoints. +
+But it is not in the Starknet State (aka what is pushed to l1). So the `+.casm+` contracts are not part of the storage trie. Only their hash is.
+
+
+* Where does the person declaring the class get the compiled class hash from in order to submit the `DECLARE` transaction? What's the order of events---is it:
++
+--
+. Compile Cairo code to Sierra.
+. Use an SDK to generate a compiled class hash from the Sierra.
+. Add the Sierra code of the class to Starknet using a `DECLARE` transaction.
+. The sequencer compiles the Casm from the Sierra code, stores it on the Starknet blockchain's storage, and generates a hash of the compiled class. This hash should be identical to the hash that the SDK generated.
+--
+=====
+
+The party that declares the contract signs the compiled class hash as part of the xref:Network_Architecture/transactions.adoc#declare_v2[`DECLARE`] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.
 
 In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.
 ====
