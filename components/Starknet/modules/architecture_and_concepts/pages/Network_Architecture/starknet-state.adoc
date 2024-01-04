@@ -105,13 +105,37 @@ Where:
 
 [NOTE]
 ====
-Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly. For more information, see xref:Smart_Contracts/system-calls-cairo1.adoc[System calls].
+Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly (Casm). For more information, see xref:Smart_Contracts/system-calls-cairo1.adoc[System calls]. #Why are we referring to System calls instead of xref:architecture_and_concepts:Smart_Contracts/cairo-and-sierra.adoc[]?#
 
-However, the prover only deals with Cairo assembly (Casm).
+However, the prover only works with Casm.
 
 So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly.
 
-Today, the user signs the compiled class hash as part of a xref:Network_Architecture/transactions.adoc#declare_v2[declare] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.
+=====
+
+.#Questions#
+
+* What information does the hash of the compiled class include about the Casm that the prover needs?
+
+* It sounds like the prover decodes the hash to get that information. Is that correct---Can the prover decode the hash to get that information?
++
+Or is the Casm also stored in Starknet storage, and the compiled class hash is an identifier for the leaf in the trie that also includes the storage address for the Casm code?
+
+* Where does the person declaring the class get the compiled class hash from in order to submit the `DECLARE` transaction? What's the order of events---is it:
++
+--
+. Compile Cairo code to Sierra.
+. Compile Sierra to Casm. The Casm assembler generates the hash during compilation.
+. Add the Sierra code of the class to Starknet using a `DECLARE` transaction.
+. The sequencer assembles the Casm from the Sierra code, stores it on the Starknet blockchain's storage, and generates a hash of the compiled class.
+--
++
+This doesn't make sense, though, because when submitting the `DECLARE` transaction to declare the class, which is before you have the compiled class hash, you need to specify the `compiled_class_hash` as a transaction fied. Sounds like a Catch 22.
+
+
+=====
+
+The [.line-through]#user# #party that declares the contract# signs the compiled class hash as part of the xref:Network_Architecture/transactions.adoc#declare_v2[`DECLARE`] transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.
 
 In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.
 ====
