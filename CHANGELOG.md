@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.446](https://github.com/starknet-io/starknet-docs/compare/v0.1.445...v0.1.446) (2024-01-04)
+
+
+### Bug Fixes
+
+* Update Goerli end-of-support until at least end of Q1 2024 ([#1068](https://github.com/starknet-io/starknet-docs/issues/1068)) ([fb67be3](https://github.com/starknet-io/starknet-docs/commit/fb67be3b32b7301316d7a056c710fa81477b2750))
+
 ### [0.1.445](https://github.com/starknet-io/starknet-docs/compare/v0.1.444...v0.1.445) (2024-01-04)
 
 
