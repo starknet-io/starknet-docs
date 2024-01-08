@@ -356,7 +356,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../contract-syntax/">Migrating a contract from Cairo 0 to Cairo</a>
+     href="../contract-syntax/">Migrating a contract from Cairo v1 to Cairo v2</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -570,10 +570,8 @@
 <p>When you interact with contracts, especially if you are a library or SDK developer that wants to create transactions, you need to understand how Cairo handles types that are larger than 252 bits so you can correctly formulate the calldata in a transaction.</p>
 </div>
 <div class="paragraph">
-<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as <code>u256</code> or arrays, are ultimately represented by a list of felts.</p>
-</div>
-<div class="paragraph">
-<p>In order to interact with a contract, you need to know how the felts in these lists are serialized in the Cairo VM so you can correctly formulate the calldata in the transaction. SDKs, such as starknet.js, serialize these values for you, so you can simply specify any type and the SDK properly formulates the calldata. For example, you don’t need to know that a <code>u256</code> value is represented by two <code>felt252</code> values. You can simply specify a <code>u256</code> value in your code, and the SDK takes care of the serialization and encoding.</p>
+<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as <code>u256</code> or arrays, are ultimately represented by a list of felts. In order to interact with a contract, you need to know how to encode its arguments as a list of felts in the Cairo VM so you can correctly formulate the calldata in the transaction.
+SDKs, such as starknet.js, encode the calldata for you, so you can simply specify any type and the SDK properly formulates the calldata. For example, you don’t need to know that a <code>u256</code> value is represented by two <code>felt252</code> values. You can simply specify a <code>u256</code> value in your code, and the SDK takes care of the serialization and encoding.</p>
 </div>
 </div>
 </div>
@@ -581,7 +579,7 @@
 <h2 id="data_types_of_252_bits_or_less"><a class="anchor" href="#data_types_of_252_bits_or_less"></a>Data types of 252 bits or less</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following types are smaller than 252 bits. For these types, each value is represented by a single-member list, whose only member is a <code>felt252</code> value.</p>
+<p>The following types are smaller than 252 bits. For these types, each value is serialized to a single-member list that contains a <code>felt252</code> value.</p>
 </div>
 <div class="ulist">
 <ul>
@@ -628,7 +626,7 @@
 <h2 id="data_types_greater_than_252_bits"><a class="anchor" href="#data_types_greater_than_252_bits"></a>Data types greater than 252 bits</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following data types require serialization:</p>
+<p>The following Cairo data types have non-trivial serialization:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -639,10 +637,10 @@
 <p><code>array</code></p>
 </li>
 <li>
-<p><code>enum</code></p>
+<p>enum</p>
 </li>
 <li>
-<p><code>struct</code></p>
+<p>struct</p>
 </li>
 <li>
 <p><code>ByteArray</code>, which represents strings</p>
@@ -655,107 +653,54 @@
 <h2 id="serialization_of_unsigned_integers"><a class="anchor" href="#serialization_of_unsigned_integers"></a>Serialization of unsigned integers</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>For <code>u256</code> and <code>u512</code> values, serialization is necessary.</p>
+<p>Among unsigned integers, only <code>u256</code> and <code>u512</code> have non-trivial serialization.</p>
 </div>
 <div class="sect2">
 <h3 id="serialization_in_u256_values"><a class="anchor" href="#serialization_in_u256_values"></a>Serialization in <code>u256</code> values</h3>
 <div class="paragraph">
-<p>A <code>u256</code> value in Cairo is serialized across two <code>felt252</code> values, each containing 128 meaningful bits. The most significant bit is in the first 128-bit <code>felt252</code> value. For example:</p>
+<p>A <code>u256</code> value in Cairo is represented by two <code>felt252</code> values, as follows:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>A <code>u256</code> variable whose decimal value is <code>2</code> is serialized as <code>(0,2)</code><sub>decimal</sub> using two <code>felt252</code> values, each with 128 meaningful bits, as follows:</p>
-<table class="tableblock frame-all grid-all fit-content">
-<colgroup>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top"><code>felt252</code><sub>1</sub> = <code>0</code><sub>binary</sub> = <code>0</code><sub>decimal</sub></th>
-<th class="tableblock halign-left valign-top"><code>felt252</code><sub>2</sub> = <code>10</code><sub>binary</sub> = <code>2<sub>decimal</sub></code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
-<div class="content">
-\[\underbrace{0\cdots0}_{\text{128 bits}}
-\underbrace{0\cdots0}_{\text{128 bits}}\]
+<p>The first <code>felt252</code> value contains the 128 most significant bits, usually referred to as the high part of the original <code>u256</code> value.</p>
+</li>
+<li>
+<p>The second <code>felt252</code> value contains the 128 least significant bits, usually referred to as the low part of the original <code>u256</code> value.</p>
+</li>
+</ul>
 </div>
-</div></div></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
+<div class="paragraph">
+<p>For example:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A <code>u256</code> variable whose decimal value is <code>2</code> is serialized as <code>[0,2]</code>. To understand why, examine the binary representation of the <code>2</code> and split it into two 128-bit parts, as follows:</p>
+<div class="stemblock">
 <div class="content">
-\[\underbrace{0\cdots0}_{\text{128 bits}}
+\[\underbrace{0\cdots0}_{\text{128 bits}} |
 \underbrace{0\cdots10}_{\text{128 bits}}\]
 </div>
-</div></div></td>
-</tr>
-</tbody>
-</table>
+</div>
 </li>
 <li>
-<p>A <code>u256</code> variable whose decimal value is <code>2<sup>128</sup></code> is serialized as <code>(1,0)</code><sub>decimal</sub> using two <code>felt252</code> values, each with 128 meaningful bits, as follows:</p>
-<table class="tableblock frame-all grid-all fit-content">
-<colgroup>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top"><code>felt252</code><sub>1</sub> = <code>1</code><sub>binary</sub> = <code>1</code><sub>decimal</sub></th>
-<th class="tableblock halign-left valign-top"><code>felt252</code><sub>2</sub> = <code>0</code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
+<p>A <code>u256</code> variable whose decimal value is <code>2<sup>128</sup></code> is serialized as <code>[1,0]</code>. To understand why, examine the binary representation of the <code>2<sup>128</sup></code> and split it into two 128-bit parts, as follows:</p>
+<div class="stemblock">
 <div class="content">
-\[\underbrace{0\cdots0}_{\text{128 bits}}
-\underbrace{0\cdots1}_{\text{128 bits}}\]
-</div>
-</div></div></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
-<div class="content">
-\[\underbrace{0\cdots0}_{\text{128 bits}}
+\[\underbrace{0\cdots1}_{\text{128 bits}} |
 \underbrace{0\cdots0}_{\text{128 bits}}\]
 </div>
-</div></div></td>
-</tr>
-</tbody>
-</table>
+</div>
 </li>
 <li>
-<p>A <code>u256</code> variable whose decimal value is <code>2<sup>129</sup>+2<sup>128</sup>+20</code>, is serialized as <code>(3,20)</code><sub>decimal</sub> using two <code>felt252</code> values, each with 128 meaningful bits, as follows:</p>
-<table class="tableblock frame-all grid-all fit-content">
-<colgroup>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top"><code>felt252</code><sub>1</sub> = <code>11</code><sub>binary</sub> = <code>3</code><sub>decimal</sub></th>
-<th class="tableblock halign-left valign-top"><code>felt252</code><sub>2</sub> = <code>10100</code><sub>binary</sub> = <code>20</code><sub>decimal</sub></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
+<p>A <code>u256</code> variable whose decimal value is <code>2<sup>129</sup>+2<sup>128</sup>+20</code>, is serialized as <code>[3,20]</code>. To understand why, examine the binary representation of the <code>2<sup>129</sup>+2<sup>128</sup>+20</code> and split it into two 128-bit parts, as follows:</p>
+<div class="stemblock">
 <div class="content">
-\[\underbrace{0\cdots0}_{\text{128 bits}}
-\underbrace{0\cdots11}_{\text{128 bits}}\]
-</div>
-</div></div></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="stemblock">
-<div class="content">
-\[\underbrace{0\cdots0}_{\text{128 bits}}
+\[\underbrace{0\cdots11}_{\text{128 bits}} \|
 \underbrace{0\cdots10100}_{\text{128 bits}}\]
 </div>
-</div></div></td>
-</tr>
-</tbody>
-</table>
+</div>
 </li>
 </ul>
 </div>
@@ -763,7 +708,7 @@
 <div class="sect2">
 <h3 id="serialization_in_u512_values"><a class="anchor" href="#serialization_in_u512_values"></a>Serialization of <code>u512</code> values</h3>
 <div class="paragraph">
-<p>A <code>u512</code> value in Cairo is serialized similarly to a <code>u256</code> value, but it requires four <code>felt252</code> values, each with 128 bits. The most significant bit is in the first 128-bit <code>felt252</code> value.</p>
+<p>A <code>u512</code> value in Cairo is a struct containing four <code>felt252</code> values, each representing a 128-bit limb of the original integer, starting from the most significant bit, similar to a <code>u256</code> value.</p>
 </div>
 </div>
 </div>
@@ -772,19 +717,22 @@
 <h2 id="serialization_of_arrays"><a class="anchor" href="#serialization_of_arrays"></a>Serialization of arrays</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>An array is serialized as follows when encoded as calldata:</p>
+<p>Arrays are serialized as follows:</p>
 </div>
 <div class="paragraph">
-<p><code>&lt;<em>number_of_array_members</em>&gt;, &lt;<em>serialized_member_0</em>&gt;,&#8230;&#8203;, &lt;<em>serialized_member_n</em>&gt;</code></p>
+<p><code>&lt;<em>array_length</em>&gt;, &lt;<em>serialized_member_0</em>&gt;,&#8230;&#8203;, &lt;<em>serialized_member_n</em>&gt;</code></p>
 </div>
 <div class="paragraph">
 <p>For example, consider the following array of <code>u256</code> values:</p>
 </div>
-<div class="paragraph">
-<p><code>Array&lt;u256&gt;[10,20,2<sup>128</sup>]</code></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let POW_2_128: u256 = 0x100000000000000000000000000000000
+let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
+</div>
 </div>
 <div class="paragraph">
-<p>Each <code>u256</code> value in the array is represented by two <code>felt252</code> values. So the calldata for the array above is serialized as follows:</p>
+<p>Each <code>u256</code> value in the array is represented by two <code>felt252</code> values. So the array above is serialized as follows:</p>
 </div>
 <div class="stemblock">
 <div class="content">
@@ -800,7 +748,7 @@
 <h2 id="serialization_of_enums"><a class="anchor" href="#serialization_of_enums"></a>Serialization of enums</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>An enum is serialized as follows when encoded as calldata:</p>
+<p>An enum is serialized as follows:</p>
 </div>
 <div class="paragraph">
 <p><code>&lt;<em>index_of_enum_variant</em>&gt;,&lt;<em>serialized_variant_type</em>&gt;</code></p>
@@ -824,7 +772,7 @@
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">fn process(self: WeekEnd) \{
     match self \{
-        WeekEnd::Sunday, // index=0, no associated value
+        WeekEnd::Sunday, // index=0, the variant type is the unit type
         }
     }</code></pre>
 </div>
