@@ -3,15 +3,14 @@
 
 When you interact with contracts, especially if you are a library or SDK developer that wants to create transactions, you need to understand how Cairo handles types that are larger than 252 bits so you can correctly formulate the calldata in a transaction.
 
-The field element (`felt252`), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as `u256` or arrays, are ultimately represented by a list of felts.
-
-In order to interact with a contract, you need to know how the felts in these lists are serialized in the Cairo VM so you can correctly formulate the calldata in the transaction. SDKs, such as starknet.js, serialize these values for you, so you can simply specify any type and the SDK properly formulates the calldata. For example, you don’t need to know that a `u256` value is represented by two `felt252` values. You can simply specify a `u256` value in your code, and the SDK takes care of the serialization and encoding.
+The field element (`felt252`), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as `u256` or arrays, are ultimately represented by a list of felts. In order to interact with a contract, you need to know how to encode its arguments as a list of felts in the Cairo VM so you can correctly formulate the calldata in the transaction.
+SDKs, such as starknet.js, encode the calldata for you, so you can simply specify any type and the SDK properly formulates the calldata. For example, you don’t need to know that a `u256` value is represented by two `felt252` values. You can simply specify a `u256` value in your code, and the SDK takes care of the serialization and encoding.
 
 
 [#data_types_of_252_bits_or_less]
 == Data types of 252 bits or less
 
-The following types are smaller than 252 bits. For these types, each value is represented by a single-member list, whose only member is a `felt252` value.
+The following types are smaller than 252 bits. For these types, each value is serialized to a single-member list that contains a `felt252` value.
 
 * `ContractAddress`
 * `EthAddress`
@@ -35,103 +34,95 @@ For example, `-5` is serialized as stem:[P-5]. For more information on the value
 [#data_types_greater_than_252_bits]
 == Data types greater than 252 bits
 
-The following data types require serialization:
+The following Cairo data types have non-trivial serialization:
 
 * `u256` and `u512`
 * `array`
-* `enum`
-* `struct`
+* enum
+* struct
 * `ByteArray`, which represents strings
 
 
 [#serialization_of_unsigned_integers]
 == Serialization of unsigned integers
 
-For `u256` and `u512` values, serialization is necessary.
+Among unsigned integers, only `u256` and `u512` have non-trivial serialization.
 
 [#serialization_in_u256_values]
 === Serialization in `u256` values
 
-A `u256` value in Cairo is serialized across two `felt252` values, each containing 128 meaningful bits. The most significant bit is in the first 128-bit `felt252` value. For example:
+A `u256` value in Cairo is represented by two `felt252` values, as follows:
 
-* A `u256` variable whose decimal value is `2` is serialized as `(0,2)`~decimal~ using two `felt252` values, each with 128 meaningful bits, as follows:
+* The first `felt252` value contains the 128 most significant bits, usually referred to as the high part of the original `u256` value.
+* The second `felt252` value contains the 128 least significant bits, usually referred to as the low part of the original `u256` value.
+
+For example:
+
+* A `u256` variable whose decimal value is `2` is serialized as `[0,2]`. To understand why, examine the binary representation of the `2` and split it into two 128-bit parts, as follows:
 +
-[%autowidth,cols="2"]
-|===
-|`felt252`~1~ = `0`~binary~ = `0`~decimal~|`felt252`~2~ = `10`~binary~ = `2~decimal~`
-
-a|//`0b000...000`
 [stem]
 ++++
-\underbrace{0\cdots0}_{\text{128 bits}}
-\underbrace{0\cdots0}_{\text{128 bits}}
-++++
-a| //`0b000...000`
-[stem]
-++++
-\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots0}_{\text{128 bits}} |
 \underbrace{0\cdots10}_{\text{128 bits}}
 ++++
-|===
+//
+// [#binary_representation_of_u256]
+// .Binary representation of `2` in a serialized `u256`
+// [%autowidth,cols="2"]
+// |===
+// |`felt252`~1~ = `0`~binary~ = `0`~decimal~|`felt252`~2~ = `10`~binary~ = `2~decimal~`
+//
+// a|//`0b000...000`
+// [stem]
+// ++++
+// \underbrace{0\cdots0}_{\text{128 bits}}
+// ++++
+// a| //`0b000...000`
+// [stem]
+// ++++
+// \underbrace{0\cdots0}_{\text{128 bits}}
+// \underbrace{0\cdots10}_{\text{128 bits}}
+// ++++
+// |===
 
-* A `u256` variable whose decimal value is `2^128^` is serialized as `(1,0)`~decimal~ using two `felt252` values, each with 128 meaningful bits, as follows:
+* A `u256` variable whose decimal value is `2^128^` is serialized as `[1,0]`. To understand why, examine the binary representation of the `2^128^` and split it into two 128-bit parts, as follows:
 +
-[%autowidth,cols="2"]
-|===
-|`felt252`~1~ = `1`~binary~ = `1`~decimal~|`felt252`~2~ = `0`
-
-a|//`0b000...000`
 [stem]
 ++++
-\underbrace{0\cdots0}_{\text{128 bits}}
-\underbrace{0\cdots1}_{\text{128 bits}}
-++++
-a| //`0b000...000`
-[stem]
-++++
-\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots1}_{\text{128 bits}} |
 \underbrace{0\cdots0}_{\text{128 bits}}
 ++++
-|===
 
-* A `u256` variable whose decimal value is `2^129^+2^128^+20`, is serialized as `(3,20)`~decimal~ using two `felt252` values, each with 128 meaningful bits, as follows:
+* A `u256` variable whose decimal value is `2^129^+2^128^+20`, is serialized as `[3,20]`. To understand why, examine the binary representation of the `2^129^+2^128^+20` and split it into two 128-bit parts, as follows:
 +
-[%autowidth,cols="2"]
-|===
-|`felt252`~1~ = `11`~binary~ = `3`~decimal~|`felt252`~2~ = `10100`~binary~ = `20`~decimal~
-
-a|//`0b000...000`
 [stem]
 ++++
-\underbrace{0\cdots0}_{\text{128 bits}}
-\underbrace{0\cdots11}_{\text{128 bits}}
-++++
-a| //`0b000...000`
-[stem]
-++++
-\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots11}_{\text{128 bits}} \|
 \underbrace{0\cdots10100}_{\text{128 bits}}
 ++++
-|===
 
 [#serialization_in_u512_values]
 === Serialization of `u512` values
 
-A `u512` value in Cairo is serialized similarly to a `u256` value, but it requires four `felt252` values, each with 128 bits. The most significant bit is in the first 128-bit `felt252` value.
+A `u512` value in Cairo is a struct containing four `felt252` values, each representing a 128-bit limb of the original integer, starting from the most significant bit, similar to a `u256` value.
 
 
 [#serialization_of_arrays]
 == Serialization of arrays
 
-An array is serialized as follows when encoded as calldata:
+Arrays are serialized as follows:
 
-`<__number_of_array_members__>, <__serialized_member_0__>,..., <__serialized_member_n__>`
+`<__array_length__>, <__serialized_member_0__>,..., <__serialized_member_n__>`
 
 For example, consider the following array of `u256` values:
 
-`Array<u256>[10,20,2^128^]`
+[source,cairo]
+----
+let POW_2_128: u256 = 0x100000000000000000000000000000000
+let array: Array<u256> = array![10, 20, POW_2_128]
+----
 
-Each `u256` value in the array is represented by two `felt252` values. So the calldata for the array above is serialized as follows:
+Each `u256` value in the array is represented by two `felt252` values. So the array above is serialized as follows:
 
 // `3,0,10,0,20,1,0`
 
@@ -147,7 +138,7 @@ Each `u256` value in the array is represented by two `felt252` values. So the ca
 [#serialization_of_enums]
 == Serialization of enums
 
-An enum is serialized as follows when encoded as calldata:
+An enum is serialized as follows:
 
 `<__index_of_enum_variant__>,<__serialized_variant_type__>`
 
@@ -169,7 +160,7 @@ Now consider the following instantiations of the enum, one with `Sunday`, and th
 ----
 fn process(self: WeekEnd) \{
     match self \{
-        WeekEnd::Sunday, // index=0, no associated value
+        WeekEnd::Sunday, // index=0, the variant type is the unit type
         }
     }
 ----
