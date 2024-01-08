@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.448](https://github.com/starknet-io/starknet-docs/compare/v0.1.447...v0.1.448) (2024-01-08)
+
+
+### Bug Fixes
+
+* Update tab labels of examples from Cairo v1 to Cairo v2 ([#1072](https://github.com/starknet-io/starknet-docs/issues/1072)) ([105f798](https://github.com/starknet-io/starknet-docs/commit/105f798c865cfbe225af63af51096c499f8cedbc))
+
 ### [0.1.447](https://github.com/starknet-io/starknet-docs/compare/v0.1.446...v0.1.447) (2024-01-07)
 
 ### [0.1.446](https://github.com/starknet-io/starknet-docs/compare/v0.1.445...v0.1.446) (2024-01-04)
