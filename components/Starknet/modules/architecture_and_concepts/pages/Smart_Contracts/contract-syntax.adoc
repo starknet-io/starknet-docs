@@ -1,4 +1,4 @@
-= Migrating a contract from Cairo 0 to Cairo
+= Migrating a contract from Cairo v1 to Cairo v2
 
 With the link:https://github.com/starkware-libs/cairo/releases/tag/v2.0.0-rc0[v2.0.0 release] of the Cairo compiler, the Starknet contract syntax has evolved, affecting the organization of functions, storage, and events.
 
@@ -6,7 +6,7 @@ For more information on the latest syntax changes, see the Community Forum post 
 
 .Prerequisites
 
-* A contract written with the Cairo compiler v1.1.0
+* A contract written with the Cairo compiler v1
 * The most recent version of the Cairo compiler
 
 .Procedure
@@ -15,18 +15,18 @@ For more information on the latest syntax changes, see the Community Forum post 
 +
 [tabs]
 ====
-old::
+Cairo v1::
 +
-[source,rust]
+[source,cairo]
 ----
 #[contract]
 mod CounterContract {
    ...
 }
 ----
-new::
+Cairo v2::
 +
-[source,rust]
+[source,cairo]
 ----
 #[starknet::contract]
 mod CounterContract {
@@ -38,18 +38,18 @@ mod CounterContract {
 +
 [tabs]
 ====
-old::
+Cairo v1::
 +
-[source,rust]
+[source,cairo]
 ----
 struct Storage {
     counter: u128,
     other_contract: IOtherContractDispatcher
 }
 ----
-new::
+Cairo v2::
 +
-[source,rust]
+[source,cairo]
 ----
 #[storage]
 struct Storage {
@@ -72,9 +72,9 @@ For example:
 +
 [tabs]
 ====
-old::
+Cairo v1::
 +
-[source,rust]
+[source,cairo]
 ----
 #[contract]
 mod CounterContract {
@@ -86,9 +86,9 @@ mod CounterContract {
    fn get_counter() -> u128 { ... }
 }
 ----
-new::
+Cairo v2::
 +
-[source,rust]
+[source,cairo]
 ----
 #[starknet::interface]
 trait ICounterContract<TContractState> {
@@ -110,9 +110,9 @@ For example:
 +
 [tabs]
 ====
-old::
+Cairo v1::
 +
-[source,rust]
+[source,cairo]
 ----
 #[contract]
 mod CounterContract {
@@ -124,9 +124,9 @@ mod CounterContract {
    fn get_counter() -> u128 { ... }
 }
 ----
-new::
+Cairo v2::
 +
-[source,rust]
+[source,cairo]
 ----
 #[starknet::interface]
 trait ICounterContract<TContractState> {
@@ -159,18 +159,18 @@ For example:
 +
 [tabs]
 ====
-old::
+Cairo v1::
 +
-[source,rust]
+[source,cairo]
 ----
 #[abi]
 trait IOtherContract {
     fn decrease_allowed() -> bool;
 }
 ----
-new::
+Cairo v2::
 +
-[source,rust]
+[source,cairo]
 ----
 #[starknet::interface]
 trait IOtherContract<TContractState> {
@@ -191,15 +191,15 @@ For example:
 +
 [tabs]
 ====
-old::
+Cairo v1::
 +
-[source,rust]
+[source,cairo]
 ----
 let current = counter::read();
 ----
-new::
+Cairo v2::
 +
-[source,rust]
+[source,cairo]
 ----
 let current = self.counter.read();
 ----
@@ -218,18 +218,18 @@ For example:
 +
 [tabs]
 ====
-old::
+Cairo v1::
 +
-[source,rust]
+[source,cairo]
 ----
 #[event]
 fn counter_increased(amount: u128) {}
 #[event]
 fn counter_decreased(amount: u128) {}
 ----
-new::
+Cairo v2::
 +
-[source,rust]
+[source,cairo]
 ----
 #[event]
 #[derive(Drop, starknet::Event)]
@@ -252,18 +252,18 @@ struct CounterDecreased {
 +
 [tabs]
 ====
-old::
+Cairo v1::
 +
-[source,rust]
+[source,cairo]
 ----
 fn increase_counter(amount: u128) {
     ...
     counter_increased(amount);
 }
 ----
-new::
+Cairo v2::
 +
-[source,rust]
+[source,cairo]
 ----
 fn increase_counter(ref self: ContractState, amount: u128) {
     ...
