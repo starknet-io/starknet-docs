@@ -357,7 +357,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Smart_Contracts/contract-syntax/">Migrating a contract from Cairo 0 to Cairo</a>
+     href="../../Smart_Contracts/contract-syntax/">Migrating a contract from Cairo v1 to Cairo v2</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -753,7 +753,7 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 <p><code>CONTRACT_CLASS_LEAF_V0</code> is a constant prefix string encoded in ASCII (and represented as a field element).</p>
 </li>
 <li>
-<p><code>compiled_class_hash</code> is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler</p>
+<p><code>compiled_class_hash</code> is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler.</p>
 </li>
 </ul>
 </div>
@@ -765,28 +765,37 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly (Casm). For more information, see <a href="../../Smart_Contracts/system-calls-cairo1/" class="xref page">System calls</a>. <mark>Why are we referring to System calls instead of <a href="../../Smart_Contracts/cairo-and-sierra/" class="xref page">Cairo and Sierra</a>?</mark></p>
+<div class="title">Compiled class hash</div>
+<p>The compiled class hash identifies the output of a specific Casm compilation as unique.</p>
 </div>
 <div class="paragraph">
-<p>However, the prover only works with Casm.</p>
+<p>Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly (Casm). However, the prover only works with Casm.</p>
 </div>
 <div class="paragraph">
-<p>So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly.</p>
+<p>So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly. The compiled class hash provides this information.</p>
+</div>
+<div class="paragraph">
+<p>For more information, see <a href="../../Smart_Contracts/cairo-and-sierra/" class="xref page">Cairo and Sierra</a>.</p>
 </div>
 <div class="exampleblock">
 <div class="content">
 <div class="ulist">
-<div class="title"><mark>Questions</mark></div>
 <ul>
 <li>
-<p>What information does the hash of the compiled class include about the Casm that the prover needs?</p>
-</li>
-<li>
-<p>It sounds like the prover decodes the hash to get that information. Is that correct---Can the prover decode the hash to get that information?</p>
-<div class="paragraph">
 <p>Or is the Casm also stored in Starknet storage, and the compiled class hash is an identifier for the leaf in the trie that also includes the storage address for the Casm code?</p>
-</div>
 </li>
+</ul>
+</div>
+<div class="quoteblock">
+<blockquote>
+<div class="paragraph">
+<p>The Casm is stored by the sequencer, we load it to execute the contract entrypoints.<br>
+But it is not in the Starknet State (aka what is pushed to l1). So the <code>.casm</code> contracts are not part of the storage trie. Only their hash is.</p>
+</div>
+</blockquote>
+</div>
+<div class="ulist">
+<ul>
 <li>
 <p>Where does the person declaring the class get the compiled class hash from in order to submit the <code>DECLARE</code> transaction? What&#8217;s the order of events---is it:</p>
 <div class="openblock">
@@ -797,20 +806,20 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 <p>Compile Cairo code to Sierra.</p>
 </li>
 <li>
-<p>Compile Sierra to Casm. The Casm assembler generates the hash during compilation.</p>
+<p>Use an SDK to generate a compiled class hash from the Sierra. HOW?</p>
 </li>
 <li>
 <p>Add the Sierra code of the class to Starknet using a <code>DECLARE</code> transaction.</p>
 </li>
 <li>
-<p>The sequencer assembles the Casm from the Sierra code, stores it on the Starknet blockchain&#8217;s storage, and generates a hash of the compiled class.</p>
+<p>The sequencer compiles the Casm from the Sierra code, stores it on the Starknet blockchain&#8217;s storage, and generates a hash of the compiled class.</p>
 </li>
 </ol>
 </div>
 </div>
 </div>
 <div class="paragraph">
-<p>This doesn&#8217;t make sense, though, because when submitting the <code>DECLARE</code> transaction to declare the class, which is before you have the compiled class hash, you need to specify the <code>compiled_class_hash</code> as a transaction fied. Sounds like a Catch 22.</p>
+<p>This doesn&#8217;t make sense, though, because when submitting the <code>DECLARE</code> transaction to declare the class, which is before you have the compiled class hash, you need to specify the <code>compiled_class_hash</code> as a transaction field. Sounds like a Catch 22.</p>
 </div>
 </li>
 </ul>
@@ -1050,7 +1059,7 @@ Default Values
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
-    <strong>Mainnet: 0.12.3 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
+    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->
