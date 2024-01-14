@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.450](https://github.com/starknet-io/starknet-docs/compare/v0.1.449...v0.1.450) (2024-01-14)
+
+
+### Bug Fixes
+
+* discrepancies in 0.13.0 fee docs ([#1078](https://github.com/starknet-io/starknet-docs/issues/1078)) ([0f0cf14](https://github.com/starknet-io/starknet-docs/commit/0f0cf14033748cdd90369a00e2a32bef6d882bd1))
+
 ### [0.1.449](https://github.com/starknet-io/starknet-docs/compare/v0.1.448...v0.1.449) (2024-01-10)
 
 ### [0.1.448](https://github.com/starknet-io/starknet-docs/compare/v0.1.447...v0.1.448) (2024-01-08)
