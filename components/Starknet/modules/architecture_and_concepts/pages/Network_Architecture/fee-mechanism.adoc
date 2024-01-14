@@ -19,12 +19,12 @@ The following formula describes the overall fee for a transaction:
 // OLD
 // [stem]
 // ++++
-// F = 0.9 \cdot \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)\right)
+// F = \text{gas_price}\cdot\left(\max_k v_k w_k + 0.9\cdot\text{calldata_cost}\cdot\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)\right)
 // ++++
 
 [stem]
 ++++
-F = 0.9 \cdot \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left((n+2m-1) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)+n \cdot 200 + 272\right)
+F = \text{gas_price}\cdot\left(\max_k v_k w_k + 0.9\cdot\text{calldata_cost}\cdot\left((n+2m-1) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)+ t\cdot\text{storage_write_cost} + n \cdot 200 + 272\right)
 ++++
 
 where:
@@ -38,7 +38,8 @@ For more information see xref:#calculation_of_computation_costs[Calculation of c
 * stem:[$\ell$] is the number of contract deployments.
 * stem:[$0.9$] is a 10% cost reduction that considers that the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.
 * stem:[$w$] is the xref:#calculation_of_computation_costs[`CairoResourceFeeWeights`] vector.
-* stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
+* stem:[$\text{calldata_cost}$] is 612 gas per 32-byte word (~100 gas is charged for on-chain hashing the happens for every sent word).
+* stem:[$\text{storage_write_cost}$] is the 20,000 gas, the cost associated with allocating a new storage cell on Ethereum.
 * stem:[200] and stem:[272] are gas costs associated with storage updates. For more information, see xref:#storage_updates[].
 
 == When is the fee charged?
