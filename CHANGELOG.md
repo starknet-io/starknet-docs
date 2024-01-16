@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.457](https://github.com/starknet-io/starknet-docs/compare/v0.1.456...v0.1.457) (2024-01-16)
+
+
+### Bug Fixes
+
+* Block limit (Cairo steps) in Update limits_and_triggers.adoc ([#1082](https://github.com/starknet-io/starknet-docs/issues/1082)) ([59b1c82](https://github.com/starknet-io/starknet-docs/commit/59b1c82a322d618a6aff4859988457f25ccb6e09))
+
 ### [0.1.456](https://github.com/starknet-io/starknet-docs/compare/v0.1.455...v0.1.456) (2024-01-15)
 
 ### [0.1.455](https://github.com/starknet-io/starknet-docs/compare/v0.1.454...v0.1.455) (2024-01-15)
