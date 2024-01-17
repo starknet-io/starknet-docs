@@ -148,12 +148,11 @@ For example, consider the following enum definition:
 ----
 enum WeekEnd \{
     Saturday: (), // index=0, no associated value
-    Sunday: u256, // index=1, two 128-bit felts.
-                  //The most significant bit is first.
+    Sunday: u256, // index=1
 }
 ----
 
-Now consider the following instantiations of the enum, one with `Sunday`, and the other with `Monday`:
+Now consider the following instantiations of the enum, one with `Sunday`:
 
 [.`Sunday`]
 [source,cairo]
@@ -165,18 +164,6 @@ fn process(self: WeekEnd) \{
     }
 ----
 
-[.`Monday`]
-[source,cairo]
-----
-fn process(self: WeekEnd) \{
-    match self \{
-        WeekEnd::Monday(5) // index=1, two 128-bit felts.
-                           //The most significant bit is first.
-        }
-    }
-----
-
-
 The calldata for this enum is serialized as follows:
 
 [cols=",,",]
@@ -185,9 +172,9 @@ The calldata for this enum is serialized as follows:
 
 |`WeekEnd::Sunday` |index=`0`, no corresponding value. |`0`
 |`WeekEnd::Monday(5)` a|
-index=`1`
+index=`1`.
 
-One `u256` value=two `felt252` values of 128-bits each.
+The variant's value is `5`. It's serialization is `[0,5]`.
 
 |`1,0,5`
 |===
@@ -196,16 +183,17 @@ One `u256` value=two `felt252` values of 128-bits each.
 
 [#serialization_of_structs]
 == Serialization of structs
-You need to represent each variant of a struct as a serialized set of `felt252` values, where each field value can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a _word_.
 
-You serialize a struct by serializing its variants one at a time. Its values in calldata are in the order in which they appear in the _definition_ of the struct, even if the variants appear out of order in the instantiation of the struct.
+You serialize a struct by serializing its members one at a time.
+
+Its members are serialized in the order in which they  appear in the _definition_ of the struct, even if the members appear out of order in the instantiation of the struct.
 
 
-For example, consider the following definition of the struct `myStruct` and its instantiation as `struct`:
+For example, consider the following definition of the struct `MyStruct` and its instantiation as `struct`:
 
 [source,cairo]
 ----
-struct myStruct {
+struct MyStruct {
     a: u256,
     b: felt252,
     c: Array<felt252>
@@ -219,57 +207,52 @@ The calldata is the same for both of the following instantiations of the struct'
 |===
 a|[source,cairo]
 ----
-let struct1 = myStruct {
+let struct1 = MyStruct {
     a: 2, b: 5, c: [1,2,3]
 };
 ----
 
 a|[source,cairo]
 ----
-let struct1 = myStruct {
+let struct1 = MyStruct {
     b: 5, c: [1,2,3], a: 2
 };
 ----
 |===
 
-The serialized calldata for this struct is determined as shown in the table xref:#calldata_serialization_for_a_struct_in_cairo[].
+The serialized calldata for this struct is determined as shown in the table xref:#serialization_for_a_struct_in_cairo[].
 
-[#calldata_serialization_for_a_struct_in_cairo]
-.Calldata serialization for a struct in Cairo
+[#serialization_for_a_struct_in_cairo]
+.Serialization for a struct in Cairo
 [cols="3"]
 |===
 |Member |Description |Values to pass in calldata 
 
 | `a: 2`
-| A `u256` value is serialized as two `felt252` values, the most significant bit is first.
-| `0,2`
+| For information on serializing `u256` values, see xref:#serialization_in_u256_values[]
+| [`0,2`]
 | `b: 5`
 | One `felt252` value
 | `5`
 | `c: [1,2,3]`
 | An array of three `felt252` values
-| `3,1,2,3`
+| [`3,1,2,3`]
 |===
 
-The calldata for this struct is serialized as follows: `0,2,5,3,1,2,3`
+Combining the above, the struct is serialized as follows: [`0,2,5,3,1,2,3`]
 
+[#serialization_of_byte_arrays]
+== Serialization of byte arrays
 
+A string is represented in Cairo as a `ByteArray` type. A byte array has the following structure:
 
+. *word count:* Represents the number of 31-byte words in the array construct.
 
-[#serialization_of_ByteArray_values]
-== Serialization of `ByteArray` values
+. *data:*  Consists of one or more `felt252` values, each containing a maximum of 31 bytes.
++
+The last, or only, value is a _pending word_, which is a `felt252` value that represents the remainder of the byte array. It consists of at most 30 bytes.
 
-A string is represented in Cairo as a `ByteArray` type. The first byte of each word in the byte array is the most significant byte in the word. A byte array has the following structure:
-
-[horizontal]
-
-. *Word Count:* Represents the number of 31-byte words in the array construct.
-
-. *Data:*  Consists of one or more felt252 values, each containing a maximum of 31 bytes.The last or only value is limited to 30 bytes or less.
-
-A value of 30 bytes or less is a _pending word_.
-
-3.The number of bytes of the pending word.
+. *`pending_word_len`:* The number of bytes in the pending word.
 
 .Example 1: A string shorter than 31 characters
 
@@ -278,7 +261,7 @@ Consider the string `hello`, which is represented by the 5-byte hex value `0x686
 [source,cairo]
 ----
 
-    0, // Number of 31-byte words in the array construct.
+    0, // Number of 31-byte words in the data array.
     0x68656c6c6f, // Pending word
     5 // Length of the pending word, in bytes
 
