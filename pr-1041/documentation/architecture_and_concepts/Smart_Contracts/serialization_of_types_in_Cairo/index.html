@@ -806,17 +806,17 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <h2 id="serialization_of_structs"><a class="anchor" href="#serialization_of_structs"></a>Serialization of structs</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>You need to represent each variant of a struct as a serialized set of <code>felt252</code> values, where each field value can hold up to 31 bytes (248 bits). This 31-byte chunk is referred to in this context as a <em>word</em>.</p>
+<p>You serialize a struct by serializing its members one at a time.</p>
 </div>
 <div class="paragraph">
-<p>You serialize a struct by serializing its variants one at a time. Its values in calldata are in the order in which they appear in the <em>definition</em> of the struct, even if the variants appear out of order in the instantiation of the struct.</p>
+<p>Its members are serialized in the order in which they  appear in the <em>definition</em> of the struct, even if the members appear out of order in the instantiation of the struct.</p>
 </div>
 <div class="paragraph">
-<p>For example, consider the following definition of the struct <code>myStruct</code> and its instantiation as <code>struct</code>:</p>
+<p>For example, consider the following definition of the struct <code>MyStruct</code> and its instantiation as <code>struct</code>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">struct myStruct {
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">struct MyStruct {
     a: u256,
     b: felt252,
     c: Array&lt;felt252&gt;
@@ -835,14 +835,14 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let struct1 = myStruct {
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let struct1 = MyStruct {
     a: 2, b: 5, c: [1,2,3]
 };</code></pre>
 </div>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let struct1 = myStruct {
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let struct1 = MyStruct {
     b: 5, c: [1,2,3], a: 2
 };</code></pre>
 </div>
@@ -851,10 +851,10 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 </tbody>
 </table>
 <div class="paragraph">
-<p>The serialized calldata for this struct is determined as shown in the table <a href="#calldata_serialization_for_a_struct_in_cairo">Calldata serialization for a struct in Cairo</a>.</p>
+<p>The serialized calldata for this struct is determined as shown in the table <a href="#serialization_for_a_struct_in_cairo">Serialization for a struct in Cairo</a>.</p>
 </div>
-<table id="calldata_serialization_for_a_struct_in_cairo" class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 1. Calldata serialization for a struct in Cairo</caption>
+<table id="serialization_for_a_struct_in_cairo" class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 1. Serialization for a struct in Cairo</caption>
 <colgroup>
 <col style="width: 33.3333%;">
 <col style="width: 33.3333%;">
@@ -870,8 +870,8 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>a: 2</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A <code>u256</code> value is serialized as two <code>felt252</code> values, the most significant bit is first.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>0,2</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">For information on serializing <code>u256</code> values, see <a href="#serialization_in_u256_values">Serialization in <code>u256</code> values</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">[<code>0,2</code>]</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>b: 5</code></p></td>
@@ -881,12 +881,12 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>c: [1,2,3]</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">An array of three <code>felt252</code> values</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>3,1,2,3</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">[<code>3,1,2,3</code>]</p></td>
 </tr>
 </tbody>
 </table>
 <div class="paragraph">
-<p>The calldata for this struct is serialized as follows: <code>0,2,5,3,1,2,3</code></p>
+<p>Combining the above, the struct is serialized as follows: [<code>0,2,5,3,1,2,3</code>]</p>
 </div>
 </div>
 </div>
@@ -894,23 +894,23 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <h2 id="serialization_of_ByteArray_values"><a class="anchor" href="#serialization_of_ByteArray_values"></a>Serialization of <code>ByteArray</code> values</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>A string is represented in Cairo as a <code>ByteArray</code> type. The first byte of each word in the byte array is the most significant byte in the word. A byte array has the following structure:</p>
+<p>A string is represented in Cairo as a <code>ByteArray</code> type. A byte array has the following structure:</p>
 </div>
-<div class="olist horizontal">
-<ol class="horizontal">
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p><strong>Word Count:</strong> Represents the number of 31-byte words in the array construct.</p>
+<p><strong>word count:</strong> Represents the number of 31-byte words in the array construct.</p>
 </li>
 <li>
-<p><strong>Data:</strong>  Consists of one or more felt252 values, each containing a maximum of 31 bytes.The last or only value is limited to 30 bytes or less.</p>
+<p><strong>data:</strong>  Consists of one or more felt252 values, each containing a maximum of 31 bytes.The last or only value is limited to 30 bytes or less.</p>
+<div class="paragraph">
+<p><code>pending_word</code> - a <code>felt252</code> which represents the remainder of the byte array. Consists of at most 30 bytes.</p>
+</div>
+</li>
+<li>
+<p>The number of bytes in the pending word.</p>
 </li>
 </ol>
-</div>
-<div class="paragraph">
-<p>A value of 30 bytes or less is a <em>pending word</em>.</p>
-</div>
-<div class="paragraph">
-<p>3.The number of bytes of the pending word.</p>
 </div>
 <div class="paragraph">
 <div class="title">Example 1: A string shorter than 31 characters</div>
@@ -918,7 +918,7 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">    0, // Number of 31-byte words in the array construct.
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">    0, // Number of 31-byte words in the data array.
     0x68656c6c6f, // Pending word
     5 // Length of the pending word, in bytes</code></pre>
 </div>
