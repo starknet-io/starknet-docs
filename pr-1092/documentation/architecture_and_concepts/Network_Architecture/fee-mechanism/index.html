@@ -586,7 +586,7 @@
 <p>\(n\) is <a href="#storage_updates">the number of unique contracts updated</a>.</p>
 </li>
 <li>
-<p>\(m\) is the number of values updated, not counting multiple updates for the same key.</p>
+<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Note that \(m\ge 2\) always holds since the sending account balance and the sequencer&#8217;s balance are always updated.</p>
 </li>
 <li>
 <p>\(t\) is the number of L2&#8594;L1 messages sent, where the corresponding payload sizes are denoted by \(q_1,...,q_t\).</p>
@@ -598,19 +598,16 @@
 <p>\(w\) is the <a href="#calculation_of_computation_costs"><code>CairoResourceFeeWeights</code></a> vector.</p>
 </li>
 <li>
-<p>\(\text{calldata_cost}\) is 550 gas per 32-byte word. This cost is derived as follows: 32*16 gas per 32-byte word on Ethereum, ~100gas for on-chain hashing that happens for every sent word, and 10% discount because the the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block, resulting in 0.9*612 = 550gas (rounded down).</p>
-</li>
-<li>
-<p>\(\text{storage_write_cost}\) is 20,000 gas, the cost of allocating a new storage cell on Ethereum.</p>
-</li>
-<li>
-<p>\(\text{contract_update_discount}\) is 312 gas, for the derivation of this discount see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
+<p>\(\text{calldata_cost}\) is 550 gas per 32-byte word. This cost is derived as follows: 512 gas per 32-byte word for calldata, ~100gas for on-chain hashing that happens for every sent word, and 10% discount because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block, resulting in 0.9*612 = 550gas (rounded down).</p>
 </li>
 <li>
 <p>\(310\) is the cost of updating the sender&#8217;s balance, for the derivation of this number see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
 </li>
 <li>
-<p>Note that \(m\ge 2\) always holds since the sending account balance and the sequencer&#8217;s balance are always updated.</p>
+<p>\(\text{contract_update_discount}\) is 312 gas, for the derivation of this discount see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
+</li>
+<li>
+<p>\(\text{storage_write_cost}\) is 20,000 gas, the cost of allocating a new storage cell on Ethereum.</p>
 </li>
 </ul>
 </div>
@@ -897,12 +894,12 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </div>
 <div class="stemblock">
 <div class="content">
-\[\underbrace{\textit{gas_price}(\text{calldata_cost} \cdot 2n - \text{contract_update_discount}\cdot n}_{\text{contract addresses +  new nonce and number of storage updates
+\[\underbrace{\textit{gas_price}\left(\text{calldata_cost} \cdot 2n - \text{contract_update_discount}\cdot n\right)}_{\text{contract addresses +  new nonce and number of storage updates
 }} \\
 
 + \\
 
-\underbrace{\textit{gas_price} \cdot (\text{calldata_cost}(2(m-2))+310)}_{\text{storage updates}}\]
+\underbrace{\textit{gas_price} \cdot \left(\text{calldata_cost}(2(m-2))+310\right)}_{\text{storage updates}}\]
 </div>
 </div>
 <div class="paragraph">
@@ -914,10 +911,7 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 <p>\(n\) is the number of unique contracts updated.</p>
 </li>
 <li>
-<p>\(m\) is the number of unique values updated. Be aware that the account balance is always updated, because the account needs to pay a fee. A discount is applied to the account balance update to consider that the value of the account balance most likely does not use the full 32 bytes allotted to it.</p>
-</li>
-<li>
-<p>\(\text{calldata_cost}\) is 550 gas per 32-byte word. This cost is derived as follows: 32*16 gas per 32-byte word on Ethereum, ~100gas for on-chain hashing that happens for every sent word, and 10% discount because the the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block, resulting in 0.9*612 = 550gas (rounded down).</p>
+<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Note that \(m\ge 2\) always holds since the sending account balance and the sequencer&#8217;s balance are always updated. The sender&#8217;s balance is treated separately (described below) and the sequencer&#8217;s balance is ignored since it is touched by all the transactions within a block.</p>
 </li>
 <li>
 <p>\(\text{contract_update_discount}\) is 312 gas, which is discounted for every updated contract, since out of the \(2n\) words induced by updated contracts, \(n\) are short, including at most \(6\) non-zero bytes:</p>
