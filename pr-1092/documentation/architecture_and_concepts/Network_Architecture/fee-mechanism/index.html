@@ -568,7 +568,7 @@
 </div>
 <div class="stemblock">
 <div class="content">
-\[F = \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left(2n+2(m-2) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right) - \text{contract_update_discount}\cdot n + 310 + \text{storage_write_cost}\cdot t\right)\]
+\[F = \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left(2n+2(m-1) + 3t + \sum\limits_{i=1}^t q_i +\ell\right) - \text{contract_update_discount}\cdot n - 240 + \text{storage_write_cost}\cdot t\right)\]
 </div>
 </div>
 <div class="paragraph">
@@ -583,16 +583,16 @@
 </div>
 </li>
 <li>
-<p>\(n\) is <a href="#storage_updates">the number of unique contracts updated</a>.</p>
+<p>\(n\) is <a href="#storage_updates">the number of unique contracts updated</a>. Note that this also takes into account contract deployment, even if the storage of the newly deployed contract was untouched, i.e. \(n\ge\ell\).</p>
 </li>
 <li>
-<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Note that \(m\ge 2\) always holds since the sending account balance and the sequencer&#8217;s balance are always updated.</p>
+<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Note that \(m\ge 1\) since the sequencer balance is always updated (this is not charged for).</p>
 </li>
 <li>
 <p>\(t\) is the number of L2&#8594;L1 messages sent, where the corresponding payload sizes are denoted by \(q_1,...,q_t\).</p>
 </li>
 <li>
-<p>\(\ell\) is the number of contract deployments.</p>
+<p>\(\ell\) is the number of contracts whose class was changed. This can happen on deployment or on applying the <code>replace_class</code> syscall.</p>
 </li>
 <li>
 <p>\(w\) is the <a href="#calculation_of_computation_costs"><code>CairoResourceFeeWeights</code></a> vector.</p>
@@ -601,7 +601,7 @@
 <p>\(\text{calldata_cost}\) is 550 gas per 32-byte word. This cost is derived as follows: 512 gas per 32-byte word for calldata, ~100gas for on-chain hashing that happens for every sent word, and 10% discount because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block, resulting in 0.9*612 = 550gas (rounded down).</p>
 </li>
 <li>
-<p>\(310\) is the cost of updating the sender&#8217;s balance, for the derivation of this number see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
+<p>\(240\) is the gas discount for updating the sender&#8217;s balance, for the derivation of this number see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
 </li>
 <li>
 <p>\(\text{contract_update_discount}\) is 312 gas, for the derivation of this discount see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
@@ -899,7 +899,7 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 
 + \\
 
-\underbrace{\textit{gas_price} \cdot \left(\text{calldata_cost}(2(m-2))+310\right)}_{\text{storage updates}}\]
+\underbrace{\textit{gas_price} \cdot \left(\text{calldata_cost}(2(m-1))-240\right)}_{\text{storage updates}}\]
 </div>
 </div>
 <div class="paragraph">
@@ -908,10 +908,10 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 <div class="ulist">
 <ul>
 <li>
-<p>\(n\) is the number of unique contracts updated.</p>
+<p>\(n\) is <a href="#storage_updates">the number of unique contracts updated</a>. Note that this also takes into account contract deployment, even if the storage of the newly deployed contract was untouched, i.e. \(n\ge\ell\).</p>
 </li>
 <li>
-<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Note that \(m\ge 2\) always holds since the sending account balance and the sequencer&#8217;s balance are always updated. The sender&#8217;s balance is treated separately (described below) and the sequencer&#8217;s balance is ignored since it is touched by all the transactions within a block.</p>
+<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Note that \(m\ge 1\) since the sequencer balance is always updated (this is not charged for).</p>
 </li>
 <li>
 <p>\(\text{contract_update_discount}\) is 312 gas, which is discounted for every updated contract, since out of the \(2n\) words induced by updated contracts, \(n\) are short, including at most \(6\) non-zero bytes:</p>
@@ -937,7 +937,7 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </div>
 </li>
 <li>
-<p>\(310\) is the cost of updating the sender&#8217;s balance, and is derived by assuming the balance requires at most 12 non-zero bytes (which is enough for 1.2B ETH or STRK), resulting in the following discounted price: \(0.9*612-(512-(16*12+20*4))=310\) (rounded down).</p>
+<p>\(240\) is the gas discount for updating the sender&#8217;s balance, and is derived by assuming the balance requires at most 12 non-zero bytes (which is enough for 1.2B ETH or STRK), resulting in the following discount: \(512-(20*4+12*16)=240$\).</p>
 </li>
 </ul>
 </div>
@@ -1011,18 +1011,8 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </ul>
 </div>
 <div class="paragraph">
-<p>The following formula describes the fee for a single deployment:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[\textit{gas_price}\cdot 3 \cdot \text{calldata_cost}\]
-</div>
-</div>
-<div class="paragraph">
-<p>where \(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
-</div>
-<div class="paragraph">
-<p>For more information on data saved on L1, see <a href="../on-chain-data/" class="xref page">Data availability</a>.</p>
+<p>The first two elements are counted in the number of unique modified contracts which we denote by \(n\) throughout this page (i.e. \(n\ge\ell\)), so the only addition to the cost is coming from publishing the class hash,
+which adds 551 gas (see \(\text{calldata_cost}\) above).</p>
 </div>
 </div>
 </div>
