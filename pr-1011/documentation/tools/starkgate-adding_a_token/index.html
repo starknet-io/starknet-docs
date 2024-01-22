@@ -6,7 +6,7 @@
     <title>Adding a token to StarkGate :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/tools/starkgate-adding_a_token/">
     <link rel="prev" href="../starkgate-automated_actions_with_bridging/">
-    <link rel="next" href="../starkgate-removing_a_token/">
+    <link rel="next" href="../starkgate-cancelling%20a%20deposit/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -115,7 +115,7 @@
   </ul>
 </nav>
   <div class="edit-this-page">
-    <a href="https://github.com/starknet-io/starknet-docs/edit/master/components/Starknet/modules/tools/pages/starkgate-adding_a_token.adoc"><img class="pencil">Edit this Page</a>
+    <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/tools/pages/starkgate-adding_a_token.adoc"><img class="pencil">Edit this Page</a>
   </div>
 </div>
 <div class="body">
@@ -352,12 +352,12 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../architecture_and_concepts/Smart_Contracts/cairo-and-sierra/">Cairo and Sierra</a>
+     href="../../architecture_and_concepts/Smart_Contracts/contract-syntax/">Migrating a contract from Cairo v1 to Cairo v2</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../architecture_and_concepts/Smart_Contracts/contract-syntax/">Migrating a contract from Cairo 0 to Cairo</a>
+     href="../../architecture_and_concepts/Smart_Contracts/cairo-and-sierra/">Cairo and Sierra</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -452,16 +452,6 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../important_addresses/">Important addresses</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="../limits_and_triggers/">Current limits and triggers</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
      href="../ref_block_explorers/">Block explorers</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -483,24 +473,19 @@
        class="nav-link"
      href="../starkgate_architecture/">StarkGate architecture</a>
   </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../starkgate-automated_actions_with_bridging/">Automated actions with bridging</a>
-  </li>
   <li class="nav-item parent" data-depth="3">
     <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">Procedures</span>
 <ul class="nav-list">
+  <li class="nav-item" data-depth="4">
+    <a 
+       class="nav-link"
+     href="../starkgate-automated_actions_with_bridging/">Performing a Smart Deposit</a>
+  </li>
   <li class="nav-item is-current-page" data-depth="4">
     <a 
        class="nav-link"
      href="./">Adding a token</a>
-  </li>
-  <li class="nav-item" data-depth="4">
-    <a 
-       class="nav-link"
-     href="../starkgate-removing_a_token/">Removing a token</a>
   </li>
   <li class="nav-item" data-depth="4">
     <a 
@@ -517,11 +502,32 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../starkgate_function_reference/">StarkGate function reference</a>
+     href="../starkgate_function_reference/">StarkGate function and event reference</a>
   </li>
 </ul>
   </li>
 </ul>
+  </li>
+  <li class="nav-item parent" data-depth="1">
+    <button class="nav-item-toggle mask-svg-center"></button>
+    <span class="nav-text">Important addresses</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../important_addresses/">Starknet contracts and sequencer addresses</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../bridged_tokens/">Bridged tokens</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a 
+       class="nav-link"
+     href="../limits_and_triggers/">Current limits</a>
   </li>
 </ul>
   </li>
@@ -552,10 +558,10 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>You can add support for a token with the <code>enrollTokenBridge</code> function, using a block explorer or a CLI.</p>
+<p>StarkGate supports permissionless bridging.</p>
 </div>
 <div class="paragraph">
-<p>The L2 ERC-20 contract is a standard contract, so it is not recommended to add tokens with non-standard behavior, such as inflationary tokens.</p>
+<p>To permissionlessly add support for an ERC-20 token, use the <code>enrollTokenBridge</code> function. You can access this function using a block explorer or a CLI.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -572,7 +578,47 @@
 </table>
 </div>
 <div class="paragraph">
-<p>Adding a token that requires a customized bridging mechanism or a non-standard ERC-20 contract on L2 is currently not pemissionless, and can be done only by the StarkWare team. Please contact StarkWare at <a href="mailto:starkgate.support@starkware.co">starkgate.support@starkware.co</a>.</p>
+<p>When you enroll a new ERC-20 token, StarkGate does the following:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Adds bridge functionality for that token on L1 using the <code>StarknetTokenBridge.sol</code> contract.</p>
+</li>
+<li>
+<p>Adds bridge functionality for that token on L2 using the <code>token_bridge.cairo</code> class.</p>
+</li>
+<li>
+<p>Creates a new ERC-20 token contract on L2 based on a standard ERC-20 contract class. Each new contract uses the class hash of this contract class to identify its inheritance.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>When the code of <code>token_bridge.cairo</code> is updated, its class hash changes. However,any existing contract continues to refer to the previous class hash. Any new contracts use the new class hash.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Be aware of the following:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The L2 ERC-20 contract is a standard contract, so it is not recommended to add tokens with non-standard behavior, such as inflationary tokens.</p>
+</li>
+<li>
+<p>Adding a token that requires a customized bridging mechanism or a non-standard ERC-20 contract on L2 is currently not permissionless, and can be done only by the StarkWare team. Please contact StarkWare on the <a href="https://community.starknet.io/">Starknet Community Forum</a> and <a href="https://discord.com/invite/qypnmzkhbc">Discord channel</a>.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -592,8 +638,8 @@
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../starkgate-automated_actions_with_bridging/">Automated actions with bridging</a></span>
-  <span class="next"><a href="../starkgate-removing_a_token/">Removing a token</a></span>
+  <span class="prev"><a href="../starkgate-automated_actions_with_bridging/">Performing a Smart Deposit</a></span>
+  <span class="next"><a href="../starkgate-cancelling%20a%20deposit/">Cancelling a deposit</a></span>
 </nav>
 </article>
   </div>
@@ -604,7 +650,7 @@
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
-    <strong>Mainnet: 0.12.3 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
+    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->

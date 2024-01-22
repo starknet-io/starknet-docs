@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Universal Deployer Contract (UDC) :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Smart_Contracts/universal-deployer/">
-    <link rel="prev" href="../contract-syntax/">
+    <link rel="prev" href="../cairo-and-sierra/">
     <link rel="next" href="../system-calls-cairo1/">
     <meta name="generator" content="Antora 3.1.1">
 
@@ -114,7 +114,7 @@
   </ul>
 </nav>
   <div class="edit-this-page">
-    <a href="https://github.com/starknet-io/starknet-docs/edit/master/components/Starknet/modules/architecture_and_concepts/pages/Smart_Contracts/universal-deployer.adoc"><img class="pencil">Edit this Page</a>
+    <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture_and_concepts/pages/Smart_Contracts/universal-deployer.adoc"><img class="pencil">Edit this Page</a>
   </div>
 </div>
 <div class="body">
@@ -351,12 +351,12 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../cairo-and-sierra/">Cairo and Sierra</a>
+     href="../contract-syntax/">Migrating a contract from Cairo v1 to Cairo v2</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../contract-syntax/">Migrating a contract from Cairo 0 to Cairo</a>
+     href="../cairo-and-sierra/">Cairo and Sierra</a>
   </li>
   <li class="nav-item is-current-page" data-depth="3">
     <a 
@@ -451,16 +451,6 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../tools/important_addresses/">Important addresses</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="../../../tools/limits_and_triggers/">Current limits and triggers</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
      href="../../../tools/ref_block_explorers/">Block explorers</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -482,11 +472,6 @@
        class="nav-link"
      href="../../../tools/starkgate_architecture/">StarkGate architecture</a>
   </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../tools/starkgate-automated_actions_with_bridging/">Automated actions with bridging</a>
-  </li>
   <li class="nav-item parent" data-depth="3">
     <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">Procedures</span>
@@ -494,12 +479,12 @@
   <li class="nav-item" data-depth="4">
     <a 
        class="nav-link"
-     href="../../../tools/starkgate-adding_a_token/">Adding a token</a>
+     href="../../../tools/starkgate-automated_actions_with_bridging/">Performing a Smart Deposit</a>
   </li>
   <li class="nav-item" data-depth="4">
     <a 
        class="nav-link"
-     href="../../../tools/starkgate-removing_a_token/">Removing a token</a>
+     href="../../../tools/starkgate-adding_a_token/">Adding a token</a>
   </li>
   <li class="nav-item" data-depth="4">
     <a 
@@ -516,11 +501,32 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../../tools/starkgate_function_reference/">StarkGate function reference</a>
+     href="../../../tools/starkgate_function_reference/">StarkGate function and event reference</a>
   </li>
 </ul>
   </li>
 </ul>
+  </li>
+  <li class="nav-item parent" data-depth="1">
+    <button class="nav-item-toggle mask-svg-center"></button>
+    <span class="nav-text">Important addresses</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../../../tools/important_addresses/">Starknet contracts and sequencer addresses</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../../../tools/bridged_tokens/">Bridged tokens</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a 
+       class="nav-link"
+     href="../../../tools/limits_and_triggers/">Current limits</a>
   </li>
 </ul>
   </li>
@@ -607,17 +613,34 @@ For details on the motivation and the decision making process, see the <a href="
 <div class="listingblock">
 <div class="title">Example implementation in Cairo:</div>
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">use openzeppelin::universal_deployer::interface::IUniversalDeployerDispatcher;
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[starknet::interface]
+trait IUniversalDeployer&lt;TContractState&gt; {
+    fn deployContract(
+        ref self: TContractState,
+        class_hash: ClassHash,
+        salt: felt252,
+        unique: bool,
+        calldata: Span&lt;felt252&gt;
+    ) -&gt; ContractAddress; }
 
-const UDC_ADDRESS = 0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf;
-let udc = IUniversalDeployerDispatcher { contract_address: UDC_ADDRESS }
+const UDC_ADDRESS: felt252 = 0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf;
 
-let class_hash = 0x5c478ee27f2112411f86f207605b2e2c58cdb647bac0df27f660ef2252359c6;
-let salt = 1234567879;
-let unique = false;
-let mut calldata = array![];
+fn deploy() -&gt; ContractAddress {
+    let dispatcher = IUniversalDeployerDispatcher {
+        contract_address: UDC_ADDRESS.try_into().unwrap()
+    };
 
-let deployed_addr = udc.deployContract(class_hash, salt, unique, calldata.span());</code></pre>
+    // deployment parameters
+    let class_hash = class_hash_const::&lt;
+       0x5c478ee27f2112411f86f207605b2e2c58cdb647bac0df27f660ef2252359c6
+    &gt;();
+    let salt = 1234567879;
+    let unique = false;
+    let mut calldata = array![];
+
+    // the UDC returns the deployed contract address
+    dispatcher.deployContract(class_hash, salt, unique, calldata.span());
+}</code></pre>
 </div>
 </div>
 </div>
@@ -744,7 +767,7 @@ struct ContractDeployed {
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../contract-syntax/">Migrating a contract from Cairo 0 to Cairo</a></span>
+  <span class="prev"><a href="../cairo-and-sierra/">Cairo and Sierra</a></span>
   <span class="next"><a href="../system-calls-cairo1/">System calls</a></span>
 </nav>
 </article>
@@ -756,7 +779,7 @@ struct ContractDeployed {
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
-    <strong>Mainnet: 0.12.3 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
+    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->
