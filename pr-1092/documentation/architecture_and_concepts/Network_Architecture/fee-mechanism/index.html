@@ -568,7 +568,11 @@
 </div>
 <div class="stemblock">
 <div class="content">
-\[F = \text{gas_price}\cdot\left(\max_k v_k w_k + \text{calldata_cost}\cdot\left(2n+2(m-1) + 3t + \sum\limits_{i=1}^t q_i +\ell\right) - \text{contract_update_discount}\cdot n - 240 + \text{storage_write_cost}\cdot t\right)\]
+\[F = \text{gas_price}\cdot\left(\max_k v_k w_k + \\
+\text{da_calldata_cost}\left(2n+2(m-1) + \ell + 3t + \sum\limits_{i=1}^t q_i\right) \\
+- \text{contract_update_discount}\cdot n - 240 \\
+\text{message_calldata_cost}\cdot\left(3t + \sum\limits_{i=1}^t q_i\right) \\
+ + \text{storage_write_cost}\cdot t\right)\]
 </div>
 </div>
 <div class="paragraph">
@@ -598,7 +602,10 @@
 <p>\(w\) is the <a href="#calculation_of_computation_costs"><code>CairoResourceFeeWeights</code></a> vector.</p>
 </li>
 <li>
-<p>\(\text{calldata_cost}\) is 550 gas per 32-byte word. This cost is derived as follows: 512 gas per 32-byte word for calldata, ~100gas for on-chain hashing that happens for every sent word, and 10% discount because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block, resulting in 0.9*612 = 550gas (rounded down).</p>
+<p>\(\text{da_calldata_cost}\) is 551 gas per 32-byte word. This cost is derived as follows: 512 gas per 32-byte word for calldata, ~100gas for on-chain hashing that happens for every sent word, and 10% discount because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block, resulting in 551gas.</p>
+</li>
+<li>
+<p>\(\text{message_calldata_cost}\) is 512 gas per 32-byte word. For more details, see <a href="#l_2→l_1_messages">Onchain data: L2&#8594;L1 messages</a>.</p>
 </li>
 <li>
 <p>\(240\) is the gas discount for updating the sender&#8217;s balance, for the derivation of this number see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
@@ -894,12 +901,12 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </div>
 <div class="stemblock">
 <div class="content">
-\[\underbrace{\textit{gas_price}\left(\text{calldata_cost} \cdot 2n - \text{contract_update_discount}\cdot n\right)}_{\text{contract addresses +  new nonce and number of storage updates
+\[\underbrace{\textit{gas_price}\left(\text{da_calldata_cost} \cdot 2n - \text{contract_update_discount}\cdot n\right)}_{\text{contract addresses +  new nonce and number of storage updates
 }} \\
 
 + \\
 
-\underbrace{\textit{gas_price} \cdot \left(\text{calldata_cost}(2(m-1))-240\right)}_{\text{storage updates}}\]
+\underbrace{\textit{gas_price} \cdot \left(\text{da_calldata_cost}(2(m-1))-240\right)}_{\text{storage updates}}\]
 </div>
 </div>
 <div class="paragraph">
@@ -985,11 +992,13 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </div>
 <div class="stemblock">
 <div class="content">
-\[\textit{gas_price}\cdot \text{calldata_cost}\cdot(3+\text{payload_size})\]
+\[\textit{gas_price}\cdot \left(\text{da_calldata_cost} + \test{message_calldata_cost}\right)\cdot\left(3+\text{payload_size}\right)\]
 </div>
 </div>
 <div class="paragraph">
-<p>where \(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
+<p>Where \(\text{da_calldata_cost}\) and \(\text{message_calldata_cost}\) are 551 and 512 gas correspondingly.
+The reason messages appear twice in the fee formula (and pay both in \(\text{da_calldata_cost}\) and \(\text{message_calldata_cost}\)),
+is that they are sent to Ethereum twice: once to the STARK verifier contract (where the additional hashing cost is incured) and once when it is sent to the Starknet Core contract as part of the state update transaction.</p>
 </div>
 </div>
 <div class="sect2">
