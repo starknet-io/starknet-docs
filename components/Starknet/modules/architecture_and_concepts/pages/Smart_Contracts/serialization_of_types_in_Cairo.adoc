@@ -139,7 +139,7 @@ Combining the above, the array is serialized as follows: `[3,0,10,0,20,1,0]`
 
 An enum is serialized as follows:
 
-`<__index_of_enum_variant__>,<__serialized_variant_type__>`
+`<__index_of_enum_variant__>,<__serialized_variant_type_and_value__>`
 
 .Example: Serialization in an enum 1
 
@@ -151,30 +151,44 @@ enum Week {
 }
 ----
 
+Now consider instantiations of the `Week` enum's variants as shown in the table xref:#serialization_of_Week[]:
 
-
-The `Week` enum is serialized as follows:
+[#serialization_of_Week]
+.Serialization of `Week` variants
 
 [cols=",,",]
 |===
 |Instance |Description |Serialization
 
-|`Week::Sunday` |index=`1`, the variant type is the unit type | `[1]`
-|`Week::Monday(5)` a| index=`2` |The variant's type is `u256`. It's serialization is `[2,0,5]`.
+|`Week::Sunday` | Index=`1`. The variant's type is the unit type. | `[1]`
+|`Week::Monday(5)` a| Index=`2`. The variant's type is `u256`.| `[2,0,5]`
 |===
 
 .Example: Serialization in an enum 2
+
+Consider the following definition of an enum named `MessageType`:
 [source,cairo]
 ----
 enum MessageType {
     A,
     #[default]
     B: u128,
-    C(
+    C
 }
 ----
 
-The variant `A` is serialized as `[1]`, variant `B` as `[0]`, because it is marked as `#[default]`, and variant `C` as `[2]`. So the serialization is as follows: `[1,0,2]`
+Now consider instantiations of the `MessageType` enum's variants as shown in the table xref:#serialization_of_MessageType[]:
+
+[#serialization_of_MessageType]
+.Serialization of `MessageType` variants
+[cols=",,",]
+|===
+|Instance |Description |Serialization
+
+|`MessageType::A` | Index=`1`. The variant's type is the unit type. | `[1]`
+|`MessageType::B(6)` a| Index=`0`. The variant's type is `u128`. | `[0,6]`
+|`MessageType::C` | Index=`2`. The variant's type is the unit type. | `[2]`
+|===
 
 [#serialization_of_structs]
 == Serialization of structs
