@@ -361,6 +361,11 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
+     href="../universal-deployer/">Universal Deployer Contract</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
      href="../system-calls-cairo1/">System calls</a>
   </li>
   <li class="nav-item is-current-page" data-depth="3">
@@ -560,8 +565,8 @@
 <p>When you interact with contracts, especially if you are a library or SDK developer that wants to create transactions, you need to understand how Cairo handles types that are larger than 252 bits so you can correctly formulate the calldata in a transaction.</p>
 </div>
 <div class="paragraph">
-<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as <code>u256</code> or arrays, are ultimately represented by a list of felts. In order to interact with a contract, you need to know how to encode its arguments as a list of felts in the Cairo VM so you can correctly formulate the calldata in the transaction.
-SDKs, such as starknet.js, encode the calldata for you, so you can simply specify any type and the SDK properly formulates the calldata. For example, you don’t need to know that a <code>u256</code> value is represented by two <code>felt252</code> values. You can simply specify a <code>u256</code> value in your code, and the SDK takes care of the serialization and encoding.</p>
+<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as <code>u256</code> or arrays, are ultimately represented by a list of felts. In order to interact with a contract, you need to know how to encode its arguments as a list of felts so you can correctly formulate the calldata in the transaction.
+SDKs, such as starknet.js, encode the calldata for you, so you can simply specify any type and the SDK properly formulates the calldata. For example, you don’t need to know that a <code>u256</code> value is represented by two <code>felt252</code> values. You can simply specify a single integer in your code, and the SDK takes care of the serialization and encoding.</p>
 </div>
 </div>
 </div>
@@ -569,7 +574,7 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 <h2 id="data_types_of_252_bits_or_less"><a class="anchor" href="#data_types_of_252_bits_or_less"></a>Data types of 252 bits or less</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following types are smaller than 252 bits. For these types, each value is serialized to a single-member list that contains a <code>felt252</code> value.</p>
+<p>The following types are smaller than 252 bits. For these types, each value is serialized as a list that contains a single value, of type <code>felt252</code>.</p>
 </div>
 <div class="ulist">
 <ul>
@@ -589,7 +594,7 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 <p>Unsigned integers smaller than 252 bits: <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, and <code>usize</code></p>
 </li>
 <li>
-<p><code>byte31</code></p>
+<p><code>bytes31</code></p>
 </li>
 <li>
 <p><code>felt252</code></p>
@@ -624,13 +629,13 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 <p><code>u256</code> and <code>u512</code></p>
 </li>
 <li>
-<p><code>array</code></p>
+<p>arrays</p>
 </li>
 <li>
-<p>enum</p>
+<p>enums</p>
 </li>
 <li>
-<p>struct</p>
+<p>structs</p>
 </li>
 <li>
 <p><code>ByteArray</code>, which represents strings</p>
@@ -646,7 +651,7 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 <p>Among unsigned integers, only <code>u256</code> and <code>u512</code> have non-trivial serialization.</p>
 </div>
 <div class="sect2">
-<h3 id="serialization_in_u256_values"><a class="anchor" href="#serialization_in_u256_values"></a>Serialization in <code>u256</code> values</h3>
+<h3 id="serialization_in_u256_values"><a class="anchor" href="#serialization_in_u256_values"></a>Serialization of <code>u256</code> values</h3>
 <div class="paragraph">
 <p>A <code>u256</code> value in Cairo is represented by two <code>felt252</code> values, as follows:</p>
 </div>
@@ -666,7 +671,7 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 <div class="ulist">
 <ul>
 <li>
-<p>A <code>u256</code> variable whose decimal value is <code>2</code> is serialized as <code>[0,2]</code>. To understand why, examine the binary representation of the <code>2</code> and split it into two 128-bit parts, as follows:</p>
+<p>A <code>u256</code> variable whose decimal value is <code>2</code> is serialized as <code>[0,2]</code>. To understand why, examine the binary representation of <code>2</code> and split it into two 128-bit parts, as follows:</p>
 <div class="stemblock">
 <div class="content">
 \[\underbrace{0\cdots0}_{\text{128 bits}} |
@@ -675,10 +680,10 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 </div>
 </li>
 <li>
-<p>A <code>u256</code> variable whose decimal value is <code>2<sup>128</sup></code> is serialized as <code>[1,0]</code>. To understand why, examine the binary representation of the <code>2<sup>128</sup></code> and split it into two 128-bit parts, as follows:</p>
+<p>A <code>u256</code> variable whose decimal value is <code>2<sup>128</sup></code> is serialized as <code>[1,0]</code>. To understand why, examine the binary representation of <code>2<sup>128</sup></code> and split it into two 128-bit parts, as follows:</p>
 <div class="stemblock">
 <div class="content">
-\[\underbrace{0\cdots1}_{\text{128 bits}} |
+\[\underbrace{0\cdots01}_{\text{128 bits}} |
 \underbrace{0\cdots0}_{\text{128 bits}}\]
 </div>
 </div>
@@ -687,7 +692,7 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 <p>A <code>u256</code> variable whose decimal value is <code>2<sup>129</sup>+2<sup>128</sup>+20</code>, is serialized as <code>[3,20]</code>. To understand why, examine the binary representation of the <code>2<sup>129</sup>+2<sup>128</sup>+20</code> and split it into two 128-bit parts, as follows:</p>
 <div class="stemblock">
 <div class="content">
-\[\underbrace{0\cdots11}_{\text{128 bits}} \|
+\[\underbrace{0\cdots011}_{\text{128 bits}} \|
 \underbrace{0\cdots10100}_{\text{128 bits}}\]
 </div>
 </div>
@@ -698,7 +703,7 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 <div class="sect2">
 <h3 id="serialization_in_u512_values"><a class="anchor" href="#serialization_in_u512_values"></a>Serialization of <code>u512</code> values</h3>
 <div class="paragraph">
-<p>A <code>u512</code> value in Cairo is a struct containing four <code>felt252</code> values, each representing a 128-bit limb of the original integer, starting from the most significant bit, similar to a <code>u256</code> value.</p>
+<p>The <code>u512</code> type in Cairo is a struct containing four <code>felt252</code> members, each representing a 128-bit limb of the original integer, similar to the <code>u256</code> type.</p>
 </div>
 </div>
 </div>
@@ -743,25 +748,26 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <div class="paragraph">
 <p><code>&lt;<em>index_of_enum_variant</em>&gt;,&lt;<em>serialized_variant_type</em>&gt;</code></p>
 </div>
-<div class="paragraph">
-<p>For example, consider the following enum definition:</p>
-</div>
 <div class="listingblock">
+<div class="title">Example: Serialization in an enum 1</div>
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">enum WeekEnd \{
-    Saturday: (), // index=0, no associated value
-    Sunday: u256, // index=1
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">enum Week {
+    Sunday: (), // index=1, the variant type is the unit type
+    Monday: u256, // index=2
 }</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Now consider the following instantiations of the enum, one with <code>Sunday</code>:</p>
+<p>The variant A is serialized as 1, variant B as 0 (since it is marked as default), and variant C as 2</p>
 </div>
-<div class="listingblock `Sunday`">
+<div class="paragraph">
+<p>Now consider the following instantiations of the enum, one with <code>Monday</code>:</p>
+</div>
+<div class="listingblock `Monday`">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">fn process(self: WeekEnd) \{
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">fn process(self: Week) \{
     match self \{
-        WeekEnd::Sunday, // index=0, the variant type is the unit type
+        Week::Monday, // index=2, the variant type is the unit type
         }
     }</code></pre>
 </div>
@@ -779,27 +785,36 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <tr>
 <th class="tableblock halign-left valign-top">Instance</th>
 <th class="tableblock halign-left valign-top">Description</th>
-<th class="tableblock halign-left valign-top">Values to pass in calldata</th>
+<th class="tableblock halign-left valign-top">Values to pass in serialization</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>WeekEnd::Sunday</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">index=<code>0</code>, no corresponding value.</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>0</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Week::Sunday</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">index=<code>1</code>, no corresponding value.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>WeekEnd::Monday(5)</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Week::Monday(5)</code></p></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>index=<code>1</code>.</p>
+<p>index=<code>2</code>.</p>
 </div>
 <div class="paragraph">
 <p>The variant&#8217;s value is <code>5</code>. It&#8217;s serialization is <code>[0,5]</code>.</p>
 </div></div></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1,0,5</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>2,0,5</code></p></td>
 </tr>
 </tbody>
 </table>
+<div class="paragraph">
+<div class="title">Example: Serialization in an enum 2</div>
+<p>enum MessageType \{<br>
+A,<br>
+#[default]<br>
+B<br>
+C:<br>
+}</p>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -809,7 +824,7 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <p>You serialize a struct by serializing its members one at a time.</p>
 </div>
 <div class="paragraph">
-<p>Its members are serialized in the order in which they  appear in the <em>definition</em> of the struct, even if the members appear out of order in the instantiation of the struct.</p>
+<p>Its members are serialized in the order in which they  appear in the definition of the struct.</p>
 </div>
 <div class="paragraph">
 <p>For example, consider the following definition of the struct <code>MyStruct</code> and its instantiation as <code>struct</code>:</p>
@@ -851,7 +866,7 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 </tbody>
 </table>
 <div class="paragraph">
-<p>The serialized calldata for this struct is determined as shown in the table <a href="#serialization_for_a_struct_in_cairo">Serialization for a struct in Cairo</a>.</p>
+<p>The serialization of <code>MyStruct</code> is determined as shown in the table <a href="#serialization_for_a_struct_in_cairo">Serialization for a struct in Cairo</a>.</p>
 </div>
 <table id="serialization_for_a_struct_in_cairo" class="tableblock frame-all grid-all stretch">
 <caption class="title">Table 1. Serialization for a struct in Cairo</caption>
@@ -864,13 +879,13 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <tr>
 <th class="tableblock halign-left valign-top">Member</th>
 <th class="tableblock halign-left valign-top">Description</th>
-<th class="tableblock halign-left valign-top">Values to pass in calldata</th>
+<th class="tableblock halign-left valign-top">Values to pass in serialization</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>a: 2</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">For information on serializing <code>u256</code> values, see <a href="#serialization_in_u256_values">Serialization in <code>u256</code> values</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">For information on serializing <code>u256</code> values, see <a href="#serialization_in_u256_values">Serialization of <code>u256</code> values</a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">[<code>0,2</code>]</p></td>
 </tr>
 <tr>
@@ -894,21 +909,21 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <h2 id="serialization_of_byte_arrays"><a class="anchor" href="#serialization_of_byte_arrays"></a>Serialization of byte arrays</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>A string is represented in Cairo as a <code>ByteArray</code> type. A byte array has the following structure:</p>
+<p>A string is represented in Cairo as a <code>ByteArray</code> type. A byte array is actually a struct with the following members:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p><strong>word count:</strong> Represents the number of 31-byte words in the array construct.</p>
+<p><strong><code>data: Array&lt;felt252&gt;</code></strong><br>
+Contains one or more <code>felt252</code> values, each containing a maximum of 31 bytes.</p>
 </li>
 <li>
-<p><strong>data:</strong>  Consists of one or more <code>felt252</code> values, each containing a maximum of 31 bytes.</p>
-<div class="paragraph">
-<p>The last, or only, value is a <em>pending word</em>, which is a <code>felt252</code> value that represents the remainder of the byte array. It consists of at most 30 bytes.</p>
-</div>
+<p><strong><code>pending_word: felt252</code></strong><br>
+The last, or only, value is a <code>felt252</code> value that represents the remainder of the byte array. It consists of at most 30 bytes.</p>
 </li>
 <li>
-<p><strong><code>pending_word_len</code>:</strong> The number of bytes in the pending word.</p>
+<p><strong><code>pending_word_len: usize</code></strong><br>
+The number of bytes in <code>pending_word</code>.</p>
 </li>
 </ol>
 </div>
