@@ -1,7 +1,7 @@
 [id="serialization_of_types_in_Cairo"]
-= Serialization of types in Cairo
+= Serialization of Cairo types
 
-When you interact with contracts, especially if you are a library or SDK developer that wants to create transactions, you need to understand how Cairo handles types that are larger than 252 bits so you can correctly formulate the calldata in a transaction.
+When you interact with contracts, especially if you are a library or SDK developer that wants to construt transactions, you need to understand how Cairo handles types that are larger than 252 bits so you can correctly formulate the calldata in a transaction.
 
 The field element (`felt252`), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as `u256` or arrays, are ultimately represented by a list of felts. In order to interact with a contract, you need to know how to encode its arguments as a list of felts so you can correctly formulate the calldata in the transaction.
 SDKs, such as starknet.js, encode the calldata for you, so you can simply specify any type and the SDK properly formulates the calldata. For example, you don’t need to know that a `u256` value is represented by two `felt252` values. You can simply specify a single integer in your code, and the SDK takes care of the serialization and encoding.
@@ -10,7 +10,7 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 [#data_types_of_252_bits_or_less]
 == Data types of 252 bits or less
 
-The following types are smaller than 252 bits. For these types, each value is serialized as a list that contains a single value, of type `felt252`.
+The following types are smaller than 252 bits. For these types, each value is serialized as a a single-member list that contains one `felt252` value.
 
 * `ContractAddress`
 * `EthAddress`
@@ -53,17 +53,17 @@ Among unsigned integers, only `u256` and `u512` have non-trivial serialization.
 
 A `u256` value in Cairo is represented by two `felt252` values, as follows:
 
-* The first `felt252` value contains the 128 most significant bits, usually referred to as the high part of the original `u256` value.
-* The second `felt252` value contains the 128 least significant bits, usually referred to as the low part of the original `u256` value.
+* The first `felt252` value contains the 128 most significant bits, usually referred to as the low part of the original `u256` value.
+* The second `felt252` value contains the 128 least significant bits, usually referred to as the high part of the original `u256` value.
 
 For example:
 
-* A `u256` variable whose decimal value is `2` is serialized as `[0,2]`. To understand why, examine the binary representation of `2` and split it into two 128-bit parts, as follows:
+* A `u256` variable whose decimal value is `2` is serialized as `[2,0]`. To understand why, examine the binary representation of `2` and split it into two 128-bit parts, as follows:
 +
 [stem]
 ++++
-\underbrace{0\cdots0}_{\text{128 bits}} |
-\underbrace{0\cdots10}_{\text{128 bits}}
+\underbrace{0\cdots10}_{\text{128 bits}} |
+\underbrace{0\cdots0}_{\text{128 bits}}
 ++++
 //
 // [#binary_representation_of_u256]
@@ -85,20 +85,20 @@ For example:
 // ++++
 // |===
 
-* A `u256` variable whose decimal value is `2^128^` is serialized as `[1,0]`. To understand why, examine the binary representation of `2^128^` and split it into two 128-bit parts, as follows:
+* A `u256` variable whose decimal value is `2^128^` is serialized as `[0,1]`. To understand why, examine the binary representation of `2^128^` and split it into two 128-bit parts, as follows:
 +
 [stem]
 ++++
-\underbrace{0\cdots01}_{\text{128 bits}} |
-\underbrace{0\cdots0}_{\text{128 bits}}
+\underbrace{0\cdots0}_{\text{128 bits}} |
+\underbrace{0\cdots01}_{\text{128 bits}}
 ++++
 
-* A `u256` variable whose decimal value is `2^129^+2^128^+20`, is serialized as `[3,20]`. To understand why, examine the binary representation of the `2^129^+2^128^+20` and split it into two 128-bit parts, as follows:
+* A `u256` variable whose decimal value is `2^129^+2^128^+20`, is serialized as `[20,3]`. To understand why, examine the binary representation of the `2^129^+2^128^+20` and split it into two 128-bit parts, as follows:
 +
 [stem]
 ++++
-\underbrace{0\cdots011}_{\text{128 bits}} \|
-\underbrace{0\cdots10100}_{\text{128 bits}}
+\underbrace{0\cdots10100}_{\text{128 bits}} |
+\underbrace{0\cdots011}_{\text{128 bits}}
 ++++
 
 [#serialization_in_u512_values]
@@ -127,27 +127,29 @@ Each `u256` value in the array is represented by two `felt252` values. So the ar
 [stem]
 ++++
 \underbrace{3}_{\textit{number_of_array_members}} ,
-\underbrace{0,10}_{\textit{serialized_member_0}} ,
-\underbrace{0,20}_{\textit{serialized_member_1}} ,
-\underbrace{1,0}_{\textit{serialized_member_2}}
+\underbrace{10,0}_{\textit{serialized_member_0}} ,
+\underbrace{20,0}_{\textit{serialized_member_1}} ,
+\underbrace{0,1}_{\textit{serialized_member_2}}
 ++++
 
-Combining the above, the array is serialized as follows: `[3,0,10,0,20,1,0]`
+Combining the above, the array is serialized as follows: `[3,10,0,20,0,0,1]`
 
 [#serialization_of_enums]
 == Serialization of enums
 
 An enum is serialized as follows:
 
-`<__index_of_enum_variant__>,<__serialized_variant_type_and_value__>`
+`<__index_of_enum_variant__>,<__serialized_variant__>`
 
-.Example: Serialization in an enum 1
+.Enum serialization example 1
+
+Consider the following definition of an enum named `Week`:
 
 [source,cairo]
 ----
 enum Week {
-    Sunday: (), // index=1, the variant type is the unit type
-    Monday: u256, // index=2
+    Sunday: (), // Index=1. The variant type is the unit type.
+    Monday: u256, // Index=2. The variant type is u256.
 }
 ----
 
@@ -161,12 +163,13 @@ Now consider instantiations of the `Week` enum's variants as shown in the table 
 |Instance |Description |Serialization
 
 |`Week::Sunday` | Index=`1`. The variant's type is the unit type. | `[1]`
-|`Week::Monday(5)` a| Index=`2`. The variant's type is `u256`.| `[2,0,5]`
+|`Week::Monday(5)` a| Index=`2`. The variant's type is `u256`.| `[2,5,0]`
 |===
 
-.Example: Serialization in an enum 2
+.Enum serialization example 2
 
 Consider the following definition of an enum named `MessageType`:
+
 [source,cairo]
 ----
 enum MessageType {
@@ -198,7 +201,7 @@ You serialize a struct by serializing its members one at a time.
 Its members are serialized in the order in which they  appear in the definition of the struct.
 
 
-For example, consider the following definition of the struct `MyStruct` and its instantiation as `struct`:
+For example, consider the following definition of the struct `MyStruct`:
 
 [source,cairo]
 ----
@@ -210,20 +213,20 @@ struct MyStruct {
 
 ----
 
-The calldata is the same for both of the following instantiations of the struct's variants:
+The serialization is the same for both of the following instantiations of the struct's members:
 
 [cols="2"]
 |===
 a|[source,cairo]
 ----
-let struct1 = MyStruct {
+let my_struct = MyStruct {
     a: 2, b: 5, c: [1,2,3]
 };
 ----
 
 a|[source,cairo]
 ----
-let struct1 = MyStruct {
+let my_struct = MyStruct {
     b: 5, c: [1,2,3], a: 2
 };
 ----
@@ -235,11 +238,11 @@ The serialization of `MyStruct` is determined as shown in the table xref:#serial
 .Serialization for a struct in Cairo
 [cols="3"]
 |===
-|Member |Description |Values to pass in serialization
+|Member |Description |Serialization
 
 | `a: 2`
 | For information on serializing `u256` values, see xref:#serialization_in_u256_values[]
-| [`0,2`]
+| [`2,0`]
 | `b: 5`
 | One `felt252` value
 | `5`
@@ -257,16 +260,18 @@ A string is represented in Cairo as a `ByteArray` type. A byte array is actually
 
 . *`data: Array<felt252>`* +
 Contains one or more `felt252` values, each containing a maximum of 31 bytes.
+Contains 31-byte chunks of the byte array. Each `felt252` value has exactly 31 bytes. If the string has less than 31 bytes, then this array is empty.
 
 . *`pending_word: felt252`* +
-The last, or only, value is a `felt252` value that represents the remainder of the byte array. It consists of at most 30 bytes.
+The bytes that remain after filling the `data` array with full 31-byte chunks. The pending word consists of at most 30 bytes.
+
 
 . *`pending_word_len: usize`* +
 The number of bytes in `pending_word`.
 
 .Example 1: A string shorter than 31 characters
 
-Consider the string `hello`, which is represented by the 5-byte hex value `0x68656c6c6f`. The resulting byte array is serialized as follows:
+Consider the string `hello`, whose ASCII encoding is the 5-byte hex value `0x68656c6c6f`. The resulting byte array is serialized as follows:
 
 [source,cairo]
 ----
