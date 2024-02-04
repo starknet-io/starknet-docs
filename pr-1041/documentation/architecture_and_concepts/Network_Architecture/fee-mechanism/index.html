@@ -372,7 +372,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Smart_Contracts/serialization_of_types_in_Cairo/">Serialization of types in Cairo</a>
+     href="../../Smart_Contracts/serialization_of_Cairo_types/">Serialization of Cairo types</a>
   </li>
 </ul>
   </li>
@@ -574,11 +574,17 @@
 <p>This section shows the formula for determining a transaction&#8217;s fee. The following sections describe how this formula was derived.</p>
 </div>
 <div class="paragraph">
-<p>The following formula describes the overall fee for a transaction:</p>
+<p>The following formula describes the overall fee, \(F\), for a transaction:</p>
 </div>
 <div class="stemblock">
 <div class="content">
-\[F = \text{gas_price}\cdot\left(\max_k v_k w_k + 0.9\cdot\text{calldata_cost}\cdot\left((n+2m-1) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)+ t\cdot\text{storage_write_cost} + n \cdot 200 + 272\right)\]
+\[\begin{align}
+F  = \text{gas_price}\cdot&amp;\Bigg(\max_k v_k w_k + \\
+&amp; + \; \text{da_calldata_cost}\left(2n+2(m-1) + \ell + 3t + \sum\limits_{i=1}^t q_i\right)\\
+&amp; - \; \text{contract_update_discount}\cdot n - 240 \\
+&amp; + \; \text{message_calldata_cost}\cdot\left(3t + \sum\limits_{i=1}^t q_i\right) \\
+&amp; + \; \text{storage_write_cost}\cdot t\Bigg)
+\end{align}\]
 </div>
 </div>
 <div class="paragraph">
@@ -587,37 +593,53 @@
 <div class="ulist">
 <ul>
 <li>
-<p>\(v\) is a vector that represents resource usage, where each of its entries, \(v_k\), correspond to different resource types: Cairo steps and number of applications of each builtin.</p>
+<p>\(v\) is a vector that represents resource usage, where each of its entries, \(v_k\), corresponds to different resource types: Cairo steps and number of applications of each builtin.</p>
 <div class="paragraph">
 <p>For more information see <a href="#calculation_of_computation_costs">Calculation of computation costs</a>.</p>
 </div>
 </li>
 <li>
-<p>\(n\) is <a href="#storage_updates">the number of unique contracts updated</a>.</p>
+<p>\(n\) is <a href="#storage_updates">the number of unique contracts updated</a>, which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, \(n\ge\ell\).</p>
 </li>
 <li>
-<p>\(m\) is the number of values updated, not counting multiple updates for the same key.</p>
+<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Notice that \(m\ge 1\) is always true, because the sequencer&#8217;s balance is always updated, which does not incur any fee.</p>
 </li>
 <li>
 <p>\(t\) is the number of L2&#8594;L1 messages sent, where the corresponding payload sizes are denoted by \(q_1,...,q_t\).</p>
 </li>
 <li>
-<p>\(\ell\) is the number of contract deployments.</p>
-</li>
-<li>
-<p>\(0.9\) is a 10% cost reduction that considers that the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.</p>
+<p>\(\ell\) is the number of contracts whose class was changed, which happens on contract deployment and when applying the <code>replace_class</code> syscall.</p>
 </li>
 <li>
 <p>\(w\) is the <a href="#calculation_of_computation_costs"><code>CairoResourceFeeWeights</code></a> vector.</p>
 </li>
 <li>
-<p>\(\text{calldata_cost}\) is 612 gas per 32-byte word (~100 gas is charged for on-chain hashing the happens for every sent word).</p>
+<p>\(\text{da_calldata_cost}\) is 551 gas per 32-byte word. This cost is derived as follows:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>512 gas per 32-byte word for calldata.</p>
+</li>
+<li>
+<p>~100 gas for onchain hashing that happens for every sent word.</p>
+</li>
+<li>
+<p>a 10% discount, because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>\(\text{message_calldata_cost}\) is 512 gas per 32-byte word. For more details, see <a href="#l_2-l_1_messages">Onchain data: L2&#8594;L1 messages</a>.</p>
+</li>
+<li>
+<p>\(240\) is the gas discount for updating the sender&#8217;s balance, for the derivation of this number see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
+</li>
+<li>
+<p>\(\text{contract_update_discount}\) is 312 gas, for the derivation of this discount see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
 </li>
 <li>
 <p>\(\text{storage_write_cost}\) is 20,000 gas, the cost of allocating a new storage cell on Ethereum.</p>
-</li>
-<li>
-<p>\(200\) and \(272\) are gas costs associated with storage updates. For more information, see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
 </li>
 </ul>
 </div>
@@ -904,12 +926,12 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </div>
 <div class="stemblock">
 <div class="content">
-\[\underbrace{\textit{gas_price}(\text{calldata_cost} \cdot n + 200 \cdot n)}_{\text{contract addresses +  new nonce and number of storage updates
+\[\underbrace{\textit{gas_price}\left(\text{da_calldata_cost} \cdot 2n - \text{contract_update_discount}\cdot n\right)}_{\text{contract addresses +  new nonce and number of storage updates
 }} \\
 
 + \\
 
-\underbrace{\textit{gas_price} \cdot (\text{calldata_cost}(2m-1)+272)}_{\text{storage updates}}\]
+\underbrace{\textit{gas_price} \cdot \left(\text{da_calldata_cost}(2(m-1))-240\right)}_{\text{storage updates}}\]
 </div>
 </div>
 <div class="paragraph">
@@ -918,16 +940,13 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 <div class="ulist">
 <ul>
 <li>
-<p>\(n\) is the number of unique contracts updated.</p>
+<p>\(n\) is <a href="#storage_updates">the number of unique contracts updated</a>, which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, \(n\ge\ell\).</p>
 </li>
 <li>
-<p>\(m\) is the number of unique values updated. Be aware that the account balance is always updated, because the account needs to pay a fee. A discount is applied to the account balance update to consider that the value of the account balance most likely does not use the full 32 bytes allotted to it.</p>
+<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Notice that \(m\ge 1\) always holds, because the sequencer&#8217;s balance is updated at the end of each transaction. The sequencer&#8217;s balance update is not taken into account when computing the fee.</p>
 </li>
 <li>
-<p>\(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
-</li>
-<li>
-<p>\(200\) is the cost of the onchain storage update&#8217;s meta information and nonce, in gas. This value accounts for the fact that out of 32 bytes in the meta information, only the following six bytes are non-zero:</p>
+<p>\(\text{contract_update_discount}\) is 312 gas, which is discounted for every updated contract. This discount is a result of the fact that out of the \(2n\) words caused by updating contracts, \(n\) words are short, including at most 6 non-zero bytes:</p>
 <div class="openblock">
 <div class="content">
 <div class="ulist">
@@ -936,7 +955,7 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 <p>three bytes for the nonce</p>
 </li>
 <li>
-<p>two bytes for storage updates</p>
+<p>two bytes for the number of storage updates</p>
 </li>
 <li>
 <p>one byte for the class information flag</p>
@@ -946,14 +965,11 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </div>
 </div>
 <div class="paragraph">
-<p>The cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. So 6 non-zero bytes @ 16 gas per byte + 26 bytes of zeros @ 4 gas per byte results in 200 gas.</p>
+<p>Taking into account that zero bytes only cost 4 gas, the cost difference between a full 32-byte word, which does not contain zeros, and a word with only six non-zero bytes is \(32\cdot16-(6\cdot16+26\cdot4)=312\).</p>
 </div>
 </li>
 <li>
-<p>\(\text{272}\) is the cost of updating the balance, in gas. This value assumes a balance of at most 12 non-zero bytes, which is enough for 1.2 billion ETH or STRK.</p>
-<div class="paragraph">
-<p>The cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. So 12 non-zero bytes @ 16 gas per byte + 20 bytes of zeros @ 4 gas per byte results in 272 gas.</p>
-</div>
+<p>\(240\) is the gas discount for updating the sender&#8217;s balance, and is derived by assuming the balance requires at most 12 non-zero bytes, which is enough for 1.2B ETH or STRK, resulting in the following discount: \(512-(20\cdot4+12\cdot16)=240\).</p>
 </li>
 </ul>
 </div>
@@ -976,7 +992,7 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </div>
 </div>
 <div class="sect2">
-<h3 id="l_2→l_1_messages"><a class="anchor" href="#l_2→l_1_messages"></a>Onchain data: L2&#8594;L1 messages</h3>
+<h3 id="l_2-l_1_messages"><a class="anchor" href="#l_2-l_1_messages"></a>Onchain data: L2&#8594;L1 messages</h3>
 <div class="paragraph">
 <p>When a transaction that raises the <code>send_message_to_l1</code> syscall is included in a state update, the following data reaches L1:</p>
 </div>
@@ -997,15 +1013,17 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </ul>
 </div>
 <div class="paragraph">
-<p>Consequently, the fee associated with a single L2→L1 message is:</p>
+<p>Consequently, the gas cost associated with a single L2→L1 message is:</p>
 </div>
 <div class="stemblock">
 <div class="content">
-\[\textit{gas_price}\cdot \text{calldata_cost}\cdot(3+\text{payload_size})\]
+\[\text{storage_write_cost} + \left(\text{da_calldata_cost} + \text{message_calldata_cost}\right)\cdot\left(3+\text{payload_size}\right)\]
 </div>
 </div>
 <div class="paragraph">
-<p>where \(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
+<p>Where \(\text{da_calldata_cost}\) is 551 gas, and \(\text{message_calldata_cost}\) is 512 gas.
+Messages appear twice in the fee formula, and pay both in \(\text{da_calldata_cost}\) and \(\text{message_calldata_cost}\), because
+they are sent to Ethereum twice: once to the STARK verifier contract, where the additional hashing cost is incurred, and once when it is sent to the Starknet Core Contract as part of the state update transaction.</p>
 </div>
 </div>
 <div class="sect2">
@@ -1027,18 +1045,7 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </ul>
 </div>
 <div class="paragraph">
-<p>The following formula describes the fee for a single deployment:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[\textit{gas_price}\cdot 3 \cdot \text{calldata_cost}\]
-</div>
-</div>
-<div class="paragraph">
-<p>where \(\text{calldata_cost}\) is 512 gas per 32-byte word.</p>
-</div>
-<div class="paragraph">
-<p>For more information on data saved on L1, see <a href="../on-chain-data/" class="xref page">Data availability</a>.</p>
+<p>The first two elements are counted in the number of unique modified contracts, denoted by \(n\) throughout this page. So the only additional word comes from publishing the class hash, which adds 551 gas. For more information, see \(\text{da_calldata_cost}\) in the <a href="#overall_fee">final formula</a>.</p>
 </div>
 </div>
 </div>
