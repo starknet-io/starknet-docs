@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.465](https://github.com/starknet-io/starknet-docs/compare/v0.1.464...v0.1.465) (2024-02-04)
+
+
+### Bug Fixes
+
+* fee calculation formula ([#1092](https://github.com/starknet-io/starknet-docs/issues/1092)) ([0c36768](https://github.com/starknet-io/starknet-docs/commit/0c367688427c9bff7c4e74e60b7b4da2bc8009da))
+
 ### [0.1.464](https://github.com/starknet-io/starknet-docs/compare/v0.1.463...v0.1.464) (2024-01-30)
 
 ### [0.1.463](https://github.com/starknet-io/starknet-docs/compare/v0.1.462...v0.1.463) (2024-01-28)
