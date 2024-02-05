@@ -60,13 +60,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          node-version: 16
           ref: gh-pages
-          persist-credentials: false
-          fetch-depth: 0
-          #token: ${{ secrets.USER_TOKEN }} //null
           token: ${{ secrets.GITHUB_TOKEN }}
-          #USER_TOKEN: ${{ secrets.USER_TOKEN }}
 
       - name: Extract PR details
         id: pr
@@ -118,10 +113,6 @@ jobs:
             # Commit changes
             git commit -m "$commit_message"
 
-            git remote -v 
-            git branch 
-            git branch -a
-          
             # Check if commit was successful
             if [ $? -eq 0 ]; then
               # Debug information
@@ -147,9 +138,7 @@ jobs:
             echo "No changes found."
           fi
         env:
-          #GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          #GITHUB_TOKEN: "${{ secrets.USER_TOKEN }}"
-          USER_TOKEN: "${{ secrets.USER_TOKEN }}"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: "Send comment to PR"
         continue-on-error: true
@@ -158,6 +147,4 @@ jobs:
           echo "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://starknet-io.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/documentation/ ." >/tmp/comment
           gh pr comment ${{ github.event.pull_request.number }} -F /tmp/comment
         env:
-          USER_TOKEN: "${{ secrets.USER_TOKEN }}"
-          #GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          #GH_TOKEN: "${{ github.token }}"
+          GH_TOKEN: "${{ github.token }}"
