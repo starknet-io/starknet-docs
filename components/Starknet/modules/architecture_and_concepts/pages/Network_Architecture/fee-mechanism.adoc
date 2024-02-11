@@ -21,7 +21,7 @@ The following formula describes the overall fee, stem:[F], for a transaction:
 ++++
 \begin{align}
 F  = \text{gas_price}\cdot&\Bigg(\max_k v_k w_k + \\
-& + \; \text{da_calldata_cost}\left(2n+2(m-1) + \ell + 3t + \sum\limits_{i=1}^t q_i\right)\\ 
+& + \; \text{da_calldata_cost}\left(2(n-1)+2(m-1) + \ell + 3t + \sum\limits_{i=1}^t q_i\right)\\ 
 & - \; \text{contract_update_discount}\cdot n - 240 \\
 & + \; \text{message_calldata_cost}\cdot\left(3t + \sum\limits_{i=1}^t q_i\right) \\
 & + \; \text{storage_write_cost}\cdot t\Bigg)
@@ -33,8 +33,8 @@ where:
 * stem:[$v$] is a vector that represents resource usage, where each of its entries, stem:[$v_k$], corresponds to different resource types: Cairo steps and number of applications of each builtin.
 +
 For more information see xref:#calculation_of_computation_costs[Calculation of computation costs].
-* stem:[$n$] is xref:#storage_updates[the number of unique contracts updated], which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, stem:[$n\ge\ell$].
-* stem:[$m$] is the number of values updated, not counting multiple updates for the same key. Notice that stem:[$m\ge 1$] is always true, because the sequencer's balance is always updated, which does not incur any fee.
+* stem:[$n$] is xref:#storage_updates[the number of unique contracts updated], which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, stem:[$n\ge\ell$]. Notice that stem:[$n\ge 1$] always holds, because the fee token contract is always updated, which does not incur any fee.
+* stem:[$m$] is the number of values updated, not counting multiple updates for the same key. Notice that stem:[$m\ge 1$] always holds, because the sequencer's balance is always updated, which does not incur any fee.
 * stem:[$t$] is the number of L2->L1 messages sent, where the corresponding payload sizes are denoted by stem:[$q_1,...,q_t$].
 * stem:[$\ell$] is the number of contracts whose class was changed, which happens on contract deployment and when applying the `replace_class` syscall.
 * stem:[$w$] is the xref:#calculation_of_computation_costs[`CairoResourceFeeWeights`] vector.
@@ -185,7 +185,7 @@ The following formula describes the storage update fee for a transaction:
 
 [stem]
 ++++
-\underbrace{\textit{gas_price}\left(\text{da_calldata_cost} \cdot 2n - \text{contract_update_discount}\cdot n\right)}_{\text{contract addresses +  new nonce and number of storage updates
+\underbrace{\textit{gas_price}\left(\text{da_calldata_cost} \cdot 2(n-1) - \text{contract_update_discount}\cdot n\right)}_{\text{contract addresses +  new nonce and number of storage updates
 }} \\
 
 + \\
@@ -195,7 +195,7 @@ The following formula describes the storage update fee for a transaction:
 
 where:
 
-* stem:[$n$] is xref:#storage_updates[the number of unique contracts updated], which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, stem:[$n\ge\ell$].
+* stem:[$n$] is xref:#storage_updates[the number of unique contracts updated], which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, stem:[$n\ge\ell$]. Notice that stem:[$n\ge 1$] always holds, because the fee token contract is always updated at the end of each transaction, in order to update the sequencer and the sender's balances. The fee token address is not taken contract update is not taken into account when computing the fee.
 * stem:[$m$] is the number of values updated, not counting multiple updates for the same key. Notice that stem:[$m\ge 1$] always holds, because the sequencer's balance is updated at the end of each transaction. The sequencer's balance update is not taken into account when computing the fee.
 * stem:[\text{contract_update_discount}] is 312 gas, which is discounted for every updated contract. This discount is a result of the fact that out of the stem:[$2n$] words caused by updating contracts, stem:[$n$] words are short, including at most 6 non-zero bytes:
 +
