@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.473](https://github.com/starknet-io/starknet-docs/compare/v0.1.472...v0.1.473) (2024-02-11)
+
+
+### Bug Fixes
+
+* ignore fee token contract is the fee formula ([#1123](https://github.com/starknet-io/starknet-docs/issues/1123)) ([3863f6f](https://github.com/starknet-io/starknet-docs/commit/3863f6f693e3f3d06ee53f67cff4e7afb4334e13))
+
 ### [0.1.472](https://github.com/starknet-io/starknet-docs/compare/v0.1.471...v0.1.472) (2024-02-11)
 
 ### [0.1.471](https://github.com/starknet-io/starknet-docs/compare/v0.1.470...v0.1.471) (2024-02-08)
