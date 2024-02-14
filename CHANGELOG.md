@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.476](https://github.com/starknet-io/starknet-docs/compare/v0.1.475...v0.1.476) (2024-02-14)
+
+
+### Bug Fixes
+
+* Minor edits to Economics-of-Starknet.adoc ([#1130](https://github.com/starknet-io/starknet-docs/issues/1130)) ([d00cfa6](https://github.com/starknet-io/starknet-docs/commit/d00cfa6f9aa3f9ebb42bd77e6c1bfc3c0fb830ae))
+
 ### [0.1.475](https://github.com/starknet-io/starknet-docs/compare/v0.1.474...v0.1.475) (2024-02-14)
 
 ### [0.1.474](https://github.com/starknet-io/starknet-docs/compare/v0.1.473...v0.1.474) (2024-02-13)
