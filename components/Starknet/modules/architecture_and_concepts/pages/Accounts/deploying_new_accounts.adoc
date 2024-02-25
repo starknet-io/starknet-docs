@@ -11,16 +11,12 @@ Upon receiving a `DEPLOY_ACCOUNT` transaction, the sequencer performs the follow
 . Charges fees from the new account address.
 . Sets the account's nonce to `1`.
 
-.Procedure
+*To create and deploy a new account*, you can use Starkli's `starkli account` command.
 
-. For the account contract that you want to deploy, compute the offchain account address.
-// How do I do that?
-. Send funds to this address.
-// How do I do that?
-. When the address has enough funds to pay for the deployment, send a `DEPLOY_ACCOUNT` transaction.
-// How do I do that?
+For more information, see link:https://book.starkli.rs/accounts[Accounts] in the Starkli Book.
+For information on how to starkli to create and deploy a new account.
 
-After the deployment has completed successfully, it is recommended to validate the account deployment.
+// After the deployment has completed successfully, it is recommended to validate the account deployment using .
 
 [#DEPLOY_ACCOUNT_restrictions]
 == `DEPLOY_ACCOUNT` constructor restrictions
@@ -33,22 +29,38 @@ The constructor of the `DEPLOY_ACCOUNT` transaction has the following limitation
 ** `get_sequencer_address` for Cairo 0 contracts
 
 [#validate_deploy]
-== Validating a `DEPLOY_ACCOUNT` transaction
+== Validation of a `DEPLOY_ACCOUNT` transaction
 
-Two potential issues with sending a `DEPLOY_ACCOUNT` transaction without any validation are:
+A `DEPLOY_ACCOUNT` transaction automatically tells the sequencer to call the `+__validate_deploy__+` function, which validates the transaction.
+
+[NOTE]
+====
+When creating a new account without the `DEPLOY_ACCOUNT` transaction, such as by invoking the Universal Deployer Contract (UDC) with an `INVOKE` transaction, the sequencer calls the `+__validate__+` function, which validates the `INVOKE` transaction.
+====
+
+== Limitations of validation
+
+By automatically calling the `+__validate_deploy__+` function when executing a `DEPLOY_ACCOUNT` transaction, the sequencer avoids the following potential issues:
 
 * Sequencers can charge arbitrarily high fees, potentially draining user funds from a pre-funded account.
 * A bad actor can carry out a Denial of Service (DoS) attack on the sequencer by sending multiple, invalid `DEPLOY_ACCOUNT` transactions, which would result in the sequencer not being compensated for work completed.
 
-You can prevent both issues by using a validation entrypoint called `+__validate_deploy__+`.
+//  the constructor and `+__validate_deploy__+` executions
 
-`+__validate_deploy__+` prevents sequencers from charging arbitrarily high fees, and the following limitations on the constructor and `+__validate_deploy__+` executions prevent a potential DoS attack:
+The limitations listed here apply to:
+
+* `+__validate__+`
+* `+__validate_deploy__+`
+* `+__validate_declare__+`
+* A constructor, when run in a DEPLOY_ACCOUNT transaction, that is, if an account is deployed from an existing class via the `deploy` syscall, the constructor can run differently.
+
+The following limitations on validation prevent a potential DoS attack:
 
 * Limited number of Cairo steps.
 * Limited number of times a builtin can be applied.
 * External contract calls are not allowed. Library calls and self-calls are allowed.
 
-Include the `+__validate_deploy__+` entrypoint in any accounts or contracts that can enable deploying a new account.
+// Include the `+__validate_deploy__+` entrypoint in any accounts or contracts that can enable deploying a new account.
 
 == `+__validate_deploy__+`
 
