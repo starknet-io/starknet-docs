@@ -654,19 +654,6 @@ For information on how to starkli to create and deploy a new account.</p>
 <h2 id="limitations_of_validation"><a class="anchor" href="#limitations_of_validation"></a>Limitations of validation</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>By automatically calling the <code>__validate_deploy__</code> function when executing a <code>DEPLOY_ACCOUNT</code> transaction, the sequencer avoids the following potential issues:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Sequencers can charge arbitrarily high fees, potentially draining user funds from a pre-funded account.</p>
-</li>
-<li>
-<p>A bad actor can carry out a Denial of Service (DoS) attack on the sequencer by sending multiple, invalid <code>DEPLOY_ACCOUNT</code> transactions, which would result in the sequencer not being compensated for work completed.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
 <p>The limitations listed here apply to:</p>
 </div>
 <div class="ulist">
@@ -681,12 +668,36 @@ For information on how to starkli to create and deploy a new account.</p>
 <p><code>__validate_declare__</code></p>
 </li>
 <li>
-<p>A constructor, when run in a DEPLOY_ACCOUNT transaction, that is, if an account is deployed from an existing class via the <code>deploy</code> syscall, the constructor can run differently.</p>
+<p>A constructor, when run in a <code>DEPLOY_ACCOUNT</code> transaction. That is, if an account is deployed from an existing class via the <code>deploy</code> syscall, the constructor can run differently.</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>The following limitations on validation prevent a potential DoS attack:</p>
+<p>The sequencer automatically calls:</p>
+</div>
+<div class="paragraph">
+<p>*<code>__validate_deploy__</code> when executing a <code>DEPLOY_ACCOUNT</code> transaction
+*<code>__validate__</code> when executing an <code>INVOKE</code> transaction
+* <code>__validate_declare__</code> when executing a <code>DECLARE</code> transaction</p>
+</div>
+<div class="paragraph">
+<p>The requirement to pass validate_deploy after the constructor execution as a prerequisite for charging fees solves 1, and the limitations on validate execution [link to the new limitation section I suggested above] solves 2.</p>
+</div>
+<div class="paragraph">
+<p>By automatically calling these validation functions, the sequencer avoids the following potential issues:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Sequencers can charge arbitrarily high fees, potentially draining user funds from a pre-funded account.</p>
+</li>
+<li>
+<p>A bad actor can carry out a Denial of Service (DoS) attack on the sequencer by sending multiple, invalid <code>DEPLOY_ACCOUNT</code> transactions, which would result in the sequencer not being compensated for work completed.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The following limitations on validation prevent the potential issues above:</p>
 </div>
 <div class="ulist">
 <ul>
