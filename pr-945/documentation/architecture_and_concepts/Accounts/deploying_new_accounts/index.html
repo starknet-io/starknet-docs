@@ -581,7 +581,7 @@
 <p>Executes the constructor with the given arguments.</p>
 </li>
 <li>
-<p>Executes the <code>__validate_deploy__</code> entry point. For more information, see <a href="#validate_deploy">Validating a <code>DEPLOY_ACCOUNT</code> transaction</a>.</p>
+<p>Executes the <code>__validate_deploy__</code> entry point. For more information, see <a href="#validate_deploy">Validation of a <code>DEPLOY_ACCOUNT</code> transaction</a>.</p>
 </li>
 <li>
 <p>Charges fees from the new account address.</p>
@@ -591,22 +591,12 @@
 </li>
 </ol>
 </div>
-<div class="olist arabic">
-<div class="title">Procedure</div>
-<ol class="arabic">
-<li>
-<p>For the account contract that you want to deploy, compute the offchain account address.</p>
-</li>
-<li>
-<p>Send funds to this address.</p>
-</li>
-<li>
-<p>When the address has enough funds to pay for the deployment, send a <code>DEPLOY_ACCOUNT</code> transaction.</p>
-</li>
-</ol>
+<div class="paragraph">
+<p><strong>To create and deploy a new account</strong>, you can use Starkli&#8217;s <code>starkli account</code> command.</p>
 </div>
 <div class="paragraph">
-<p>After the deployment has completed successfully, it is recommended to validate the account deployment.</p>
+<p>For more information, see <a href="https://book.starkli.rs/accounts">Accounts</a> in the Starkli Book.
+For information on how to starkli to create and deploy a new account.</p>
 </div>
 </div>
 </div>
@@ -639,10 +629,32 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="validate_deploy"><a class="anchor" href="#validate_deploy"></a>Validating a <code>DEPLOY_ACCOUNT</code> transaction</h2>
+<h2 id="validate_deploy"><a class="anchor" href="#validate_deploy"></a>Validation of a <code>DEPLOY_ACCOUNT</code> transaction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Two potential issues with sending a <code>DEPLOY_ACCOUNT</code> transaction without any validation are:</p>
+<p>A <code>DEPLOY_ACCOUNT</code> transaction automatically tells the sequencer to call the <code>__validate_deploy__</code> function, which validates the transaction.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>When creating a new account without the <code>DEPLOY_ACCOUNT</code> transaction, such as by invoking the Universal Deployer Contract (UDC) with an <code>INVOKE</code> transaction, the sequencer calls the <code>__validate__</code> function, which validates the <code>INVOKE</code> transaction.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="limitations_of_validation"><a class="anchor" href="#limitations_of_validation"></a>Limitations of validation</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>By automatically calling the <code>__validate_deploy__</code> function when executing a <code>DEPLOY_ACCOUNT</code> transaction, the sequencer avoids the following potential issues:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -655,10 +667,26 @@
 </ul>
 </div>
 <div class="paragraph">
-<p>You can prevent both issues by using a validation entrypoint called <code>__validate_deploy__</code>.</p>
+<p>The limitations listed here apply to:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>__validate__</code></p>
+</li>
+<li>
+<p><code>__validate_deploy__</code></p>
+</li>
+<li>
+<p><code>__validate_declare__</code></p>
+</li>
+<li>
+<p>A constructor, when run in a DEPLOY_ACCOUNT transaction, that is, if an account is deployed from an existing class via the <code>deploy</code> syscall, the constructor can run differently.</p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p><code>__validate_deploy__</code> prevents sequencers from charging arbitrarily high fees, and the following limitations on the constructor and <code>__validate_deploy__</code> executions prevent a potential DoS attack:</p>
+<p>The following limitations on validation prevent a potential DoS attack:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -672,9 +700,6 @@
 <p>External contract calls are not allowed. Library calls and self-calls are allowed.</p>
 </li>
 </ul>
-</div>
-<div class="paragraph">
-<p>Include the <code>__validate_deploy__</code> entrypoint in any accounts or contracts that can enable deploying a new account.</p>
 </div>
 </div>
 </div>
