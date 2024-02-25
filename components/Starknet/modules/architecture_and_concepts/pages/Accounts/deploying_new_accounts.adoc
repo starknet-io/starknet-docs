@@ -40,21 +40,32 @@ When creating a new account without the `DEPLOY_ACCOUNT` transaction, such as by
 
 == Limitations of validation
 
-By automatically calling the `+__validate_deploy__+` function when executing a `DEPLOY_ACCOUNT` transaction, the sequencer avoids the following potential issues:
+The limitations listed here apply to:
+
+* `+__validate__+`
+* `+__validate_deploy__+`
+* `+__validate_declare__+`
+* A constructor, when run in a `DEPLOY_ACCOUNT` transaction. That is, if an account is deployed from an existing class via the `deploy` syscall, the constructor can run differently.
+
+The sequencer automatically calls:
+
+*`+__validate_deploy__+` when executing a `DEPLOY_ACCOUNT` transaction
+*`+__validate__+` when executing an `INVOKE` transaction
+* `+__validate_declare__+` when executing a `DECLARE` transaction
+
+The requirement to pass validate_deploy after the constructor execution as a prerequisite for charging fees solves 1, and the limitations on validate execution [link to the new limitation section I suggested above] solves 2.
+
+
+By automatically calling these validation functions, the sequencer avoids the following potential issues:
 
 * Sequencers can charge arbitrarily high fees, potentially draining user funds from a pre-funded account.
 * A bad actor can carry out a Denial of Service (DoS) attack on the sequencer by sending multiple, invalid `DEPLOY_ACCOUNT` transactions, which would result in the sequencer not being compensated for work completed.
 
 //  the constructor and `+__validate_deploy__+` executions
 
-The limitations listed here apply to:
 
-* `+__validate__+`
-* `+__validate_deploy__+`
-* `+__validate_declare__+`
-* A constructor, when run in a DEPLOY_ACCOUNT transaction, that is, if an account is deployed from an existing class via the `deploy` syscall, the constructor can run differently.
 
-The following limitations on validation prevent a potential DoS attack:
+The following limitations on validation prevent the potential issues above:
 
 * Limited number of Cairo steps.
 * Limited number of times a builtin can be applied.
