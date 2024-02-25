@@ -49,8 +49,8 @@ The limitations listed here apply to:
 
 The sequencer automatically calls:
 
-*`+__validate_deploy__+` when executing a `DEPLOY_ACCOUNT` transaction
-*`+__validate__+` when executing an `INVOKE` transaction
+* `+__validate_deploy__+` when executing a `DEPLOY_ACCOUNT` transaction
+* `+__validate__+` when executing an `INVOKE` transaction
 * `+__validate_declare__+` when executing a `DECLARE` transaction
 
 The requirement to pass validate_deploy after the constructor execution as a prerequisite for charging fees solves 1, and the limitations on validate execution [link to the new limitation section I suggested above] solves 2.
@@ -94,23 +94,20 @@ In determining the contract address, the deployer address `0x0` is used.
 === Example
 Consider an account with the following constructor signature:
 
-[#constructor_signature]
-[source,cairo]
-----
-@constructor
-func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    _public_key: felt
-)
-----
-
 The signature of `+__validate_deploy__+` must be:
 
 [#call_validate_deploy]
 [source,cairo,sub="quotes"]
 ----
-func __validate_deploy__{
-    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
-}(class_hash: felt, contract_address_salt: felt, _public_key: felt)
+  fn __validate_deploy__(
+      self: @ComponentState<TContractState>,
+      class_hash: felt252,
+      contract_address_salt: felt252,
+      public_key: felt252
+  ) -> felt252
+
+#[constructor]
+fn constructor(ref self: ContractState, public_key: felt252)
 ----
 
 [NOTE]
