@@ -6,7 +6,7 @@
     <title>Cairo and Sierra :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Smart_Contracts/cairo-and-sierra/">
     <link rel="prev" href="../contract-syntax/">
-    <link rel="next" href="../system-calls-cairo1/">
+    <link rel="next" href="../universal-deployer/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -256,12 +256,7 @@
   <li class="nav-item" data-depth="4">
     <a 
        class="nav-link"
-     href="../../Network_Architecture/fee-mechanism/">Gas and transaction fees (Starting in Starknet 0.13.0)</a>
-  </li>
-  <li class="nav-item" data-depth="4">
-    <a 
-       class="nav-link"
-     href="../../Network_Architecture/fee-mechanism-pre-v0.13.0/">Gas and transaction fees (Prior to Starknet 0.13.0)</a>
+     href="../../Network_Architecture/fee-mechanism/">Gas and transaction fees</a>
   </li>
 </ul>
   </li>
@@ -326,7 +321,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../contract-classes/">Contract classes</a>
+     href="../contract-classes/">Contract classes and instances</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -356,7 +351,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../contract-syntax/">Migrating a contract from Cairo 0 to Cairo</a>
+     href="../contract-syntax/">Migrating a contract from Cairo v1 to Cairo v2</a>
   </li>
   <li class="nav-item is-current-page" data-depth="3">
     <a 
@@ -366,7 +361,17 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
+     href="../universal-deployer/">Universal Deployer Contract</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
      href="../system-calls-cairo1/">System calls</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../serialization_of_Cairo_types/">Serialization of Cairo types</a>
   </li>
 </ul>
   </li>
@@ -392,6 +397,11 @@
 </ul>
   </li>
 </ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a 
+       class="nav-link"
+     href="../../Economics-of-Starknet/">The Economics of Starknet</a>
   </li>
 </ul>
   </li>
@@ -460,7 +470,7 @@
   </li>
   <li class="nav-item parent" data-depth="2">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">StarkGate bridge developer&#8217;s guide</span>
+    <span class="nav-text">StarkGate bridge guide</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="3">
     <a 
@@ -485,11 +495,6 @@
     <a 
        class="nav-link"
      href="../../../tools/starkgate-adding_a_token/">Adding a token</a>
-  </li>
-  <li class="nav-item" data-depth="4">
-    <a 
-       class="nav-link"
-     href="../../../tools/starkgate-removing_a_token/">Removing a token</a>
   </li>
   <li class="nav-item" data-depth="4">
     <a 
@@ -562,11 +567,11 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Before <a href="../../../starknet_versions/upcoming_versions/" class="xref page">Starknet Alpha v0.11.0</a> users would write contracts in Cairo 0 and compile them locally to Cairo assembly (or Casm for short).
-Next, the user would submit the compilation output (the <a href="../contract-classes/" class="xref page">contract class</a>) to the Starknet sequencer via a <code>declare</code> transaction.</p>
+<p>Before <a href="../../../starknet_versions/upcoming_versions/" class="xref page">Starknet Alpha v0.11.0</a> a developer would write contracts in Cairo 0 and compile them locally to Cairo assembly (or Casm for short).
+Next, the developer would submit the compilation output, the <a href="../contract-classes/" class="xref page">contract class</a>, to the Starknet sequencer via a <code>DECLARE</code> transaction.</p>
 </div>
 <div class="paragraph">
-<p>With Cairo 1.0, the contract class resulting from <a href="../class-hash/#cairo1_class" class="xref page">compiling Cairo 1.0</a> does not include Casm. Instead of Casm, it includes instructions in an intermediate representation called Sierra (Safe Intermediate Representation).
+<p>Starting with Cairo 1.0, the contract class resulting from <a href="../class-hash/#cairo1_class" class="xref page">compiling Cairo 1.0</a> does not include Casm. Instead of Casm, it includes instructions in an intermediate representation called <strong>S</strong>afe <strong>I</strong>nt<strong>er</strong>mediate <strong>R</strong>epresent<strong>a</strong>tion, <em>Sierra</em> for short.
 This new contract class is then compiled by the sequencer, via the Sierra &rarr; Casm compiler, to generate the Cairo assembly associated with this class. The Casm code is then executed by the Starknet OS.</p>
 </div>
 </div>
@@ -578,19 +583,17 @@ This new contract class is then compiled by the sequencer, via the Sierra &rarr;
 <p>Starknet is a validity rollup, which means that the execution inside every block needs to be proven, and this is where STARKs come in handy.
 However, STARK proofs can address statements that are formulated in the language of polynomial
 constraints, and have no knowledge of smart contract execution.
-To overcome this gap, we developed <a href="https://github.com/starknet-io/starknet-stack-resources/blob/main/Cairo/Cairo%20%E2%80%93%20a%20Turing-complete%20STARK-friendly%20CPU%20architecture.pdf">Cairo</a>.</p>
+To overcome this gap, we developed Cairo.</p>
 </div>
 <div class="paragraph">
-<p>Cairo instructions (which we referred to previously by Casm) are translated to polynomial constraints that enforce the correct execution of a program (according to the Cairo semantics defined in the paper).</p>
+<p>Cairo instructions, previously referred to as Casm, are translated to polynomial constraints that enforce the correct execution of a program according to the Cairo semantics defined in <a href="https://github.com/starknet-io/starknet-stack-resources/blob/main/Cairo/Cairo%20%E2%80%93%20a%20Turing-complete%20STARK-friendly%20CPU%20architecture.pdf"><em>Cairo-a Turing-complete STARK-friendly CPU architecture</em></a>.</p>
 </div>
 <div class="paragraph">
-<p>Thanks to Cairo, we can formulate the statement "this Starknet block is valid" in a way that we can prove.
-Note that we can only prove things about Casm. That is, regardless of what the user sends to the Starknet sequencer, what&#8217;s proven is the correct Casm execution.</p>
+<p>Thanks to Cairo, we can formulate the statement "This Starknet block is valid" in a way that we can prove.
+Be aware that we can only prove things about Casm. That is, regardless of what the user sends to the Starknet sequencer, what&#8217;s proven is the correct Casm execution.</p>
 </div>
 <div class="paragraph">
-<p>This means that we need a way to translate Sierra into Casm, and this is achieved with the Sierra
-&rarr;
-Casm compiler.</p>
+<p>This means that we need a way to translate Sierra into Casm, and this is achieved with the Sierra &#8594; Casm compiler.</p>
 </div>
 </div>
 </div>
@@ -667,7 +670,7 @@ above as Casm (while we actually refer to the compilation result of the above).<
 there is nothing we can substitute <code>index</code> for, that makes the following lines run successfully).</p>
 </div>
 <div class="paragraph">
-<p>Such Casm cannot be generated by the Sierra&rarr;Casm compiler.
+<p>Such Casm cannot be generated by the Sierra&#8594;Casm compiler.
 Furthermore, simply replacing the assertion with an if/else statement doesn&#8217;t do, as this results in non-deterministic execution. That is, for the same input, different hint values can yield different results.
 A malicious prover can use this freedom to harm the user - in this example, they are able to make it seem as if an element isn&#8217;t part of the array, even though it actually is.</p>
 </div>
@@ -714,8 +717,8 @@ Note that this is currently not part of Starknet&#8217;s roadmap.</p>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../contract-syntax/">Migrating a contract from Cairo 0 to Cairo</a></span>
-  <span class="next"><a href="../system-calls-cairo1/">System calls</a></span>
+  <span class="prev"><a href="../contract-syntax/">Migrating a contract from Cairo v1 to Cairo v2</a></span>
+  <span class="next"><a href="../universal-deployer/">Universal Deployer Contract</a></span>
 </nav>
 </article>
   </div>
@@ -726,7 +729,7 @@ Note that this is currently not part of Starknet&#8217;s roadmap.</p>
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
-    <strong>Mainnet: 0.12.3 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
+    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->

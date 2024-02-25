@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Migrating a contract from Cairo 0 to Cairo :: Starknet documentation</title>
+    <title>Migrating a contract from Cairo v1 to Cairo v2 :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Smart_Contracts/contract-syntax/">
     <link rel="prev" href="../starknet-events/">
     <link rel="next" href="../cairo-and-sierra/">
@@ -110,7 +110,7 @@
     <li><a href="../../../">Starknet</a></li>
     <li>Architecture</li>
     <li>Contracts</li>
-    <li><a href="./">Migrating a contract from Cairo 0 to Cairo</a></li>
+    <li><a href="./">Migrating a contract from Cairo v1 to Cairo v2</a></li>
   </ul>
 </nav>
   <div class="edit-this-page">
@@ -256,12 +256,7 @@
   <li class="nav-item" data-depth="4">
     <a 
        class="nav-link"
-     href="../../Network_Architecture/fee-mechanism/">Gas and transaction fees (Starting in Starknet 0.13.0)</a>
-  </li>
-  <li class="nav-item" data-depth="4">
-    <a 
-       class="nav-link"
-     href="../../Network_Architecture/fee-mechanism-pre-v0.13.0/">Gas and transaction fees (Prior to Starknet 0.13.0)</a>
+     href="../../Network_Architecture/fee-mechanism/">Gas and transaction fees</a>
   </li>
 </ul>
   </li>
@@ -326,7 +321,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../contract-classes/">Contract classes</a>
+     href="../contract-classes/">Contract classes and instances</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -356,7 +351,7 @@
   <li class="nav-item is-current-page" data-depth="3">
     <a 
        class="nav-link"
-     href="./">Migrating a contract from Cairo 0 to Cairo</a>
+     href="./">Migrating a contract from Cairo v1 to Cairo v2</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -366,7 +361,17 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
+     href="../universal-deployer/">Universal Deployer Contract</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
      href="../system-calls-cairo1/">System calls</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../serialization_of_Cairo_types/">Serialization of Cairo types</a>
   </li>
 </ul>
   </li>
@@ -392,6 +397,11 @@
 </ul>
   </li>
 </ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a 
+       class="nav-link"
+     href="../../Economics-of-Starknet/">The Economics of Starknet</a>
   </li>
 </ul>
   </li>
@@ -460,7 +470,7 @@
   </li>
   <li class="nav-item parent" data-depth="2">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">StarkGate bridge developer&#8217;s guide</span>
+    <span class="nav-text">StarkGate bridge guide</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="3">
     <a 
@@ -485,11 +495,6 @@
     <a 
        class="nav-link"
      href="../../../tools/starkgate-adding_a_token/">Adding a token</a>
-  </li>
-  <li class="nav-item" data-depth="4">
-    <a 
-       class="nav-link"
-     href="../../../tools/starkgate-removing_a_token/">Removing a token</a>
   </li>
   <li class="nav-item" data-depth="4">
     <a 
@@ -558,7 +563,7 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Migrating a contract from Cairo 0 to Cairo</h1>
+<h1 class="page">Migrating a contract from Cairo v1 to Cairo v2</h1>
 <div class="paragraph">
 <p>With the <a href="https://github.com/starkware-libs/cairo/releases/tag/v2.0.0-rc0">v2.0.0 release</a> of the Cairo compiler, the Starknet contract syntax has evolved, affecting the organization of functions, storage, and events.</p>
 </div>
@@ -569,7 +574,7 @@
 <div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>A contract written with the Cairo compiler v1.1.0</p>
+<p>A contract written with the Cairo compiler v1</p>
 </li>
 <li>
 <p>The most recent version of the Cairo compiler</p>
@@ -585,28 +590,28 @@
 <div class="content">
 <div class="ulist tablist">
 <ul>
-<li id="tabs_1_old" class="tab">
-<p>old</p>
+<li id="tabs_1_cairo_v1" class="tab">
+<p>Cairo v1</p>
 </li>
-<li id="tabs_1_new" class="tab">
-<p>new</p>
+<li id="tabs_1_cairo_v2" class="tab">
+<p>Cairo v2</p>
 </li>
 </ul>
 </div>
-<div id="tabs_1_old--panel" class="tabpanel" aria-labelledby="tabs_1_old">
+<div id="tabs_1_cairo_v1--panel" class="tabpanel" aria-labelledby="tabs_1_cairo_v1">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[contract]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[contract]
 mod CounterContract {
    ...
 }</code></pre>
 </div>
 </div>
 </div>
-<div id="tabs_1_new--panel" class="tabpanel" aria-labelledby="tabs_1_new">
+<div id="tabs_1_cairo_v2--panel" class="tabpanel" aria-labelledby="tabs_1_cairo_v2">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[starknet::contract]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[starknet::contract]
 mod CounterContract {
    ...
 }</code></pre>
@@ -622,28 +627,28 @@ mod CounterContract {
 <div class="content">
 <div class="ulist tablist">
 <ul>
-<li id="tabs_2_old" class="tab">
-<p>old</p>
+<li id="tabs_2_cairo_v1" class="tab">
+<p>Cairo v1</p>
 </li>
-<li id="tabs_2_new" class="tab">
-<p>new</p>
+<li id="tabs_2_cairo_v2" class="tab">
+<p>Cairo v2</p>
 </li>
 </ul>
 </div>
-<div id="tabs_2_old--panel" class="tabpanel" aria-labelledby="tabs_2_old">
+<div id="tabs_2_cairo_v1--panel" class="tabpanel" aria-labelledby="tabs_2_cairo_v1">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">struct Storage {
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">struct Storage {
     counter: u128,
     other_contract: IOtherContractDispatcher
 }</code></pre>
 </div>
 </div>
 </div>
-<div id="tabs_2_new--panel" class="tabpanel" aria-labelledby="tabs_2_new">
+<div id="tabs_2_cairo_v2--panel" class="tabpanel" aria-labelledby="tabs_2_cairo_v2">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[storage]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[storage]
 struct Storage {
     counter: u128,
     other_contract: IOtherContractDispatcher
@@ -678,18 +683,18 @@ represents the state of your contract.</p>
 <div class="content">
 <div class="ulist tablist">
 <ul>
-<li id="tabs_3_old" class="tab">
-<p>old</p>
+<li id="tabs_3_cairo_v1" class="tab">
+<p>Cairo v1</p>
 </li>
-<li id="tabs_3_new" class="tab">
-<p>new</p>
+<li id="tabs_3_cairo_v2" class="tab">
+<p>Cairo v2</p>
 </li>
 </ul>
 </div>
-<div id="tabs_3_old--panel" class="tabpanel" aria-labelledby="tabs_3_old">
+<div id="tabs_3_cairo_v1--panel" class="tabpanel" aria-labelledby="tabs_3_cairo_v1">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[contract]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[contract]
 mod CounterContract {
    #[external]
    fn increase_counter(amount: u128) { ... }
@@ -701,10 +706,10 @@ mod CounterContract {
 </div>
 </div>
 </div>
-<div id="tabs_3_new--panel" class="tabpanel" aria-labelledby="tabs_3_new">
+<div id="tabs_3_cairo_v2--panel" class="tabpanel" aria-labelledby="tabs_3_cairo_v2">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[starknet::interface]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[starknet::interface]
 trait ICounterContract&lt;TContractState&gt; {
    fn increase_counter(ref self: TContractState, amount: u128);
    fn decrease_counter(ref self: TContractState, amount: u128);
@@ -733,18 +738,18 @@ mod CounterContract {
 <div class="content">
 <div class="ulist tablist">
 <ul>
-<li id="tabs_4_old" class="tab">
-<p>old</p>
+<li id="tabs_4_cairo_v1" class="tab">
+<p>Cairo v1</p>
 </li>
-<li id="tabs_4_new" class="tab">
-<p>new</p>
+<li id="tabs_4_cairo_v2" class="tab">
+<p>Cairo v2</p>
 </li>
 </ul>
 </div>
-<div id="tabs_4_old--panel" class="tabpanel" aria-labelledby="tabs_4_old">
+<div id="tabs_4_cairo_v1--panel" class="tabpanel" aria-labelledby="tabs_4_cairo_v1">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[contract]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[contract]
 mod CounterContract {
    #[external]
    fn increase_counter(amount: u128) { ... }
@@ -756,10 +761,10 @@ mod CounterContract {
 </div>
 </div>
 </div>
-<div id="tabs_4_new--panel" class="tabpanel" aria-labelledby="tabs_4_new">
+<div id="tabs_4_cairo_v2--panel" class="tabpanel" aria-labelledby="tabs_4_cairo_v2">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[starknet::interface]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[starknet::interface]
 trait ICounterContract&lt;TContractState&gt; {
    fn increase_counter(ref self: TContractState, amount: u128);
    fn decrease_counter(ref self: TContractState, amount: u128);
@@ -805,28 +810,28 @@ functions makes the implementation more complete.</p>
 <div class="content">
 <div class="ulist tablist">
 <ul>
-<li id="tabs_5_old" class="tab">
-<p>old</p>
+<li id="tabs_5_cairo_v1" class="tab">
+<p>Cairo v1</p>
 </li>
-<li id="tabs_5_new" class="tab">
-<p>new</p>
+<li id="tabs_5_cairo_v2" class="tab">
+<p>Cairo v2</p>
 </li>
 </ul>
 </div>
-<div id="tabs_5_old--panel" class="tabpanel" aria-labelledby="tabs_5_old">
+<div id="tabs_5_cairo_v1--panel" class="tabpanel" aria-labelledby="tabs_5_cairo_v1">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[abi]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[abi]
 trait IOtherContract {
     fn decrease_allowed() -&gt; bool;
 }</code></pre>
 </div>
 </div>
 </div>
-<div id="tabs_5_new--panel" class="tabpanel" aria-labelledby="tabs_5_new">
+<div id="tabs_5_cairo_v2--panel" class="tabpanel" aria-labelledby="tabs_5_cairo_v2">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[starknet::interface]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[starknet::interface]
 trait IOtherContract&lt;TContractState&gt; {
     fn decrease_allowed(self: @TContractState) -&gt; bool;
 }</code></pre>
@@ -859,25 +864,25 @@ trait IOtherContract&lt;TContractState&gt; {
 <div class="content">
 <div class="ulist tablist">
 <ul>
-<li id="tabs_6_old" class="tab">
-<p>old</p>
+<li id="tabs_6_cairo_v1" class="tab">
+<p>Cairo v1</p>
 </li>
-<li id="tabs_6_new" class="tab">
-<p>new</p>
+<li id="tabs_6_cairo_v2" class="tab">
+<p>Cairo v2</p>
 </li>
 </ul>
 </div>
-<div id="tabs_6_old--panel" class="tabpanel" aria-labelledby="tabs_6_old">
+<div id="tabs_6_cairo_v1--panel" class="tabpanel" aria-labelledby="tabs_6_cairo_v1">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">let current = counter::read();</code></pre>
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let current = counter::read();</code></pre>
 </div>
 </div>
 </div>
-<div id="tabs_6_new--panel" class="tabpanel" aria-labelledby="tabs_6_new">
+<div id="tabs_6_cairo_v2--panel" class="tabpanel" aria-labelledby="tabs_6_cairo_v2">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">let current = self.counter.read();</code></pre>
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let current = self.counter.read();</code></pre>
 </div>
 </div>
 </div>
@@ -909,28 +914,28 @@ and each member type must implement the <code>Serde</code> trait.</p>
 <div class="content">
 <div class="ulist tablist">
 <ul>
-<li id="tabs_7_old" class="tab">
-<p>old</p>
+<li id="tabs_7_cairo_v1" class="tab">
+<p>Cairo v1</p>
 </li>
-<li id="tabs_7_new" class="tab">
-<p>new</p>
+<li id="tabs_7_cairo_v2" class="tab">
+<p>Cairo v2</p>
 </li>
 </ul>
 </div>
-<div id="tabs_7_old--panel" class="tabpanel" aria-labelledby="tabs_7_old">
+<div id="tabs_7_cairo_v1--panel" class="tabpanel" aria-labelledby="tabs_7_cairo_v1">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[event]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[event]
 fn counter_increased(amount: u128) {}
 #[event]
 fn counter_decreased(amount: u128) {}</code></pre>
 </div>
 </div>
 </div>
-<div id="tabs_7_new--panel" class="tabpanel" aria-labelledby="tabs_7_new">
+<div id="tabs_7_cairo_v2--panel" class="tabpanel" aria-labelledby="tabs_7_cairo_v2">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">#[event]
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[event]
 #[derive(Drop, starknet::Event)]
 enum Event {
     CounterIncreased: CounterIncreased,
@@ -956,28 +961,28 @@ struct CounterDecreased {
 <div class="content">
 <div class="ulist tablist">
 <ul>
-<li id="tabs_8_old" class="tab">
-<p>old</p>
+<li id="tabs_8_cairo_v1" class="tab">
+<p>Cairo v1</p>
 </li>
-<li id="tabs_8_new" class="tab">
-<p>new</p>
+<li id="tabs_8_cairo_v2" class="tab">
+<p>Cairo v2</p>
 </li>
 </ul>
 </div>
-<div id="tabs_8_old--panel" class="tabpanel" aria-labelledby="tabs_8_old">
+<div id="tabs_8_cairo_v1--panel" class="tabpanel" aria-labelledby="tabs_8_cairo_v1">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">fn increase_counter(amount: u128) {
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">fn increase_counter(amount: u128) {
     ...
     counter_increased(amount);
 }</code></pre>
 </div>
 </div>
 </div>
-<div id="tabs_8_new--panel" class="tabpanel" aria-labelledby="tabs_8_new">
+<div id="tabs_8_cairo_v2--panel" class="tabpanel" aria-labelledby="tabs_8_cairo_v2">
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">fn increase_counter(ref self: ContractState, amount: u128) {
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">fn increase_counter(ref self: ContractState, amount: u128) {
     ...
     self.emit(Event::CounterIncreased(CounterIncreased { amount }));
 }</code></pre>
@@ -1002,7 +1007,7 @@ struct CounterDecreased {
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
-    <strong>Mainnet: 0.12.3 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
+    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->

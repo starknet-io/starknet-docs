@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Starknet state :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/starknet-state/">
-    <link rel="prev" href="../fee-mechanism-pre-v0.13.0/">
+    <link rel="prev" href="../fee-mechanism/">
     <link rel="next" href="../on-chain-data/">
     <meta name="generator" content="Antora 3.1.1">
 
@@ -257,12 +257,7 @@
   <li class="nav-item" data-depth="4">
     <a 
        class="nav-link"
-     href="../fee-mechanism/">Gas and transaction fees (Starting in Starknet 0.13.0)</a>
-  </li>
-  <li class="nav-item" data-depth="4">
-    <a 
-       class="nav-link"
-     href="../fee-mechanism-pre-v0.13.0/">Gas and transaction fees (Prior to Starknet 0.13.0)</a>
+     href="../fee-mechanism/">Gas and transaction fees</a>
   </li>
 </ul>
   </li>
@@ -327,7 +322,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Smart_Contracts/contract-classes/">Contract classes</a>
+     href="../../Smart_Contracts/contract-classes/">Contract classes and instances</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -357,7 +352,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../Smart_Contracts/contract-syntax/">Migrating a contract from Cairo 0 to Cairo</a>
+     href="../../Smart_Contracts/contract-syntax/">Migrating a contract from Cairo v1 to Cairo v2</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -367,7 +362,17 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
+     href="../../Smart_Contracts/universal-deployer/">Universal Deployer Contract</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
      href="../../Smart_Contracts/system-calls-cairo1/">System calls</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../../Smart_Contracts/serialization_of_Cairo_types/">Serialization of Cairo types</a>
   </li>
 </ul>
   </li>
@@ -393,6 +398,11 @@
 </ul>
   </li>
 </ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a 
+       class="nav-link"
+     href="../../Economics-of-Starknet/">The Economics of Starknet</a>
   </li>
 </ul>
   </li>
@@ -461,7 +471,7 @@
   </li>
   <li class="nav-item parent" data-depth="2">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">StarkGate bridge developer&#8217;s guide</span>
+    <span class="nav-text">StarkGate bridge guide</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="3">
     <a 
@@ -486,11 +496,6 @@
     <a 
        class="nav-link"
      href="../../../tools/starkgate-adding_a_token/">Adding a token</a>
-  </li>
-  <li class="nav-item" data-depth="4">
-    <a 
-       class="nav-link"
-     href="../../../tools/starkgate-removing_a_token/">Removing a token</a>
   </li>
   <li class="nav-item" data-depth="4">
     <a 
@@ -753,11 +758,11 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 <p><code>CONTRACT_CLASS_LEAF_V0</code> is a constant prefix string encoded in ASCII (and represented as a field element).</p>
 </li>
 <li>
-<p><code>compiled_class_hash</code> is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler</p>
+<p><code>compiled_class_hash</code> is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler.</p>
 </li>
 </ul>
 </div>
-<div class="admonitionblock note">
+<div id="note_compiled_class_hash" class="admonitionblock note">
 <table>
 <tr>
 <td class="icon">
@@ -765,16 +770,20 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly. For more information, see <a href="../../Smart_Contracts/system-calls-cairo1/" class="xref page">System calls</a>.</p>
+<div class="title">Compiled class hash</div>
+<p>The compiled class hash identifies the output of a specific Casm compilation as unique.</p>
 </div>
 <div class="paragraph">
-<p>However, the prover only deals with Cairo assembly (Casm).</p>
+<p>Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly (Casm). However, the prover only works with Casm.</p>
 </div>
 <div class="paragraph">
-<p>So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly.</p>
+<p>So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly. The compiled class hash provides this information.</p>
 </div>
 <div class="paragraph">
-<p>Today, the user signs the compiled class hash as part of a <a href="../transactions/#declare_v2" class="xref page">declare</a> transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.</p>
+<p>For more information, see <a href="../../Smart_Contracts/cairo-and-sierra/" class="xref page">Cairo and Sierra</a>.</p>
+</div>
+<div class="paragraph">
+<p>The party that declares the contract signs the compiled class hash, which they obtain using an SDK, as part of the <a href="../transactions/#declare_v2" class="xref page"><code>DECLARE</code></a> transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.</p>
 </div>
 <div class="paragraph">
 <p>In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.</p>
@@ -994,7 +1003,7 @@ Default Values
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../fee-mechanism-pre-v0.13.0/">Gas and transaction fees (Prior to Starknet 0.13.0)</a></span>
+  <span class="prev"><a href="../fee-mechanism/">Gas and transaction fees</a></span>
   <span class="next"><a href="../on-chain-data/">Data availability</a></span>
 </nav>
 </article>
@@ -1006,7 +1015,7 @@ Default Values
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
-    <strong>Mainnet: 0.12.3 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
+    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->
