@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>The __validate__ and __execute__ functions :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Accounts/validate_and_execute/">
+    <title>Account functions :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Accounts/account_functions/">
     <link rel="prev" href="../approach/">
     <link rel="next" href="../deploying_new_accounts/">
     <meta name="generator" content="Antora 3.1.1">
@@ -110,11 +110,11 @@
     <li><a href="../../../">Starknet</a></li>
     <li>Architecture</li>
     <li>Accounts</li>
-    <li><a href="./">Validate and execute</a></li>
+    <li><a href="./">Account functions</a></li>
   </ul>
 </nav>
   <div class="edit-this-page">
-    <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture_and_concepts/pages/Accounts/validate_and_execute.adoc"><img class="pencil">Edit this Page</a>
+    <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture_and_concepts/pages/Accounts/account_functions.adoc"><img class="pencil">Edit this Page</a>
   </div>
 </div>
 <div class="body">
@@ -300,7 +300,7 @@
   <li class="nav-item is-current-page" data-depth="3">
     <a 
        class="nav-link"
-     href="./">Validate and execute</a>
+     href="./">Account functions</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -563,38 +563,53 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">The <code>__validate__</code> and <code>__execute__</code> functions</h1>
+<h1 class="page">Account functions</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>A Starknet account is a contract that must include the following two functions:</p>
+<p>The functions in the table <a href="#starknet_account_interface_functions">Starknet account interface functions</a> are part of account contracts. Where required, you must include these functions within your contract, but the logic of these functions can be mostly arbitrary, with a few limitations. For information on these limitations, see <a href="#invalid_transactions">Invalid transactions</a>.</p>
 </div>
-<div class="hdlist">
-<table>
+<table id="starknet_account_interface_functions" class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 1. Starknet account interface functions</caption>
 <colgroup>
-<col style="width: 15%;">
-<col>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
 </colgroup>
+<thead>
 <tr>
-<td class="hdlist1">
-<code>__validate__</code>
-</td>
-<td class="hdlist2">
-<p>Initiates the validation stage in the sequencer.</p>
-</td>
+<th class="tableblock halign-left valign-top">Function name</th>
+<th class="tableblock halign-left valign-top">Description of minimal functionality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate__</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>Required</em>.</p>
+<p class="tableblock">Initiates the validation stage in the sequencer. Runs when the sequencer receives an <code>INVOKE</code> transaction. Validates the sender&#8217;s address.</p>
+<p class="tableblock">In most implementations, <code>__validate__</code> ensures that only the account owner can initiate transactions.</p></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>__execute__</code>
-</td>
-<td class="hdlist2">
-<p>Initiates the execution stage in the sequencer.</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__execute__</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>Required</em>.</p>
+<p class="tableblock">Initiates the execution stage in the sequencer. Runs when the sequencer receives an <code>INVOKE</code> transaction.</p>
+<p class="tableblock">In most implementations, <code>__execute__</code> initiates a sequence of calls from the account.</p></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate_declare__</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>Required for a contract to be able to send a</em>`DECLARE` <em>transaction.</em></p>
+<p class="tableblock">Runs when the sequencer receives a <code>DECLARE</code> transaction. Validates the sender&#8217;s address.</p>
+<p class="tableblock">If the contract declares other contracts and handles the corresponding gas fees, this function authenticates the contract declaration.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate_deploy__</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>Required when deploying an account with a</em> <code>DEPLOY_ACCOUNT</code> <em>transaction</em>.</p>
+<p class="tableblock">Runs when the sequencer receives a <code>DEPLOY_ACCOUNT</code> transaction. Validates the deployment of the class referred to by the <code>class_hash</code> parameter in the transaction.</p>
+<p class="tableblock">You can use this function to set up an account contract without linking it to the address that deploys it or depending on another account contract for gas fees.</p></td>
+</tr>
+</tbody>
 </table>
-</div>
 <div class="paragraph">
-<p>When the sequencer receives a transaction request, it calls the <code>__validate__</code> function with the fields of the transaction request. After the validation stage completes successfully, the sequencer calls the <code>__execute__</code> function with the fields of the transaction request.</p>
+<p>When the sequencer receives a transaction request, it calls the corrsponding <em>validate</em> function with the fields of the transaction request. For an <code>INVOKE</code> transaction, after successfully completing validation, the sequencer calls the <code>__execute__</code> function with the fields of the transaction request.</p>
 </div>
 <div class="ulist">
 <ul>
@@ -607,7 +622,7 @@
 </ul>
 </div>
 <div class="paragraph">
-<p>Separating the validation and execution stages, which correspond to the <code>__validate__</code> and <code>__execute__</code> functions, guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.</p>
+<p>Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.</p>
 </div>
 </div>
 </div>
