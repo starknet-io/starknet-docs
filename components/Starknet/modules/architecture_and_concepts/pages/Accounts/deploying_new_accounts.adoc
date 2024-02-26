@@ -1,6 +1,13 @@
 [id="deploying_new_accounts"]
 = Deploying a new account
 
+You can deploy a new account in the following ways:
+
+* Send a `DEPLOY_ACCOUNT` transaction. This method does not require a preexisting account.
+* Include the `deploy` syscall in the account contract, such as by invoking the Universal Deployer Contract (UDC) with an `INVOKE` transaction. This method requires an existing account to send the `INVOKE` transaction.
+
+== Deploying a new account with the `DEPLOY_ACCOUNT` transaction type
+
 The `DEPLOY_ACCOUNT` transaction deploys new accounts to the network.
 
 Upon receiving a `DEPLOY_ACCOUNT` transaction, the sequencer performs the following steps:
@@ -36,81 +43,4 @@ A `DEPLOY_ACCOUNT` transaction automatically tells the sequencer to call the `+_
 [NOTE]
 ====
 When creating a new account without the `DEPLOY_ACCOUNT` transaction, such as by invoking the Universal Deployer Contract (UDC) with an `INVOKE` transaction, the sequencer calls the `+__validate__+` function, which validates the `INVOKE` transaction.
-====
-
-== Limitations of validation
-
-The limitations listed here apply to:
-
-* `+__validate__+`
-* `+__validate_deploy__+`
-* `+__validate_declare__+`
-* A constructor, when run in a `DEPLOY_ACCOUNT` transaction. That is, if an account is deployed from an existing class via the `deploy` syscall, the constructor can run differently.
-
-The sequencer automatically calls:
-
-* `+__validate_deploy__+` when executing a `DEPLOY_ACCOUNT` transaction
-* `+__validate__+` when executing an `INVOKE` transaction
-* `+__validate_declare__+` when executing a `DECLARE` transaction
-
-The requirement to pass validate_deploy after the constructor execution as a prerequisite for charging fees solves 1, and the limitations on validate execution [link to the new limitation section I suggested above] solves 2.
-
-
-By automatically calling these validation functions, the sequencer avoids the following potential issues:
-
-* Sequencers can charge arbitrarily high fees, potentially draining user funds from a pre-funded account.
-* A bad actor can carry out a Denial of Service (DoS) attack on the sequencer by sending multiple, invalid `DEPLOY_ACCOUNT` transactions, which would result in the sequencer not being compensated for work completed.
-
-//  the constructor and `+__validate_deploy__+` executions
-
-
-
-The following limitations on validation prevent the potential issues above:
-
-* Limited number of Cairo steps.
-* Limited number of times a builtin can be applied.
-* External contract calls are not allowed. Library calls and self-calls are allowed.
-
-// Include the `+__validate_deploy__+` entrypoint in any accounts or contracts that can enable deploying a new account.
-
-== `+__validate_deploy__+`
-
-Validates a `DEPLOY_ACCOUNT` transaction.
-
-[discrete]
-=== Parameters
-
-[horizontal,labelwidth="35",role="stripes-odd"]
-`class_hash: _felt_`:: The class hash.
-`contract_address_salt: _felt_`:: The contract address salt.
-`<__constructor_arguments__>`:: The arguments expected by the contract’s constructor. The compiler enforces this constructor.
-
-[NOTE]
-====
-In determining the contract address, the deployer address `0x0` is used.
-====
-
-[discrete]
-=== Example
-Consider an account with the following constructor signature:
-
-The signature of `+__validate_deploy__+` must be:
-
-[#call_validate_deploy]
-[source,cairo,sub="quotes"]
-----
-  fn __validate_deploy__(
-      self: @ComponentState<TContractState>,
-      class_hash: felt252,
-      contract_address_salt: felt252,
-      public_key: felt252
-  ) -> felt252
-
-#[constructor]
-fn constructor(ref self: ContractState, public_key: felt252)
-----
-
-[NOTE]
-====
-You can access the transaction hash and value for `max_fee` with the `get_tx_info` system call.
 ====

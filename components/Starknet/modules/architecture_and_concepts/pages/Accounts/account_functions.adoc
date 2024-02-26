@@ -1,0 +1,183 @@
+[id="validate_and_execute"]
+= Account functions
+
+The functions in the table xref:#starknet_account_interface_functions[] are part of account contracts. Where required, you must include these functions within your contract, but the logic of these functions can be mostly arbitrary, with a few limitations. For information on these limitations, see xref:#invalid_transactions[].
+
+[#starknet_account_interface_functions]
+.Starknet account interface functions
+[cols="1,2"]
+|===
+| Function name | Description of minimal functionality
+
+| `+__validate__+` | _Required_.
+
+Initiates the validation stage in the sequencer. Runs when the sequencer receives an `INVOKE` transaction. Validates the sender's address.
+
+In most implementations, `+__validate__+` ensures that only the account owner can initiate transactions.
+| `+__execute__+` | _Required_.
+
+Initiates the execution stage in the sequencer. Runs when the sequencer receives an `INVOKE` transaction.
+
+In most implementations, `+__execute__+` initiates a sequence of calls from the account.
+| `+__validate_declare__+` | _Required for a contract to be able to send a_`DECLARE` _transaction._
+
+Runs when the sequencer receives a `DECLARE` transaction. Validates the sender's address.
+
+If the contract declares other contracts and handles the corresponding gas fees, this function authenticates the contract declaration.
+| `+__validate_deploy__+`
+| _Required when deploying an account with a_ `DEPLOY_ACCOUNT` _transaction_.
+
+Runs when the sequencer receives a `DEPLOY_ACCOUNT` transaction. Validates the deployment of the class referred to by the `class_hash` parameter in the transaction.
+
+You can use this function to set up an account contract without linking it to the address that deploys it or depending on another account contract for gas fees.
+|===
+
+When the sequencer receives a transaction request, it calls the corrsponding _validate_ function with the fields of the transaction request. For an `INVOKE` transaction, after successfully completing validation, the sequencer calls the `+__execute__+` function with the fields of the transaction request.
+
+* For more information on the available transaction types and their fields, see xref:architecture_and_concepts:Network_Architecture/transactions.adoc[Transaction types].
+* For more information on the validation and execution stages, see xref:architecture_and_concepts:Network_Architecture/transaction-life-cycle.adoc[Transaction lifecycle].
+
+Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.
+
+[id="the_validate_function"]
+=== The `+__validate__+` function
+
+The `+__validate__+` function typically ensures that any transaction submitted was indeed initiated by the account owner and therefore does not take up unjustified resources during the execution process.
+
+Without this mechanism, a forged transaction can result in the sequencer stealing the user's funds. So the `+__validate__+` function ensures that the sequencer can only include transactions that were approved by the account owner.
+
+The arbitrary logic allowed in the `+__validate__+` function gives the account's designer the ability to determine what it means for a transaction to be valid, enabling different signature schemes and other xref:architecture_and_concepts:Accounts/introduction.adoc#examples[exotic accounts].
+
+[id="invalid_transactions"]
+== Invalid transactions
+
+When the `+__validate__+` function fails, no fee is taken from the account in question.
+
+[id="validate_limitations"]
+=== `+__validate__+` limitations
+
+The `+__validate__+` function has the following limitations:
+
+* You cannot call functions in external contracts, only in your account contract.
++
+[NOTE]
+====
+This restriction enforces a single storage update being able to invalidate only transactions from a single account. However, be aware that an account can always invalidate its own past transactions by changing its keys.
+
+So the fees you need to pay to invalidate transactions in the mempool are directly proportional to the number of unique accounts. For example, if the fee you need to pay to invalidate a transaction from one account is stem:[$$x$$], then the price of invalidating ten transactions from ten different accounts is stem:[$$10x$$].
+====
+* The maximum number of computational steps, measured in Cairo steps, for a `+__validate__+` function is 1,000,000.
+* Access is restricted to `+sequencer_address+` in the `+get_execution_info+` syscall. The syscall returns zero values for `+sequencer_address+`.
+* Access is restricted to the following syscalls:
+** `+get_block_hash+` for Cairo contracts
+** `+get_sequencer_address+` for Cairo 0 contracts
+
+
+[NOTE]
+====
+Validation, while now abstract and in control of the account owner rather than the protocol, should still be a simple operation. So in the future, the `+__validate__+` function will have a limitation of a maximum number of Cairo steps.
+====
+
+[#types_of_attacks_that_limitations_prevent]
+=== Types of attacks that limitations prevent
+
+These limitations prevent the following attacks:
+
+* Denial of Service (DoS) attacks. Without these limitations, an attack could cause the sequencer to perform a large amount of work before a transaction fails validation. This work would not be eligible for fee payment.
+
+* Even if the validation is simple, the following attack could still be possible:
+  . An attacker fills the mempool with transactions that are valid at the time they are sent.
+  . A sequencer starts executing them, thinking that by the time it produces a  block, they will still be valid.
+  . However, shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it's included in the block, by offering higher fees for this one transaction, before the sequencer can publish the block.
+
+* Consider many `+__validate__+` functions checking that the value of a storage slot is `1`, and the attacker's transaction later sets it to `0`. To handle this issue, we add some further limitations. This attack is prevented by Starknet restricting `+__validate__+` from calling external contracts.
+
+[id="the_execute_function"]
+== The `+__execute__+` function
+
+The purpose of the `+__execute__+` function is to abstract away the remaining actions performed by a transaction.
+
+In Ethereum, a transaction is necessarily a call to a specific function in a smart contract. With the `+__execute__+` abstraction, the account designer controls the flow of the transaction. For example, multicalls can be natively supported in your account, saving the need to send multiple transactions (in practice, this is even harder to manage without multicalls due to nonces).
+
+[id="reverted_transactions"]
+=== Reverted transactions
+
+A transaction has the status *REVERTED* when the `+__execute__+` function fails. A reverted transaction is included in a block, and the sequencer is eligible to charge a fee for the work done up to the point of failure, similar to Ethereum.
+
+
+== Limitations of validation
+
+The limitations listed here apply to:
+
+* `+__validate__+`
+* `+__validate_deploy__+`
+* `+__validate_declare__+`
+* A constructor, when run in a `DEPLOY_ACCOUNT` transaction. That is, if an account is deployed from an existing class via the `deploy` syscall, the constructor can run differently.
+
+The sequencer automatically calls:
+
+* `+__validate_deploy__+` when executing a `DEPLOY_ACCOUNT` transaction
+* `+__validate__+` when executing an `INVOKE` transaction
+* `+__validate_declare__+` when executing a `DECLARE` transaction
+
+The requirement to pass validate_deploy after the constructor execution as a prerequisite for charging fees solves 1, and the limitations on validate execution [link to the new limitation section I suggested above] solves 2.
+
+
+By automatically calling these validation functions, the sequencer avoids the following potential issues:
+
+* Sequencers can charge arbitrarily high fees, potentially draining user funds from a pre-funded account.
+* A bad actor can carry out a Denial of Service (DoS) attack on the sequencer by sending multiple, invalid `DEPLOY_ACCOUNT` transactions, which would result in the sequencer not being compensated for work completed.
+
+//  the constructor and `+__validate_deploy__+` executions
+
+
+
+The following limitations on validation prevent the potential issues above:
+
+* Limited number of Cairo steps.
+* Limited number of times a builtin can be applied.
+* External contract calls are not allowed. Library calls and self-calls are allowed.
+
+// Include the `+__validate_deploy__+` entrypoint in any accounts or contracts that can enable deploying a new account.
+
+== `+__validate_deploy__+`
+
+Validates a `DEPLOY_ACCOUNT` transaction.
+
+[discrete]
+=== Parameters
+
+[horizontal,labelwidth="35",role="stripes-odd"]
+`class_hash: _felt_`:: The class hash.
+`contract_address_salt: _felt_`:: The contract address salt.
+`<__constructor_arguments__>`:: The arguments expected by the contract’s constructor. The compiler enforces this constructor.
+
+[NOTE]
+====
+In determining the contract address, the deployer address `0x0` is used.
+====
+
+[discrete]
+=== Example
+Consider an account with the following constructor signature:
+
+The signature of `+__validate_deploy__+` must be:
+
+[#call_validate_deploy]
+[source,cairo,sub="quotes"]
+----
+  fn __validate_deploy__(
+      self: @ComponentState<TContractState>,
+      class_hash: felt252,
+      contract_address_salt: felt252,
+      public_key: felt252
+  ) -> felt252
+
+#[constructor]
+fn constructor(ref self: ContractState, public_key: felt252)
+----
+
+[NOTE]
+====
+You can access the transaction hash and value for `max_fee` with the `get_tx_info` system call.
+====
