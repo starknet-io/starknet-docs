@@ -2,6 +2,64 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.490](https://github.com/starknet-io/starknet-docs/compare/v0.1.489...v0.1.490) (2024-02-25)
+
+### [0.1.489](https://github.com/starknet-io/starknet-docs/compare/v0.1.488...v0.1.489) (2024-02-25)
+
+### [0.1.488](https://github.com/starknet-io/starknet-docs/compare/v0.1.487...v0.1.488) (2024-02-25)
+
+### [0.1.487](https://github.com/starknet-io/starknet-docs/compare/v0.1.486...v0.1.487) (2024-02-25)
+
+### [0.1.486](https://github.com/starknet-io/starknet-docs/compare/v0.1.485...v0.1.486) (2024-02-22)
+
+### [0.1.485](https://github.com/starknet-io/starknet-docs/compare/v0.1.484...v0.1.485) (2024-02-22)
+
+### [0.1.484](https://github.com/starknet-io/starknet-docs/compare/v0.1.483...v0.1.484) (2024-02-21)
+
+### [0.1.483](https://github.com/starknet-io/starknet-docs/compare/v0.1.482...v0.1.483) (2024-02-21)
+
+### [0.1.482](https://github.com/starknet-io/starknet-docs/compare/v0.1.481...v0.1.482) (2024-02-21)
+
+### [0.1.481](https://github.com/starknet-io/starknet-docs/compare/v0.1.480...v0.1.481) (2024-02-21)
+
+### [0.1.480](https://github.com/starknet-io/starknet-docs/compare/v0.1.479...v0.1.480) (2024-02-19)
+
+### [0.1.479](https://github.com/starknet-io/starknet-docs/compare/v0.1.478...v0.1.479) (2024-02-15)
+
+### [0.1.478](https://github.com/starknet-io/starknet-docs/compare/v0.1.477...v0.1.478) (2024-02-15)
+
+### [0.1.477](https://github.com/starknet-io/starknet-docs/compare/v0.1.476...v0.1.477) (2024-02-14)
+
+### [0.1.476](https://github.com/starknet-io/starknet-docs/compare/v0.1.475...v0.1.476) (2024-02-14)
+
+
+### Bug Fixes
+
+* Minor edits to Economics-of-Starknet.adoc ([#1130](https://github.com/starknet-io/starknet-docs/issues/1130)) ([d00cfa6](https://github.com/starknet-io/starknet-docs/commit/d00cfa6f9aa3f9ebb42bd77e6c1bfc3c0fb830ae))
+
+### [0.1.475](https://github.com/starknet-io/starknet-docs/compare/v0.1.474...v0.1.475) (2024-02-14)
+
+### [0.1.474](https://github.com/starknet-io/starknet-docs/compare/v0.1.473...v0.1.474) (2024-02-13)
+
+### [0.1.473](https://github.com/starknet-io/starknet-docs/compare/v0.1.472...v0.1.473) (2024-02-11)
+
+
+### Bug Fixes
+
+* ignore fee token contract is the fee formula ([#1123](https://github.com/starknet-io/starknet-docs/issues/1123)) ([3863f6f](https://github.com/starknet-io/starknet-docs/commit/3863f6f693e3f3d06ee53f67cff4e7afb4334e13))
+
+### [0.1.472](https://github.com/starknet-io/starknet-docs/compare/v0.1.471...v0.1.472) (2024-02-11)
+
+### [0.1.471](https://github.com/starknet-io/starknet-docs/compare/v0.1.470...v0.1.471) (2024-02-08)
+
+### [0.1.470](https://github.com/starknet-io/starknet-docs/compare/v0.1.469...v0.1.470) (2024-02-08)
+
+### [0.1.469](https://github.com/starknet-io/starknet-docs/compare/v0.1.468...v0.1.469) (2024-02-06)
+
+### [0.1.468](https://github.com/starknet-io/starknet-docs/compare/v0.1.467...v0.1.468) (2024-02-05)
+
+### [0.1.467](https://github.com/starknet-io/starknet-docs/compare/v0.1.466...v0.1.467) (2024-02-05)
+
 ### [0.1.466](https://github.com/starknet-io/starknet-docs/compare/v0.1.465...v0.1.466) (2024-02-04)
 
 ### [0.1.465](https://github.com/starknet-io/starknet-docs/compare/v0.1.464...v0.1.465) (2024-02-04)
