@@ -1,18 +1,43 @@
 [id="validate_and_execute"]
-= The `+__validate__+` and `+__execute__+` functions
+= Account functions
 
-A Starknet account is a contract that must include the following two functions:
+The functions in the table xref:#starknet_account_interface_functions[] are part of account contracts. Where required, you must include these functions within your contract, but the logic of these functions can be mostly arbitrary, with a few limitations. For information on these limitations, see xref:#invalid_transactions[].
 
-[horizontal,labelwidth=15]
-`+__validate__+`:: Initiates the validation stage in the sequencer.
-`+__execute__+`:: Initiates the execution stage in the sequencer.
+[#starknet_account_interface_functions]
+.Starknet account interface functions
+[cols="1,2"]
+|===
+| Function name | Description of minimal functionality
 
-When the sequencer receives a transaction request, it calls the `+__validate__+` function with the fields of the transaction request. After the validation stage completes successfully, the sequencer calls the `+__execute__+` function with the fields of the transaction request.
+| `+__validate__+` | _Required_.
+
+Initiates the validation stage in the sequencer. Runs when the sequencer receives an `INVOKE` transaction. Validates the sender's address.
+
+In most implementations, `+__validate__+` ensures that only the account owner can initiate transactions.
+| `+__execute__+` | _Required_.
+
+Initiates the execution stage in the sequencer. Runs when the sequencer receives an `INVOKE` transaction.
+
+In most implementations, `+__execute__+` initiates a sequence of calls from the account.
+| `+__validate_declare__+` | _Required for a contract to be able to send a_`DECLARE` _transaction._
+
+Runs when the sequencer receives a `DECLARE` transaction. Validates the sender's address.
+
+If the contract declares other contracts and handles the corresponding gas fees, this function authenticates the contract declaration.
+| `+__validate_deploy__+`
+| _Required when deploying an account with a_ `DEPLOY_ACCOUNT` _transaction_.
+
+Runs when the sequencer receives a `DEPLOY_ACCOUNT` transaction. Validates the deployment of the class referred to by the `class_hash` parameter in the transaction.
+
+You can use this function to set up an account contract without linking it to the address that deploys it or depending on another account contract for gas fees.
+|===
+
+When the sequencer receives a transaction request, it calls the corrsponding _validate_ function with the fields of the transaction request. For an `INVOKE` transaction, after successfully completing validation, the sequencer calls the `+__execute__+` function with the fields of the transaction request.
 
 * For more information on the available transaction types and their fields, see xref:architecture_and_concepts:Network_Architecture/transactions.adoc[Transaction types].
 * For more information on the validation and execution stages, see xref:architecture_and_concepts:Network_Architecture/transaction-life-cycle.adoc[Transaction lifecycle].
 
-Separating the validation and execution stages, which correspond to the `+__validate__+` and `+__execute__+` functions, guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.
+Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.
 
 [id="the_validate_function"]
 === The `+__validate__+` function

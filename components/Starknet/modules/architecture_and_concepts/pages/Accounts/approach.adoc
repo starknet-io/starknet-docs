@@ -5,20 +5,31 @@ Starknet's account structure is inspired by Ethereum's EIP-4337, where instead o
 
 While not mandatory at the protocol level, you can use a richer standard interface for accounts, defined in link:https://github.com/starknet-io/SNIPs/blob/main/SNIPS/snip-6.md[Starknet Improvement Proposal #6 (SNIP-6)]. SNIP-6 was developed by community members at OpenZeppelin, in close collaboration with wallet teams and other Core Starknet developers.
 
-[#account_entrypoints]
-== Account entrypoints
+[#account_functions]
+== Account functions
 
-The following entrypoints are part of account contracts:
+The following functions are part of account contracts. The logic of these functions can be mostly arbitrary. For more information, see
 
-[horizontal,labelwidth="35",role="stripes-odd"]
-`+__validate__+`:: (Required)
-`+__execute__+`:: (Required)
-`+__validate_declare__+`:: (Optional)
-`+__validate_deploy__+`:: (Optional)
+[#starknet_account_interface_functions]
+.Starknet account interface functions
+[cols="1,2"]
+|===
+| Function name | Description
 
+| `+__validate__+` | (Required) Initiates the validation stage in the sequencer. Runs when the sequencer receives an `INVOKE` transaction. Validates the sender's address.
 
-While the logic of the above functions can be mostly arbitrary, with a few limitations discussed later, in most implementations, `+__validate__+` ensures that only the account owner can initiate transactions and `+__execute__+` initiates a sequence of calls from the account.
+In most implementations, `+__validate__+` ensures that only the account owner can initiate transactions.
+| `+__execute__+` | (Required) Runs when the sequencer receives an `INVOKE` transaction.
 
+In most implementations, `+__execute__+` initiates a sequence of calls from the account.
+| `+__validate_declare__+` | (Optional) Runs when the sequencer receives an `DECLARE` transaction. Validates the sender's address.
+
+If the contract declares other contracts and handles the corresponding gas fees, this function authenticates the contract declaration.
+| `+__validate_deploy__+`
+| (Optional) Runs when the sequencer receives a `DEPLOY` transaction. Validate the deployment of the class referred to by the `class_hash` parameter in the transaction.
+
+You can use this function to set up an account contract without linking it to the address that deploys it or depending on another account contract for gas fees.
+|===
 
 [#replay_protection]
 == Replay protection
