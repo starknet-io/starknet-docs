@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.493](https://github.com/starknet-io/starknet-docs/compare/v0.1.492...v0.1.493) (2024-02-26)
+
+
+### Bug Fixes
+
+* Update validation info in transaction_lifecycle.adoc ([#1151](https://github.com/starknet-io/starknet-docs/issues/1151)) ([2fc6bbf](https://github.com/starknet-io/starknet-docs/commit/2fc6bbfc6b8f90a059657aa3aa63c9067ec958c7))
+
 ### [0.1.492](https://github.com/starknet-io/starknet-docs/compare/v0.1.491...v0.1.492) (2024-02-26)
 
 ### [0.1.491](https://github.com/starknet-io/starknet-docs/compare/v0.1.490...v0.1.491) (2024-02-26)
