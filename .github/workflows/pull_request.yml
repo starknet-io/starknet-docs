@@ -1,15 +1,25 @@
 name: Pull request workflow
 
 on:
-  pull_request:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
     branches:
-      - '*'
+      - 'main'
+      - 'dev'
 
-#  push:
-#    branches:
-#      - master
+permissions:
+  contents: write
 
 jobs:
+
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: crate-ci/typos@master
 
   test-deploy:
     name: Test deploy
@@ -18,7 +28,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          node-version: 16
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
 
       - name: Install Node.js
         uses: actions/setup-node@v2
@@ -47,9 +57,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          node-version: 16
           ref: gh-pages
-          USER_TOKEN: ${{ secrets.USER_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract PR details
         id: pr
@@ -82,9 +91,9 @@ jobs:
           ls -al
           echo "Git status:"
           git status
-          
           git config user.name "GitHub Actions"
           git config user.email noreply@github.com
+          
           git add .
           
           
@@ -99,7 +108,7 @@ jobs:
           
             # Commit changes
             git commit -m "$commit_message"
-          
+
             # Check if commit was successful
             if [ $? -eq 0 ]; then
               # Debug information
@@ -134,5 +143,4 @@ jobs:
           echo "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://starknet-io.github.io/starknet-docs/${{ steps.pr.outputs.PR_ID }}/documentation/ ." >/tmp/comment
           gh pr comment ${{ github.event.pull_request.number }} -F /tmp/comment
         env:
-          # USER_TOKEN: "${{ secrets.USER_TOKEN }}"
           GH_TOKEN: "${{ github.token }}"
