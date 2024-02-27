@@ -9,33 +9,44 @@ This section describes fees that are paid on L2 starting in Starknet 0.13.0. For
 
 This section shows the formula for determining a transaction's fee. The following sections describe how this formula was derived.
 
-The following formula describes the overall fee for a transaction:
+The following formula describes the overall fee, stem:[F], for a transaction:
 
 // OLD
 // [stem]
 // ++++
-// F = \text{gas_price}\cdot\left(\max_k v_k w_k + 0.9\cdot\text{calldata_cost}\cdot\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)\right)
+// F = \text{gas_price}\cdot\left(\max_k v_k w_k + 0.9\cdot\text{calldata_cost}\cdot\left(2(n+m) + 3t + \sum\limits_{i=1}^t q_i +\ell\right)\right)
 // ++++
 
 [stem]
 ++++
-F = \text{gas_price}\cdot\left(\max_k v_k w_k + 0.9\cdot\text{calldata_cost}\cdot\left((n+2m-1) + 3t + \sum\limits_{i=1}^t q_i +3\ell\right)+ t\cdot\text{storage_write_cost} + n \cdot 200 + 272\right)
+\begin{align}
+F  = \text{gas_price}\cdot&\Bigg(\max_k v_k w_k + \\
+& + \; \text{da_calldata_cost}\left(2(n-1)+2(m-1) + \ell + 3t + \sum\limits_{i=1}^t q_i\right)\\ 
+& - \; \text{contract_update_discount}\cdot (n-1) - 240 \\
+& + \; \text{message_calldata_cost}\cdot\left(3t + \sum\limits_{i=1}^t q_i\right) \\
+& + \; \text{storage_write_cost}\cdot t\Bigg)
+\end{align}
 ++++
 
 where:
 
-* stem:[$v$] is a vector that represents resource usage, where each of its entries, stem:[$v_k$], correspond to different resource types: Cairo steps and number of applications of each builtin.
+* stem:[$v$] is a vector that represents resource usage, where each of its entries, stem:[$v_k$], corresponds to different resource types: Cairo steps and number of applications of each builtin.
 +
 For more information see xref:#calculation_of_computation_costs[Calculation of computation costs].
-* stem:[$n$] is xref:#storage_updates[the number of unique contracts updated].
-* stem:[$m$] is the number of values updated, not counting multiple updates for the same key.
+* stem:[$n$] is xref:#storage_updates[the number of unique contracts updated], which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, stem:[$n\ge\ell$]. Notice that stem:[$n\ge 1$] always holds, because the fee token contract is always updated, which does not incur any fee.
+* stem:[$m$] is the number of values updated, not counting multiple updates for the same key. Notice that stem:[$m\ge 1$] always holds, because the sequencer's balance is always updated, which does not incur any fee.
 * stem:[$t$] is the number of L2->L1 messages sent, where the corresponding payload sizes are denoted by stem:[$q_1,...,q_t$].
-* stem:[$\ell$] is the number of contract deployments.
-* stem:[$0.9$] is a 10% cost reduction that considers that the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.
+* stem:[$\ell$] is the number of contracts whose class was changed, which happens on contract deployment and when applying the `replace_class` syscall.
 * stem:[$w$] is the xref:#calculation_of_computation_costs[`CairoResourceFeeWeights`] vector.
-* stem:[$\text{calldata_cost}$] is 612 gas per 32-byte word (~100 gas is charged for on-chain hashing the happens for every sent word).
+* stem:[$\text{da_calldata_cost}$] is 551 gas per 32-byte word. This cost is derived as follows: 
++
+** 512 gas per 32-byte word for calldata.
+** ~100 gas for onchain hashing that happens for every sent word.
+** a 10% discount, because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.
+* stem:[$\text{message_calldata_cost}$] is 512 gas per 32-byte word. For more details, see xref:#l_2-l_1_messages[].
+* stem:[$240$] is the gas discount for updating the sender's balance, for the derivation of this number see xref:#storage_updates[].
+* stem:[$\text{contract_update_discount}$] is 312 gas, for the derivation of this discount see xref:#storage_updates[].
 * stem:[$\text{storage_write_cost}$] is 20,000 gas, the cost of allocating a new storage cell on Ethereum.
-* stem:[200] and stem:[272] are gas costs associated with storage updates. For more information, see xref:#storage_updates[].
 
 == When is the fee charged?
 
@@ -174,34 +185,28 @@ The following formula describes the storage update fee for a transaction:
 
 [stem]
 ++++
-\underbrace{\textit{gas_price}(\text{calldata_cost} \cdot n + 200 \cdot n)}_{\text{contract addresses +  new nonce and number of storage updates
+\underbrace{\textit{gas_price}\left(\text{da_calldata_cost} \cdot 2(n-1) - \text{contract_update_discount}\cdot (n-1)\right)}_{\text{contract addresses +  new nonce and number of storage updates
 }} \\
 
 + \\
 
-\underbrace{\textit{gas_price} \cdot (\text{calldata_cost}(2m-1)+272)}_{\text{storage updates}}
+\underbrace{\textit{gas_price} \cdot \left(\text{da_calldata_cost}(2(m-1))-240\right)}_{\text{storage updates}}
 ++++
 
 where:
 
-* stem:[$n$] is the number of unique contracts updated.
-* stem:[$m$] is the number of unique values updated. Be aware that the account balance is always updated, because the account needs to pay a fee. A discount is applied to the account balance update to consider that the value of the account balance most likely does not use the full 32 bytes allotted to it.
-* stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
-* stem:[$200$] is the cost of the onchain storage update's meta information and nonce, in gas. This value accounts for the fact that out of 32 bytes in the meta information, only the following six bytes are non-zero:
+* stem:[$n$] is xref:#storage_updates[the number of unique contracts updated], which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, stem:[$n\ge\ell$]. Notice that stem:[$n\ge 1$] always holds, because the fee token contract is always updated at the end of each transaction, in order to update the sequencer's and the sender's balances. The fee token contract update is not taken into account when computing the fee.
+* stem:[$m$] is the number of values updated, not counting multiple updates for the same key. Notice that stem:[$m\ge 1$] always holds, because the sequencer's balance is updated at the end of each transaction. The sequencer's balance update is not taken into account when computing the fee.
+* stem:[\text{contract_update_discount}] is 312 gas, which is discounted for every updated contract. This discount is a result of the fact that out of the stem:[$2n$] words caused by updating contracts, stem:[$n$] words are short, including at most 6 non-zero bytes:
 +
 --
 ** three bytes for the nonce
-** two bytes for storage updates
+** two bytes for the number of storage updates
 ** one byte for the class information flag
 --
 +
-The cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. So 6 non-zero bytes @ 16 gas per byte + 26 bytes of zeros @ 4 gas per byte results in 200 gas.
-
-* stem:[$\text{272}$] is the cost of updating the balance, in gas. This value assumes a balance of at most 12 non-zero bytes, which is enough for 1.2 billion ETH or STRK.
-+
-The cost of a non-zero byte is 16 gas, and the cost of a byte of zeros is 4 gas. So 12 non-zero bytes @ 16 gas per byte + 20 bytes of zeros @ 4 gas per byte results in 272 gas.
-
-
+Taking into account that zero bytes only cost 4 gas, the cost difference between a full 32-byte word, which does not contain zeros, and a word with only six non-zero bytes is stem:[$32\cdot16-(6\cdot16+26\cdot4)=312$].
+* stem:[$240$] is the gas discount for updating the sender's balance, and is derived by assuming the balance requires at most 12 non-zero bytes, which is enough for 1.2B ETH or STRK, resulting in the following discount: stem:[$512-(20\cdot4+12\cdot16)=240$].
 
 [NOTE]
 ====
@@ -210,7 +215,7 @@ Improvements to the above pessimistic estimation might be gradually implemented 
 For example, if different transactions within the same block update the same storage cell, there is no need to charge for both transactions, because only the last value reaches L1. In the future, Starknet might include a refund mechanism for such cases.
 ====
 
-[#l_2→l_1_messages]
+[#l_2-l_1_messages]
 === Onchain data: L2->L1 messages
 
 When a transaction that raises the `send_message_to_l1` syscall is included in a state update, the following data reaches L1:
@@ -220,14 +225,16 @@ When a transaction that raises the `send_message_to_l1` syscall is included in a
 * Payload size
 * Payload (list of field elements)
 
-Consequently, the fee associated with a single L2→L1 message is:
+Consequently, the gas cost associated with a single L2→L1 message is:
 
 [stem]
 ++++
-\textit{gas_price}\cdot \text{calldata_cost}\cdot(3+\text{payload_size})
+\text{storage_write_cost} + \left(\text{da_calldata_cost} + \text{message_calldata_cost}\right)\cdot\left(3+\text{payload_size}\right)
 ++++
 
-where stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
+Where stem:[$\text{da_calldata_cost}$] is 551 gas, and stem:[$\text{message_calldata_cost}$] is 512 gas.
+Messages appear twice in the fee formula, and pay both in stem:[$\text{da_calldata_cost}$] and stem:[$\text{message_calldata_cost}$], because 
+they are sent to Ethereum twice: once to the STARK verifier contract, where the additional hashing cost is incurred, and once when it is sent to the Starknet Core Contract as part of the state update transaction.
 
 [#deployed_contracts]
 === Onchain data: Deployed contracts
@@ -238,15 +245,6 @@ When a transaction that raises the `deploy` syscall is included in a state updat
 * number of storage updates and the new nonce
 * class hash
 
-The following formula describes the fee for a single deployment:
-
-[stem]
-++++
-\textit{gas_price}\cdot 3 \cdot \text{calldata_cost}
-++++
-
-where stem:[$\text{calldata_cost}$] is 512 gas per 32-byte word.
-
-For more information on data saved on L1, see xref:architecture_and_concepts:Network_Architecture/on-chain-data.adoc[Data availability].
+The first two elements are counted in the number of unique modified contracts, denoted by stem:[$n$] throughout this page. So the only additional word comes from publishing the class hash, which adds 551 gas. For more information, see stem:[$\text{da_calldata_cost}$] in the xref:#overall_fee[final formula].
 
 

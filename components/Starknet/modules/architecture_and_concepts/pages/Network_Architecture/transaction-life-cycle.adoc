@@ -13,10 +13,13 @@ The high-level steps in the Starknet transaction lifecycle are as follows:
 
 . *Mempool validation:*
 The mempool performs a preliminary validation on the transaction. If the transaction is invalid, it does not proceed.
++
+Mempool validation in this context is analogous to Ethereum's signature checking, including running the account's `+__validate__+` function on an `INVOKE` transaction, `+__validate_declare__+` on a `DECLARE` transaction, or `+__validate_deploy__+` on a `DEPLOY_ACCOUNT` transaction, ensuring that the current account balance exceeds the value of `max_fee` (prior to v3 transactions), and more.
 
 . *Sequencer validation:* The sequencer performs preliminary validation on the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.
 +
-Validation in this context is analogous to Ethereum's signature checking, including running the account's `+__validate__+` function, ensuring that the current account balance exceeds the value of `max_fee` (prior to v3 transactions), and more.
+This validation stage repeats the same validation run during the Mempool validation.
+//in this context is analogous to Ethereum's signature checking, including running the account's `+__validate__+` function on an `INVOKE` transaction, `+__validate_declare__+` on a `DECLARE` transaction, or `+__validate_deploy__+` on a `DEPLOY_ACCOUNT` transaction, ensuring that the current account balance exceeds the value of `max_fee` (prior to v3 transactions), and more.
 +
 include::partial$snippet_v3_max_price_sidebar.adoc[]
 
@@ -39,18 +42,23 @@ The following are the possible statuses of a transaction from the moment a user 
 |Status type |Status |Explanation
 
 .5+|*Finality* |`NOT_RECEIVED` |The transaction is not yet known to the sequencer.
-|`RECEIVED` |The transaction was received by the mempool. The transaction now either executes successfully, is rejected, or reverted.
-|`REJECTED` |The transaction was received by the mempool but failed validation in the sequencer. Such transactions are not included in a block.
+|`RECEIVED` a|The transaction was received by the mempool. The transaction now either executes successfully, is rejected, or reverted.
+
+The transaction has no execution status.
+|`REJECTED` a|The transaction was received by the mempool but failed validation in the sequencer. Such transactions are not included in a block.
+
+The transaction has no execution status.
+
+
+[NOTE]
+====
+A `REJECTED` transaction is stored in the mempool. You cannot send another transaction with the same transaction hash.
+====
 |`ACCEPTED_ON_L2` |The transaction was executed and entered an actual created block on L2.
 |`ACCEPTED_ON_L1` |The transaction was accepted on Ethereum.
 .2+|*Execution* |`REVERTED` |The transaction passed validation but failed during execution in the sequencer. It is included in the block with the status `REVERTED`.
 |`SUCCEEDED` |The transaction was successfully executed by the sequencer. It is included in the block.
 |===
-
-[NOTE]
-====
-If the finality status of a transaction is `RECEIVED` or `REJECTED`, the transaction does not have an execution status.
-====
 
 [id="transaction-state-implications"]
 == State implications of a reverted transaction
