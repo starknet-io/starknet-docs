@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.495](https://github.com/starknet-io/starknet-docs/compare/v0.1.494...v0.1.495) (2024-02-29)
+
+
+### Bug Fixes
+
+* Testing highlightjs-cairo v4.0 in starknet-docs-antora-ui ([#1153](https://github.com/starknet-io/starknet-docs/issues/1153)) ([1668841](https://github.com/starknet-io/starknet-docs/commit/1668841717103e1b49d6221024c8f736419f6034))
+
 ### [0.1.494](https://github.com/starknet-io/starknet-docs/compare/v0.1.493...v0.1.494) (2024-02-28)
 
 ### [0.1.493](https://github.com/starknet-io/starknet-docs/compare/v0.1.492...v0.1.493) (2024-02-26)
