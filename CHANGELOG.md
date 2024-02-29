@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.496](https://github.com/starknet-io/starknet-docs/compare/v0.1.495...v0.1.496) (2024-02-29)
+
+
+### Features
+
+* Added callouts to example in Data availability topic. ([#1006](https://github.com/starknet-io/starknet-docs/issues/1006)) ([e1b8500](https://github.com/starknet-io/starknet-docs/commit/e1b850074a9d2fdfa8113bef7de48b0fa1cca8ac))
+
 ### [0.1.495](https://github.com/starknet-io/starknet-docs/compare/v0.1.494...v0.1.495) (2024-02-29)
 
 
