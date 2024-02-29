@@ -36,7 +36,7 @@
     <script>var uiRootPath = '../../../../_'</script>
     <script src="../../../../_/js/vendor/medium-zoom.js?new"></script>
     <script type="text/javascript" id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="e4db29b5-cd94-4bcf-87e4-04f4ca564240" data-blockingmode="manual"></script>
-    <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
     <script>
         (function(h,o,t,j,a,r){
@@ -567,6 +567,24 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
+<p>You can deploy a new account in the following ways:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Send a <code>DEPLOY_ACCOUNT</code> transaction. This method does not require a preexisting account.</p>
+</li>
+<li>
+<p>Include the <code>deploy</code> syscall in the account contract, such as by invoking the Universal Deployer Contract (UDC) with an <code>INVOKE</code> transaction. This method requires an existing account to send the <code>INVOKE</code> transaction.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="deploying_a_new_account_with_the_deploy_account_transaction_type"><a class="anchor" href="#deploying_a_new_account_with_the_deploy_account_transaction_type"></a>Deploying a new account with the <code>DEPLOY_ACCOUNT</code> transaction type</h2>
+<div class="sectionbody">
+<div class="paragraph">
 <p>The <code>DEPLOY_ACCOUNT</code> transaction deploys new accounts to the network.</p>
 </div>
 <div class="paragraph">
@@ -650,167 +668,6 @@ For information on how to starkli to create and deploy a new account.</p>
 </div>
 </div>
 </div>
-<div class="sect1">
-<h2 id="limitations_of_validation"><a class="anchor" href="#limitations_of_validation"></a>Limitations of validation</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The limitations listed here apply to:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>__validate__</code></p>
-</li>
-<li>
-<p><code>__validate_deploy__</code></p>
-</li>
-<li>
-<p><code>__validate_declare__</code></p>
-</li>
-<li>
-<p>A constructor, when run in a <code>DEPLOY_ACCOUNT</code> transaction. That is, if an account is deployed from an existing class via the <code>deploy</code> syscall, the constructor can run differently.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>The sequencer automatically calls:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>__validate_deploy__</code> when executing a <code>DEPLOY_ACCOUNT</code> transaction</p>
-</li>
-<li>
-<p><code>__validate__</code> when executing an <code>INVOKE</code> transaction</p>
-</li>
-<li>
-<p><code>__validate_declare__</code> when executing a <code>DECLARE</code> transaction</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>The requirement to pass validate_deploy after the constructor execution as a prerequisite for charging fees solves 1, and the limitations on validate execution [link to the new limitation section I suggested above] solves 2.</p>
-</div>
-<div class="paragraph">
-<p>By automatically calling these validation functions, the sequencer avoids the following potential issues:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Sequencers can charge arbitrarily high fees, potentially draining user funds from a pre-funded account.</p>
-</li>
-<li>
-<p>A bad actor can carry out a Denial of Service (DoS) attack on the sequencer by sending multiple, invalid <code>DEPLOY_ACCOUNT</code> transactions, which would result in the sequencer not being compensated for work completed.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>The following limitations on validation prevent the potential issues above:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Limited number of Cairo steps.</p>
-</li>
-<li>
-<p>Limited number of times a builtin can be applied.</p>
-</li>
-<li>
-<p>External contract calls are not allowed. Library calls and self-calls are allowed.</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="validate_deploy_2"><a class="anchor" href="#validate_deploy_2"></a><code>__validate_deploy__</code></h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Validates a <code>DEPLOY_ACCOUNT</code> transaction.</p>
-</div>
-<h3 id="parameters" class="discrete">Parameters</h3>
-<div class="hdlist stripes-odd">
-<table>
-<colgroup>
-<col style="width: 35%;">
-<col>
-</colgroup>
-<tr>
-<td class="hdlist1">
-<code>class_hash: <em>felt</em></code>
-</td>
-<td class="hdlist2">
-<p>The class hash.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>contract_address_salt: <em>felt</em></code>
-</td>
-<td class="hdlist2">
-<p>The contract address salt.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>&lt;<em>constructor_arguments</em>&gt;</code>
-</td>
-<td class="hdlist2">
-<p>The arguments expected by the contract’s constructor. The compiler enforces this constructor.</p>
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>In determining the contract address, the deployer address <code>0x0</code> is used.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<h3 id="example" class="discrete">Example</h3>
-<div class="paragraph">
-<p>Consider an account with the following constructor signature:</p>
-</div>
-<div class="paragraph">
-<p>The signature of <code>__validate_deploy__</code> must be:</p>
-</div>
-<div id="call_validate_deploy" class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">  fn __validate_deploy__(
-      self: @ComponentState&lt;TContractState&gt;,
-      class_hash: felt252,
-      contract_address_salt: felt252,
-      public_key: felt252
-  ) -&gt; felt252
-
-#[constructor]
-fn constructor(ref self: ContractState, public_key: felt252)</code></pre>
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>You can access the transaction hash and value for <code>max_fee</code> with the <code>get_tx_info</code> system call.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
 <nav class="pagination">
   <span class="prev"><a href="../account_functions/">Account functions</a></span>
   <span class="next"><a href="../simplified_transaction_flow/">Simplified transaction flow</a></span>
@@ -852,7 +709,7 @@ fn constructor(ref self: ContractState, public_key: felt252)</code></pre>
 <script async src="../../../../_/js/vendor/component-versions.js?new"></script>
 <script src="../../../../_/js/vendor/custom.js?new"></script>
 <script async src="../../../../_/js/vendor/tabs.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js"></script>
 <script
     src="https://cdn.jsdelivr.net/npm/algoliasearch@4.14.3/dist/algoliasearch-lite.umd.js"
