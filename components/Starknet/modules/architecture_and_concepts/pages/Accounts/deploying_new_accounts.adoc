@@ -6,24 +6,30 @@ You can deploy a new account in the following ways:
 * Send a `DEPLOY_ACCOUNT` transaction. This method does not require a preexisting account.
 * Include the `deploy` syscall in the account contract, such as by invoking the Universal Deployer Contract (UDC) with an `INVOKE` transaction. This method requires an existing account to send the `INVOKE` transaction.
 
-== Deploying a new account with the `DEPLOY_ACCOUNT` transaction type
-
-The `DEPLOY_ACCOUNT` transaction deploys new accounts to the network.
-
-Upon receiving a `DEPLOY_ACCOUNT` transaction, the sequencer performs the following steps:
+Upon receiving one of these transactions, the sequencer performs the following steps:
 
 . Verifies that the address has funds to pay for the deployment.
 . Executes the constructor with the given arguments.
-. Executes the `+__validate_deploy__+` entry point. For more information, see xref:#validate_deploy[].
+. Runs the respective validation function in the contract, as follows:
+** When deploying with the `DEPLOY_ACCOUNT` transaction type, the sequencer executes the `+__validate_deploy__+` function in the contract.
+** When deploying with the `INVOKE` transaction type and a contract that includes the `deploy` syscall, such as the UDC, the sequencer executes the `+__validate__+` function in the contract.
 . Charges fees from the new account address.
 . Sets the account's nonce to `1`.
 
-*To create and deploy a new account*, you can use Starkli's `starkli account` command.
+== Deploying an account
 
-For more information, see link:https://book.starkli.rs/accounts[Accounts] in the Starkli Book.
-For information on how to starkli to create and deploy a new account.
+Starkli simplifies account creation.
 
-// After the deployment has completed successfully, it is recommended to validate the account deployment using .
+.Prerequisites
+
+* Starkli is installed.
+* The deployed contract must include a `+__validate_deploy__+` entrypoint.
+
+.Procedure
+
+To create and deploy a new account, use Starkli's `starkli account` command.
+
+For more information on creating a new account as a Starknet wallet account with a `DEPLOY_ACCOUNT` transaction, or by using the UDC with an `INVOKE` transaction , see link:https://book.starkli.rs/accounts[Accounts] in the Starkli Book.
 
 [#DEPLOY_ACCOUNT_restrictions]
 == `DEPLOY_ACCOUNT` constructor restrictions
@@ -34,13 +40,3 @@ The constructor of the `DEPLOY_ACCOUNT` transaction has the following limitation
 * Restricted access to the following syscalls:
 ** `get_block_hash` for Cairo contracts
 ** `get_sequencer_address` for Cairo 0 contracts
-
-[#validate_deploy]
-== Validation of a `DEPLOY_ACCOUNT` transaction
-
-A `DEPLOY_ACCOUNT` transaction automatically tells the sequencer to call the `+__validate_deploy__+` function, which validates the transaction.
-
-[NOTE]
-====
-When creating a new account without the `DEPLOY_ACCOUNT` transaction, such as by invoking the Universal Deployer Contract (UDC) with an `INVOKE` transaction, the sequencer calls the `+__validate__+` function, which validates the `INVOKE` transaction.
-====
