@@ -5,7 +5,7 @@ The following release notes cover the ongoing version changes to Starknet. You c
 
 == Starknet environments
 
-Within Starknet's deployment pipeline there are separate and distinct networks that operate independently of each other for testing before deployment.
+Within Starknet's deployment pipeline, there are separate and distinct networks that operate independently of each other for testing before deployment.
 
 
 include::ROOT:partial$snippet_important_goerli2_removed.adoc[]
@@ -16,13 +16,82 @@ include::ROOT:partial$snippet_important_goerli2_removed.adoc[]
 |Environment |Starknet version|Sierra version|Cairo version
 
 |Mainnet|0.13.0|1.4.0|2.0.0 - 2.5.4
-
-|Sepolia Testnet|0.13.0|1.4.0|2.0.0 - 2.5.4
+|Sepolia Testnet|0.13.1|1.5.0|2.0.0 - 2.6
 |Goerli Testnet (deprecated)|0.13.0|1.4.0|2.0.0 - 2.5.4
 |===
 
+[id="version0.13.1"]
+== Starknet v0.13.1
+
+[discrete]
+=== New features and enhancements
+
+* *Cheaper data availability:* Starknet uses link:https://eips.ethereum.org/EIPS/eip-4844[EIP-4844].
+* Time-related syscalls when called from an account contract's `+__validate__+` function:
+** `timestamp` returns the hour, rounded down.
+** `block_number` returns the block number, rounded down to the nearest multiple of 100.
+* *Optimization:* Load into memory only the functions in a contract that are actually used when generating the proof.
+
+[discrete]
+=== Pricing changes
+
+[discrete]
+==== Computation
+
+* A Cairo step now costs 0.0025 gas/step, a 50% reduction.
+* All builtins costs are accordingly reduced by 50%.
+
+[discrete]
+==== Calldata and signatures
+
+Each felt in the calldata and signature arrays of all transaction types now costs 0.128 gas/felt.
+
+[discrete]
+==== Class declaration
+* Each felt of a sierra_program in the contract class and of bytecode in the compiled contract class now costs 28 gas/felt.
++
+[NOTE]
+====
+v1 `DECLARE` transactions only include bytecode.
+====
+* Each character in the ABI costs 0.875 gas.
+
+[discrete]
+==== Events
+
+* An additional felt to the data array of an event now costs 0.128 gas/felt, similar to calldata.
+* An additional felt to the keys array now costs 0.256 gas/felt.
+
+[discrete]
+=== API changes:
+
+Starknet block:
+
+* New field `l1_da_mode`, which indicates whether EIP-4844 was used in the block.
+* `eth_l1_gas_price` and `strk_l1_gas_price` were replaced, and the information now contains the data gas price (EIP-4844) in addition to the regular gas price
+* `execution_resources` in the transaction receipt now contains:
+** data availability resources
+** syscall resources, which contribute to the transaction fee but were not included in the receipt before this version.
+* `transaction_commitment` and `event_commitment` are added to the block. `0` is returned for old blocks.
+
+[discrete]
+=== Infrastructure updates
+
+Starknet now supports multiple L1 providers.
+
+[discrete]
+=== Additional resources
+
+Community Forum Posts:
+
+* link:https://community.starknet.io/t/starknet-v0-13-1-eip4844-support-more-fee-reductions-stability-quality-of-life/112951[Starknet v0.13.1: EIP4844 Support, More Fee Reductions, Stability, Quality of Life]
+* link:https://community.starknet.io/t/starknet-v0-13-1-fee-reduction/113552[Starknet v0.13.1: Fee Reduction]
+* link:https://community.starknet.io/t/data-availability-with-eip4844/113065[Data availability with EIP4844]
+* link:https://community.starknet.io/t/starknet-v0-13-1-pre-release-notes/113664[Starknet v0.13.1 pre-release notes]
+
+
 [id="version0.13.0"]
-== Starknet v0.13.0
+== Starknet v0.13.0 (Jan 10, 23)
 
 Starknet v0.13.0 is live on Mainnet.
 
@@ -38,7 +107,7 @@ Starknet 0.13.0 includes the following changes:
 
 
 [id="version0.12.3"]
-== Starknet v0.12.3 (November 19th 23)
+== Starknet v0.12.3 (Nov 19, 23)
 
 Starknet v0.12.3 is live on Mainnet.
 
@@ -63,7 +132,7 @@ Move structs that are common to `secp256k1` and `secp256r1` to a separate file.
 
 
 [id="version0.12.2"]
-== Starknet v0.12.2 (September 4th 23)
+== Starknet v0.12.2 (Sep 04, 23)
 
 Starknet v0.12.2 is live on Mainnet.
 
@@ -74,7 +143,7 @@ This version includes the following changes:
 * Increased maximum Cairo steps per transaction from 1 million to 3 million.
 
 [id="version0.12.1"]
-== Starknet v0.12.1 (August 21st 23)
+== Starknet v0.12.1 (Aug 21, 23)
 
 Starknet v0.12.1 is live on Mainnet.
 
@@ -85,7 +154,7 @@ This version includes the following changes:
 * Keccak builtin.
 
 [id="version0.12.0"]
-== Starknet v0.12.0 (July 12th, 23)
+== Starknet v0.12.0 (July 12, 23)
 
 Starknet v0.12.0 is live on Mainnet.
 
@@ -265,7 +334,6 @@ Technical changes:
 
 [id="version0.9.1"]
 == Starknet v0.9.1 (July 20, 22)
-
 This version contains the following changes:
 
 Starknet:
