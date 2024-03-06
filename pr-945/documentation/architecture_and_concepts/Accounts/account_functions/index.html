@@ -564,8 +564,24 @@
 </aside>
 <article class="doc">
 <h1 class="page">Account interface functions</h1>
-<div class="sect1">
-<h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
+<div id="toc" class="toc">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#attacks_that_validation_limitations_prevent">Potential attacks</a></li>
+<li><a href="#limitations_of_validation">Attack prevention: Limitations of validation</a></li>
+<li><a href="#invalid_transactions">Invalid transactions</a></li>
+<li><a href="#reverted_transactions">Reverted transactions</a></li>
+<li><a href="#function_descriptions">Function descriptions</a>
+<ul class="sectlevel2">
+<li><a href="#the_execute_function"><code>__execute__</code></a></li>
+<li><a href="#the_validate_function"><code>__validate__</code></a></li>
+<li><a href="#the_validate_declare_function"><code>__validate_declare__</code></a></li>
+<li><a href="#the_validate_deploy_function"><code>__validate_deploy__</code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
 <p>The functions in the table <a href="#starknet_account_interface_functions">Starknet account interface functions</a> are part of account contracts. Where required, you must include these functions within your contract. The logic of these functions can be mostly arbitrary, with a few limitations. For information on these limitations, see <a href="#invalid_transactions">Invalid transactions</a>.</p>
@@ -620,15 +636,41 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="invalid_transactions"><a class="anchor" href="#invalid_transactions"></a>Invalid transactions</h2>
+<h2 id="attacks_that_validation_limitations_prevent"><a class="anchor" href="#attacks_that_validation_limitations_prevent"></a>Potential attacks</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>When the <code>__validate__</code>, <code>__validate_deploy__</code>, or <code>__validate_declare__</code>, function fails, the account in question does not pay any fee.</p>
+<p>The validation limitations prevent the following attacks:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Denial of Service (DoS) attacks. Without these limitations, an attack could cause the sequencer to perform a large amount of work before a transaction fails validation, such as by sending multiple, invalid <code>DEPLOY_ACCOUNT</code> transactions. This work would not be eligible for fee payment.</p>
+</li>
+<li>
+<p>Even if the validation is simple, the following attack could still be possible:</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>An attacker fills the mempool with transactions that are valid at the time they are sent.</p>
+</li>
+<li>
+<p>A sequencer starts executing them, thinking that by the time it produces a block, they will still be valid.</p>
+</li>
+<li>
+<p>However, shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it&#8217;s included in the block, by offering higher fees for this one transaction, before the sequencer can publish the block.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Consider many validation functions checking that the value of a storage slot is <code>1</code>, and the attacker&#8217;s transaction later sets it to <code>0</code>. To handle this issue, we add some further limitations. By restricting validation functions from calling external contracts, Starknet prevents this attack.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="limitations_of_validation"><a class="anchor" href="#limitations_of_validation"></a>Limitations of validation</h2>
+<h2 id="limitations_of_validation"><a class="anchor" href="#limitations_of_validation"></a>Attack prevention: Limitations of validation</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The limitations listed here apply to the following validation functions:</p>
@@ -718,36 +760,10 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="attacks_that_validation_limitations_prevent"><a class="anchor" href="#attacks_that_validation_limitations_prevent"></a>Attacks that validation limitations prevent</h2>
+<h2 id="invalid_transactions"><a class="anchor" href="#invalid_transactions"></a>Invalid transactions</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The validation limitations prevent the following attacks:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Denial of Service (DoS) attacks. Without these limitations, an attack could cause the sequencer to perform a large amount of work before a transaction fails validation, such as by sending multiple, invalid <code>DEPLOY_ACCOUNT</code> transactions. This work would not be eligible for fee payment.</p>
-</li>
-<li>
-<p>Even if the validation is simple, the following attack could still be possible:</p>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>An attacker fills the mempool with transactions that are valid at the time they are sent.</p>
-</li>
-<li>
-<p>A sequencer starts executing them, thinking that by the time it produces a block, they will still be valid.</p>
-</li>
-<li>
-<p>However, shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it&#8217;s included in the block, by offering higher fees for this one transaction, before the sequencer can publish the block.</p>
-</li>
-</ol>
-</div>
-</li>
-<li>
-<p>Consider many validation functions checking that the value of a storage slot is <code>1</code>, and the attacker&#8217;s transaction later sets it to <code>0</code>. To handle this issue, we add some further limitations. By restricting validation functions from calling external contracts, Starknet prevents this attack.</p>
-</li>
-</ul>
+<p>When the <code>__validate__</code>, <code>__validate_deploy__</code>, or <code>__validate_declare__</code>, function fails, the account in question does not pay any fee.</p>
 </div>
 </div>
 </div>
