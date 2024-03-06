@@ -1,42 +1,83 @@
 [id="deploying_new_accounts"]
-= Deploying a new account
+= Deploying new accounts
 
-You can deploy a new account in the following ways:
+Starknet provides the `deploy_account` transaction in order to deploy new accounts to the
+network.
 
-* Send a `DEPLOY_ACCOUNT` transaction. This method does not require a preexisting account.
-* Include the `deploy` syscall in the account contract, such as by invoking the Universal Deployer Contract (UDC) with an `INVOKE` transaction. This method requires an existing account to send the `INVOKE` transaction.
+== Deploy account transaction
 
-Upon receiving one of these transactions, the sequencer performs the following steps:
+In order to deploy a new account on StarkNet you need to complete the following steps:
 
-. Verifies that the address has funds to pay for the deployment.
-. Executes the constructor with the given arguments.
-. Runs the respective validation function in the contract, as follows:
-** When deploying with the `DEPLOY_ACCOUNT` transaction type, the sequencer executes the `+__validate_deploy__+` function in the contract.
-** When deploying with the `INVOKE` transaction type and a contract that includes the `deploy` syscall, such as the UDC, the sequencer executes the `+__validate__+` function in the contract.
-. Charges fees from the new account address.
-. Sets the account's nonce to `1`.
+* Decide on the account contract that you want to deploy
+* Compute your would-be account address off-chain
+* Send funds to this address
 
-== Deploying an account
+Once the address has enough funds to pay for the deployment, you can then send a `deploy_account` transaction.
 
-Starkli simplifies account creation.
+== Transaction flow
 
-.Prerequisites
+Upon receiving a `deploy_account` transaction, the sequencer will:
 
-* Starkli is installed.
-* The deployed contract must include a `+__validate_deploy__+` entrypoint.
+* Verify that the address has funds to pay for the deployment
+* Execute the constructor with the given arguments
+* Execute the `+__validate_deploy__+` entry point (See below)
+* Charge fee from the new account address
+* Advance the nonce to 1
 
-.Procedure
+== Validate deploy
 
-To create and deploy a new account, use Starkli's `starkli account` command.
+Two issues might arise from sending a `deploy_account` transaction without any extra validation:
 
-For more information on creating a new account as a Starknet wallet account with a `DEPLOY_ACCOUNT` transaction, or by using the UDC with an `INVOKE` transaction , see link:https://book.starkli.rs/accounts[Accounts] in the Starkli Book.
+* Sequencers having the ability to charge arbitrarily high fees, thus potentially draining user funds from a pre-funded account
+* A bad actor having the ability to carry out a sequencer DOS attack by sending multiple, invalid `deploy_account` transactions. This would result in the sequencer not being compensated for work completed.
 
-[#DEPLOY_ACCOUNT_restrictions]
-== `DEPLOY_ACCOUNT` constructor restrictions
 
-The constructor of the `DEPLOY_ACCOUNT` transaction has the following limitations:
+To prevent the scenario described in the first point, a new optional validation entrypoint is provided: `+__validate_deploy__+`.
 
-* Restricted access to `sequencer_address` in the `get_execution_info` syscall. The syscall returns zero values for `sequencer_address`
-* Restricted access to the following syscalls:
-** `get_block_hash` for Cairo contracts
-** `get_sequencer_address` for Cairo 0 contracts
+To prevent the potential DOS attack from the second point, we introduce some limitations on the constructor and `+__validate_deploy__+`
+_ executions, namely:
+
+* Limited # of Cairo steps
+* Limited # of builtin applications
+* No external contract calls (library calls and self-calls are allowed)
+
+This entrypoint should be included in any accounts or contracts that wish to allow this new deployment flow.
+
+=== Using validate deploy
+
+`+__validate_deploy__+` expects the following arguments:
+
+* class hash
+* contract address salt
+* constructor arguments - the arguments expected by the contract’s constructor (this will be enforced in the compiler).
+
+[NOTE]
+====
+In determining the contract address, deployer address 0 will be used.
+====
+
+Consider an account with the following constructor signature:
+
+[#constructor_signature]
+[source,cairo]
+----
+@constructor
+func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _public_key: felt
+)
+----
+
+Then the signature of `+__validate_deploy__+` must be:
+
+[#call_validate_deploy]
+[source,cairo,sub="quotes"]
+----
+func __validate_deploy__{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
+}(class_hash: felt, contract_address_salt: felt, _public_key: felt)
+----
+
+[NOTE]
+====
+The transaction hash and `max_fee` are accessible through the `get_tx_info` system call.
+====
