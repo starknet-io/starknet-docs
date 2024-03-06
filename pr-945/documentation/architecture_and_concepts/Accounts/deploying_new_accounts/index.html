@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Deploying a new account :: Starknet documentation</title>
+    <title>Deploying new accounts :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Accounts/deploying_new_accounts/">
     <link rel="prev" href="../account_functions/">
     <link rel="next" href="../simplified_transaction_flow/">
@@ -208,12 +208,12 @@
 <ul class="nav-list">
   <li class="nav-item parent" data-depth="1">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">Versions</span>
+    <span class="nav-text">Release information</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../starknet_versions/version_notes/">Starknet release notes</a>
+     href="../../../starknet_versions/version_notes/">Release notes</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -563,107 +563,172 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Deploying a new account</h1>
+<h1 class="page">Deploying new accounts</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>You can deploy a new account in the following ways:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Send a <code>DEPLOY_ACCOUNT</code> transaction. This method does not require a preexisting account.</p>
-</li>
-<li>
-<p>Include the <code>deploy</code> syscall in the account contract, such as by invoking the Universal Deployer Contract (UDC) with an <code>INVOKE</code> transaction. This method requires an existing account to send the <code>INVOKE</code> transaction.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>Upon receiving one of these transactions, the sequencer performs the following steps:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>Verifies that the address has funds to pay for the deployment.</p>
-</li>
-<li>
-<p>Executes the constructor with the given arguments.</p>
-</li>
-<li>
-<p>Runs the respective validation function in the contract, as follows:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>When deploying with the <code>DEPLOY_ACCOUNT</code> transaction type, the sequencer executes the <code>__validate_deploy__</code> function in the contract.</p>
-</li>
-<li>
-<p>When deploying with the <code>INVOKE</code> transaction type and a contract that includes the <code>deploy</code> syscall, such as the UDC, the sequencer executes the <code>__validate__</code> function in the contract.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>Charges fees from the new account address.</p>
-</li>
-<li>
-<p>Sets the account&#8217;s nonce to <code>1</code>.</p>
-</li>
-</ol>
+<p>Starknet provides the <code>deploy_account</code> transaction in order to deploy new accounts to the
+network.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="deploying_an_account"><a class="anchor" href="#deploying_an_account"></a>Deploying an account</h2>
+<h2 id="deploy_account_transaction"><a class="anchor" href="#deploy_account_transaction"></a>Deploy account transaction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Starkli simplifies account creation.</p>
+<p>In order to deploy a new account on StarkNet you need to complete the following steps:</p>
 </div>
 <div class="ulist">
-<div class="title">Prerequisites</div>
 <ul>
 <li>
-<p>Starkli is installed.</p>
+<p>Decide on the account contract that you want to deploy</p>
 </li>
 <li>
-<p>The deployed contract must include a <code>__validate_deploy__</code> entrypoint.</p>
+<p>Compute your would-be account address off-chain</p>
+</li>
+<li>
+<p>Send funds to this address</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<div class="title">Procedure</div>
-<p>To create and deploy a new account, use Starkli&#8217;s <code>starkli account</code> command.</p>
-</div>
-<div class="paragraph">
-<p>For more information on creating a new account as a Starknet wallet account with a <code>DEPLOY_ACCOUNT</code> transaction, or by using the UDC with an <code>INVOKE</code> transaction , see <a href="https://book.starkli.rs/accounts">Accounts</a> in the Starkli Book.</p>
+<p>Once the address has enough funds to pay for the deployment, you can then send a <code>deploy_account</code> transaction.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="DEPLOY_ACCOUNT_restrictions"><a class="anchor" href="#DEPLOY_ACCOUNT_restrictions"></a><code>DEPLOY_ACCOUNT</code> constructor restrictions</h2>
+<h2 id="transaction_flow"><a class="anchor" href="#transaction_flow"></a>Transaction flow</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The constructor of the <code>DEPLOY_ACCOUNT</code> transaction has the following limitations:</p>
+<p>Upon receiving a <code>deploy_account</code> transaction, the sequencer will:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Restricted access to <code>sequencer_address</code> in the <code>get_execution_info</code> syscall. The syscall returns zero values for <code>sequencer_address</code></p>
+<p>Verify that the address has funds to pay for the deployment</p>
 </li>
 <li>
-<p>Restricted access to the following syscalls:</p>
-<div class="ulist">
-<ul>
-<li>
-<p><code>get_block_hash</code> for Cairo contracts</p>
+<p>Execute the constructor with the given arguments</p>
 </li>
 <li>
-<p><code>get_sequencer_address</code> for Cairo 0 contracts</p>
+<p>Execute the <code>__validate_deploy__</code> entry point (See below)</p>
+</li>
+<li>
+<p>Charge fee from the new account address</p>
+</li>
+<li>
+<p>Advance the nonce to 1</p>
 </li>
 </ul>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="validate_deploy"><a class="anchor" href="#validate_deploy"></a>Validate deploy</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Two issues might arise from sending a <code>deploy_account</code> transaction without any extra validation:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Sequencers having the ability to charge arbitrarily high fees, thus potentially draining user funds from a pre-funded account</p>
+</li>
+<li>
+<p>A bad actor having the ability to carry out a sequencer DOS attack by sending multiple, invalid <code>deploy_account</code> transactions. This would result in the sequencer not being compensated for work completed.</p>
 </li>
 </ul>
+</div>
+<div class="paragraph">
+<p>To prevent the scenario described in the first point, a new optional validation entrypoint is provided: <code>__validate_deploy__</code>.</p>
+</div>
+<div class="paragraph">
+<p>To prevent the potential DOS attack from the second point, we introduce some limitations on the constructor and <code>__validate_deploy__</code>
+_ executions, namely:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Limited # of Cairo steps</p>
+</li>
+<li>
+<p>Limited # of builtin applications</p>
+</li>
+<li>
+<p>No external contract calls (library calls and self-calls are allowed)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This entrypoint should be included in any accounts or contracts that wish to allow this new deployment flow.</p>
+</div>
+<div class="sect2">
+<h3 id="using_validate_deploy"><a class="anchor" href="#using_validate_deploy"></a>Using validate deploy</h3>
+<div class="paragraph">
+<p><code>__validate_deploy__</code> expects the following arguments:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>class hash</p>
+</li>
+<li>
+<p>contract address salt</p>
+</li>
+<li>
+<p>constructor arguments - the arguments expected by the contract’s constructor (this will be enforced in the compiler).</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In determining the contract address, deployer address 0 will be used.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Consider an account with the following constructor signature:</p>
+</div>
+<div id="constructor_signature" class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">@constructor
+func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _public_key: felt
+)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then the signature of <code>__validate_deploy__</code> must be:</p>
+</div>
+<div id="call_validate_deploy" class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">func __validate_deploy__{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
+}(class_hash: felt, contract_address_salt: felt, _public_key: felt)</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The transaction hash and <code>max_fee</code> are accessible through the <code>get_tx_info</code> system call.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </div>
 </div>
 </div>
@@ -680,7 +745,7 @@
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
-    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
+    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.1 | Goerli testnet: 0.13.0</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->
