@@ -575,7 +575,7 @@
 <p>Send a <code>DEPLOY_ACCOUNT</code> transaction. This method does not require a preexisting account.</p>
 </li>
 <li>
-<p>Include the <code>deploy</code> syscall in the account contract, such as by invoking the Universal Deployer Contract (UDC) with an <code>INVOKE</code> transaction. This method requires an existing account to send the <code>INVOKE</code> transaction.</p>
+<p>Using the Universal Deployer Contract (UDC). This method requires an existing account to send the <code>INVOKE</code> transaction.</p>
 </li>
 </ul>
 </div>
@@ -586,28 +586,41 @@
 <ol class="arabic">
 <li>
 <p>Verifies that the address has funds to pay for the deployment.</p>
-</li>
-<li>
-<p>Executes the constructor with the given arguments.</p>
+<div class="paragraph">
+<p>If you use a <code>DEPLOY_ACCOUNT</code> transaction, the fees are paid from the address of the deployed account. If you use the UDC, the fees are paid from the sender&#8217;s account.</p>
+</div>
 </li>
 <li>
 <p>Runs the respective validation function in the contract, as follows:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>When deploying with the <code>DEPLOY_ACCOUNT</code> transaction type, the sequencer executes the <code>__validate_deploy__</code> function in the contract.</p>
+<p>When deploying with the <code>DEPLOY_ACCOUNT</code> transaction type, the sequencer executes the <code>__validate_deploy__</code> function in the deployed contract.</p>
 </li>
 <li>
-<p>When deploying with the <code>INVOKE</code> transaction type and a contract that includes the <code>deploy</code> syscall, such as the UDC, the sequencer executes the <code>__validate__</code> function in the contract.</p>
+<p>When deploying using the UDC, the sequencer executes the <code>__validate__</code> function in the contract of the sender&#8217;s address.</p>
 </li>
 </ul>
 </div>
 </li>
 <li>
+<p>Executes the constructor with the given arguments.</p>
+</li>
+<li>
 <p>Charges fees from the new account address.</p>
 </li>
 <li>
-<p>Sets the account&#8217;s nonce to <code>1</code>.</p>
+<p>Sets the account&#8217;s nonce as follows:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>1</code>, when deployed with a <code>DEPLOY_ACCOUNT</code> transaction</p>
+</li>
+<li>
+<p><code>0</code>, when deployed with the UDC</p>
+</li>
+</ul>
+</div>
 </li>
 </ol>
 </div>
@@ -619,19 +632,7 @@
 <div class="paragraph">
 <p>Starkli simplifies account creation, whether you create an account as a Starknet wallet account, or using the UDC.</p>
 </div>
-<div class="ulist">
-<div class="title">Prerequisites</div>
-<ul>
-<li>
-<p>Starkli is installed.</p>
-</li>
-<li>
-<p>If you are deploying an account with a <code>DEPLOY_ACCOUNT</code> transaction, the deployed contract must include a <code>__validate_deploy__</code> entrypoint.</p>
-</li>
-</ul>
-</div>
 <div class="paragraph">
-<div class="title">Procedure</div>
 <p>To create and deploy a new account, use Starkli&#8217;s <code>starkli account</code> command.</p>
 </div>
 <div class="paragraph">
