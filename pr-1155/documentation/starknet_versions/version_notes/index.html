@@ -108,8 +108,8 @@
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../../">Starknet</a></li>
-    <li>Versions</li>
-    <li><a href="./">Starknet release notes</a></li>
+    <li>Release information</li>
+    <li><a href="./">Release notes</a></li>
   </ul>
 </nav>
   <div class="edit-this-page">
@@ -207,12 +207,12 @@
 <ul class="nav-list">
   <li class="nav-item parent" data-depth="1">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">Versions</span>
+    <span class="nav-text">Release information</span>
 <ul class="nav-list">
   <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Starknet release notes</a>
+     href="./">Release notes</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -574,7 +574,7 @@
 <h2 id="starknet_environments"><a class="anchor" href="#starknet_environments"></a>Starknet environments</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Within Starknet&#8217;s deployment pipeline there are separate and distinct networks that operate independently of each other for testing before deployment.</p>
+<p>Within Starknet&#8217;s deployment pipeline, there are separate and distinct networks that operate independently of each other for testing before deployment.</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -624,16 +624,151 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Goerli Testnet (deprecated)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0.13.0</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.4.0</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">2.0.0 - 2.5.4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.13.1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.5.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2.0.0 - 2.6</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
 <div class="sect1">
-<h2 id="version0.13.0"><a class="anchor" href="#version0.13.0"></a>Starknet v0.13.0</h2>
+<h2 id="version0.13.1"><a class="anchor" href="#version0.13.1"></a>Starknet v0.13.1</h2>
+<div class="sectionbody">
+<h3 id="new_features_and_enhancements" class="discrete">New features and enhancements</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Cheaper data availability:</strong> Starknet uses <a href="https://eips.ethereum.org/EIPS/eip-4844">EIP-4844</a>.</p>
+</li>
+<li>
+<p>Time-related syscalls when called from an account contract&#8217;s <code>__validate__</code> function:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>timestamp</code> returns the hour, rounded down.</p>
+</li>
+<li>
+<p><code>block_number</code> returns the block number, rounded down to the nearest multiple of 100.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>Optimization:</strong> Load into memory only the functions in a contract that are actually used when generating the proof.</p>
+</li>
+</ul>
+</div>
+<h3 id="pricing_changes" class="discrete">Pricing changes</h3>
+<h4 id="computation" class="discrete">Computation</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>A Cairo step now costs 0.0025 gas/step, a 50% reduction.</p>
+</li>
+<li>
+<p>All builtins costs are accordingly reduced by 50%.</p>
+</li>
+</ul>
+</div>
+<h4 id="calldata_and_signatures" class="discrete">Calldata and signatures</h4>
+<div class="paragraph">
+<p>Each felt in the calldata and signature arrays of all transaction types now costs 0.128 gas/felt.</p>
+</div>
+<h4 id="class_declaration" class="discrete">Class declaration</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>Each felt of a sierra_program in the contract class and of bytecode in the compiled contract class now costs 28 gas/felt.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>v1 <code>DECLARE</code> transactions only include bytecode.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>Each character in the ABI costs 0.875 gas.</p>
+</li>
+</ul>
+</div>
+<h4 id="events" class="discrete">Events</h4>
+<div class="ulist">
+<ul>
+<li>
+<p>An additional felt to the data array of an event now costs 0.128 gas/felt, similar to calldata.</p>
+</li>
+<li>
+<p>An additional felt to the keys array now costs 0.256 gas/felt.</p>
+</li>
+</ul>
+</div>
+<h3 id="api_changes" class="discrete">API changes:</h3>
+<div class="paragraph">
+<p>Starknet block:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>New field <code>l1_da_mode</code>, which indicates whether EIP-4844 was used in the block.</p>
+</li>
+<li>
+<p><code>eth_l1_gas_price</code> and <code>strk_l1_gas_price</code> were replaced, and the information now contains the data gas price (EIP-4844) in addition to the regular gas price</p>
+</li>
+<li>
+<p><code>execution_resources</code> in the transaction receipt now contains:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>data availability resources</p>
+</li>
+<li>
+<p>syscall resources, which contribute to the transaction fee but were not included in the receipt before this version.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><code>transaction_commitment</code> and <code>event_commitment</code> are added to the block. <code>0</code> is returned for old blocks.</p>
+</li>
+</ul>
+</div>
+<h3 id="infrastructure_updates" class="discrete">Infrastructure updates</h3>
+<div class="paragraph">
+<p>Starknet now supports multiple L1 providers.</p>
+</div>
+<h3 id="additional_resources" class="discrete">Additional resources</h3>
+<div class="paragraph">
+<p>Community Forum Posts:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://community.starknet.io/t/starknet-v0-13-1-eip4844-support-more-fee-reductions-stability-quality-of-life/112951">Starknet v0.13.1: EIP4844 Support, More Fee Reductions, Stability, Quality of Life</a></p>
+</li>
+<li>
+<p><a href="https://community.starknet.io/t/starknet-v0-13-1-fee-reduction/113552">Starknet v0.13.1: Fee Reduction</a></p>
+</li>
+<li>
+<p><a href="https://community.starknet.io/t/data-availability-with-eip4844/113065">Data availability with EIP4844</a></p>
+</li>
+<li>
+<p><a href="https://community.starknet.io/t/starknet-v0-13-1-pre-release-notes/113664">Starknet v0.13.1 pre-release notes</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="version0.13.0"><a class="anchor" href="#version0.13.0"></a>Starknet v0.13.0 (Jan 10, 23)</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Starknet v0.13.0 is live on Mainnet.</p>
@@ -673,7 +808,7 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="version0.12.3"><a class="anchor" href="#version0.12.3"></a>Starknet v0.12.3 (November 19th 23)</h2>
+<h2 id="version0.12.3"><a class="anchor" href="#version0.12.3"></a>Starknet v0.12.3 (Nov 19, 23)</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Starknet v0.12.3 is live on Mainnet.</p>
@@ -727,7 +862,7 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="version0.12.2"><a class="anchor" href="#version0.12.2"></a>Starknet v0.12.2 (September 4th 23)</h2>
+<h2 id="version0.12.2"><a class="anchor" href="#version0.12.2"></a>Starknet v0.12.2 (Sep 04, 23)</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Starknet v0.12.2 is live on Mainnet.</p>
@@ -751,7 +886,7 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="version0.12.1"><a class="anchor" href="#version0.12.1"></a>Starknet v0.12.1 (August 21st 23)</h2>
+<h2 id="version0.12.1"><a class="anchor" href="#version0.12.1"></a>Starknet v0.12.1 (Aug 21, 23)</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Starknet v0.12.1 is live on Mainnet.</p>
@@ -775,7 +910,7 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="version0.12.0"><a class="anchor" href="#version0.12.0"></a>Starknet v0.12.0 (July 12th, 23)</h2>
+<h2 id="version0.12.0"><a class="anchor" href="#version0.12.0"></a>Starknet v0.12.0 (July 12, 23)</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Starknet v0.12.0 is live on Mainnet.</p>
@@ -1378,7 +1513,7 @@ As a result, it&#8217;s now mandatory to specify return types. <code>func foo() 
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
-    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.1 | Goerli testnet: 0.13.0</strong>
+    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.1 | Goerli testnet: 0.13.1</strong>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->
