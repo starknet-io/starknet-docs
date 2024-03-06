@@ -568,6 +568,10 @@
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
 <li><a href="#overview">Overview</a></li>
+<li><a href="#invalid_transactions">Invalid transactions</a></li>
+<li><a href="#limitations_of_validation">Limitations of validation</a></li>
+<li><a href="#attacks_that_validation_limitations_prevent">Attacks that validation limitations prevent</a></li>
+<li><a href="#reverted_transactions">Reverted transactions</a></li>
 <li><a href="#function_descriptions">Function descriptions</a>
 <ul class="sectlevel2">
 <li><a href="#the_execute_function"><code>__execute__</code></a></li>
@@ -576,10 +580,6 @@
 <li><a href="#the_validate_deploy_function"><code>__validate_deploy__</code></a></li>
 </ul>
 </li>
-<li><a href="#invalid_transactions">Invalid transactions</a></li>
-<li><a href="#limitations_of_validation">Limitations of validation</a></li>
-<li><a href="#attacks_that_validation_limitations_prevent">Attacks that validation limitations prevent</a></li>
-<li><a href="#reverted_transactions">Reverted transactions</a></li>
 </ul>
 </div>
 <div class="sect1">
@@ -634,94 +634,6 @@
 </div>
 <div class="paragraph">
 <p>Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="function_descriptions"><a class="anchor" href="#function_descriptions"></a>Function descriptions</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="the_execute_function"><a class="anchor" href="#the_execute_function"></a><code>__execute__</code></h3>
-<div class="paragraph">
-<div class="title">Description</div>
-<p>Initiates the execution stage in the sequencer. The sequencer calls this function upon receiving an <code>INVOKE</code> transaction, after the <code>__validate__</code> function successfully completes.</p>
-</div>
-<div class="paragraph">
-<p>In most implementations, <code>__execute__</code> initiates a sequence of calls from the account.</p>
-</div>
-<div class="paragraph">
-<p>The purpose of the <code>__execute__</code> function is to abstract away the remaining actions performed by a transaction.</p>
-</div>
-<div class="paragraph">
-<p>In Ethereum, a transaction is necessarily a call to a specific function in a smart contract. With the <code>__execute__</code> abstraction, the account designer controls the flow of the transaction. For example, you can natively support multicalls in your account, saving the need to send multiple transactions. In practice, however, <mark>this</mark> is even harder to manage without multicalls due to nonces. <mark>What does <em>this</em> refer to?</mark></p>
-</div>
-<div class="paragraph">
-<div class="title">Returns</div>
-<p>The list of each call&#8217;s serialized return value.</p>
-</div>
-<hr>
-</div>
-<div class="sect2">
-<h3 id="the_validate_function"><a class="anchor" href="#the_validate_function"></a><code>__validate__</code></h3>
-<div class="paragraph">
-<div class="title">Description</div>
-<p><em>Always required</em></p>
-</div>
-<div class="paragraph">
-<p>Initiates the validation stage in the sequencer. Validates the sender&#8217;s address. The sequencer calls this function upon receiving any transaction.</p>
-</div>
-<div class="paragraph">
-<p>In most implementations, <code>__validate__</code> ensures that only the account owner can initiate transactions.</p>
-</div>
-<div class="paragraph">
-<p>The <code>__validate__</code> function typically ensures that any transaction submitted was indeed initiated by the account owner and therefore does not take up unjustified resources during the execution process.</p>
-</div>
-<div class="paragraph">
-<p>Without this mechanism, a forged transaction could result in the sequencer stealing the user&#8217;s funds. So the <code>__validate__</code> function ensures that the sequencer can only include transactions that were approved by the account owner.</p>
-</div>
-<div class="paragraph">
-<p>The arbitrary logic allowed in the <code>__validate__</code> function gives the account&#8217;s designer the ability to determine what it means for a transaction to be valid, enabling different signature schemes and other <a href="../introduction/#examples" class="xref page">exotic accounts</a>.</p>
-</div>
-<div class="paragraph">
-<div class="title">Returns</div>
-<p>If the signature is verified, the function should return the string <code>VALID</code> as <code>felt252</code> value. If not, it should return any other value, such as <code>0</code>.</p>
-</div>
-<hr>
-</div>
-<div class="sect2">
-<h3 id="the_validate_declare_function"><a class="anchor" href="#the_validate_declare_function"></a><code>__validate_declare__</code></h3>
-<div class="paragraph">
-<div class="title">Description</div>
-<p><em>Required for a contract to be able to send a</em>`DECLARE` <em>transaction.</em></p>
-</div>
-<div class="paragraph">
-<p>The sequencer calls this function upon receiving a <code>DECLARE</code> transaction.</p>
-</div>
-<div class="paragraph">
-<p>If the contract declares other contracts and handles the corresponding gas fees, this function authenticates the contract declaration.</p>
-</div>
-<div class="paragraph">
-<div class="title">Returns</div>
-<p>If the signature is verified, the function should return the string <code>VALID</code> as <code>felt252</code> value. If not, it should return any other value, such as <code>0</code>.</p>
-</div>
-<hr>
-</div>
-<div class="sect2">
-<h3 id="the_validate_deploy_function"><a class="anchor" href="#the_validate_deploy_function"></a><code>__validate_deploy__</code></h3>
-<div class="paragraph">
-<div class="title">Description</div>
-<p><em>Required when deploying an account with a</em> <code>DEPLOY_ACCOUNT</code> <em>transaction</em>.</p>
-</div>
-<div class="paragraph">
-<p>The sequencer calls this function upon receiving a <code>DEPLOY_ACCOUNT</code> transaction. Validates the deployment of the class referred to by the <code>class_hash</code> parameter in the transaction.</p>
-</div>
-<div class="paragraph">
-<p>You can use this function to set up an account contract without linking it to the address that deploys it or depending on another account contract for gas fees. When determining the contract&#8217;s address, use the deployer address <code>0x0</code>.</p>
-</div>
-<div class="paragraph">
-<div class="title">Returns</div>
-<p>If the signature is verified, the function should return the string <code>VALID</code> as <code>felt252</code> value. If not, it should return any other value, such as <code>0</code>.</p>
-</div>
 </div>
 </div>
 </div>
@@ -863,16 +775,88 @@
 <div class="paragraph">
 <p>A transaction has the status <strong>REVERTED</strong> when the <code>__execute__</code> function fails. A reverted transaction is included in a block, and the sequencer is eligible to charge a fee for the work done up to the point of failure, similar to Ethereum.</p>
 </div>
-<div class="exampleblock">
-<div class="content">
+</div>
+</div>
+<div class="sect1">
+<h2 id="function_descriptions"><a class="anchor" href="#function_descriptions"></a>Function descriptions</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="the_execute_function"><a class="anchor" href="#the_execute_function"></a><code>__execute__</code></h3>
 <div class="paragraph">
-<p>This section is not appropriate, because the function can have arbitrary logic.</p>
+<div class="title">Description</div>
+<p>Initiates the execution stage in the sequencer. The sequencer calls this function upon receiving an <code>INVOKE</code> transaction, after the <code>__validate__</code> function successfully completes.</p>
 </div>
 <div class="paragraph">
-<p>== <code>__validate_deploy__</code></p>
+<p>In most implementations, <code>__execute__</code> initiates a sequence of calls from the account.</p>
 </div>
 <div class="paragraph">
-<p>Validates a <code>DEPLOY_ACCOUNT</code> transaction.</p>
+<p>The purpose of the <code>__execute__</code> function is to abstract away the remaining actions performed by a transaction.</p>
+</div>
+<div class="paragraph">
+<p>In Ethereum, a transaction is necessarily a call to a specific function in a smart contract. With the <code>__execute__</code> abstraction, the account designer controls the flow of the transaction. For example, you can natively support multicalls in your account, saving the need to send multiple transactions. In practice, however, <mark>this</mark> is even harder to manage without multicalls due to nonces. <mark>What does <em>this</em> refer to?</mark></p>
+</div>
+<div class="paragraph">
+<div class="title">Returns</div>
+<p>The list of each call&#8217;s serialized return value.</p>
+</div>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="the_validate_function"><a class="anchor" href="#the_validate_function"></a><code>__validate__</code></h3>
+<div class="paragraph">
+<div class="title">Description</div>
+<p><em>Always required</em></p>
+</div>
+<div class="paragraph">
+<p>Initiates the validation stage in the sequencer. Validates the sender&#8217;s address. The sequencer calls this function upon receiving any transaction.</p>
+</div>
+<div class="paragraph">
+<p>In most implementations, <code>__validate__</code> ensures that only the account owner can initiate transactions.</p>
+</div>
+<div class="paragraph">
+<p>The <code>__validate__</code> function typically ensures that any transaction submitted was indeed initiated by the account owner and therefore does not take up unjustified resources during the execution process.</p>
+</div>
+<div class="paragraph">
+<p>Without this mechanism, a forged transaction could result in the sequencer stealing the user&#8217;s funds. So the <code>__validate__</code> function ensures that the sequencer can only include transactions that were approved by the account owner.</p>
+</div>
+<div class="paragraph">
+<p>The arbitrary logic allowed in the <code>__validate__</code> function gives the account&#8217;s designer the ability to determine what it means for a transaction to be valid, enabling different signature schemes and other <a href="../introduction/#examples" class="xref page">exotic accounts</a>.</p>
+</div>
+<div class="paragraph">
+<div class="title">Returns</div>
+<p>If the signature is verified, the function should return the string <code>VALID</code> as <code>felt252</code> value. If not, it should return any other value, such as <code>0</code>.</p>
+</div>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="the_validate_declare_function"><a class="anchor" href="#the_validate_declare_function"></a><code>__validate_declare__</code></h3>
+<div class="paragraph">
+<div class="title">Description</div>
+<p><em>Required for a contract to be able to send a</em>`DECLARE` <em>transaction.</em></p>
+</div>
+<div class="paragraph">
+<p>The sequencer calls this function upon receiving a <code>DECLARE</code> transaction.</p>
+</div>
+<div class="paragraph">
+<p>If the contract declares other contracts and handles the corresponding gas fees, this function authenticates the contract declaration.</p>
+</div>
+<div class="paragraph">
+<div class="title">Returns</div>
+<p>If the signature is verified, the function should return the string <code>VALID</code> as <code>felt252</code> value. If not, it should return any other value, such as <code>0</code>.</p>
+</div>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="the_validate_deploy_function"><a class="anchor" href="#the_validate_deploy_function"></a><code>__validate_deploy__</code></h3>
+<div class="paragraph">
+<div class="title">Description</div>
+<p><em>Required when deploying an account with a</em> <code>DEPLOY_ACCOUNT</code> <em>transaction</em>.</p>
+</div>
+<div class="paragraph">
+<p>The sequencer calls this function upon receiving a <code>DEPLOY_ACCOUNT</code> transaction. Validates the deployment of the class referred to by the <code>class_hash</code> parameter in the transaction.</p>
+</div>
+<div class="paragraph">
+<p>You can use this function to set up an account contract without linking it to the address that deploys it or depending on another account contract for gas fees. When determining the contract&#8217;s address, use the deployer address <code>0x0</code>.</p>
 </div>
 <h3 id="parameters" class="discrete">Parameters</h3>
 <div class="hdlist stripes-odd">
@@ -921,6 +905,10 @@
 </tr>
 </table>
 </div>
+<div class="paragraph">
+<div class="title">Returns</div>
+<p>If the signature is verified, the function should return the string <code>VALID</code> as a <code>felt252</code> value. If not, it should return any other value, such as <code>0</code>.</p>
+</div>
 <h3 id="example" class="discrete">Example</h3>
 <div class="paragraph">
 <p>Consider an account with the following constructor signature:</p>
@@ -954,7 +942,6 @@ fn constructor(ref self: ContractState, public_key: felt252)</code></pre>
 </td>
 </tr>
 </table>
-</div>
 </div>
 </div>
 </div>
