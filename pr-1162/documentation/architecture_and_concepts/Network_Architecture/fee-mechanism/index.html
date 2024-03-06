@@ -576,7 +576,7 @@
 <h2 id="overall_fee"><a class="anchor" href="#overall_fee"></a>Overall transaction fee</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>From Starknet v0.13.1 onwards, we destinguish between blocks whose state diffs are sent to L1 as calldata, and blocks whose state diffs are sent to L1 as blobs (the <code>l1_da_mode</code> property in Starknet block headers determines this). The cost of computation remains the same on both options, but the cost related to data availability differs.</p>
+<p>From Starknet v0.13.1 onwards, we distinguish between blocks whose state diffs are sent to L1 as calldata, and blocks whose state diffs are sent to L1 as blobs (the <code>l1_da_mode</code> property in Starknet block headers determines this). The cost of computation remains the same on both options, but the cost related to data availability differs.</p>
 </div>
 <div class="sect2">
 <h3 id="overall_fee_blob"><a class="anchor" href="#overall_fee_blob"></a>Overall transaction fee with blobs</h3>
@@ -592,7 +592,7 @@
 F  = \; &amp; \text{gas_price}\cdot\Bigg(\max_k v_k w_k + \\
 &amp; \quad + \; \text{da_calldata_cost}\left(3t + \sum\limits_{i=1}^t q_i\right) + \\
 &amp; \quad + \; \text{message_calldata_cost}\cdot\left(3t + \sum\limits_{i=1}^t q_i\right) + \\
-&amp; \quad + \; \text{storage_write_cost}\cdot t + \\
+&amp; \quad + \; \text{l1_storage_write_cost}\cdot t + \\
 &amp; \quad + \; \text{l2_payload_costs}\Bigg) + \\
 &amp; \text{data_gas_price}\cdot\bigg(2(n-1)+2(m-1) + \ell +2D \bigg)
 \end{align}\]
@@ -647,6 +647,9 @@ F  = \; &amp; \text{gas_price}\cdot\Bigg(\max_k v_k w_k + \\
 <p>\(\text{message_calldata_cost}\) is 512 gas per 32-byte word. For more details, see <a href="#l_2-l_1_messages">Onchain data: L2&#8594;L1 messages</a>.</p>
 </li>
 <li>
+<p>\(\text{l1_storage_write_cost}\) is the cost of writing a to a new storage slot on Ethereum, which is 20,000 gas. The reason it appears here is that the hash of an L2&#8594;L1 message needs to be recorded on the Starknet core contract on L1.</p>
+</li>
+<li>
 <p>\(\text{l2_payload_costs}\) is the gas cost of data sent over L2. This includes calldata, code, and event emission. For more details see <a href="#l2_calldata">L2 payloads: calldata, events, and code</a>.</p>
 </li>
 </ul>
@@ -667,7 +670,7 @@ F  = \text{gas_price}\cdot&amp;\Bigg(\max_k v_k w_k + \\
 &amp; + \; \text{da_calldata_cost}\left(2(n-1)+2(m-1) + \ell + 2D + 3t + \sum\limits_{i=1}^t q_i\right)\\
 &amp; - \; \text{contract_update_discount}\cdot (n-1) - 240 \\
 &amp; + \; \text{message_calldata_cost}\cdot\left(3t + \sum\limits_{i=1}^t q_i\right) \\
-&amp; + \; \text{storage_write_cost}\cdot t \\
+&amp; + \; \text{l1_storage_write_cost}\cdot t \\
 &amp; + \; \text{l2_payload_costs}\Bigg)
 \end{align}\]
 </div>
@@ -678,7 +681,7 @@ F  = \text{gas_price}\cdot&amp;\Bigg(\max_k v_k w_k + \\
 <div class="ulist">
 <ul>
 <li>
-<p>\(v, w, n, m, t, \ell, \text{da_calldata_cost}, \text{message_calldata_cost}, D, \text{l2_payload_costs}\) are defined in the same manner as the blob-based formula above.</p>
+<p>\(v, w, n, m, t, \ell, \text{da_calldata_cost}, \text{message_calldata_cost}, \text{l1_storage_write_cost}, D, \text{l2_payload_costs}\) are defined in the same manner as in the blob-based formula above.</p>
 </li>
 <li>
 <p>\(240\) is the gas discount for updating the sender&#8217;s balance, for the derivation of this number see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
@@ -705,16 +708,16 @@ F  = \text{gas_price}\cdot&amp;\Bigg(\max_k v_k w_k + \\
 <div class="sect2">
 <h3 id="v3_fee_limitations"><a class="anchor" href="#v3_fee_limitations"></a>v3 transactions</h3>
 <div class="paragraph">
-<p>With v3 transactions, users specifiy the max amount and max price for each resource. At the time of writing, the only available resource is L1 gas. In the future, we will introduce L2 gas which will be used to price L2 work (as opposed to only charging for the proof verification in L1 gas, which is what happens today).</p>
+<p>With v3 transactions, users specify the max amount and max price for each resource. At the time of writing, the only available resource is L1 gas. In the future, we will introduce L2 gas which will be used to price L2 work (as opposed to only charging for the proof verification in L1 gas, which is what happens today).</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="deprecated_fee_limitations"><a class="anchor" href="#deprecated_fee_limitations"></a>Deprecated transactions (verion &lt; 3)</h3>
+<h3 id="deprecated_fee_limitations"><a class="anchor" href="#deprecated_fee_limitations"></a>Deprecated transactions (version &lt; 3)</h3>
 <div class="paragraph">
-<p>With older transactio versions, users specify the maximum fee that they are willing to pay for a transaction.</p>
+<p>With older transaction versions, users specify the maximum fee that they are willing to pay for a transaction.</p>
 </div>
 <div class="paragraph">
-<p>The only limitation on the sequencer, which is enforced by the Starknet OS, is that the actual fee charged is bounded by <code>max_fee</code>. While not enforced in the proof, the Starknet sequencer usually charges less than <code>max_fee</code>, as it charges exactly the amount given by the above fee formula.</p>
+<p>The only limitation on the sequencer, which is enforced by the Starknet OS, is that the actual fee charged is bounded by <code>max_fee</code>. While not enforced in the proof, the Starknet sequencer usually charges less than <code>max_fee</code>, as it charges in accordance with the above fee formula.</p>
 </div>
 </div>
 </div>
@@ -723,7 +726,7 @@ F  = \text{gas_price}\cdot&amp;\Bigg(\max_k v_k w_k + \\
 <h2 id="what_do_we_pay_for"><a class="anchor" href="#what_do_we_pay_for"></a>What do we price</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>At the time of writing, the following components are contributing to the transacation fee:</p>
+<p>At the time of writing, the following components are contributing to the transaction fee:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -731,13 +734,13 @@ F  = \text{gas_price}\cdot&amp;\Bigg(\max_k v_k w_k + \\
 <p><a href="#computation_without_builtins">Computational complexity</a>: The marginal cost of verifying the transaction on L1, measured in L1 gas.</p>
 </li>
 <li>
-<p><a href="#onchain_data_components">Onchain data</a>: The cost of posting  the state diffs induced by the transaction to L1 (for more details, see <a href="../on-chain-data/" class="xref page">data availability</a>). This is measured in L1 gas or L1 data gas, depending on whether or not the L2 block in which the transaction was included uses blobs or calldata.</p>
+<p><a href="#onchain_data_components">Onchain data</a>: The cost of posting  the state diffs induced by the transaction to L1 (for more details, see <a href="../on-chain-data/" class="xref page">data availability</a>). This is measured in L1 gas or L1 data gas, depending on whether or not the L2 block in which the transaction was included uses calldata or blobs.</p>
 </li>
 <li>
-<p>L2→L1 messages: Messages sent to L1 are eventually sent to the Starknet core contract by the sequencer, which leads to the sending L2 transaction having additional L1 gas costs.</p>
+<p>L2→L1 messages: Messages sent to L1 are eventually sent to the Starknet core contract as L1 calldata by the sequencer; therefore L2 transaction that send L2&#8594;L1 messages incur an additional L1 gas cost.</p>
 </li>
 <li>
-<p>L2 calldata, events and code: From Starknet 0.13.1 onwwards, thers is a per-byte (or per felt) price for L2 payloads. For more details, see <a href="#l2_calldata">L2 payloads: calldata, events, and code</a>.</p>
+<p>L2 calldata, events and code: From Starknet 0.13.1 onwards, there is a per-byte (or per felt) price for L2 payloads. For more details, see <a href="#l2_calldata">L2 payloads: calldata, events, and code</a>.</p>
 </li>
 </ul>
 </div>
@@ -1099,7 +1102,7 @@ they are sent to Ethereum twice: once to the STARK verifier contract, where the 
 <div class="ulist">
 <ul>
 <li>
-<p>calldata: this includes transaction calldata (in the case of <code>INVOKE</code> transactions or <code>L1_HANDLER</code>), constructor calldata (int the case of <code>DEPLOY_ACCOUNT</code> transactions), and signatures</p>
+<p>calldata: this includes transaction calldata (in the case of <code>INVOKE</code> transactions or <code>L1_HANDLER</code>), constructor calldata (in the case of <code>DEPLOY_ACCOUNT</code> transactions), and signatures</p>
 </li>
 <li>
 <p>events: data and keys of emitted events</p>
