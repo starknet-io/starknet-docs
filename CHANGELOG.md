@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.505](https://github.com/starknet-io/starknet-docs/compare/v0.1.504...v0.1.505) (2024-03-10)
+
+
+### Bug Fixes
+
+* Fix example in emit_events ([#1169](https://github.com/starknet-io/starknet-docs/issues/1169)) ([75b08a1](https://github.com/starknet-io/starknet-docs/commit/75b08a17fff8e8b0ca07d303b8d29b55390d6588))
+
 ### [0.1.504](https://github.com/starknet-io/starknet-docs/compare/v0.1.503...v0.1.504) (2024-03-10)
 
 ### [0.1.503](https://github.com/starknet-io/starknet-docs/compare/v0.1.502...v0.1.503) (2024-03-07)
