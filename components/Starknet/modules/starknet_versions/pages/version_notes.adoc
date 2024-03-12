@@ -26,11 +26,56 @@ include::ROOT:partial$snippet_important_goerli2_removed.adoc[]
 [discrete]
 === New features and enhancements
 
-* *Cheaper data availability:* Starknet uses link:https://eips.ethereum.org/EIPS/eip-4844[EIP-4844].
+* *Cheaper data availability (DA):* Starknet uses link:https://eips.ethereum.org/EIPS/eip-4844[EIP-4844]. State diffs are now blobs, rather than calldata, requiring the addition of `data_gas` to Starknet blocks.
 * Time-related syscalls when called from an account contract's `+__validate__+` function:
-** `timestamp` returns the hour, rounded down.
+** `block_timestamp` returns the hour, rounded down.
 ** `block_number` returns the block number, rounded down to the nearest multiple of 100.
 * *Optimization:* Load into memory only the functions in a contract that are actually used when generating the proof.
+
+[discrete]
+=== Block header updates
+The block header includes the following new fields:
+
+* `l1_da_mode`: A string enum that takes the value `CALLDATA` or `BLOB`, and indicates whether EIP-4844 is the data availability solution that is used for the block. Also appears in pending block.
+* `l1_data_gas_price`: Contains `price_in_wei` and `price_in_fri`, where 1 fri is 10^-18^ STRK. Also appears in pending block.
+* `l1_gas_price`: Replaces `eth_l1_gas_price` and `strk_l1_gas_price`. Contains the data gas price (EIP-4844) in addition to the regular gas price.
+
+[discrete]
+=== JSON RPC
+
+Starknet 0.13.1 is backward compatible with starknet_api_openrpc.json v0.6.0. Responses from 0.13.1 can be mapped naturally into v0.6.0 objects.
+
+A new version of `starknet_api_openrpc.json`, 0.7.0, accommodates the changes introduced by Starknet using EIP-4844:
+[discrete]
+==== `BLOCK_HEADER` includes two new fields to support EIP-4844:
+
+* `l1_data_gas_price`: contains `price_in_wei` and `price_in_fri` (10^-18^ denominations, similar to https://github.com/starkware-libs/starknet-specs/blob/49665932a97f8fdef7ac5869755d2858c5e3a687/api/starknet_api_openrpc.json#L3766[v0.6.0]).
+* `l1_da_mode`: An enum that indicates whether this block will use calldata or blobdata and can take the following values:
+** `CALLDATA`
+** `BLOB`
+
+[discrete]
+==== `FEE_ESTIMATE`
+
+* Includes two new fields:
+** `data_gas_consumed`
+** `data_gas_price`
+* `overall_fee` is now: +
+`gas_consumed` × `gas_price` + `data_gas_consumed` × `data_gas_price`
+* Fee estimates will change depending on the data availability solution used by current Starknet blocks. For example, if you estimate the fee against the pending block, and it’s currently using `CALLDATA`, then nodes are expected to return `data_gas_consumed=0` and compute the fee similarly to today, that is, get higher estimates.
+
+[discrete]
+==== Receipts and traces now include data availability resources
+
+* `COMMON_RECEIPT_PROPERTIES`, the main receipt object, now includes a new entry: execution_resources.
+* The `EXECUTION_RESOURCES` object now includes the field `data_availability`. Note that the resources of internal calls will remain the same/
+* For more information, see the https://github.com/starkware-libs/starknet-specs/pull/187/files[PR for the API JSON RPC specs]
+
+[discrete]
+==== `EXECUTION_RESOURCES`
+
+* Computation resources are separated from data availability resources. This is done by introducing the `data_availability` property, which includes `l1_gas` and `l1_data_gas`, which were consumed due to DA requirements. One of these will always be zero, depending on whether or not the block uses calldata or blobs, as specified by the `l1_da_mode` field in the block header.
+* Syscall costs are now included in the execution resources of traces and receipts. These are costs that are already being paid for but were not reported so far.
 
 [discrete]
 === Pricing changes
@@ -65,14 +110,27 @@ v1 `DECLARE` transactions only include bytecode.
 [discrete]
 === API changes:
 
+[discrete]
+==== Feeder gateway request/response
+
 Starknet block:
 
-* New field `l1_da_mode`, which indicates whether EIP-4844 was used in the block.
-* `eth_l1_gas_price` and `strk_l1_gas_price` were replaced, and the information now contains the data gas price (EIP-4844) in addition to the regular gas price
-* `execution_resources` in the transaction receipt now contains:
-** data availability resources
-** syscall resources, which contribute to the transaction fee but were not included in the receipt before this version.
+* New field, `l1_da_mode`, in the block header, including the pending block: A string enum that takes the value `CALLDATA` or `BLOB`, and indicates whether EIP-4844 is the data availability solution that is used for the block.
+* New field, `l1_data_gas_price`, in the block header, including the pending block:
+Contains `price_in_wei` and `price_in_fri`, where 1 fri is 10^-18^ STRK.
+* New field, `l1_gas_price`, in the block header, replaces `eth_l1_gas_price` and `strk_l1_gas_price`. Contains the data gas price (EIP-4844) in addition to the regular gas price.
+* `get_compiled_class_by_class_hash` returns the updated compiled class structure, including data for segments, such as the new field `bytecode_segments_lengths`,  which is a nested list of integers.
+* Transaction receipt refactor. `execution_resources` in the transaction receipt that you get with a `get_block` request, now include the following:
+** the `data_availability` property, which isolates DA resources from computation resources. This property includes `l1_gas` and `l1_data_gas` that were incurred by state updates. One of them is always zero.
+** syscall-related resources. Each syscall has an associated step-cost. For more information, see link:https://github.com/starkware-libs/blockifier/blob/5fe26bd71143ac96beea2902086ce68179f27cbb/crates/blockifier/resources/versioned_constants.json#L167[versioned_constance.json]. So far, these costs were included in the fee but not reported inside receipts. This now changes, so a spike in the receipt resources is to be expected. These costs are not new. Rather, they are already incurred but were not previously reported in the receipt.
 * `transaction_commitment` and `event_commitment` are added to the block. `0` is returned for old blocks.
+
+The source of truth for the feeder gateway response is link:https://github.com/starkware-libs/cairo-lang/blob/v0.13.1a0/src/starkware/starknet/services/api/feeder_gateway/response_objects.py[response_objects.py].
+
+[discrete]
+==== JSON RPC
+
+
 
 [discrete]
 === Infrastructure updates
