@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.507](https://github.com/starknet-io/starknet-docs/compare/v0.1.506...v0.1.507) (2024-03-12)
+
+
+### Bug Fixes
+
+* add felt size multiplier to data gas usage ([#1174](https://github.com/starknet-io/starknet-docs/issues/1174)) ([6e2a41e](https://github.com/starknet-io/starknet-docs/commit/6e2a41e60625c9d2f96e5b5b7ad739698294a18d))
+
 ### [0.1.506](https://github.com/starknet-io/starknet-docs/compare/v0.1.505...v0.1.506) (2024-03-11)
 
 ### [0.1.505](https://github.com/starknet-io/starknet-docs/compare/v0.1.504...v0.1.505) (2024-03-10)
