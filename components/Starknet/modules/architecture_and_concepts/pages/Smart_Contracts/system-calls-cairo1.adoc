@@ -21,11 +21,16 @@ extern fn get_block_hash_syscall(
 
 Gets the hash of a specific Starknet block within the range of `[__first_v0_12_0_block__, __current_block__ - 10]`.
 
+[discrete]
+=== Arguments
+
+[horizontal,labelwidth="25",role="stripes-odd"]
+`_block_number_ u64`:: The number of the block whose hash you want to get.
 
 [discrete]
 === Return values
 
-Returns the hash of the given block.
+The hash of the specified block.
 
 [discrete]
 === Common library
@@ -44,7 +49,7 @@ link:https://github.com/starkware-libs/cairo/blob/0c882679fdb24a818cad19f2c18dec
 == `get_execution_info`
 
 [discrete]
-==== Syntax
+=== Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
@@ -54,33 +59,50 @@ extern fn get_execution_info_syscall() -> SyscallResult<Box<starknet::info::Exec
 ----
 
 [discrete]
-==== Description
+=== Description
 
-Gets information about the original transaction.
+Gets information about the currently executing block and the transactions in the block. For a complete description of this information, see xref:Smart_Contracts/execution_info.adoc[]
 
-In Cairo 1.0, all block/transaction/execution context getters are batched into this single system call.
+This single system call contains all information for a block, transaction, and execution context.
+
+When an account's `+__validate__+`, `+__validate_deploy__+`, or `+__validate_declare__+` function calls `get_execution_info`, the return values for `block_timestamp` and `block_number` are modified as follows:
+
+* `block_timestamp` returns the hour, rounded down to the nearest hour.
+* `block_number` returns the block number, rounded down to the nearest multiple of 100.
 
 [discrete]
-==== Arguments
+=== Arguments
 
 None.
 
 [discrete]
-==== Return values
+=== Return values
 
-* A link:https://github.com/starkware-libs/cairo/blob/efbf69d4e93a60faa6e1363fd0152b8fcedbb00a/corelib/src/starknet/info.cairo#L8[struct] containing the execution info.
+[horizontal,labelwidth="25",role="stripes-odd"]
+link:https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/info.cairo#L8[`ExecutionInfo`]:: A struct that contains information about the currently executing function, transaction, and block.
 
 [discrete]
-==== Common library
+=== Common library
 
 link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L35[`syscalls.cairo`^]
+
+[discrete]
+=== Example
+
+This example shows how to pull the block number from the `ExecutionInfo` struct.
+[source,cairo]
+----
+let execution_info = get_execution_info().unbox();
+let block_info = execution_info.block_info.unbox();
+let block number = block_info.block_number;
+----
 
 
 [id="call_contract"]
 == `call_contract`
 
 [discrete]
-==== Syntax
+=== Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
@@ -90,19 +112,19 @@ extern fn call_contract_syscall(
 ----
 
 [discrete]
-==== Description
+=== Description
 
 Calls a given contract. This system call expects the address of the called contract, a selector for a function within that contract, and call arguments.
 
 [NOTE]
-====
+===
 An internal call can't return `Err(_)` as this is not handled by the sequencer and the Starknet OS.
 
 If `call_contract_syscall` fails, this can't be caught and will therefore result in the entire transaction being reverted.
-====
+===
 
 [discrete]
-==== Arguments
+=== Arguments
 
 [horizontal,labelwidth=35]
 `_address_`:: The address of the contract you want to call.
@@ -110,13 +132,13 @@ If `call_contract_syscall` fails, this can't be caught and will therefore result
 `_calldata_`:: The calldata array.
 
 [discrete]
-==== Return values
+=== Return values
 
 * The call response, of type `SyscallResult<Span<felt252>>`.
 
 
 [discrete]
-==== Common library
+=== Common library
 
 link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L10[`syscalls.cairo`^]
 
@@ -131,7 +153,7 @@ If the interface of the called contract is available, then you can use a more st
 == `deploy`
 
 [discrete]
-==== Syntax
+=== Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
@@ -144,12 +166,12 @@ extern fn deploy_syscall(
 ----
 
 [discrete]
-==== Description
+=== Description
 
 Deploys a new instance of a previously declared class.
 
 [discrete]
-==== Arguments
+=== Arguments
 
 [horizontal,labelwidth=35]
 `_class_hash_`:: The class hash of the contract to be deployed.
@@ -157,14 +179,15 @@ Deploys a new instance of a previously declared class.
 `_calldata_`:: The constructor's calldata. An array of felts.
 `_deploy_from_zero_`:: A flag used for the contract address computation. If not set, the caller address will be used as the new contract's deployer address, otherwise 0 is used.
 
-.Return values
+[discrete]
+=== Return values
 
 * A tuple wrapped with `SyscallResult` where:
 ** The first element is the address of the deployed contract, of type `ContractAddress`.
 ** The second element is the response array from the contract's constructor, of type `Span::<felt252>`.
 
 [discrete]
-==== Common library
+=== Common library
 
 link:https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/syscalls.cairo#L20[`syscalls.cairo`^]
 
@@ -173,7 +196,7 @@ link:https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/sysc
 == `emit_event`
 
 [discrete]
-==== Syntax
+=== Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
@@ -183,43 +206,38 @@ extern fn emit_event_syscall(
 ----
 
 [discrete]
-==== Description
+=== Description
 
 Emits an event with a given set of keys and data.
 
 For more information, and for a higher-level syntax for emitting events, see xref:architecture_and_concepts:Smart_Contracts/starknet-events.adoc[Starknet events].
 
 [discrete]
-==== Arguments
+=== Arguments
 
 [horizontal,labelwidth=35]
 `_keys_`:: The event's keys. These are analogous to Ethereum's event topics, you can use the link:https://github.com/starkware-libs/starknet-specs/blob/c270b8170684bb09741672a7a4ae5003670c3f43/api/starknet_api_openrpc.json#L569RPC[starknet_getEvents] method to filter by these keys.
 `_data_`:: The event's data.
 
 [discrete]
-==== Return values
+=== Return values
 
 None.
 
 [discrete]
-==== Common library
+=== Common library
 
 link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L30[`syscalls.cairo`^]
 
 [discrete]
-==== Example
+=== Example
 
-The following example emits an event with two keys, the strings `status` and `deposit` and three data elements: `1`, `2`, and `3`.
+The following example emits an event with two keys, the strings `key` and `deposit` and three data elements: `1`, `2`, and `3`.
 
 [source,cairo]
 ----
-let keys = ArrayTrait::new();
-keys.append('key');
-keys.append('deposit');
-let values = ArrayTrait::new();
-values.append(1);
-values.append(2);
-values.append(3);
+let keys = array!['key', 'deposit'];
+let values = array![1, 2, 3];
 emit_event_syscall(keys, values).unwrap_syscall();
 ----
 
@@ -227,7 +245,7 @@ emit_event_syscall(keys, values).unwrap_syscall();
 == `library_call`
 
 [discrete]
-==== Syntax
+=== Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
@@ -237,14 +255,14 @@ extern fn library_call_syscall(
 ----
 
 [discrete]
-==== Description
+=== Description
 
 Calls the requested function in any previously declared class. The class is only used for its logic.
 
 This system call replaces the known delegate call functionality from Ethereum, with the important difference that there is only one contract involved.
 
 [discrete]
-==== Arguments
+=== Arguments
 
 [horizontal,labelwidth=35]
 `_class_hash_`:: The hash of the class you want to use.
@@ -252,12 +270,12 @@ This system call replaces the known delegate call functionality from Ethereum, w
 `_calldata_`:: The calldata.
 
 [discrete]
-==== Return values
+=== Return values
 
 * The call response, of type `SyscallResult<Span<felt252>>`.
 
 [discrete]
-==== Common library
+=== Common library
 
 link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L43[`syscalls.cairo`^]
 
@@ -265,7 +283,7 @@ link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994d
 == `send_message_to_L1`
 
 [discrete]
-==== Syntax
+=== Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
@@ -275,7 +293,7 @@ extern fn send_message_to_l1_syscall(
 ----
 
 [discrete]
-==== Description
+=== Description
 
 Sends a message to L1.
 
@@ -284,24 +302,24 @@ This system call includes the message parameters as part of the proof's output a
 For more information, see Starknet's xref:Network_Architecture/messaging-mechanism.adoc[messaging mechanism].
 
 [discrete]
-==== Arguments
+=== Arguments
 
 [horizontal,labelwidth=35]
 `_to_address_`:: The recipient's L1 address.
 `_payload_`:: The array containing the message payload
 
 [discrete]
-==== Return values
+=== Return values
 
 None.
 
 [discrete]
-==== Common library
+=== Common library
 
 link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L51[`syscalls.cairo`^]
 
 [discrete]
-==== Example
+=== Example
 
 The following example sends a message whose content is `(1,2)` to the L1 contract whose address is `3423542542364363`.
 
@@ -317,7 +335,7 @@ send_message_to_l1_syscall(payload).unwrap_syscall();
 == `replace_class`
 
 [discrete]
-==== Syntax
+=== Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
@@ -327,7 +345,7 @@ extern fn replace_class_syscall(
 ----
 
 [discrete]
-==== Description
+=== Description
 Once `replace_class` is called, the class of the calling contract (i.e. the contract whose address is returned by `get_contract_address` at the time the syscall is called) will be replaced
 by the class whose hash is given by the class_hash argument.
 
@@ -341,25 +359,25 @@ the `call_contract` syscall in the same transaction (after the replacement).
 ====
 
 [discrete]
-==== Arguments
+=== Arguments
 
 [horizontal,labelwidth=35]
 `_class_hash_`:: The hash of the class you want to use as a replacement.
 
 [discrete]
-==== Return values
+=== Return values
 
 None.
 
 [discrete]
-==== Common library
+=== Common library
 link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L77[`syscalls.cairo`^]
 
 [id="storage_read"]
 == `storage_read`
 
 [discrete]
-==== Syntax
+=== Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
@@ -369,7 +387,7 @@ extern fn storage_read_syscall(
 ----
 
 [discrete]
-==== Description
+=== Description
 
 Gets the value of a key in the storage of the calling contract.
 
@@ -378,24 +396,24 @@ This system call provides direct access to any possible key in storage, in contr
 For information on accessing storage by using the storage variables, see xref:./contract-storage.adoc#storage_variables[storage variables].
 
 [discrete]
-==== Arguments
+=== Arguments
 
 [horizontal,labelwidth=35]
 `_address_domain_`:: The domain of the key, used to separate between different data availability modes. This separation is used in Starknet to offer different data availability modes. Currently, only the onchain mode (where all updates go to L1), indicated by domain `0`, is supported. Other address domains which will be introduced in the future will behave differently in terms of publication (in particular, they will not be posted on L1, creating a tradeoff between cost and security).
 `_address_`:: The requested storage address.
 
 [discrete]
-==== Return values
+=== Return values
 
 * The value of the key, of type `SyscallResult<felt252>`.
 
 [discrete]
-==== Common library
+=== Common library
 
 link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L60[`syscalls.cairo`^]
 
 [discrete]
-==== Example
+=== Example
 
 [source,cairo,subs="+quotes,+macros"]
 ----
@@ -411,7 +429,7 @@ storage_read_syscall(0, storage_address).unwrap_syscall()
 == `storage_write`
 
 [discrete]
-==== Syntax
+=== Syntax
 
 [source,cairo,subs="+quotes,+macros"]
 ----
@@ -421,7 +439,7 @@ extern fn storage_write_syscall(
 ----
 
 [discrete]
-==== Description
+=== Description
 
 Sets the value of a key in the storage of the calling contract.
 
@@ -430,7 +448,7 @@ This system call provides direct access to any possible key in storage, in contr
 For information on accessing storage by using the storage variables, see xref:./contract-storage.adoc#storage_variables[storage variables].
 
 [discrete]
-==== Arguments
+=== Arguments
 
 [horizontal,labelwidth=35]
 `_address_domain_`:: The domain of the key, used to separate between different data availability modes. This separation is used in Starknet to offer different data availability modes. Currently, only the onchain mode (where all updates go to L1), indicated by domain `0`, is supported. Other address domains which will be introduced in the future will behave differently in terms of publication (in particular, they will not be posted on L1, creating a tradeoff between cost and security).
@@ -438,7 +456,7 @@ For information on accessing storage by using the storage variables, see xref:./
 `_value_`:: The value to write to the key.
 
 [discrete]
-==== Return values
+=== Return values
 
 None.
 

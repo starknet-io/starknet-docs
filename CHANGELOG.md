@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.512](https://github.com/starknet-io/starknet-docs/compare/v0.1.511...v0.1.512) (2024-03-14)
+
+### [0.1.511](https://github.com/starknet-io/starknet-docs/compare/v0.1.510...v0.1.511) (2024-03-13)
+
+### [0.1.510](https://github.com/starknet-io/starknet-docs/compare/v0.1.509...v0.1.510) (2024-03-13)
+
+### [0.1.509](https://github.com/starknet-io/starknet-docs/compare/v0.1.508...v0.1.509) (2024-03-13)
+
+### [0.1.508](https://github.com/starknet-io/starknet-docs/compare/v0.1.507...v0.1.508) (2024-03-12)
+
+### [0.1.507](https://github.com/starknet-io/starknet-docs/compare/v0.1.506...v0.1.507) (2024-03-12)
+
+
+### Bug Fixes
+
+* add felt size multiplier to data gas usage ([#1174](https://github.com/starknet-io/starknet-docs/issues/1174)) ([6e2a41e](https://github.com/starknet-io/starknet-docs/commit/6e2a41e60625c9d2f96e5b5b7ad739698294a18d))
+
+### [0.1.506](https://github.com/starknet-io/starknet-docs/compare/v0.1.505...v0.1.506) (2024-03-11)
+
+### [0.1.505](https://github.com/starknet-io/starknet-docs/compare/v0.1.504...v0.1.505) (2024-03-10)
+
+
+### Bug Fixes
+
+* Fix example in emit_events ([#1169](https://github.com/starknet-io/starknet-docs/issues/1169)) ([75b08a1](https://github.com/starknet-io/starknet-docs/commit/75b08a17fff8e8b0ca07d303b8d29b55390d6588))
+
+### [0.1.504](https://github.com/starknet-io/starknet-docs/compare/v0.1.503...v0.1.504) (2024-03-10)
+
+### [0.1.503](https://github.com/starknet-io/starknet-docs/compare/v0.1.502...v0.1.503) (2024-03-07)
+
+### [0.1.502](https://github.com/starknet-io/starknet-docs/compare/v0.1.501...v0.1.502) (2024-03-07)
+
+### [0.1.501](https://github.com/starknet-io/starknet-docs/compare/v0.1.500...v0.1.501) (2024-03-06)
+
+### [0.1.500](https://github.com/starknet-io/starknet-docs/compare/v0.1.499...v0.1.500) (2024-03-06)
+
 ### [0.1.499](https://github.com/starknet-io/starknet-docs/compare/v0.1.498...v0.1.499) (2024-03-05)
 
 ### [0.1.498](https://github.com/starknet-io/starknet-docs/compare/v0.1.497...v0.1.498) (2024-03-05)
