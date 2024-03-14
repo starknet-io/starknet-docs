@@ -309,6 +309,11 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
+     href="../../architecture_and_concepts/Accounts/universal-deployer/">Universal Deployer Contract</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
      href="../../architecture_and_concepts/Accounts/simplified_transaction_flow/">Simplified transaction flow</a>
   </li>
 </ul>
@@ -360,7 +365,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../architecture_and_concepts/Smart_Contracts/universal-deployer/">Universal Deployer Contract</a>
+     href="../../architecture_and_concepts/Smart_Contracts/system-calls-cairo1/">System calls</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -644,10 +649,10 @@
 <div class="ulist">
 <ul>
 <li>
-<p><strong>Cheaper data availability (DA):</strong> Starknet uses <a href="https://eips.ethereum.org/EIPS/eip-4844">EIP-4844</a>. State diffs are now blobs, rather than calldata, requiring the addition of <code>data_gas</code> to Starknet blocks.</p>
+<p><strong>Cheaper data availability (DA):</strong> Starknet uses <a href="https://eips.ethereum.org/EIPS/eip-4844">EIP-4844</a>. State diffs are now blobs, rather than calldata, requiring the addition of <code>data_gas</code> to the Starknet block header.</p>
 </li>
 <li>
-<p>Time-related syscalls when called from an account contract&#8217;s <code>__validate__</code> function:</p>
+<p>Time-related syscalls when called from an account contract&#8217;s <code>__validate__</code>, <code>__validate_deploy__</code>, <code>__validate_declare__</code>, or <code>constructor</code> function:</p>
 <div class="ulist">
 <ul>
 <li>
@@ -681,9 +686,9 @@
 </li>
 </ul>
 </div>
-<h3 id="json_rpc" class="discrete">JSON RPC</h3>
+<h3 id="api_json_rpc" class="discrete">API: JSON RPC</h3>
 <div class="paragraph">
-<p>Starknet 0.13.1 is backward compatible with starknet_api_openrpc.json v0.6.0. Responses from 0.13.1 can be mapped naturally into v0.6.0 objects.</p>
+<p>Starknet 0.13.1 is backward compatible with <code>starknet_api_openrpc.json</code> v0.6.0. Responses from 0.13.1 can be mapped naturally into v0.6.0 objects.</p>
 </div>
 <div class="paragraph">
 <p>A new version of <code>starknet_api_openrpc.json</code>, 0.7.0, accommodates the changes introduced by Starknet using EIP-4844:</p>
@@ -811,48 +816,6 @@
 </li>
 </ul>
 </div>
-<h3 id="api_changes" class="discrete">API changes:</h3>
-<h4 id="feeder_gateway_requestresponse" class="discrete">Feeder gateway request/response</h4>
-<div class="paragraph">
-<p>Starknet block:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>New field, <code>l1_da_mode</code>, in the block header, including the pending block: A string enum that takes the value <code>CALLDATA</code> or <code>BLOB</code>, and indicates whether EIP-4844 is the data availability solution that is used for the block.</p>
-</li>
-<li>
-<p>New field, <code>l1_data_gas_price</code>, in the block header, including the pending block:
-Contains <code>price_in_wei</code> and <code>price_in_fri</code>, where 1 fri is 10<sup>-18</sup> STRK.</p>
-</li>
-<li>
-<p>New field, <code>l1_gas_price</code>, in the block header, replaces <code>eth_l1_gas_price</code> and <code>strk_l1_gas_price</code>. Contains the data gas price (EIP-4844) in addition to the regular gas price.</p>
-</li>
-<li>
-<p><code>get_compiled_class_by_class_hash</code> returns the updated compiled class structure, including data for segments, such as the new field <code>bytecode_segments_lengths</code>,  which is a nested list of integers.</p>
-</li>
-<li>
-<p>Transaction receipt refactor. <code>execution_resources</code> in the transaction receipt that you get with a <code>get_block</code> request, now include the following:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>the <code>data_availability</code> property, which isolates DA resources from computation resources. This property includes <code>l1_gas</code> and <code>l1_data_gas</code> that were incurred by state updates. One of them is always zero.</p>
-</li>
-<li>
-<p>syscall-related resources. Each syscall has an associated step-cost. For more information, see <a href="https://github.com/starkware-libs/blockifier/blob/5fe26bd71143ac96beea2902086ce68179f27cbb/crates/blockifier/resources/versioned_constants.json#L167">versioned_constance.json</a>. So far, these costs were included in the fee but not reported inside receipts. This now changes, so a spike in the receipt resources is to be expected. These costs are not new. Rather, they are already incurred but were not previously reported in the receipt.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p><code>transaction_commitment</code> and <code>event_commitment</code> are added to the block. <code>0</code> is returned for old blocks.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>The source of truth for the feeder gateway response is <a href="https://github.com/starkware-libs/cairo-lang/blob/v0.13.1a0/src/starkware/starknet/services/api/feeder_gateway/response_objects.py">response_objects.py</a>.</p>
-</div>
-<h4 id="json_rpc_2" class="discrete">JSON RPC</h4>
 <h3 id="infrastructure_updates" class="discrete">Infrastructure updates</h3>
 <div class="paragraph">
 <p>Starknet now supports multiple L1 providers.</p>
