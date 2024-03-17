@@ -8,19 +8,23 @@ In Starknet, a block is a list of transactions, and a block header that contains
 
 [%autowidth]
 |===
-| Name | Type | Description | Implemented
+| Name | Type | Description
 
-| `parent_block_hash` | `FieldElement` | The hash of this block's parent | &#10003;
-|`block_number` | `Integer` | The number (height) of this block | &#10003;
-| `global_state_root` | `FieldElement` | The state xref:../Network_Architecture/starknet-state.adoc#state_commitment[commitment] after this block | &#10003;
-|`sequencer_address` | `FieldElement` | The Starknet address of the sequencer who created this block | &#10003;
-| `block_timestamp` | `Timestamp` | The time the sequencer created this block before executing transactions | &#10003;
-|`transaction_count` | `Integer` | The number of transactions in a block | &#10003;
-| `transaction_commitment` | `FieldElement` | A commitment to the transactions included in the block | &#10003;
-|`event_count` | `Integer` | The number of events | &#10003;
-| `event_commitment` | `FieldElement` | A commitment to the events produced in this block | &#10003;
-| `protocol_version` | `Integer` | The version of the Starknet protocol used when creating this block |
-| `extra data` | `FieldElement` | Extraneous data that might be useful for running transactions |
+| `parent_block_hash` | `FieldElement` | The hash of this block's parent
+|`block_number` | `Integer` | The number (height) of this block
+| `global_state_root` | `FieldElement` | The state xref:../Network_Architecture/starknet-state.adoc#state_commitment[commitment] after this block
+|`sequencer_address` | `ContractAddress` | The Starknet address of the sequencer who created this block
+| `block_timestamp` | `Timestamp` | The time the sequencer created this block before executing transactions
+|`transaction_count` | `Integer` | The number of transactions in a block
+| `transaction_commitment` | `FieldElement` | A commitment to the transactions included in the block;
+|`event_count` | `Integer` | The number of events
+| `event_commitment` | `FieldElement` | A commitment to the events produced in this block
+| `l1_gas_price` | `(Integer, Integer)` | The price of L1 gas that was used while constructing this block. L1 gas prices are relevant for storage updates and L1→L2 messages (today, computation is also priced in terms of L1 gas, but this will change in the future). The price is specified in both wei and fri, hence the two numbers.
+| `l1_data_gas_price` | `(Integer, Integer)` | The price of L1 blob gas that was used while constructing this block. If the `l1_DA_MODE` of the block is set to `BLOB`, L1 blob gas prices will determine the storage update cost. The price is specified in both wei and fri, hence the two numbers.
+| `l1_da_mode` | `String` | `CALLDATA` or `BLOB`, depending on how Starknet state diffs are sent to L1
+| `protocol_version` | `Integer` | The version of the Starknet protocol used when creating this block.
+
+
 |===
 
 Where:
@@ -60,4 +64,9 @@ Where `_h_` is the xref:../../Cryptography/hash-functions.adoc#pedersen-hash[Ped
 [NOTE]
 ====
 Zeros inside the hash computation of an object are used as placeholders, to be replaced in the future by meaningful fields.
+====
+
+[NOTE]
+====
+Several properties of the block header, such as `l1_gas_price` and `l1_da_mode`, are not yet included in the block hash. This will change in a future Starknet version.
 ====
