@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>System Calls :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Smart_Contracts/system-calls-cairo1/">
-    <link rel="prev" href="../universal-deployer/">
+    <link rel="prev" href="../cairo-and-sierra/">
     <link rel="next" href="../serialization_of_Cairo_types/">
     <meta name="generator" content="Antora 3.1.1">
 
@@ -310,6 +310,11 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
+     href="../../Accounts/universal-deployer/">Universal Deployer Contract</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
      href="../../Accounts/simplified_transaction_flow/">Simplified transaction flow</a>
   </li>
 </ul>
@@ -358,11 +363,6 @@
        class="nav-link"
      href="../cairo-and-sierra/">Cairo and Sierra</a>
   </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../universal-deployer/">Universal Deployer Contract</a>
-  </li>
   <li class="nav-item is-current-page" data-depth="3">
     <a 
        class="nav-link"
@@ -372,6 +372,16 @@
     <a 
        class="nav-link"
      href="../serialization_of_Cairo_types/">Serialization of Cairo types</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="3">
+    <a 
+       class="nav-link"
+     href="./">System calls</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../execution_info/">Execution information for the current block</a>
   </li>
 </ul>
   </li>
@@ -506,6 +516,11 @@
        class="nav-link"
      href="../../../tools/starkgate-estimating_fees/">Estimating StarkGate fees</a>
   </li>
+  <li class="nav-item" data-depth="4">
+    <a 
+       class="nav-link"
+     href="../../../tools/dai_token_migration/">Migrating DAI v0 to DAI</a>
+  </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="3">
@@ -587,9 +602,26 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 <div class="paragraph">
 <p>Gets the hash of a specific Starknet block within the range of <code>[<em>first_v0_12_0_block</em>, <em>current_block</em> - 10]</code>.</p>
 </div>
+<h3 id="arguments" class="discrete">Arguments</h3>
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 25%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<code><em>block_number</em> u64</code>
+</td>
+<td class="hdlist2">
+<p>The number of the block whose hash you want to get.</p>
+</td>
+</tr>
+</table>
+</div>
 <h3 id="return_values" class="discrete">Return values</h3>
 <div class="paragraph">
-<p>Returns the hash of the given block.</p>
+<p>The hash of the specified block.</p>
 </div>
 <h3 id="common_library" class="discrete">Common library</h3>
 <div class="paragraph">
@@ -625,7 +657,7 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 <div class="sect1">
 <h2 id="get_execution_info"><a class="anchor" href="#get_execution_info"></a><code>get_execution_info</code></h2>
 <div class="sectionbody">
-<h4 id="syntax_2" class="discrete">Syntax</h4>
+<h3 id="syntax_2" class="discrete">Syntax</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">extern fn get_execution_info_syscall() -&gt; SyscallResult&lt;Box&lt;starknet::info::ExecutionInfo&gt;&gt; implicits(
@@ -633,35 +665,68 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 ) nopanic;</code></pre>
 </div>
 </div>
-<h4 id="description_2" class="discrete">Description</h4>
+<h3 id="description_2" class="discrete">Description</h3>
 <div class="paragraph">
-<p>Gets information about the original transaction.</p>
+<p>Gets information about the currently executing block and the transactions in the block. For a complete description of this information, see <a href="../execution_info/" class="xref page">Execution information</a></p>
 </div>
 <div class="paragraph">
-<p>In Cairo 1.0, all block/transaction/execution context getters are batched into this single system call.</p>
+<p>This single system call contains all information for a block, transaction, and execution context.</p>
 </div>
-<h4 id="arguments" class="discrete">Arguments</h4>
 <div class="paragraph">
-<p>None.</p>
+<p>When an account&#8217;s <code>__validate__</code>, <code>__validate_deploy__</code>, or <code>__validate_declare__</code> function calls <code>get_execution_info</code>, the return values for <code>block_timestamp</code> and <code>block_number</code> are modified as follows:</p>
 </div>
-<h4 id="return_values_2" class="discrete">Return values</h4>
 <div class="ulist">
 <ul>
 <li>
-<p>A <a href="https://github.com/starkware-libs/cairo/blob/efbf69d4e93a60faa6e1363fd0152b8fcedbb00a/corelib/src/starknet/info.cairo#L8">struct</a> containing the execution info.</p>
+<p><code>block_timestamp</code> returns the hour, rounded down to the nearest hour.</p>
+</li>
+<li>
+<p><code>block_number</code> returns the block number, rounded down to the nearest multiple of 100.</p>
 </li>
 </ul>
 </div>
-<h4 id="common_library_2" class="discrete">Common library</h4>
+<h3 id="arguments_2" class="discrete">Arguments</h3>
+<div class="paragraph">
+<p>None.</p>
+</div>
+<h3 id="return_values_2" class="discrete">Return values</h3>
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 25%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<a href="https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/info.cairo#L8"><code>ExecutionInfo</code></a>
+</td>
+<td class="hdlist2">
+<p>A struct that contains information about the currently executing function, transaction, and block.</p>
+</td>
+</tr>
+</table>
+</div>
+<h3 id="common_library_2" class="discrete">Common library</h3>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L35" target="_blank" rel="noopener"><code>syscalls.cairo</code></a></p>
+</div>
+<h3 id="example" class="discrete">Example</h3>
+<div class="paragraph">
+<p>This example shows how to pull the block number from the <code>ExecutionInfo</code> struct.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let execution_info = get_execution_info().unbox();
+let block_info = execution_info.block_info.unbox();
+let block number = block_info.block_number;</code></pre>
+</div>
 </div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="call_contract"><a class="anchor" href="#call_contract"></a><code>call_contract</code></h2>
 <div class="sectionbody">
-<h4 id="syntax_3" class="discrete">Syntax</h4>
+<h3 id="syntax_3" class="discrete">Syntax</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">extern fn call_contract_syscall(
@@ -669,7 +734,7 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 ) -&gt; SyscallResult&lt;Span&lt;felt252&gt;&gt; implicits(GasBuiltin, System) nopanic;</code></pre>
 </div>
 </div>
-<h4 id="description_3" class="discrete">Description</h4>
+<h3 id="description_3" class="discrete">Description</h3>
 <div class="paragraph">
 <p>Calls a given contract. This system call expects the address of the called contract, a selector for a function within that contract, and call arguments.</p>
 </div>
@@ -680,17 +745,17 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 <i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
-<div class="paragraph">
-<p>An internal call can&#8217;t return <code>Err(_)</code> as this is not handled by the sequencer and the Starknet OS.</p>
-</div>
-<div class="paragraph">
-<p>If <code>call_contract_syscall</code> fails, this can&#8217;t be caught and will therefore result in the entire transaction being reverted.</p>
-</div>
+===
+An internal call can&#8217;t return <code>Err(_)</code> as this is not handled by the sequencer and the Starknet OS.
 </td>
 </tr>
 </table>
 </div>
-<h4 id="arguments_2" class="discrete">Arguments</h4>
+<div class="paragraph">
+<p>If <code>call_contract_syscall</code> fails, this can&#8217;t be caught and will therefore result in the entire transaction being reverted.
+===</p>
+</div>
+<h3 id="arguments_3" class="discrete">Arguments</h3>
 <div class="hdlist">
 <table>
 <colgroup>
@@ -723,7 +788,7 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 </tr>
 </table>
 </div>
-<h4 id="return_values_3" class="discrete">Return values</h4>
+<h3 id="return_values_3" class="discrete">Return values</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -731,7 +796,7 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 </li>
 </ul>
 </div>
-<h4 id="common_library_3" class="discrete">Common library</h4>
+<h3 id="common_library_3" class="discrete">Common library</h3>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L10" target="_blank" rel="noopener"><code>syscalls.cairo</code></a></p>
 </div>
@@ -757,7 +822,7 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 <div class="sect1">
 <h2 id="deploy"><a class="anchor" href="#deploy"></a><code>deploy</code></h2>
 <div class="sectionbody">
-<h4 id="syntax_4" class="discrete">Syntax</h4>
+<h3 id="syntax_4" class="discrete">Syntax</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">extern fn deploy_syscall(
@@ -768,11 +833,11 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 ) -&gt; SyscallResult&lt;(ContractAddress, Span::&lt;felt252&gt;)&gt; implicits(GasBuiltin, System) nopanic;</code></pre>
 </div>
 </div>
-<h4 id="description_4" class="discrete">Description</h4>
+<h3 id="description_4" class="discrete">Description</h3>
 <div class="paragraph">
 <p>Deploys a new instance of a previously declared class.</p>
 </div>
-<h4 id="arguments_3" class="discrete">Arguments</h4>
+<h3 id="arguments_4" class="discrete">Arguments</h3>
 <div class="hdlist">
 <table>
 <colgroup>
@@ -813,8 +878,8 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 </tr>
 </table>
 </div>
+<h3 id="return_values_4" class="discrete">Return values</h3>
 <div class="ulist">
-<div class="title">Return values</div>
 <ul>
 <li>
 <p>A tuple wrapped with <code>SyscallResult</code> where:</p>
@@ -831,7 +896,7 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 </li>
 </ul>
 </div>
-<h4 id="common_library_4" class="discrete">Common library</h4>
+<h3 id="common_library_4" class="discrete">Common library</h3>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/syscalls.cairo#L20" target="_blank" rel="noopener"><code>syscalls.cairo</code></a></p>
 </div>
@@ -840,7 +905,7 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 <div class="sect1">
 <h2 id="emit_event"><a class="anchor" href="#emit_event"></a><code>emit_event</code></h2>
 <div class="sectionbody">
-<h4 id="syntax_5" class="discrete">Syntax</h4>
+<h3 id="syntax_5" class="discrete">Syntax</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">extern fn emit_event_syscall(
@@ -848,14 +913,14 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 ) -&gt; SyscallResult&lt;()&gt; implicits(GasBuiltin, System) nopanic;</code></pre>
 </div>
 </div>
-<h4 id="description_5" class="discrete">Description</h4>
+<h3 id="description_5" class="discrete">Description</h3>
 <div class="paragraph">
 <p>Emits an event with a given set of keys and data.</p>
 </div>
 <div class="paragraph">
 <p>For more information, and for a higher-level syntax for emitting events, see <a href="../starknet-events/" class="xref page">Starknet events</a>.</p>
 </div>
-<h4 id="arguments_4" class="discrete">Arguments</h4>
+<h3 id="arguments_5" class="discrete">Arguments</h3>
 <div class="hdlist">
 <table>
 <colgroup>
@@ -880,15 +945,15 @@ accessing the contract&#8217;s storage, that standalone programs do not require.
 </tr>
 </table>
 </div>
-<h4 id="return_values_4" class="discrete">Return values</h4>
+<h3 id="return_values_5" class="discrete">Return values</h3>
 <div class="paragraph">
 <p>None.</p>
 </div>
-<h4 id="common_library_5" class="discrete">Common library</h4>
+<h3 id="common_library_5" class="discrete">Common library</h3>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L30" target="_blank" rel="noopener"><code>syscalls.cairo</code></a></p>
 </div>
-<h4 id="example" class="discrete">Example</h4>
+<h3 id="example_2" class="discrete">Example</h3>
 <div class="paragraph">
 <p>The following example emits an event with two keys, the strings <code>key</code> and <code>deposit</code> and three data elements: <code>1</code>, <code>2</code>, and <code>3</code>.</p>
 </div>
@@ -904,7 +969,7 @@ emit_event_syscall(keys, values).unwrap_syscall();</code></pre>
 <div class="sect1">
 <h2 id="library_call"><a class="anchor" href="#library_call"></a><code>library_call</code></h2>
 <div class="sectionbody">
-<h4 id="syntax_6" class="discrete">Syntax</h4>
+<h3 id="syntax_6" class="discrete">Syntax</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">extern fn library_call_syscall(
@@ -912,14 +977,14 @@ emit_event_syscall(keys, values).unwrap_syscall();</code></pre>
 ) -&gt; SyscallResult&lt;Span&lt;felt252&gt;&gt; implicits(GasBuiltin, System) nopanic;</code></pre>
 </div>
 </div>
-<h4 id="description_6" class="discrete">Description</h4>
+<h3 id="description_6" class="discrete">Description</h3>
 <div class="paragraph">
 <p>Calls the requested function in any previously declared class. The class is only used for its logic.</p>
 </div>
 <div class="paragraph">
 <p>This system call replaces the known delegate call functionality from Ethereum, with the important difference that there is only one contract involved.</p>
 </div>
-<h4 id="arguments_5" class="discrete">Arguments</h4>
+<h3 id="arguments_6" class="discrete">Arguments</h3>
 <div class="hdlist">
 <table>
 <colgroup>
@@ -952,7 +1017,7 @@ emit_event_syscall(keys, values).unwrap_syscall();</code></pre>
 </tr>
 </table>
 </div>
-<h4 id="return_values_5" class="discrete">Return values</h4>
+<h3 id="return_values_6" class="discrete">Return values</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -960,7 +1025,7 @@ emit_event_syscall(keys, values).unwrap_syscall();</code></pre>
 </li>
 </ul>
 </div>
-<h4 id="common_library_6" class="discrete">Common library</h4>
+<h3 id="common_library_6" class="discrete">Common library</h3>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L43" target="_blank" rel="noopener"><code>syscalls.cairo</code></a></p>
 </div>
@@ -969,7 +1034,7 @@ emit_event_syscall(keys, values).unwrap_syscall();</code></pre>
 <div class="sect1">
 <h2 id="send_message_to_L1"><a class="anchor" href="#send_message_to_L1"></a><code>send_message_to_L1</code></h2>
 <div class="sectionbody">
-<h4 id="syntax_7" class="discrete">Syntax</h4>
+<h3 id="syntax_7" class="discrete">Syntax</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">extern fn send_message_to_l1_syscall(
@@ -977,7 +1042,7 @@ emit_event_syscall(keys, values).unwrap_syscall();</code></pre>
 ) -&gt; SyscallResult&lt;()&gt; implicits(GasBuiltin, System) nopanic;</code></pre>
 </div>
 </div>
-<h4 id="description_7" class="discrete">Description</h4>
+<h3 id="description_7" class="discrete">Description</h3>
 <div class="paragraph">
 <p>Sends a message to L1.</p>
 </div>
@@ -987,7 +1052,7 @@ emit_event_syscall(keys, values).unwrap_syscall();</code></pre>
 <div class="paragraph">
 <p>For more information, see Starknet&#8217;s <a href="../../Network_Architecture/messaging-mechanism/" class="xref page">messaging mechanism</a>.</p>
 </div>
-<h4 id="arguments_6" class="discrete">Arguments</h4>
+<h3 id="arguments_7" class="discrete">Arguments</h3>
 <div class="hdlist">
 <table>
 <colgroup>
@@ -1012,15 +1077,15 @@ emit_event_syscall(keys, values).unwrap_syscall();</code></pre>
 </tr>
 </table>
 </div>
-<h4 id="return_values_6" class="discrete">Return values</h4>
+<h3 id="return_values_7" class="discrete">Return values</h3>
 <div class="paragraph">
 <p>None.</p>
 </div>
-<h4 id="common_library_7" class="discrete">Common library</h4>
+<h3 id="common_library_7" class="discrete">Common library</h3>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L51" target="_blank" rel="noopener"><code>syscalls.cairo</code></a></p>
 </div>
-<h4 id="example_2" class="discrete">Example</h4>
+<h3 id="example_3" class="discrete">Example</h3>
 <div class="paragraph">
 <p>The following example sends a message whose content is <code>(1,2)</code> to the L1 contract whose address is <code>3423542542364363</code>.</p>
 </div>
@@ -1037,7 +1102,7 @@ send_message_to_l1_syscall(payload).unwrap_syscall();</code></pre>
 <div class="sect1">
 <h2 id="replace_class"><a class="anchor" href="#replace_class"></a><code>replace_class</code></h2>
 <div class="sectionbody">
-<h4 id="syntax_8" class="discrete">Syntax</h4>
+<h3 id="syntax_8" class="discrete">Syntax</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">extern fn replace_class_syscall(
@@ -1045,7 +1110,7 @@ send_message_to_l1_syscall(payload).unwrap_syscall();</code></pre>
 ) -&gt; SyscallResult&lt;()&gt; implicits(GasBuiltin, System) nopanic;</code></pre>
 </div>
 </div>
-<h4 id="description_8" class="discrete">Description</h4>
+<h3 id="description_8" class="discrete">Description</h3>
 <div class="paragraph">
 <p>Once <code>replace_class</code> is called, the class of the calling contract (i.e. the contract whose address is returned by <code>get_contract_address</code> at the time the syscall is called) will be replaced
 by the class whose hash is given by the class_hash argument.</p>
@@ -1068,7 +1133,7 @@ the <code>call_contract</code> syscall in the same transaction (after the replac
 </tr>
 </table>
 </div>
-<h4 id="arguments_7" class="discrete">Arguments</h4>
+<h3 id="arguments_8" class="discrete">Arguments</h3>
 <div class="hdlist">
 <table>
 <colgroup>
@@ -1085,11 +1150,11 @@ the <code>call_contract</code> syscall in the same transaction (after the replac
 </tr>
 </table>
 </div>
-<h4 id="return_values_7" class="discrete">Return values</h4>
+<h3 id="return_values_8" class="discrete">Return values</h3>
 <div class="paragraph">
 <p>None.</p>
 </div>
-<h4 id="common_library_8" class="discrete">Common library</h4>
+<h3 id="common_library_8" class="discrete">Common library</h3>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L77" target="_blank" rel="noopener"><code>syscalls.cairo</code></a></p>
 </div>
@@ -1098,7 +1163,7 @@ the <code>call_contract</code> syscall in the same transaction (after the replac
 <div class="sect1">
 <h2 id="storage_read"><a class="anchor" href="#storage_read"></a><code>storage_read</code></h2>
 <div class="sectionbody">
-<h4 id="syntax_9" class="discrete">Syntax</h4>
+<h3 id="syntax_9" class="discrete">Syntax</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">extern fn storage_read_syscall(
@@ -1106,7 +1171,7 @@ the <code>call_contract</code> syscall in the same transaction (after the replac
 ) -&gt; SyscallResult&lt;felt252&gt; implicits(GasBuiltin, System) nopanic;</code></pre>
 </div>
 </div>
-<h4 id="description_9" class="discrete">Description</h4>
+<h3 id="description_9" class="discrete">Description</h3>
 <div class="paragraph">
 <p>Gets the value of a key in the storage of the calling contract.</p>
 </div>
@@ -1116,7 +1181,7 @@ the <code>call_contract</code> syscall in the same transaction (after the replac
 <div class="paragraph">
 <p>For information on accessing storage by using the storage variables, see <a href="../contract-storage/#storage_variables" class="xref page">storage variables</a>.</p>
 </div>
-<h4 id="arguments_8" class="discrete">Arguments</h4>
+<h3 id="arguments_9" class="discrete">Arguments</h3>
 <div class="hdlist">
 <table>
 <colgroup>
@@ -1141,7 +1206,7 @@ the <code>call_contract</code> syscall in the same transaction (after the replac
 </tr>
 </table>
 </div>
-<h4 id="return_values_8" class="discrete">Return values</h4>
+<h3 id="return_values_9" class="discrete">Return values</h3>
 <div class="ulist">
 <ul>
 <li>
@@ -1149,11 +1214,11 @@ the <code>call_contract</code> syscall in the same transaction (after the replac
 </li>
 </ul>
 </div>
-<h4 id="common_library_9" class="discrete">Common library</h4>
+<h3 id="common_library_9" class="discrete">Common library</h3>
 <div class="paragraph">
 <p><a href="https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L60" target="_blank" rel="noopener"><code>syscalls.cairo</code></a></p>
 </div>
-<h4 id="example_3" class="discrete">Example</h4>
+<h3 id="example_4" class="discrete">Example</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">use starknet::storage_access::storage_base_address_from_felt252;
@@ -1169,7 +1234,7 @@ storage_read_syscall(0, storage_address).unwrap_syscall()</code></pre>
 <div class="sect1">
 <h2 id="storage_write"><a class="anchor" href="#storage_write"></a><code>storage_write</code></h2>
 <div class="sectionbody">
-<h4 id="syntax_10" class="discrete">Syntax</h4>
+<h3 id="syntax_10" class="discrete">Syntax</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">extern fn storage_write_syscall(
@@ -1177,7 +1242,7 @@ storage_read_syscall(0, storage_address).unwrap_syscall()</code></pre>
 ) -&gt; SyscallResult&lt;()&gt; implicits(GasBuiltin, System) nopanic;</code></pre>
 </div>
 </div>
-<h4 id="description_10" class="discrete">Description</h4>
+<h3 id="description_10" class="discrete">Description</h3>
 <div class="paragraph">
 <p>Sets the value of a key in the storage of the calling contract.</p>
 </div>
@@ -1187,7 +1252,7 @@ storage_read_syscall(0, storage_address).unwrap_syscall()</code></pre>
 <div class="paragraph">
 <p>For information on accessing storage by using the storage variables, see <a href="../contract-storage/#storage_variables" class="xref page">storage variables</a>.</p>
 </div>
-<h4 id="arguments_9" class="discrete">Arguments</h4>
+<h3 id="arguments_10" class="discrete">Arguments</h3>
 <div class="hdlist">
 <table>
 <colgroup>
@@ -1220,7 +1285,7 @@ storage_read_syscall(0, storage_address).unwrap_syscall()</code></pre>
 </tr>
 </table>
 </div>
-<h4 id="return_values_9" class="discrete">Return values</h4>
+<h3 id="return_values_10" class="discrete">Return values</h3>
 <div class="paragraph">
 <p>None.</p>
 </div>
@@ -1231,7 +1296,7 @@ storage_read_syscall(0, storage_address).unwrap_syscall()</code></pre>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../universal-deployer/">Universal Deployer Contract</a></span>
+  <span class="prev"><a href="../cairo-and-sierra/">Cairo and Sierra</a></span>
   <span class="next"><a href="../serialization_of_Cairo_types/">Serialization of Cairo types</a></span>
 </nav>
 </article>

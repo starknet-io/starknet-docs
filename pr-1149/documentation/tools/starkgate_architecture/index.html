@@ -310,6 +310,11 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
+     href="../../architecture_and_concepts/Accounts/universal-deployer/">Universal Deployer Contract</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
      href="../../architecture_and_concepts/Accounts/simplified_transaction_flow/">Simplified transaction flow</a>
   </li>
 </ul>
@@ -361,7 +366,12 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../architecture_and_concepts/Smart_Contracts/universal-deployer/">Universal Deployer Contract</a>
+     href="../../architecture_and_concepts/Smart_Contracts/system-calls-cairo1/">System calls</a>
+  </li>
+  <li class="nav-item" data-depth="3">
+    <a 
+       class="nav-link"
+     href="../../architecture_and_concepts/Smart_Contracts/serialization_of_Cairo_types/">Serialization of Cairo types</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -371,7 +381,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../architecture_and_concepts/Smart_Contracts/serialization_of_Cairo_types/">Serialization of Cairo types</a>
+     href="../../architecture_and_concepts/Smart_Contracts/execution_info/">Execution information for the current block</a>
   </li>
 </ul>
   </li>
@@ -505,6 +515,11 @@
     <a 
        class="nav-link"
      href="../starkgate-estimating_fees/">Estimating StarkGate fees</a>
+  </li>
+  <li class="nav-item" data-depth="4">
+    <a 
+       class="nav-link"
+     href="../dai_token_migration/">Migrating DAI v0 to DAI</a>
   </li>
 </ul>
   </li>
@@ -664,31 +679,112 @@
 <div class="paragraph">
 <p>All token bridges that existed prior to StarkGate 2.0 (Mainnet: January 2024) besides supporting all StarkGate 2.0 functionality, are backward compatible. Each token was bridged with a unique, custom pair of L1 and L2 bridge contracts. The L1 bridge is an instance of <a href="https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/solidity/LegacyBridge.sol"><code>LegacyBridge.sol</code></a>, and the L2 bridge is an instance of <a href="https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/cairo/legacy_bridge_eic.cairo"><code>legacy_bridge_eic.cairo</code></a>.</p>
 </div>
+<div class="sect2">
+<h3 id="example"><a class="anchor" href="#example"></a>Example: USDC contracts</h3>
 <div class="ulist">
-<div class="title">Example: USDC contracts</div>
 <ul>
 <li>
-<p>L1 ERC-20 contract address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"</p>
+<p>L1 ERC-20 contract address: <code>0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48</code></p>
 </li>
 <li>
-<p>L2 ERC-20 contract address: "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",</p>
+<p>L2 ERC-20 contract address: <code>0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8</code></p>
 </li>
 <li>
-<p>L1 bridge contract address: "0xF6080D9fbEEbcd44D89aFfBFd42F098cbFf92816",</p>
+<p>L1 bridge contract address: <code>0xF6080D9fbEEbcd44D89aFfBFd42F098cbFf92816</code></p>
 </li>
 <li>
-<p>L2 bridge contract address: "0x05cd48fccbfd8aa2773fe22c217e808319ffcc1c5a6a463f7d8fa2da48218196"</p>
+<p>L2 bridge contract address: <code>0x05cd48fccbfd8aa2773fe22c217e808319ffcc1c5a6a463f7d8fa2da48218196</code></p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>Go to StarkGate USDC on Etherscan: <a href="https://etherscan.io/address/0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract"><code>0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract</code></a></p>
+<p>Consider the <code>Deposit</code> functions for the L1 bridge contract for USDC on Etherscan: <a href="https://etherscan.io/address/0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract"><code>0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract</code></a></p>
 </div>
 <div class="paragraph">
-<p>Notice that there are two <code>Deposit</code> functions. This shows that the bridge includes support for the legacy functionality as well as the modern functionality.  The one that says <strong>Support Legacy ABI</strong> does not have the <code>token (address)</code> parameter. Because the contract that contains this function only supports USDC, having the address of the token is superfluous. On the other hand, the StarkGate 2.0 version puts that token together with all other tokens, so it&#8217;s necessary to state the address of the token in the deposit function.</p>
+<p>This contract has the following two <code>deposit</code> functions: <code>deposit (0x0efe6a8b)</code> and <code>deposit (0xe2bbb158)</code>, which shows that the bridge includes support for the legacy functionality as well as the modern functionality:</p>
 </div>
+<div class="hdlist">
+<table>
+<colgroup>
+<col style="width: 25%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<code>deposit (0x0efe6a8b)</code>
+</td>
+<td class="hdlist2">
+<p>The StarkGate 2.0 contract, which includes support for all tokens within a single contract, requiring that you enter the address of the token in the deposit function.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>deposit (0xe2bbb158)</code>
+</td>
+<td class="hdlist2">
+<p>The legacy contract, which is labeled <strong>Support Legacy ABI</strong>. This function does not include the <code>token (address)</code> parameter, because the contract that contains this function only supports USDC. Therefore, the address of the token is superfluous.</p>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="legacy_bridges"><a class="anchor" href="#legacy_bridges"></a>List of legacy bridges</h3>
 <div class="paragraph">
-<p>Legacy tokens:</p>
+<p>The following tokens have legacy contracts as well as StarkGate 2.0 contracts:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Starknet Token (STRK)</p>
+</li>
+<li>
+<p>Starknet Voting Token (vSTRK)</p>
+</li>
+<li>
+<p>Wrapped BTC (WBTC)</p>
+</li>
+<li>
+<p>USD Coin (USDC)</p>
+</li>
+<li>
+<p>Tether USD (USDT)</p>
+</li>
+<li>
+<p>Ether (ETH)</p>
+</li>
+<li>
+<p>Dai Stablecoin (DAI)</p>
+</li>
+<li>
+<p>Dai Stablecoin (DAI) (Dai v0)</p>
+</li>
+<li>
+<p>Wrapped liquid staked Ether 2.0 (wstETH)</p>
+</li>
+<li>
+<p>Rocket Pool ETH (rETH)</p>
+</li>
+<li>
+<p>R Stablecoin &#174;</p>
+</li>
+<li>
+<p>Frax (FRAX)</p>
+</li>
+<li>
+<p>Frax Share (FXS)</p>
+</li>
+<li>
+<p>Staked Frax Ether (sfrxETH)</p>
+</li>
+<li>
+<p>LUSD Stablecoin (LUSD)</p>
+</li>
+<li>
+<p>Uniswap (UNI)</p>
+</li>
+</ul>
+</div>
 </div>
 </div>
 </div>
