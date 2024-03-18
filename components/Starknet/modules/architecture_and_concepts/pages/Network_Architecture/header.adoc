@@ -3,36 +3,44 @@
 [id="block_structure"]
 = Block structure
 
-In Starknet, a block is a list of transactions, and a block header that contains the following fields:
+A Starknet block is a list of transactions and a block header that contains the following fields:
 
 
 [%autowidth]
 |===
 | Name | Type | Description
 
-| `parent_block_hash` | `FieldElement` | The hash of this block's parent
-|`block_number` | `Integer` | The number (height) of this block
-| `global_state_root` | `FieldElement` | The state xref:../Network_Architecture/starknet-state.adoc#state_commitment[commitment] after this block
-|`sequencer_address` | `ContractAddress` | The Starknet address of the sequencer who created this block
-| `block_timestamp` | `Timestamp` | The time the sequencer created this block before executing transactions
-|`transaction_count` | `Integer` | The number of transactions in a block
-| `transaction_commitment` | `FieldElement` | A commitment to the transactions included in the block;
-|`event_count` | `Integer` | The number of events
-| `event_commitment` | `FieldElement` | A commitment to the events produced in this block
-| `l1_gas_price` | `(Integer, Integer)` | The price of L1 gas that was used while constructing this block. L1 gas prices are relevant for storage updates and L1→L2 messages (today, computation is also priced in terms of L1 gas, but this will change in the future). The price is specified in both wei and fri, hence the two numbers.
-| `l1_data_gas_price` | `(Integer, Integer)` | The price of L1 blob gas that was used while constructing this block. If the `l1_DA_MODE` of the block is set to `BLOB`, L1 blob gas prices will determine the storage update cost. The price is specified in both wei and fri, hence the two numbers.
-| `l1_da_mode` | `String` | `CALLDATA` or `BLOB`, depending on how Starknet state diffs are sent to L1
-| `protocol_version` | `Integer` | The version of the Starknet protocol used when creating this block.
+| `parent_block_hash` | `FieldElement` | The hash of the block's parent.
+|`block_number` | `Integer` | The number, that is, the height, of this block.
+| `global_state_root` | `FieldElement` | The xref:../Network_Architecture/starknet-state.adoc#state_commitment[state commitment] after the block.
+|`sequencer_address` | `ContractAddress` | The Starknet address of the sequencer that created the block.
+| `block_timestamp` | `Timestamp` | The time the sequencer created the block, before executing transactions, in seconds since the Unix epoch.
+|`transaction_count` | `Integer` | The number of transactions in the block.
+| `transaction_commitment` | `FieldElement` | A commitment to the transactions included in the block.
+
+The root of a 64-bit high binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to stem:[$${h(transaction \space hash, signature)}$$] if the stem:[$i'th$] transaction is an `invoke` transaction and stem:[$h(0,0)$] otherwise.
+|`event_count` | `Integer` | The number of events in the block.
+| `event_commitment` | `FieldElement` | A commitment to the events produced in the block.
+
+The root of a 64-bit high binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] event.
+| `l1_gas_price` | `(Integer~wei~, Integer~fri~)` | The price of L1 gas that was used while constructing the block. L1 gas prices apply to storage updates and L1->L2 messages. As of March 2023, computation is also priced in terms of L1 gas, but this will change in the future.
+
+`Integer~wei~` is the price in wei. `Integer~fri~` is the price in fri.
+| `l1_data_gas_price` | `(Integer~wei~, Integer~fri~)` | The price of L1 blob gas that was used while constructing the block. If the `l1_DA_MODE` of the block is set to `BLOB`, L1 blob gas prices determines the storage update cost.
+
+`Integer~wei~` is the price in wei. `Integer~fri~` is the price in fri.
+| `l1_da_mode` | `String` | `CALLDATA` or `BLOB`, depending on how Starknet state diffs are sent to L1.
+| `protocol_version` | `Integer` | The version of the Starknet protocol used when creating the block.
 
 
 |===
 
-Where:
-
-
-[horizontal,labelwidth='30']
-`event_commitment`:: is the root of a 64-bit high binary Merkle Patricia tree. The leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] event.
-`transaction_commitment`:: is the root of a 64-bit high binary Merkle Patricia tree. The leaf at index stem:[$i$] corresponds to stem:[$${h(transaction \space hash, signature)}$$] if the stem:[$i'th$] transaction is an `invoke` transaction and stem:[$h(0,0)$] otherwise.
+// Where:
+//
+//
+// [horizontal,labelwidth='30']
+// `event_commitment`:: is the root of a 64-bit high binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] event.
+// `transaction_commitment`:: is the root of a 64-bit high binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to stem:[$${h(transaction \space hash, signature)}$$] if the stem:[$i'th$] transaction is an `invoke` transaction and stem:[$h(0,0)$] otherwise.
 
 
 
