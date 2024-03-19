@@ -1,6 +1,6 @@
 [id="account_interface_functions"]
 = Account interface functions
-
+:toc:
 == Overview
 
 The functions in the table xref:#starknet_account_interface_functions[] are part of account contracts. Where required, you must include these functions within your contract. The logic of these functions can be mostly arbitrary, with a few limitations. For information on these limitations, see xref:#invalid_transactions[].
@@ -29,15 +29,15 @@ Separating the validation and execution stages guarantees payment to sequencers 
 
 The validation functions have limitations, described below, that are designed to prevent the following attacks:
 
-* Denial of Service (DoS) attacks. Without these limitations, an attack could cause the sequencer to perform a large amount of work before a transaction fails validation, such as by sending multiple, invalid `DEPLOY_ACCOUNT` transactions. This work would not be eligible for fee payment.
+* Denial of Service (DoS) attacks. Without these limitations, an attack could cause the sequencer to perform a large amount of work before a transaction fails validation, such as by sending multiple `DEPLOY_ACCOUNT` transactions that are invalid as a result of the constructor or `+__validate_deploy__+` failing. This work would not be eligible for fee payment.
 * Even if the validation is simple, the following attack could still be possible:
 . An attacker fills the mempool with transactions that are valid at the time they are sent.
 . A sequencer starts executing them, thinking that by the time it produces a block, they will still be valid.
 . However, shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it's included in the block, by offering higher fees for this one transaction, before the sequencer can publish the block.
-* Consider many validation functions checking that the value of a storage slot is `1`, and the attacker's transaction later sets it to `0`. To handle this issue, we add some further limitations. By restricting validation functions from calling external contracts, Starknet prevents this attack.
+* Consider many validation functions checking that the value of a storage slot is `1`, and the attacker's transaction later sets it to `0`. Restricting validation functions from calling external contracts prevents this attack.
 
 [#limitations_of_validation]
-== Attack prevention: Limitations of validation
+== Limitations on validation that prevent attacks
 
 The limitations listed here apply to the following validation functions:
 
@@ -54,12 +54,13 @@ This restriction enforces a single storage update being able to invalidate only 
 
 So the fees you need to pay to invalidate transactions in the mempool are directly proportional to the number of unique accounts. For example, if the fee you need to pay to invalidate a transaction from one account is stem:[$$x$$], then the price of invalidating ten transactions from ten different accounts is stem:[$$10x$$].
 ====
+
 * The maximum number of computational steps, measured in Cairo steps, for a validation function is 1,000,000.
 * A builtin can be applied a limited number of times. #What's the limit?#
-* Access is restricted to `+sequencer_address+` in the `+get_execution_info+` syscall. The syscall returns zero values for `+sequencer_address+`.
-* Access is restricted to the following syscalls:
-** `+get_block_hash+` for Cairo contracts
-** `+get_sequencer_address+` for Cairo 0 contracts
+* Access is restricted to `sequencer_address` in the `get_execution_info` syscall. The syscall returns zero values for `sequencer_address`.
+* The following syscalls cannot be called:
+** `get_block_hash`
+** `get_sequencer_address` `get_sequencer_address` is only supported for Cairo 0 contracts.
 
 [NOTE]
 ====
@@ -146,6 +147,11 @@ The sequencer calls this function upon receiving a `DECLARE` transaction.
 
 If the contract declares other contracts and handles the corresponding gas fees, this function authenticates the contract declaration.
 
+.Parameters
+
+[horizontal,labelwidth="35",role="stripes-odd"]
+`class_hash: _felt_`:: The class hash.
+
 .Returns
 
 If the signature is verified, the function should return the string `VALID` as `felt252` value. If not, it should return any other value, such as `0`.
@@ -170,7 +176,7 @@ You can use this function to set up an account contract without linking it to th
 [horizontal,labelwidth="35",role="stripes-odd"]
 `class_hash: _felt_`:: The class hash.
 `contract_address_salt: _felt_`:: The contract address salt.
-`<__constructor_arguments__>`:: The arguments expected by the contract’s constructor. The compiler enforces this constructor.
+`<__constructor_arguments__>`:: The arguments expected by the contract’s constructor. The inputs to the constructor must be identical to the rest of the inputs for validate_deploy. The compiler enforces this requirement.
 
 [NOTE]
 ====
@@ -201,5 +207,5 @@ fn constructor(ref self: ContractState, public_key: felt252)
 
 [NOTE]
 ====
-You can access the transaction hash and value for `max_fee` by getting transaction info wit the `get_execution_info` system call.
+You can access the transaction hash and value for `max_fee` by getting transaction info with the `get_execution_info` system call.
 ====
