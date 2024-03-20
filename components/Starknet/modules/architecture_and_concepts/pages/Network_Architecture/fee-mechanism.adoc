@@ -20,9 +20,8 @@ The following formula describes the overall fee, stem:[F], for a transaction:
 ++++
 \begin{align}
 F  = \; & \text{gas_price}\cdot\Bigg(\max_k v_k w_k + \\
-& \quad + \; \text{da_calldata_cost}\left(3t + \sum\limits_{i=1}^t q_i\right) + \\
-& \quad + \; \text{message_calldata_cost}\cdot\left(3t + \sum\limits_{i=1}^t q_i\right) + \\
-& \quad + \; \text{l1_storage_write_cost}\cdot t + \\
+& \quad + \; \text{message_calldata_cost}\cdot 3t + (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
+& \quad + \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t + \; \\
 & \quad + \; \text{l2_payload_costs}\Bigg) + \\
 & \text{data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\bigg(2(n-1)+2(m-1) + \ell +2D \bigg)
 \end{align}
@@ -39,13 +38,11 @@ For more information see xref:#calculation_of_computation_costs[Calculation of c
 * stem:[$t$] is the number of L2->L1 messages sent, where the corresponding payload sizes are denoted by stem:[$q_1,...,q_t$].
 * stem:[$\ell$] is the number of contracts whose class was changed, which happens on contract deployment and when applying the `replace_class` syscall.
 * stem:[$D$] is 1 if the transaction is of type `DECLARE` and 0 otherwise. Declare transactions need to post on L1 the new class hash and compiled class hash which are added to the state.
-* stem:[$\text{da_calldata_cost}$] is 551 gas per 32-byte word. This cost is derived as follows: 
-+
-** 512 gas per 32-byte word for calldata.
-** ~100 gas for onchain hashing that happens for every sent word.
-** a 10% discount, because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.
-* stem:[$\text{message_calldata_cost}$] is 512 gas per 32-byte word. For more details, see xref:#l_2-l_1_messages[].
-* stem:[$\text{l1_storage_write_cost}$] is the cost of writing a to a new storage slot on Ethereum, which is 20,000 gas. The reason it appears here is that the hash of an L2->L1 message needs to be recorded on the Starknet core contract on L1. 
+* L2->L1 messages related constants (for more details, see xref:#l_2-l_1_messages[]):
+** stem:[$\text{message_calldata_cost}$] is 1124 gas per 32-byte word. 
+** stem:[$\text{l1_log_data_cost}$] is 256 gas.
+** stem:[$\text{l1_storage_write_cost}$] is the cost of writing a to a new storage slot on Ethereum, which is 20,000 gas.
+** stem:[$\text{log_message_to_l1_cost}$] is 1637 gas.
 * stem:[$\text{l2_payload_costs}$] is the gas cost of data sent over L2. This includes calldata, code, and event emission. For more details see xref:#l2_calldata[].
 * stem:[$\text{felt_size_in_bytes}$] is 32, which is the number of bytes required to encode a single STARK field element.
 
@@ -62,15 +59,23 @@ The following formula describes the overall fee, stem:[F], for a transaction:
 F  = \text{gas_price}\cdot&\Bigg(\max_k v_k w_k + \\
 & + \; \text{da_calldata_cost}\left(2(n-1)+2(m-1) + \ell + 2D + 3t + \sum\limits_{i=1}^t q_i\right)\\ 
 & - \; \text{contract_update_discount}\cdot (n-1) - 240 \\
-& + \; \text{message_calldata_cost}\cdot\left(3t + \sum\limits_{i=1}^t q_i\right) \\
-& + \; \text{l1_storage_write_cost}\cdot t \\
+& + \;  \text{message_calldata_cost}\cdot 3t + (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot\sum\limits_{i=1}^t q_i \\
+& + \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t \\
 & + \; \text{l2_payload_costs}\Bigg)
 \end{align}
 ++++
 
 where:
 
-* stem:[$v, w, n, m, t, \ell, \text{da_calldata_cost}, \text{message_calldata_cost}, \text{l1_storage_write_cost}, D, \text{l2_payload_costs}$] are defined in the same manner as in the blob-based formula above.
+* The following constants are defined in the same manner as in the blob-based formula:
+** stem:[$v, w, n, m, t, \ell, D$]
+** stem:[$\text{message_calldata_cost}, \; \text{l1_log_data_cost}, \; \text{log_message_to_l1_cost}, \; \text{l1_storage_write_cost}$]
+** stem:[$\text{l2_payload_costs}$]
+* stem:[$\text{da_calldata_cost}$] is 551 gas per 32-byte word. This cost is derived as follows: 
++
+** 512 gas per 32-byte word for calldata.
+** ~100 gas for onchain hashing that happens for every sent word.
+** a 10% discount, because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.
 * stem:[$240$] is the gas discount for updating the sender's balance, for the derivation of this number see xref:#storage_updates[].
 * stem:[$\text{contract_update_discount}$] is 312 gas, for the derivation of this discount see xref:#storage_updates[].
 
@@ -263,14 +268,23 @@ When a transaction that raises the `send_message_to_l1` syscall is included in a
 
 Consequently, the gas cost associated with a single L2→L1 message is:
 
+
 [stem]
 ++++
-\text{storage_write_cost} + \left(\text{da_calldata_cost} + \text{message_calldata_cost}\right)\cdot\left(3+\text{payload_size}\right)
+\begin{align}
+\text{MESSAGE_COST} = & \; \text{message_calldata_cost}\cdot\left(3+\text{payload_size}\right) \; + \\
+& + \text{l1_log_data_cost}\cdot\text{payload_size} \; + \\ 
+& + \text{log_message_to_l1_cost} \; + \\
+& + \text{l1_storage_write_cost}
+\end{align}
 ++++
 
-Where stem:[$\text{da_calldata_cost}$] is 551 gas, and stem:[$\text{message_calldata_cost}$] is 512 gas.
-Messages appear twice in the fee formula, and pay both in stem:[$\text{da_calldata_cost}$] and stem:[$\text{message_calldata_cost}$], because 
-they are sent to Ethereum twice: once to the STARK verifier contract, where the additional hashing cost is incurred, and once when it is sent to the Starknet Core Contract as part of the state update transaction.
+Where:
+
+* stem:[$\text{message_calldata_cost}$] is 1124 gas. This is the sum of the 512 gas paid to the core contract on submitting the state update, and 612 gas paid for the submitting the same word to the verifier contract (which incurs ~100 additional gas for hashing). That is, messages are sent to Ethereum twice.
+* stem:[$\text{log_message_to_l1_cost}$] is 1637 gas. This is the fixed cost involved in emitting a `LogMessageToL1` event. This event has two topics and a data array, which adds two data words to the event, resulting in a total of stem:[$375+2\cdot 375+2\cdot 256$] gas (log opcode cost, topic cost, and two data words cost).
+* stem:[$\text{l1_log_data_cost}$] is 256 gas, which is paid for every payload element during the emission of the `LogMessageToL1` event.
+* stem:[$\text{l1_storage_write_cost}$] is 20,000 gas per message which is paid in order to store the message hash on the Starknet core contract. This recording of the message is what later enables the intended L1 contract to consume the message.
 
 [#deployed_contracts]
 === Onchain data: Deployed contracts
