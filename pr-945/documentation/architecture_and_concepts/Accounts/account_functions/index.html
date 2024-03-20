@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Account interface functions :: Starknet documentation</title>
+    <title>Account interface function reference :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Accounts/account_functions/">
     <link rel="prev" href="../approach/">
     <link rel="next" href="../deploying_new_accounts/">
@@ -110,7 +110,7 @@
     <li><a href="../../../">Starknet</a></li>
     <li>Architecture</li>
     <li>Accounts</li>
-    <li><a href="./">Account functions</a></li>
+    <li><a href="./">Account interface function reference</a></li>
   </ul>
 </nav>
   <div class="edit-this-page">
@@ -208,12 +208,12 @@
 <ul class="nav-list">
   <li class="nav-item parent" data-depth="1">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">Release information</span>
+    <span class="nav-text">Versions</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../../../starknet_versions/version_notes/">Release notes</a>
+     href="../../../starknet_versions/version_notes/">Starknet release notes</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -300,7 +300,7 @@
   <li class="nav-item is-current-page" data-depth="3">
     <a 
        class="nav-link"
-     href="./">Account functions</a>
+     href="./">Account interface function reference</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -563,7 +563,7 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Account interface functions</h1>
+<h1 class="page">Account interface function reference</h1>
 <div class="sect1">
 <h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
@@ -599,6 +599,10 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate_deploy__</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Required when deploying an account with a <code>DEPLOY_ACCOUNT</code> <em>transaction</em>.</p></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">constructor</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">If an account does not define a constructor function, the sequencer uses a default constructor function, which is empty.</p></td>
+</tr>
 </tbody>
 </table>
 <div class="paragraph">
@@ -628,7 +632,7 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Denial of Service (DoS) attacks. Without these limitations, an attack could cause the sequencer to perform a large amount of work before a transaction fails validation, such as by sending multiple, invalid <code>DEPLOY_ACCOUNT</code> transactions. This work would not be eligible for fee payment.</p>
+<p>Denial of Service (DoS) attacks. Without these limitations, an attack could cause the sequencer to perform a large amount of work before a transaction fails validation, such as by sending multiple <code>DEPLOY_ACCOUNT</code> transactions that are invalid as a result of the constructor or <code>__validate_deploy__</code> failing. This work would not be eligible for fee payment.</p>
 </li>
 <li>
 <p>Even if the validation is simple, the following attack could still be possible:</p>
@@ -647,14 +651,14 @@
 </div>
 </li>
 <li>
-<p>Consider many validation functions checking that the value of a storage slot is <code>1</code>, and the attacker&#8217;s transaction later sets it to <code>0</code>. To handle this issue, we add some further limitations. By restricting validation functions from calling external contracts, Starknet prevents this attack.</p>
+<p>Consider many validation functions checking that the value of a storage slot is <code>1</code>, and the attacker&#8217;s transaction later sets it to <code>0</code>. Restricting validation functions from calling external contracts prevents this attack.</p>
 </li>
 </ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="limitations_of_validation"><a class="anchor" href="#limitations_of_validation"></a>Attack prevention: Limitations of validation</h2>
+<h2 id="limitations_of_validation"><a class="anchor" href="#limitations_of_validation"></a>Limitations on validation that prevent attacks</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The limitations listed here apply to the following validation functions:</p>
@@ -704,14 +708,14 @@
 <p>Access is restricted to <code>sequencer_address</code> in the <code>get_execution_info</code> syscall. The syscall returns zero values for <code>sequencer_address</code>.</p>
 </li>
 <li>
-<p>Access is restricted to the following syscalls:</p>
+<p>The following syscalls cannot be called:</p>
 <div class="ulist">
 <ul>
 <li>
-<p><code>get_block_hash</code> for Cairo contracts</p>
+<p><code>get_block_hash</code></p>
 </li>
 <li>
-<p><code>get_sequencer_address</code> for Cairo 0 contracts</p>
+<p><code>get_sequencer_address</code> <code>get_sequencer_address</code> is only supported for Cairo 0 contracts.</p>
 </li>
 </ul>
 </div>
@@ -760,7 +764,7 @@
 <h2 id="function_descriptions"><a class="anchor" href="#function_descriptions"></a>Function descriptions</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The functions in this section must be present in account contracts, as noted, with <code>__execute__</code> and <code>__validate__</code> required in all account contracts. However, you define the logic in the these functions as needed, unless noted otherwise, while adhering to the limitations specified in <a href="#limitations_of_validation">Attack prevention: Limitations of validation</a>. As a result, the function descriptions below leave you room to define your own functionality.</p>
+<p>The functions in this section must be present in account contracts, as noted, with <code>__execute__</code> and <code>__validate__</code> required in all account contracts. However, you define the logic in the these functions as needed, unless noted otherwise, while adhering to the limitations specified in <a href="#limitations_of_validation">Limitations on validation that prevent attacks</a>. As a result, the function descriptions below leave you room to define your own functionality.</p>
 </div>
 <div class="paragraph">
 <p>For examples of account contracts that implement these functions, see <a href="https://book.starknet.io/ch04-01-accounts.html">Account Contracts</a> in the Starknet Book.</p>
@@ -781,7 +785,7 @@
 <p>The purpose of the <code>__execute__</code> function is to abstract away the remaining actions performed by a transaction.</p>
 </div>
 <div class="paragraph">
-<p>In Ethereum, a transaction is necessarily a call to a specific function in a smart contract. With the <code>__execute__</code> abstraction, the account designer controls the flow of the transaction. For example, you can natively support multicalls in your account, saving the need to send multiple transactions. In practice, however, <mark>this</mark> is even harder to manage without multicalls due to nonces. <mark>What does <em>this</em> refer to?</mark></p>
+<p>In Ethereum, a transaction is necessarily a call to a specific function in a smart contract. With the <code>__execute__</code> abstraction, the account designer controls the flow of the transaction. For example, you can natively support multicalls in your account, saving the need to send multiple transactions. In practice, however, <mark>this</mark> is even harder to manage without multicalls due to nonces. <mark>What does <em>this</em> refer to? Sending multiple transactions?</mark></p>
 </div>
 <div class="paragraph">
 <div class="title">Returns</div>
@@ -827,6 +831,23 @@
 </div>
 <div class="paragraph">
 <p>If the contract declares other contracts and handles the corresponding gas fees, this function authenticates the contract declaration.</p>
+</div>
+<div class="hdlist stripes-odd">
+<div class="title">Parameters</div>
+<table>
+<colgroup>
+<col style="width: 35%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<code>class_hash: <em>felt</em></code>
+</td>
+<td class="hdlist2">
+<p>The class hash.</p>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <div class="title">Returns</div>
@@ -874,7 +895,7 @@
 <code>&lt;<em>constructor_arguments</em>&gt;</code>
 </td>
 <td class="hdlist2">
-<p>The arguments expected by the contract’s constructor. The compiler enforces this constructor.</p>
+<p>The arguments expected by the contract’s constructor. The inputs to the constructor must be identical to the rest of the inputs for validate_deploy. The compiler enforces this requirement.</p>
 </td>
 </tr>
 </table>
@@ -922,7 +943,7 @@ fn constructor(ref self: ContractState, public_key: felt252)</code></pre>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>You can access the transaction hash and value for <code>max_fee</code> by getting transaction info wit the <code>get_execution_info</code> system call.</p>
+<p>You can access the transaction hash and value for <code>max_fee</code> by getting transaction information with the <code>get_execution_info</code> system call.</p>
 </div>
 </td>
 </tr>
@@ -944,7 +965,8 @@ fn constructor(ref self: ContractState, public_key: felt252)</code></pre>
     <div class="footer-left">
       <p>Built with ✨ by the Starknet community</p>
     </div>
-    <strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.1 | Goerli testnet: 0.13.0</strong>
+    <div class="footer-network-info"><strong>Mainnet: 0.13.0 | Sepolia testnet: 0.13.0 | Goerli testnet: 0.13.0</strong>
+</div>
     <!-- <div class="community-section">
       <p class="community-section__text">Follow Lisk on: </p>
       <div class="community-section__icons"> -->
