@@ -1,8 +1,8 @@
 [id="messaging_reference"]
 = Messaging reference
-:description: Comprehensive function and event reference for Starknet messaging.
+:description: Comprehensive function and event reference for the `StarknetMessaging` smart contracts.
 
-The Starknet messaging smart contracts include functions and events that you use to implement various flows in a dApp.
+The `StarknetMessaging` smart contracts include functions and events that you use to implement various messaging flows in a dApp.
 
 For information on the messaging mechanism, see xref:architecture_and_concepts:Network_Architecture/messaging-mechanism.adoc[Messaging mechanism].
 
@@ -112,7 +112,7 @@ None.
 ==== Parameters
 
 [horizontal,labelwidth="30",role=stripes-odd]
-`uint256 _fromAddress_`:: The address of the sender on L2.
+`uint256 _fromAddress_`:: The address of the L2 contract sending the message.
 `uint256[] calldata _payload_`:: The payload of the message.
 
 [discrete]
@@ -169,9 +169,8 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 [discrete]
 ==== Description
 
-[horizontal,labelwidth="30",role=stripes-odd]
-`msg_fee + 1`:: A pending message is associated with the given message hash.
-`0`:: No pending message is associated with the given message hash.
+Indicates if a pending message is associated with a given message hash and
+Returns `msg_fee + 1` if there is a pending message associated with the given 'msgHash', otherwise, returns 0.
 
 [discrete]
 ==== State Mutability
@@ -187,8 +186,10 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 [discrete]
 ==== Returns
 
+Returns `uint256 _result_`, where `_result_` is one of the following:
 [horizontal,labelwidth="30",role=stripes-odd]
-`uint256 _result_`:: `msg_fee + 1` if there is a pending message, otherwise 0.
+`msg_fee + 1`:: A pending message is associated with the given message hash.
+`0`:: No pending message is associated with the given message hash.
 
 [discrete]
 ==== Function definition
@@ -248,9 +249,9 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 
 Starts the cancellation of an L1 to L2 message.
 
-You can call the `cancelL1ToL2Message` function to call a message after this function is called. The time between the calls to these two functions must be at least the number of seconds defined by the link:https://github.com/starkware-libs/cairo-lang/blob/caba294d82eeeccc3d86a158adb8ba209bf2d8fc/src/starkware/starknet/solidity/StarknetMessaging.sol#L25[`L1L2_MESSAGE_CANCELLATION_DELAY_TAG`] constant.
+A message can be canceled messageCancellationDelay() seconds after this function is called.
 
-Be aware that you can only call the function for a message that is currently pending, and you must be the sender of that message.
+Note: This function may only be called for a message that is currently pending, and the caller must be the sender of that message.
 
 [discrete]
 ==== State Mutability
