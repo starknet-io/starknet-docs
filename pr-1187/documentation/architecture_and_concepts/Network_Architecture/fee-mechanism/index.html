@@ -556,6 +556,15 @@
   </li>
 </ul>
   </li>
+  <li class="nav-item parent" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a 
+       class="nav-link"
+     href="../../../glossary/">Glossary</a>
+  </li>
+</ul>
+  </li>
 </ul>
     <div class="navbar-end mobile-only">
       <div class="hr-divider"></div>
@@ -605,9 +614,8 @@
 <div class="content">
 \[\begin{align}
 F  = \; &amp; \text{gas_price}\cdot\Bigg(\max_k v_k w_k + \\
-&amp; \quad + \; \text{da_calldata_cost}\left(3t + \sum\limits_{i=1}^t q_i\right) + \\
-&amp; \quad + \; \text{message_calldata_cost}\cdot\left(3t + \sum\limits_{i=1}^t q_i\right) + \\
-&amp; \quad + \; \text{l1_storage_write_cost}\cdot t + \\
+&amp; \quad + \; \text{message_calldata_cost}\cdot 3t + (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
+&amp; \quad + \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t + \; \\
 &amp; \quad + \; \text{l2_payload_costs}\Bigg) + \\
 &amp; \text{data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\bigg(2(n-1)+2(m-1) + \ell +2D \bigg)
 \end{align}\]
@@ -643,26 +651,23 @@ F  = \; &amp; \text{gas_price}\cdot\Bigg(\max_k v_k w_k + \\
 <p>\(D\) is 1 if the transaction is of type <code>DECLARE</code> and 0 otherwise. Declare transactions need to post on L1 the new class hash and compiled class hash which are added to the state.</p>
 </li>
 <li>
-<p>\(\text{da_calldata_cost}\) is 551 gas per 32-byte word. This cost is derived as follows:</p>
+<p>L2&#8594;L1 messages related constants (for more details, see <a href="#l_2-l_1_messages">Onchain data: L2&#8594;L1 messages</a>):</p>
 <div class="ulist">
 <ul>
 <li>
-<p>512 gas per 32-byte word for calldata.</p>
+<p>\(\text{message_calldata_cost}\) is 1124 gas per 32-byte word.</p>
 </li>
 <li>
-<p>~100 gas for onchain hashing that happens for every sent word.</p>
+<p>\(\text{l1_log_data_cost}\) is 256 gas.</p>
 </li>
 <li>
-<p>a 10% discount, because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.</p>
+<p>\(\text{l1_storage_write_cost}\) is the cost of writing to a new storage slot on Ethereum, which is 20,000 gas.</p>
+</li>
+<li>
+<p>\(\text{log_message_to_l1_cost}\) is 1637 gas.</p>
 </li>
 </ul>
 </div>
-</li>
-<li>
-<p>\(\text{message_calldata_cost}\) is 512 gas per 32-byte word. For more details, see <a href="#l_2-l_1_messages">Onchain data: L2&#8594;L1 messages</a>.</p>
-</li>
-<li>
-<p>\(\text{l1_storage_write_cost}\) is the cost of writing a to a new storage slot on Ethereum, which is 20,000 gas. The reason it appears here is that the hash of an L2&#8594;L1 message needs to be recorded on the Starknet core contract on L1.</p>
 </li>
 <li>
 <p>\(\text{l2_payload_costs}\) is the gas cost of data sent over L2. This includes calldata, code, and event emission. For more details see <a href="#l2_calldata">L2 payloads: calldata, events, and code</a>.</p>
@@ -687,8 +692,8 @@ F  = \; &amp; \text{gas_price}\cdot\Bigg(\max_k v_k w_k + \\
 F  = \text{gas_price}\cdot&amp;\Bigg(\max_k v_k w_k + \\
 &amp; + \; \text{da_calldata_cost}\left(2(n-1)+2(m-1) + \ell + 2D + 3t + \sum\limits_{i=1}^t q_i\right)\\
 &amp; - \; \text{contract_update_discount}\cdot (n-1) - 240 \\
-&amp; + \; \text{message_calldata_cost}\cdot\left(3t + \sum\limits_{i=1}^t q_i\right) \\
-&amp; + \; \text{l1_storage_write_cost}\cdot t \\
+&amp; + \;  \text{message_calldata_cost}\cdot 3t + (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot\sum\limits_{i=1}^t q_i \\
+&amp; + \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t \\
 &amp; + \; \text{l2_payload_costs}\Bigg)
 \end{align}\]
 </div>
@@ -699,7 +704,36 @@ F  = \text{gas_price}\cdot&amp;\Bigg(\max_k v_k w_k + \\
 <div class="ulist">
 <ul>
 <li>
-<p>\(v, w, n, m, t, \ell, \text{da_calldata_cost}, \text{message_calldata_cost}, \text{l1_storage_write_cost}, D, \text{l2_payload_costs}\) are defined in the same manner as in the blob-based formula above.</p>
+<p>The following constants are defined in the same manner as in the blob-based formula:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>\(v, w, n, m, t, \ell, D\)</p>
+</li>
+<li>
+<p>\(\text{message_calldata_cost}, \; \text{l1_log_data_cost}, \; \text{log_message_to_l1_cost}, \; \text{l1_storage_write_cost}\)</p>
+</li>
+<li>
+<p>\(\text{l2_payload_costs}\)</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>\(\text{da_calldata_cost}\) is 551 gas per 32-byte word. This cost is derived as follows:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>512 gas per 32-byte word for calldata.</p>
+</li>
+<li>
+<p>~100 gas for onchain hashing that happens for every sent word.</p>
+</li>
+<li>
+<p>a 10% discount, because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.</p>
+</li>
+</ul>
+</div>
 </li>
 <li>
 <p>\(240\) is the gas discount for updating the sender&#8217;s balance, for the derivation of this number see <a href="#storage_updates">Onchain data: Storage updates</a>.</p>
@@ -1081,13 +1115,32 @@ Each assertion over field elements, such as verifying addition/multiplication ov
 </div>
 <div class="stemblock">
 <div class="content">
-\[\text{storage_write_cost} + \left(\text{da_calldata_cost} + \text{message_calldata_cost}\right)\cdot\left(3+\text{payload_size}\right)\]
+\[\begin{align}
+\text{MESSAGE_COST} = &amp; \; \text{message_calldata_cost}\cdot\left(3+\text{payload_size}\right) \; + \\
+&amp; + \text{l1_log_data_cost}\cdot\text{payload_size} \; + \\
+&amp; + \text{log_message_to_l1_cost} \; + \\
+&amp; + \text{l1_storage_write_cost}
+\end{align}\]
 </div>
 </div>
 <div class="paragraph">
-<p>Where \(\text{da_calldata_cost}\) is 551 gas, and \(\text{message_calldata_cost}\) is 512 gas.
-Messages appear twice in the fee formula, and pay both in \(\text{da_calldata_cost}\) and \(\text{message_calldata_cost}\), because
-they are sent to Ethereum twice: once to the STARK verifier contract, where the additional hashing cost is incurred, and once when it is sent to the Starknet Core Contract as part of the state update transaction.</p>
+<p>Where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(\text{message_calldata_cost}\) is 1124 gas. This is the sum of the 512 gas paid to the core contract on submitting the state update, and 612 gas paid for the submitting of the same word to the verifier contract (which incurs ~100 additional gas for hashing). That is, messages are sent to Ethereum twice.</p>
+</li>
+<li>
+<p>\(\text{log_message_to_l1_cost}\) is 1637 gas. This is the fixed cost involved in emitting a <code>LogMessageToL1</code> event. This event has two topics and a data array, which adds two data words to the event, resulting in a total of \(375+2\cdot 375+2\cdot 256\) gas (log opcode cost, topic cost, and two data words cost).</p>
+</li>
+<li>
+<p>\(\text{l1_log_data_cost}\) is 256 gas, which is paid for every payload element during the emission of the <code>LogMessageToL1</code> event.</p>
+</li>
+<li>
+<p>\(\text{l1_storage_write_cost}\) is 20,000 gas per message which is paid in order to store the message hash on the Starknet core contract. This recording of the message is what later enables the intended L1 contract to consume the message.</p>
+</li>
+</ul>
 </div>
 </div>
 <div class="sect2">
