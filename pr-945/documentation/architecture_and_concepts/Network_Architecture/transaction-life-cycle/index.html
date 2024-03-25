@@ -541,6 +541,15 @@
   </li>
 </ul>
   </li>
+  <li class="nav-item parent" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a 
+       class="nav-link"
+     href="../../../glossary/">Glossary</a>
+  </li>
+</ul>
+  </li>
 </ul>
     <div class="navbar-end mobile-only">
       <div class="hr-divider"></div>
@@ -583,12 +592,12 @@
 </li>
 <li>
 <p><strong>Mempool validation:</strong>
-The mempool performs a preliminary validation on the transaction. If the transaction is invalid, it does not proceed.</p>
+The mempool performs a preliminary validation on the transaction. It lists for each transaction which validate function the account contract calls. If the transaction is invalid, it does not proceed.</p>
 </li>
 <li>
 <p><strong>Sequencer validation:</strong> The sequencer performs preliminary validation on the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.</p>
 <div class="paragraph">
-<p>Validation in this context is analogous to Ethereum&#8217;s signature checking, including running the account&#8217;s <code>__validate__</code> function, ensuring that the current account balance exceeds the value of <code>max_fee</code> (prior to v3 transactions), and more.</p>
+<p>Validation in this context is analogous to Ethereum&#8217;s signature checking, including running the account&#8217;s <code>__validate__</code>, <code>__validate_deploy__</code>, or <code>__validate_declare__</code> function, depending on the type of transaction, ensuring that the current account balance exceeds the value of <code>max_fee</code> (prior to v3 transactions), and more.</p>
 </div>
 <div class="exampleblock">
 <div class="content">
@@ -615,7 +624,27 @@ and the maximum price per unit of that resource that the user is willing to pay.
 </div>
 </li>
 <li>
-<p><strong>Execution:</strong> The sequencer operation sequentially applies all transactions that passed the preliminary validation to the state. If a transaction fails during execution, it is included in the block with the status <code>REVERTED</code>.</p>
+<p><strong>Execution:</strong> The sequencer operation sequentially applies all transactions that passed the preliminary validation to the state, by calling the relevant function in the account contract that submitted each transaction, as follows:</p>
+<div class="openblock">
+<div class="content">
+<div class="ulist">
+<ul>
+<li>
+<p>For <code>INVOKE</code> transactions, the sequencer calls the <code>__execute__</code> function.</p>
+</li>
+<li>
+<p>For <code>DEPLOY_ACCOUNT</code> transactions, the sequencer calls the <code>__constructor__</code> function.</p>
+</li>
+<li>
+<p>For <code>DECLARE</code> transactions, the sequencer does not execute any code in the account contract that submitted the transaction.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>If a transaction fails during execution, it is included in the block with the status <code>REVERTED</code>.</p>
+</div>
 </li>
 <li>
 <p><strong>Proof generation and verification:</strong> The Prover executes the operating system on the new block, computes the proof, and transmits it to the L1 verifier, which verifies the proof. At this point, the L1 state is updated to include the transaction.</p>
