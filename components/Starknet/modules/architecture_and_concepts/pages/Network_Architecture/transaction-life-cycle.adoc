@@ -12,7 +12,7 @@ The high-level steps in the Starknet transaction lifecycle are as follows:
 . *Transaction submission:* A transaction is submitted to one of the gateways, functioning as the mempool and marks the transaction status as `RECEIVED`.
 
 . *Mempool validation:*
-The mempool performs a preliminary validation on the transaction. If the transaction is invalid, it does not proceed.
+The mempool performs a preliminary validation on the transaction. It lists for each transaction which validate function the account contract calls. If the transaction is invalid, it does not proceed.
 
 . *Sequencer validation:* The sequencer performs preliminary validation on the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.
 +
@@ -20,7 +20,15 @@ Validation in this context is analogous to Ethereum's signature checking, includ
 +
 include::partial$snippet_v3_max_price_sidebar.adoc[]
 
-. *Execution:* The sequencer operation sequentially applies all transactions that passed the preliminary validation to the state. If a transaction fails during execution, it is included in the block with the status `REVERTED`.
+. *Execution:* The sequencer operation sequentially applies all transactions that passed the preliminary validation to the state, by calling the relevant function in the account contract that submitted each transaction, as follows:
++
+--
+* For `INVOKE` transactions, the sequencer calls the `+__execute__+` function.
+* For `DEPLOY_ACCOUNT` transactions, the sequencer calls the `+__constructor__+` function.
+* For `DECLARE` transactions, the sequencer does not execute any code in the account contract that submitted the transaction.
+--
++
+If a transaction fails during execution, it is included in the block with the status `REVERTED`.
 
 . *Proof generation and verification:* The Prover executes the operating system on the new block, computes the proof, and transmits it to the L1 verifier, which verifies the proof. At this point, the L1 state is updated to include the transaction.
 

@@ -14,11 +14,16 @@ The functions in the table xref:#starknet_account_interface_functions[] are part
 | `+__validate__+` | Always required
 | `+__execute__+` | Always required
 | `+__validate_declare__+` | Required for a contract to be able to send a `DECLARE` transaction.
-| `+__validate_deploy__+` | Required when deploying an account with a `DEPLOY_ACCOUNT` _transaction_.
-| constructor | If an account does not define a constructor function, the sequencer uses a default constructor function, which is empty.
+| `+__validate_deploy__+` | Required when deploying an instance of an account contract with a `DEPLOY_ACCOUNT` _transaction_.
+| `+__constructor__+` | If an account does not define a `+__constructor__+` function, the sequencer uses a default `+__constructor__+` function, which is empty.
 |===
 
-When the sequencer receives a transaction request, it calls the corresponding validation function with the fields of the transaction request. For an `INVOKE` transaction, after successfully completing validation, the sequencer calls the `+__execute__+` function with the fields of the transaction request.
+When the sequencer receives a transaction request, it calls the corresponding validation function with the fields of the transaction request.
+
+For an `INVOKE` transaction, after successfully completing validation, the sequencer calls the `+__execute__+` function with the fields of the transaction request.
+
+For a `DEPLOY_ACCOUNT` transaction, the sequencer calls the `+__constructor__+` function with the fields of the transaction request. Then, after successfully completing validation, the deployment is finalized.
+
 
 * For more information on the available transaction types and their fields, see xref:architecture_and_concepts:Network_Architecture/transactions.adoc[Transaction types].
 * For more information on the validation and execution stages, see xref:architecture_and_concepts:Network_Architecture/transaction-life-cycle.adoc[Transaction lifecycle].
@@ -43,7 +48,7 @@ The validation functions have limitations, described below, that are designed to
 The limitations listed here apply to the following validation functions:
 
 * `+__validate__+`, `+__validate_deploy__+`, and `+__validate_declare__+`
-* A constructor, when run in a `DEPLOY_ACCOUNT` transaction. That is, if an account is deployed from an existing class via the `deploy` syscall, the constructor can run differently. #Isn't  this scenario run in an `INVOKE` transaction?#
+* A constructor, when run in a `DEPLOY_ACCOUNT` transaction. That is, if an account is deployed from an existing class via the `deploy` syscall, these limitations do not apply.
 
 The validation functions have the following limitations:
 
@@ -57,30 +62,22 @@ So the fees you need to pay to invalidate transactions in the mempool are direct
 ====
 
 * The maximum number of computational steps, measured in Cairo steps, for a validation function is 1,000,000.
-* A builtin can be applied a limited number of times. #What's the limit?#
+* A builtin can be applied a limited number of times. For specific limits for each builtin, see xref:tools:limits_and_triggers.adoc[].
 * Access is restricted to `sequencer_address` in the `get_execution_info` syscall. The syscall returns zero values for `sequencer_address`.
+* The values of `block_number` and `block_timestamp` in the `get_execution_info` syscall are modified.
 * The following syscalls cannot be called:
 ** `get_block_hash`
 ** `get_sequencer_address` `get_sequencer_address` is only supported for Cairo 0 contracts.
 
-[NOTE]
-====
-#Is this note obsolete?#
-
-Validation, while now abstract and in control of the account owner rather than the protocol, should still be a simple operation. So in the future, the `+__validate__+` function will have a limitation of a maximum number of Cairo steps.
-====
-
 [id="invalid_transactions"]
 == Invalid transactions
 
-When the `+__validate__+`, `+__validate_deploy__+`, or `+__validate_declare__+`, function fails, the account in question does not pay any fee.
-
-#Is the transaction reverted?#
+When the `+__validate__+`, `+__validate_deploy__+`, or `+__validate_declare__+`, function fails, the account in question does not pay any fee, and the transaction's status is `REJECTED`.
 
 [id="reverted_transactions"]
 == Reverted transactions
 
-A transaction has the status *REVERTED* when the `+__execute__+` function fails. A reverted transaction is included in a block, and the sequencer is eligible to charge a fee for the work done up to the point of failure, similar to Ethereum.
+A transaction has the status `REVERTED` when the `+__execute__+` function fails. A reverted transaction is included in a block, and the sequencer is eligible to charge a fee for the work done up to the point of failure, similar to Ethereum.
 
 == Function descriptions
 
@@ -118,10 +115,9 @@ The list of each call's serialized return value.
 
 _Always required_
 
-Initiates the validation stage in the sequencer. Validates the sender's address. The sequencer calls this function upon receiving any transaction.
+Initiates the validation stage in the sequencer. Validates the sender's address. The sequencer calls this function upon receiving an `INVOKE` transaction.
 
 In most implementations, `+__validate__+` ensures that only the account owner can initiate transactions.
-
 
 The `+__validate__+` function typically ensures that any transaction submitted was indeed initiated by the account owner and therefore does not take up unjustified resources during the execution process.
 
