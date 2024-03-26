@@ -20,15 +20,16 @@ The functions in the table xref:#starknet_account_interface_functions[] are part
 ====
 You can only use the `+__validate_deploy__+` function in an account contract to validate the `DEPLOY_ACCOUNT` transaction for that same contract.
 ====
-| `+__constructor__+` | If an account does not define a `+__constructor__+` function, the sequencer uses a default `+__constructor__+` function, which is empty.
+| `constructor` | If an account does not define a `constructor` function, the sequencer uses a default `constructor` function, which is empty.
 |===
 
-When the sequencer receives a transaction request, it calls the corresponding validation function with the fields of the transaction request.
+When the sequencer receives a transaction request, it calls the corresponding validation function with the fields of the transaction request, as follows:
 
-For an `INVOKE` transaction, after successfully completing validation, the sequencer calls the `+__execute__+` function with the fields of the transaction request.
+* For an `INVOKE` transaction, the sequencer calls the `+__validate__+` function. After successfully completing validation, the sequencer calls the `+__execute__+` function with the fields of the transaction request.
+* For a `DEPLOY_ACCOUNT` transaction, the sequencer calls the `constructor` function with the fields of the transaction request, then validates the transaction by calling the `+__validate_deploy__+` function.
+* For a `DECLARE` transaction, the sequencer validates the transaction by calling the `+__validate_declare__+` function.
 
-For a `DEPLOY_ACCOUNT` transaction, the sequencer calls the `+__constructor__+` function with the fields of the transaction request. Then, after successfully completing validation, the deployment is finalized.
-
+After successfully completing validation, the deployment is finalized.
 
 * For more information on the available transaction types and their fields, see xref:architecture_and_concepts:Network_Architecture/transactions.adoc[Transaction types].
 * For more information on the validation and execution stages, see xref:architecture_and_concepts:Network_Architecture/transaction-life-cycle.adoc[Transaction lifecycle].
@@ -52,7 +53,7 @@ The validation functions have limitations, described below, that are designed to
 
 The limitations listed here apply to the following validation functions:
 
-* `+__validate__+`, `+__validate_deploy__+`, and `+__validate_declare__+`
+* `+__validate__+`, `+__validate_deploy__+`, and `+__validate_declare__+`.
 * A constructor, when run in a `DEPLOY_ACCOUNT` transaction. That is, if an account is deployed from an existing class via the `deploy` syscall, these limitations do not apply.
 
 The validation functions have the following limitations:
@@ -70,7 +71,7 @@ So the fees you need to pay to invalidate transactions in the mempool are direct
 * A builtin can be applied a limited number of times. For specific limits for each builtin, see xref:tools:limits_and_triggers.adoc[].
 * Access is restricted to `sequencer_address` in the `get_execution_info` syscall. The syscall returns zero values for `sequencer_address`.
 * The values of `block_number` and `block_timestamp` in the `get_execution_info` syscall are modified as follows:
-** `block_timestamp` returns the hour, rounded down.
+** `block_timestamp` returns the time (in UTC), rounded to the most recent hour.
 ** `block_number` returns the block number, rounded down to the nearest multiple of 100.
 * The following syscalls cannot be called:
 ** `get_block_hash`
