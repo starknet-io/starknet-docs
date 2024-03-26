@@ -640,19 +640,29 @@
 </div></div></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__constructor__</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">If an account does not define a <code>__constructor__</code> function, the sequencer uses a default <code>__constructor__</code> function, which is empty.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>constructor</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">If an account does not define a <code>constructor</code> function, the sequencer uses a default <code>constructor</code> function, which is empty.</p></td>
 </tr>
 </tbody>
 </table>
 <div class="paragraph">
-<p>When the sequencer receives a transaction request, it calls the corresponding validation function with the fields of the transaction request.</p>
+<p>When the sequencer receives a transaction request, it calls the corresponding validation function with the fields of the transaction request, as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>For an <code>INVOKE</code> transaction, the sequencer calls the <code>__validate__</code> function. After successfully completing validation, the sequencer calls the <code>__execute__</code> function with the fields of the transaction request.</p>
+</li>
+<li>
+<p>For a <code>DEPLOY_ACCOUNT</code> transaction, the sequencer calls the <code>constructor</code> function with the fields of the transaction request, then validates the transaction by calling the <code>__validate_deploy__</code> function.</p>
+</li>
+<li>
+<p>For a <code>DECLARE</code> transaction, the sequencer validates the transaction by calling the <code>__validate_declare__</code> function.</p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>For an <code>INVOKE</code> transaction, after successfully completing validation, the sequencer calls the <code>__execute__</code> function with the fields of the transaction request.</p>
-</div>
-<div class="paragraph">
-<p>For a <code>DEPLOY_ACCOUNT</code> transaction, the sequencer calls the <code>__constructor__</code> function with the fields of the transaction request. Then, after successfully completing validation, the deployment is finalized.</p>
+<p>After successfully completing validation, the deployment is finalized.</p>
 </div>
 <div class="ulist">
 <ul>
@@ -712,7 +722,7 @@
 <div class="ulist">
 <ul>
 <li>
-<p><code>__validate__</code>, <code>__validate_deploy__</code>, and <code>__validate_declare__</code></p>
+<p><code>__validate__</code>, <code>__validate_deploy__</code>, and <code>__validate_declare__</code>.</p>
 </li>
 <li>
 <p>A constructor, when run in a <code>DEPLOY_ACCOUNT</code> transaction. That is, if an account is deployed from an existing class via the <code>deploy</code> syscall, these limitations do not apply.</p>
@@ -758,7 +768,7 @@
 <div class="ulist">
 <ul>
 <li>
-<p><code>block_timestamp</code> returns the hour, rounded down.</p>
+<p><code>block_timestamp</code> returns the time (in UTC), rounded to the most recent hour.</p>
 </li>
 <li>
 <p><code>block_number</code> returns the block number, rounded down to the nearest multiple of 100.</p>
