@@ -97,7 +97,8 @@ For examples of account contracts that implement these functions, see link:https
 [id="__execute__"]
 === `+__execute__+`
 
-.Description
+[discrete]
+==== Description
 
 _Always required_
 
@@ -109,7 +110,8 @@ The purpose of the `+__execute__+` function is to abstract away the remaining ac
 
 In Ethereum, a transaction is necessarily a call to a specific function in a smart contract. With the `+__execute__+` abstraction, the account designer controls the flow of the transaction. For example, you can natively support multicalls in your account, saving the need to send multiple transactions. In practice, however, #this# is even harder to manage without multicalls due to nonces. #What does _this_ refer to? Sending multiple transactions?#
 
-.Returns
+[discrete]
+==== Returns
 
 The list of each call's serialized return value.
 
@@ -119,7 +121,8 @@ The list of each call's serialized return value.
 [id="__validate__"]
 === `+__validate__+`
 
-.Description
+[discrete]
+==== Description
 
 _Always required_
 
@@ -134,7 +137,8 @@ Without this mechanism, a forged transaction could result in the sequencer steal
 
 The arbitrary logic allowed in the `+__validate__+` function gives the account's designer the ability to determine what it means for a transaction to be valid, enabling different signature schemes and other xref:architecture_and_concepts:Accounts/introduction.adoc#examples[exotic accounts].
 
-.Returns
+[discrete]
+==== Returns
 
 If the signature is verified, the function should return the string `VALID` as `felt252` value. If not, it should return any other value, such as `0`.
 
@@ -144,7 +148,8 @@ If the signature is verified, the function should return the string `VALID` as `
 [id="__validate_declare__"]
 === `+__validate_declare__+`
 
-.Description
+[discrete]
+==== Description
 
 _Required for a contract to be able to send a_ `DECLARE` _transaction._
 
@@ -152,12 +157,14 @@ The sequencer calls this function upon receiving a `DECLARE` transaction.
 
 If the contract declares other contracts and handles the corresponding gas fees, this function authenticates the contract declaration.
 
-.Parameters
+[discrete]
+==== Parameters
 
 [horizontal,labelwidth="35",role="stripes-odd"]
 `class_hash: _felt_`:: The class hash.
 
-.Returns
+[discrete]
+==== Returns
 
 If the signature is verified, the function should return the string `VALID` as `felt252` value. If not, it should return any other value, such as `0`.
 
@@ -168,7 +175,17 @@ If the signature is verified, the function should return the string `VALID` as `
 [id="__validate_deploy__"]
 === `+__validate_deploy__+`
 
-.Syntax
+[discrete]
+==== Description
+
+_Required when deploying an account with a_ `DEPLOY_ACCOUNT` _transaction_.
+
+The sequencer calls this function upon receiving a `DEPLOY_ACCOUNT` transaction. Validates the deployment of the class referred to by the `class_hash` parameter in the transaction.
+
+You can use this function to set up an account contract without linking it to the address that deploys it or depending on another account contract for gas fees. When determining the contract's address, use the deployer address `0x0`.
+
+[discrete]
+==== Function signature
 
 [source,cairo]
 ----
@@ -180,15 +197,8 @@ fn __validate_deploy__(
 ) -> felt252
 ----
 
-.Description
-
-_Required when deploying an account with a_ `DEPLOY_ACCOUNT` _transaction_.
-
-The sequencer calls this function upon receiving a `DEPLOY_ACCOUNT` transaction. Validates the deployment of the class referred to by the `class_hash` parameter in the transaction.
-
-You can use this function to set up an account contract without linking it to the address that deploys it or depending on another account contract for gas fees. When determining the contract's address, use the deployer address `0x0`.
-
-.Parameters
+[discrete]
+==== Parameters
 
 [horizontal,labelwidth="35",role="stripes-odd"]
 `self: @ContractState`:: The contract's state. If you reference a component in a separate file, use `@ComponentState<TContractState>`.
@@ -201,11 +211,13 @@ You can use this function to set up an account contract without linking it to th
 In determining the contract address, the deployer address `0x0` is used.
 ====
 
-.Returns
+[discrete]
+==== Returns
 
 If the signature is verified, the function should return the string `VALID` as a `felt252` value. If not, it should return any other value, such as `0`.
 
-.Example
+[discrete]
+==== Example
 
 Notice how the signature of `+__validate_deploy__+` is structured to consider the signature of the constructor:
 
@@ -217,11 +229,7 @@ fn __validate_deploy__(
     class_hash: felt252,
     salt: felt252,
     public_key: felt252
-) -> felt252 {
-     self.only_protocol();  // Ensures only the Starknet protocol can call
-      // Even though public_key is provided, it uses the one stored from the constructor
-      self.validate_transaction()  // Applies the same validation logic
-}
+) -> felt252
 
 #[constructor]
 fn constructor(ref self: ContractState, public_key: felt252)
@@ -229,5 +237,5 @@ fn constructor(ref self: ContractState, public_key: felt252)
 
 [NOTE]
 ====
-You can access the transaction hash and value for `max_fee` by getting transaction information with the `get_execution_info` system call.
+You can access the transaction hash and value for `max_fee` by getting transaction information with the xref:Smart_Contracts/system-calls-cairo1.adoc#get_execution_info[`get_execution_info`] system call.
 ====
