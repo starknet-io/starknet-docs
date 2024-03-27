@@ -9,17 +9,16 @@ image::transaction-flow.png[]
 
 The high-level steps in the Starknet transaction lifecycle are as follows:
 
-. *Transaction submission:* A transaction is submitted to one of the gateways, functioning as the mempool and marks the transaction status as `RECEIVED`.
+. *Transaction submission:* A transaction is submitted to one of the gateways, which functions as the mempool, and marks the transaction status as `RECEIVED`.
 
 . *Mempool validation:*
-The mempool performs a preliminary validation on the transaction. If the transaction is invalid, it does not proceed.
+The mempool performs a preliminary validation on the transaction, such as ensuring that the current account balance exceeds the value of `max_fee` (prior to v3 transactions) or assuring the transaction's calldata length is within the legal limit. If the transaction is invalid, it does not proceed.
 +
 Mempool validation in this context is analogous to Ethereum's signature checking, including running the account's `+__validate__+` function on an `INVOKE` transaction, `+__validate_declare__+` on a `DECLARE` transaction, or `+__validate_deploy__+` on a `DEPLOY_ACCOUNT` transaction, ensuring that the current account balance exceeds the value of `max_fee` (prior to v3 transactions), and more.
 
 . *Sequencer validation:* The sequencer performs preliminary validation on the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.
 +
-This validation stage repeats the same validation run during the Mempool validation.
-//in this context is analogous to Ethereum's signature checking, including running the account's `+__validate__+` function on an `INVOKE` transaction, `+__validate_declare__+` on a `DECLARE` transaction, or `+__validate_deploy__+` on a `DEPLOY_ACCOUNT` transaction, ensuring that the current account balance exceeds the value of `max_fee` (prior to v3 transactions), and more.
+This validation stage repeats the same validation run during the mempool validation.
 
 . *Execution:* The sequencer operation sequentially applies all transactions that passed the preliminary validation to the state. If a transaction fails during execution, it is included in the block with the status `REVERTED`.
 
