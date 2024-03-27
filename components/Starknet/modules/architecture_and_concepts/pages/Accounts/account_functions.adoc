@@ -168,6 +168,18 @@ If the signature is verified, the function should return the string `VALID` as `
 [id="__validate_deploy__"]
 === `+__validate_deploy__+`
 
+.Syntax
+
+[source,cairo]
+----
+fn __validate_deploy__(
+    self: @ContractState,
+    class_hash: felt252,
+    contract_address_salt: felt252,
+    <__constructor_arguments__>
+) -> felt252
+----
+
 .Description
 
 _Required when deploying an account with a_ `DEPLOY_ACCOUNT` _transaction_.
@@ -179,8 +191,9 @@ You can use this function to set up an account contract without linking it to th
 .Parameters
 
 [horizontal,labelwidth="35",role="stripes-odd"]
-`class_hash: _felt_`:: The class hash.
-`contract_address_salt: _felt_`:: The contract address salt.
+`self: @ContractState`:: The contract's state. If you reference a component in a separate file, use `@ComponentState<TContractState>`.
+`class_hash: felt252`:: The class hash.
+`contract_address_salt: felt252`:: The contract address salt.
 `<__constructor_arguments__>`:: The arguments expected by the contract’s constructor. The inputs to the constructor must be identical to the rest of the inputs for validate_deploy. The compiler enforces this requirement.
 
 [NOTE]
@@ -196,15 +209,19 @@ If the signature is verified, the function should return the string `VALID` as a
 
 Notice how the signature of `+__validate_deploy__+` is structured to consider the signature of the constructor:
 
-[#call_validate_deploy]
-[source,cairo,sub="quotes"]
+[#validate_deploy]
+[source,cairo]
 ----
-  fn __validate_deploy__(
-      self: @ComponentState<TContractState>,
-      class_hash: felt252,
-      contract_address_salt: felt252,
-      public_key: felt252
-  ) -> felt252
+fn __validate_deploy__(
+    self: @ContractState,
+    class_hash: felt252,
+    salt: felt252,
+    public_key: felt252
+) -> felt252 {
+     self.only_protocol();  // Ensures only the Starknet protocol can call
+      // Even though public_key is provided, it uses the one stored from the constructor
+      self.validate_transaction()  // Applies the same validation logic
+}
 
 #[constructor]
 fn constructor(ref self: ContractState, public_key: felt252)
