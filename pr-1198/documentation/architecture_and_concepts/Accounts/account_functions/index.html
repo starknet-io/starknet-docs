@@ -906,6 +906,17 @@
 </div>
 <div class="sect2">
 <h3 id="__validate_deploy__"><a class="anchor" href="#__validate_deploy__"></a><code>__validate_deploy__</code></h3>
+<div class="listingblock">
+<div class="title">Syntax</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">fn __validate_deploy__(
+    self: @ContractState,
+    class_hash: felt252,
+    contract_address_salt: felt252,
+    &lt;__constructor_arguments__&gt;
+) -&gt; felt252</code></pre>
+</div>
+</div>
 <div class="paragraph">
 <div class="title">Description</div>
 <p><em>Required when deploying an account with a</em> <code>DEPLOY_ACCOUNT</code> <em>transaction</em>.</p>
@@ -925,7 +936,15 @@
 </colgroup>
 <tr>
 <td class="hdlist1">
-<code>class_hash: <em>felt</em></code>
+<code>self: @ContractState</code>
+</td>
+<td class="hdlist2">
+<p>The contract&#8217;s state.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>class_hash: felt252</code>
 </td>
 <td class="hdlist2">
 <p>The class hash.</p>
@@ -933,7 +952,7 @@
 </tr>
 <tr>
 <td class="hdlist1">
-<code>contract_address_salt: <em>felt</em></code>
+<code>contract_address_salt: felt252</code>
 </td>
 <td class="hdlist2">
 <p>The contract address salt.</p>
@@ -971,14 +990,18 @@
 <div class="title">Example</div>
 <p>Notice how the signature of <code>__validate_deploy__</code> is structured to consider the signature of the constructor:</p>
 </div>
-<div id="call_validate_deploy" class="listingblock">
+<div id="validate_deploy" class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">  fn __validate_deploy__(
-      self: @ComponentState&lt;TContractState&gt;,
-      class_hash: felt252,
-      contract_address_salt: felt252,
-      public_key: felt252
-  ) -&gt; felt252
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">fn __validate_deploy__(
+    self: @ContractState,
+    class_hash: felt252,
+    salt: felt252,
+    public_key: felt252
+) -&gt; felt252 {
+     self.only_protocol();  // Ensures only the Starknet protocol can call
+      // Even though public_key is provided, it uses the one stored from the constructor
+      self.validate_transaction()  // Applies the same validation logic
+}
 
 #[constructor]
 fn constructor(ref self: ContractState, public_key: felt252)</code></pre>
