@@ -87,7 +87,7 @@ When the `+__validate__+`, `+__validate_deploy__+`, or `+__validate_declare__+`,
 
 A transaction has the status `REVERTED` when the `+__execute__+` function fails. A reverted transaction is included in a block, and the sequencer is eligible to charge a fee for the work done up to the point of failure, similar to Ethereum.
 
-== Function descriptions
+== Function reference
 
 The functions in this section must be present in account contracts, as noted, with `+__execute__+` and `+__validate__+` required in all account contracts. However, you define the logic in the these functions as needed, unless noted otherwise, while adhering to the limitations specified in xref:#limitations_of_validation[]. As a result, the function descriptions below leave you room to define your own functionality.
 
@@ -109,6 +109,25 @@ In most implementations, `+__execute__+` initiates a sequence of calls from the 
 The purpose of the `+__execute__+` function is to abstract away the remaining actions performed by a transaction.
 
 In Ethereum, a transaction is necessarily a call to a specific function in a smart contract. With the `+__execute__+` abstraction, the account designer controls the flow of the transaction. For example, you can natively support multicalls in your account, saving the need to send multiple transactions. In practice, however, sending multiple transactions is even harder to manage without multicalls due to nonces.
+
+[discrete]
+==== Function signature
+
+[source,cairo]
+----
+fn __execute__(
+   self: @ContractState,
+   <__arguments__>
+) -> felt252
+----
+
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="35",role="stripes-odd"]
+`self: @ContractState`:: The contract's state. If you reference a component in a separate file, use `@ComponentState<TContractState>`.
+`<__arguments__>`:: Any arguments that you add.
 
 [discrete]
 ==== Returns
@@ -138,6 +157,24 @@ Without this mechanism, a forged transaction could result in the sequencer steal
 The arbitrary logic allowed in the `+__validate__+` function gives the account's designer the ability to determine what it means for a transaction to be valid, enabling different signature schemes and other xref:architecture_and_concepts:Accounts/introduction.adoc#examples[exotic accounts].
 
 [discrete]
+==== Function signature
+
+[source,cairo]
+----
+fn __validate__(
+   self: @ContractState,
+   <__execute_arguments__>
+) -> felt252
+----
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="35",role="stripes-odd"]
+`self: @ContractState`:: The contract's state. If you reference a component in a separate file, use `@ComponentState<TContractState>`.
+`<__execute_arguments__>`:: The same arguments used in the `+__execute__+` function.
+
+[discrete]
 ==== Returns
 
 If the signature is verified, the function should return the string `VALID` as `felt252` value. If not, it should return any other value, such as `0`.
@@ -158,10 +195,23 @@ The sequencer calls this function upon receiving a `DECLARE` transaction.
 If the contract declares other contracts and handles the corresponding gas fees, this function authenticates the contract declaration.
 
 [discrete]
+==== Function signature
+
+[source,cairo]
+----
+fn __validate_declare__(
+    self: @ContractState,
+    class_hash: felt252
+) -> felt252
+----
+
+[discrete]
 ==== Parameters
 
 [horizontal,labelwidth="35",role="stripes-odd"]
-`class_hash: _felt_`:: The class hash.
+`self: @ContractState`:: The contract's state. If you reference a component in a separate file, use `@ComponentState<TContractState>`.
+`class_hash: felt252`:: The class hash.
+
 
 [discrete]
 ==== Returns
