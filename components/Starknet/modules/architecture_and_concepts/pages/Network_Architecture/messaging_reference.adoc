@@ -42,8 +42,6 @@ The contract that defines messaging events. a|
 
 |===
 
-'''
-
 == L1 function reference
 
 Functions are listed in alphabetical order.
@@ -56,7 +54,7 @@ Functions are listed in alphabetical order.
 [discrete]
 ==== Description
 
-Cancels an L1 to L2 message. Call this function after calling the xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`] function. The time between the calls to these two functions must be at least the number of seconds defined by the link:https://github.com/starkware-libs/cairo-lang/blob/caba294d82eeeccc3d86a158adb8ba209bf2d8fc/src/starkware/starknet/solidity/StarknetMessaging.sol#L25[`L1L2_MESSAGE_CANCELLATION_DELAY_TAG`] constant.
+Cancels an L1 to L2 message. Call this function after calling the xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`] function. The time between the calls to these two functions must be at least the number of seconds defined by the link:https://github.com/starkware-libs/cairo-lang/blob/caba294d82eeeccc3d86a158adb8ba209bf2d8fc/src/starkware/starknet/solidity/StarknetMessaging.sol#L25[`L1L2_MESSAGE_CANCELLATION_DELAY_TAG`] constant. #I can't find an actual value for this constant.#
 
 Only a sender can cancel a message.
 
@@ -74,7 +72,10 @@ None.
 
 [horizontal,labelwidth="30",role=stripes-odd]
 `uint256 _toAddress_`:: The address of the L2 contract.
-`uint256 _selector_`:: The selector of the message.
+`uint256 _selector_`::
+// tag::uint256_selector[]
+The function, in the recipient L2 contract, that the message called.
+// end::uint256_selector[]
 `uint256[] calldata _payload_`:: The payload of the message.
 `uint256 _nonce_`:: The nonce of the message.
 
@@ -136,7 +137,7 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 [discrete]
 ==== Description
 
-Returns the maximum fee, in Wei, that Starknet accepts per single message.
+Returns the maximum fee, in Wei, that Starknet #charges# #(Is "charges" correct? It says "accepts" link:https://github.com/starkware-libs/cairo-lang/blob/efa9648f57568aad8f8a13fbf027d2de7c63c2c0/src/starkware/starknet/solidity/IStarknetMessaging.sol#L8[in the source file])# for a single message.
 
 [discrete]
 ==== State Mutability
@@ -152,7 +153,7 @@ None.
 ==== Returns
 
 [horizontal,labelwidth="30",role=stripes-odd]
-`uint256 _MAX_L1_MSG_FEE_`:: The maximum fee, in Wei, that Starknet accepts per single message.
+`uint256 _MAX_L1_MSG_FEE_`:: The maximum fee, in Wei, that Starknet #accepts/charges?# per single message.
 
 [discrete]
 ==== Function definition
@@ -169,11 +170,7 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 [discrete]
 ==== Description
 
-Indicates if a pending message is associated with a given message hash and
-returns `msg_fee + 1` if there is a pending message associated with the given 'msgHash', otherwise, returns 0.
-
-// What is msg_fee? I don't see it anywhere in StarknetMessaging.sol.
-// Why does it return `msg_fee + 1`? How is that value used?
+Indicates if a pending message is associated with a given message hash.
 
 [discrete]
 ==== State Mutability
@@ -184,15 +181,15 @@ returns `msg_fee + 1` if there is a pending message associated with the given 'm
 ==== Parameters
 
 [horizontal,labelwidth="30",role=stripes-odd]
-`bytes32 _msgHash_`:: The hash of the message.
+`bytes32 _msgHash_`:: The message hash.
 
 [discrete]
 ==== Returns
 
 Returns `uint256 _result_`, where `_result_` is one of the following:
 [horizontal,labelwidth="30",role=stripes-odd]
-`msg_fee + 1`:: A pending message is associated with the given message hash.
-`0`:: No pending message is associated with the given message hash.
+`msg_fee + 1`:: A pending message is associated with the `_msgHash_` parameter. #What is `msg_fee`? I don't see it mentioned anywhere. Does it simply refer to the fee of the pending message? Why does it return `msg_fee + 1`? How is that value used?#
+`0`:: No pending message is associated with `_msgHash_`.
 
 [discrete]
 ==== Function definition
@@ -209,11 +206,7 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 [discrete]
 ==== Description
 
-Sends a message to an L2 contract.
-
-This function is payable, the paid amount is the message fee.
-
-Returns the hash of the message and the nonce of the message.
+Sends a message to an L2 contract. The message fee is the cost of executing this function.
 
 [discrete]
 ==== State Mutability
@@ -225,7 +218,8 @@ Returns the hash of the message and the nonce of the message.
 
 [horizontal,labelwidth="30",role=stripes-odd]
 `uint256 _toAddress_`:: The address of the L2 contract.
-`uint256 _selector_`:: The selector of the message.
+`uint256 _selector_`::
+include::messaging_reference.adoc[tag=uint256_selector]
 `uint256[] calldata _payload_`:: The payload of the message.
 
 [discrete]
@@ -252,9 +246,11 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 
 Starts the cancellation of an L1 to L2 message.
 
-A message can be canceled messageCancellationDelay() seconds after this function is called.
+You can cancel a message after a predefined about of time from the moment this function is called. The amount of time is set by the link:https://github.com/starkware-libs/cairo-lang/blob/efa9648f57568aad8f8a13fbf027d2de7c63c2c0/src/starkware/starknet/solidity/StarknetMessaging.sol#L59[`messageCancellationDelay()`] function.
 
-Note: This function may only be called for a message that is currently pending, and the caller must be the sender of that message.
+#Where can I see the actual numerical value?#
+
+You can only call this function for a message that is currently pending, and the caller must be the sender of that message.
 
 [discrete]
 ==== State Mutability
@@ -266,7 +262,8 @@ None.
 
 [horizontal,labelwidth="30",role=stripes-odd]
 `uint256 _toAddress_`:: The address of the L2 contract.
-`uint256 _selector_`:: The selector of the message.
+`uint256 _selector_`::
+include::messaging_reference.adoc[tag=uint256_selector]
 `uint256[] calldata _payload_`:: The payload of the message.
 `uint256 _nonce_`:: The nonce of the message.
 
@@ -287,7 +284,7 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 
 Events are listed in alphabetical order.
 
-* Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol[`IStarknetMessagingEvents`]
+// Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol[`IStarknetMessagingEvents`]
 
 '''
 
@@ -330,7 +327,8 @@ This event is emitted when a message from L1 to L2 is consumed.
 [horizontal,role=stripes-odd]
 `address indexed _fromAddress_`:: The address of the sender on L1.
 `uint256 indexed _toAddress_`:: The address of the receiver on L2.
-`uint256 indexed _selector_`:: The selector of the consumed message.
+`uint256 indexed _selector_`::
+include::messaging_reference.adoc[tag=uint256_selector]
 `uint256[] _payload_`:: The payload of the consumed message.
 `uint256 _nonce_`:: The nonce of the consumed message.
 
@@ -382,7 +380,8 @@ This event is emitted when a message is sent from L1 to L2.
 [horizontal,role=stripes-odd]
 `address indexed _fromAddress_`:: The address of the sender on L1.
 `uint256 indexed _toAddress_`:: The address of the receiver on L2.
-`uint256 indexed _selector_`:: The selector of the message.
+`uint256 indexed _selector_`::
+include::messaging_reference.adoc[tag=uint256_selector]
 `uint256[] _payload_`:: The payload of the message.
 `uint256 _nonce_`:: The nonce of the message.
 `uint256 _fee_`:: The fee associated with the message.
@@ -410,7 +409,8 @@ This event is emitted when an L1 to L2 message is canceled.
 [horizontal,role=stripes-odd]
 `address indexed _fromAddress_`:: The address of the sender on L1.
 `uint256 indexed _toAddress_`:: The address of the receiver on L2.
-`uint256 indexed _selector_`:: The selector of the canceled message.
+`uint256 indexed _selector_`::
+include::messaging_reference.adoc[tag=uint256_selector]
 `uint256[] _payload_`:: The payload of the canceled message.
 `uint256 _nonce_`:: The nonce of the canceled message.
 
@@ -437,7 +437,8 @@ This event is emitted when the cancellation of an L1 to L2 message is started.
 [horizontal,role=stripes-odd]
 `address indexed _fromAddress_`:: The address of the sender on L1.
 `uint256 indexed _toAddress_`:: The address of the receiver on L2.
-`uint256 indexed _selector_`:: The selector of the message to be canceled.
+`uint256 indexed _selector_`::
+include::messaging_reference.adoc[tag=uint256_selector]
 `uint256[] _payload_`:: The payload of the message to be canceled.
 `uint256 _nonce_`:: The nonce of the message to be canceled.
 
