@@ -2,99 +2,43 @@
 
 == Introduction
 
-Cairo builtins are pre-defined functions provided by the Cairo runtime environment. They serve as fundamental tools for you, as a developer, to efficiently implement various operations within the Cairo smart contract language. These builtins cover a wide range of functionalities, including arithmetic operations, bitwise manipulations, memory access, cryptographic computations, and more. By leveraging Cairo builtins, you can write concise and optimized smart contracts that execute securely and efficiently on the Cairo virtual machine.
-
-Here are some general characteristics and purposes of Cairo builtins:
-
-1. **Efficiency**: Cairo builtins are optimized for performance, allowing you to execute complex operations with minimal overhead.
-
-2. **Security**: Builtins provide essential cryptographic functions, such as hashing and signature verification, enabling you to implement secure and tamper-resistant smart contracts.
-
-3. **Functionality**: Cairo builtins cover a broad spectrum of functionalities, including arithmetic operations (addition, subtraction, multiplication, division), bitwise operations (AND, OR, XOR, NOT), memory access (array manipulation), and cryptographic computations.
-
-4. **Interoperability**: Builtins facilitate interoperability between smart contracts by providing standard functions for common operations, ensuring consistency and compatibility across different contract implementations.
-
-5. **Customizability**: While Cairo builtins offer a rich set of functionalities out-of-the-box, you can extend the capabilities of your smart contracts by combining builtins creatively and implementing custom functions as needed.
-
+Builtins are predefined optimized low-level execution units which are added to the Cairo CPU board to perform predefined computations which are expensive to perform in standard Cairo. Builtins enhance the functionality of the Cairo virtual machine, allowing you to perform tasks such as Pedersen hash calculations, Poseidon hash computations, range-checks, ECDSA signature verifications, Keccak hashing, Bitwise operations, and EC operations efficiently and at a cheaper gas cost.
 
 == List of Cairo Builtins
 
 [cols="1,2,2"]
 |===
-| Symbol | Example | Explanation
+| Builtin | Example | Explanation
 
-| `+`
-| `a + b`
-| Arithmetic addition.
+| `pedersen`
+| `result = pedersen(x, y)`
+| `pedersen(x: felt252, y: felt252) -> felt252`
 
-| `+=`
-| `a += b`
-| Arithmetic addition and assignment.
+Hashes two elements and retrieves a single field element output.
 
-| `-`
-| `a - b`
-| Arithmetic subtraction.
+| `poseidon_hash`
+| `result = poseidon_hash(x, y)`
+| `poseidon_hash(x: felt, y: felt) -> (res: felt)`
 
-| `-=`
-| `a -= b`
-| Arithmetic subtraction and assignment.
+Hashes two elements and retrieves a single field element output.
 
-| `*`
-| `a * b`
-| Arithmetic multiplication.
+| `poseidon_hash_single`
+| `result = poseidon_hash_single(x)`
+| `poseidon_hash_single(x: felt) -> (res: felt)`
 
-| `*=`
-|`a *= b`
-| Arithmetic multiplication and assignment.
+Hashes one element `x` and retrieves a single field element output.
 
+| `poseidon_hash_many`
+| `result = poseidon_hash_many(n, y)`
+| `poseidon_hash_many(n: felt, elements: felt*) -> (res: felt)`
 
-| `/`
-| `a / b`
-| Arithmetic division.
+Hashes n elements and retrieves a single field element output.
 
-| `/=`
-| `a /= b`
-| Arithmetic division and assignment.
+| `poseidon_hash_span`
+| `result = poseidon_hash_span(data)`
+| `poseidon_hash_span(mut span: Span<felt252>) -> felt252`
 
-| `%`
-| `a % b`
-| Arithmetic remainder.
-
-| `%=`
-| `a %= b`
-| Arithmetic remainder and assignment.
-
-| `-`
-| `-a`
-| Arithmetic negation.
-
-| `&&`
-| `a && b`
-| Short-circuiting logical AND.
-
-| `\|\|`
-| `a \|\| b`
-| Short-circuiting logical OR.
-
-| `!`
-| `!a`
-| Short-circuiting logical NOT.
-
-| `&`
-| `a & b`
-| Bitwise AND.
-
-| `\|`
-| `a \| b`
-| Bitwise OR.
-
-| `^`
-| `a ^ b`
-| Bitwise XOR.
-
-| `~`
-| `~a`
-| Bitwise NOT.
+Computes the Pedersen hash of the given input `data`.
 
 | `<`
 | `a < b`
@@ -120,36 +64,6 @@ Here are some general characteristics and purposes of Cairo builtins:
 | `a >= b`
 | Greater than or equal to comparison.
 
-| `hash2`
-| `result = hash2(x, y)`
-| `hash2(x: felt, y: felt) -> (res: felt)`
-
-Hashes two elements and retrieves a single field element output.
-
-| `pedersen_hash`
-| `result = pedersen_hash(x, y)`
-| `poseidon_hash(x: felt, y: felt) -> (res: felt)`
-
-Hashes two elements and retrieves a single field element output.
-
-| `poseidon_hash_single`
-| `result = poseidon_hash_single(x)`
-| `poseidon_hash_single(x: felt) -> (res: felt)`
-
-Hashes one element `x` and retrieves a single field element output.
-
-| `poseidon_hash_many`
-| `result = poseidon_hash_many(n, y)`
-| `poseidon_hash_many(n: felt, elements: felt*) -> (res: felt)`
-
-Hashes n elements and retrieves a single field element output.
-
-| `poseidon_hash_span`
-| `result = poseidon_hash_span(data)`
-| `poseidon_hash_span(mut span: Span<felt252>) -> felt252`
-
-Computes the Pedersen hash of the given input `data`.
-
 | `check_ecdsa_signature`
 | `valid = check_ecdsa_signature(message, public_key, signature_r, signature_s)`
 | Checks if (signature_r, signature_s) is a valid signature for the given public_key on the given message. 
@@ -159,6 +73,50 @@ Return TRUE if the signature is valid, FALSE otherwise.
 | `verify_ecdsa_signature`
 | `verify_ecdsa_signature(message, public_key, signature_r, signature_s)`
 | Verifies that the prover knows a signature of the given public_key on the given message.
+
+| `keccak_u256s_le_inputs`
+| `keccak_u256s_le_inputs(input)`
+| `keccak_u256s_le_inputs(mut input: Span<u256>) -> u256`
+
+Computes the keccak256 of multiple u256 values.
+
+The input values are interpreted as little-endian.
+
+The 32-byte result is represented as a little-endian u256.
+
+| `keccak_u256s_be_inputs`
+| `keccak_u256s_be_inputs(input)`
+| `keccak_u256s_be_inputs(mut input: Span<u256>) -> u256`
+
+Computes the keccak256 of multiple u256 values.
+
+The input values are interpreted as big-endian.
+
+The 32-byte result is represented as a little-endian u256.
+
+| `cairo_keccak`
+| `cairo_keccak(input, last_input_word, last_input_num_bytes)`
+| `cairo_keccak(ref input: Array<u64>, last_input_word: u64, last_input_num_bytes: usize) -> u256`
+
+Computes the keccak of `input` + `last_input_num_bytes` LSB bytes of `last_input_word`.
+
+To use this function, split the input into words of 64 bits (little endian).
+
+| `&`
+| `a & b`
+| Bitwise AND.
+
+| `\|`
+| `a \| b`
+| Bitwise OR.
+
+| `^`
+| `a ^ b`
+| Bitwise XOR.
+
+| `~`
+| `~a`
+| Bitwise NOT.
 
 | `ec_double`
 | `ec_double(p)`
@@ -189,48 +147,6 @@ Computes m * p on the EC.
 | `chained_ec_op(p: EcPoint, m: felt*, q: EcPoint*, len: felt) -> (r: EcPoint)`
 
 Computes p + m[0] * q[0] + m[1] * q[1] + ... m[len - 1] * q[len - 1] on the EC.
-
-| `cairo_keccak_uint256s`
-| `cairo_keccak_uint256s(n, elements)`
-| `cairo_keccak_uint256s(n_elements: felt, elements: Uint256*) -> (res: Uint256)`
-
-Computes the keccak hash of multiple uint256 numbers (big-endian).
-
-Note that both the output and the input are in big endian representation.
-
-| `cairo_keccak_felts`
-| `cairo_keccak_felts(n, elements)`
-| `cairo_keccak_felts(n_elements: felt, elements: Uint256*) -> (res: Uint256)`
-
-Computes the keccak hash of multiple field elements.
-
-| `cairo_keccak_felts_bigend`
-| `cairo_keccak_felts_bigend(n, elements)`
-| `cairo_keccak_felts_bigend(n_elements: felt, elements: Uint256*) -> (res: Uint256)`
-
-Computes the keccak hash of multiple field elements (big-endian).
-
-| `cairo_keccak`
-| `cairo_keccak(inputs, n)`
-| `cairo_keccak(inputs: felt*, n_bytes: felt) -> (res: Uint256)`
-
-Computes the keccak of input.
-
-To use this function, split the input into words of 64 bits (little endian).
-
-| `cairo_keccak_bigend`
-| `cairo_keccak_bigend(inputs, n)`
-| `cairo_keccak_bigend(inputs: felt*, n_bytes: felt) -> (res: Uint256)`
-
-Same as cairo_keccak, but outputs the hash in big endian representation.
-
-Note that the input is little endian.
-
-| `cairo_keccak_as_words`
-| `cairo_keccak_as_words(inputs, n)`
-| `cairo_keccak_as_words(inputs: felt*, n_bytes: felt) -> (res: Uint256)`
-
-Same as cairo_keccak, but outputs a pointer to 4 64-bit little endian words instead.
 
 |===
 
