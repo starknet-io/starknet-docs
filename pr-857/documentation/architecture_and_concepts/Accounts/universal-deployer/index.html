@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>What is an account? :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Accounts/introduction/">
-    <link rel="prev" href="../../Network_Architecture/messaging-mechanism/">
-    <link rel="next" href="../approach/">
+    <title>Universal Deployer Contract (UDC) :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Accounts/universal-deployer/">
+    <link rel="prev" href="../deploying_new_accounts/">
+    <link rel="next" href="../simplified_transaction_flow/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -110,11 +110,11 @@
     <li><a href="../../../">Starknet</a></li>
     <li>Architecture</li>
     <li>Accounts</li>
-    <li><a href="./">What is an account?</a></li>
+    <li><a href="./">Universal Deployer Contract</a></li>
   </ul>
 </nav>
   <div class="edit-this-page">
-    <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture_and_concepts/pages/Accounts/introduction.adoc"><img class="pencil">Edit this Page</a>
+    <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture_and_concepts/pages/Accounts/universal-deployer.adoc"><img class="pencil">Edit this Page</a>
   </div>
 </div>
 <div class="body">
@@ -287,10 +287,10 @@
     <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">Accounts</span>
 <ul class="nav-list">
-  <li class="nav-item is-current-page" data-depth="3">
+  <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="./">What is an account?</a>
+     href="../introduction/">What is an account?</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -307,10 +307,10 @@
        class="nav-link"
      href="../deploying_new_accounts/">Deploying new accounts</a>
   </li>
-  <li class="nav-item" data-depth="3">
+  <li class="nav-item is-current-page" data-depth="3">
     <a 
        class="nav-link"
-     href="../universal-deployer/">Universal Deployer Contract</a>
+     href="./">Universal Deployer Contract</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -582,112 +582,222 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">What is an account?</h1>
+<h1 class="page">Universal Deployer Contract (UDC)</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>An account represents a user onchain, and enables that user to interact with the blockchain.</p>
+<p>The Universal Deployer Contract (UDC) is a singleton smart contract that wraps the <a href="../../Smart_Contracts/system-calls-cairo1/#deploy" class="xref page">deploy syscall</a> to expose it to any contract that doesn’t implement it, such as account contracts. You can think of it as a standardized generic factory for Starknet contracts.</p>
 </div>
 <div class="paragraph">
-<p>Through an account, you can send transactions and interact with other contracts. In order for you to own an onchain asset, such as an ERC-20 token or an NFT, that asset must be associated with your account address.</p>
+<p>And since Starknet has no deployment transaction type, it offers a standardized way to deploy smart contracts by following the <a href="https://community.starknet.io/t/snip-deployer-contract-interface/2772">standard deployer interface</a> and emitting a <code>ContractDeployed</code> event.</p>
+</div>
+<div class="paragraph">
+<p>For more information see the <a href="https://community.starknet.io/t/snip-deployer-contract-interface/2772">proposal for the standard deployer interface</a>.
+For details on the motivation and the decision making process, see the <a href="https://community.starknet.io/t/universal-deployer-contract-proposal/1864">Universal Deployer Contract proposal</a>.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="ethereum_account_structure"><a class="anchor" href="#ethereum_account_structure"></a>Ethereum account structure</h2>
+<h2 id="udc_address"><a class="anchor" href="#udc_address"></a>UDC address</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Within Ethereum individual user accounts are known as Externally Owned Accounts (EOAs).</p>
-</div>
-<div class="paragraph">
-<p>EOAs differ from smart contracts in that EOAs are not controlled by code, but rather by a pair of private and public keys.</p>
-</div>
-<div class="paragraph">
-<p>The account&#8217;s address is derived from those keys and only by possessing the private key can you initiate transactions from an account. While Ethereum contracts are <em>passive</em>, that is, they can only change if they were called inside a transaction, EOAs can initiate transactions.</p>
-</div>
-<div class="paragraph">
-<p>While simple, because the signature scheme is fixed, EOAs have some drawbacks, including the following:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Control over the private key gives complete control over
-the account, so you must keep your seed phrase secure yet accessible.</p>
-</li>
-<li>
-<p>Limited flexibility surrounding wallet functionality</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>EIP-4337 is a design proposal for Ethereum that outlines <em>account abstraction</em>, whereby all accounts are managed via a dedicated smart contract on the Ethereum network, as a way to increase flexibility and usability. You can add custom logic on top of the basic EOA functionality, thereby bringing account abstraction into Ethereum.</p>
+<p>The UDC address is <code>0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf</code> in Mainnet, Sepolia testnet, and starknet-devnet. This address might change in the future when it is migrated to a modern version of Cairo.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="account_abstraction"><a class="anchor" href="#account_abstraction"></a>What is Account Abstraction?</h2>
+<h2 id="interface"><a class="anchor" href="#interface"></a>Interface</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Account abstraction enables more flexible account management. Rather than the protocol determining an account&#8217;s behavior, an <em>account contract</em>, which is a smart contract with programmable logic, defines a user&#8217;s account.</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">trait IUniversalDeployer {
+    fn deployContract(
+        class_hash: ClassHash,
+        salt: felt252,
+        unique: bool,
+        calldata: Span&lt;felt252&gt;
+    ) -&gt; ContractAddress;
+}</code></pre>
 </div>
-<div class="paragraph">
-<p>Using account abstraction you can now program how your account functions.</p>
-</div>
-<div class="paragraph">
-<p>For example, you can:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Determine what it means for a signature to be valid, or what contracts your account is allowed to interact with. This is known as <em>signature abstraction</em>.</p>
-</li>
-<li>
-<p>Pay transaction fees in different tokens. This is known as <em>fee abstraction</em>.</p>
-</li>
-<li>
-<p>Design your own replay protection mechanism and allow sending multiple uncoupled transactions in parallel.</p>
-<div class="paragraph">
-<p>In Ethereum, you cannot send two transactions in parallel, you must wait for confirmation of the first before sending the second. Otherwise, the second transaction can be rejected due to an invalid nonce. With account abstraction, a sequential nonce is not required. This is known as <em>nonce abstraction</em>.</p>
-</div>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>Today, Starknet offers signature abstraction. In the future, we will enrich the current account abstraction design. For example, see the <a href="https://community.starknet.io/t/starknet-account-abstraction-model-part-1/781">paymaster proposal</a> for fee abstraction in the Starknet Community Forum.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="examples"><a class="anchor" href="#examples"></a>Examples of customizing account functionality</h2>
+<h2 id="deploying_a_contract_with_the_udc"><a class="anchor" href="#deploying_a_contract_with_the_udc"></a>Deploying a contract with the UDC</h2>
+<div class="sectionbody">
+<div class="olist arabic">
+<div class="title">Procedure</div>
+<ol class="arabic">
+<li>
+<p>Declare the contract with a <code>DECLARE</code> transaction, or ensure that the contract has been declared.</p>
+<div class="paragraph">
+<p>For more information, see the <a href="../../Network_Architecture/transactions/#declare-transaction" class="xref page"><code>DECLARE</code> transaction</a>.</p>
+</div>
+</li>
+<li>
+<p>Call the <code>deployContract</code> function in the UDC.</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="title">Example implementation in Cairo:</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[starknet::interface]
+trait IUniversalDeployer&lt;TContractState&gt; {
+    fn deployContract(
+        ref self: TContractState,
+        class_hash: ClassHash,
+        salt: felt252,
+        unique: bool,
+        calldata: Span&lt;felt252&gt;
+    ) -&gt; ContractAddress; }
+
+const UDC_ADDRESS: felt252 = 0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf;
+
+fn deploy() -&gt; ContractAddress {
+    let dispatcher = IUniversalDeployerDispatcher {
+        contract_address: UDC_ADDRESS.try_into().unwrap()
+    };
+
+    // deployment parameters
+    let class_hash = class_hash_const::&lt;
+       0x5c478ee27f2112411f86f207605b2e2c58cdb647bac0df27f660ef2252359c6
+    &gt;();
+    let salt = 1234567879;
+    let unique = false;
+    let mut calldata = array![];
+
+    // the UDC returns the deployed contract address
+    dispatcher.deployContract(class_hash, salt, unique, calldata.span())
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="deployment_types"><a class="anchor" href="#deployment_types"></a>Deployment types</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Two examples of how you might program an account to function using account abstraction are:</p>
+<p>The Universal Deployer Contract offers two types of addresses to deploy: origin-dependent and origin-independent.
+As the names suggest, the origin-dependent type includes the deployer&#8217;s address in the address calculation,
+whereas, the origin-independent type does not.
+The <code>unique</code> boolean parameter ultimately determines the type of deployment.</p>
 </div>
-<div class="hdlist">
+<div class="admonitionblock important">
 <table>
 <tr>
-<td class="hdlist1">
-Social recovery
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
 </td>
-<td class="hdlist2">
-<p>A process where if you lose your wallet, you are able to retrieve it via a selected social network, vastly improving the typical experience of wallet recovery.</p>
+<td class="content">
+<div class="paragraph">
+<p>When deploying a contract that uses <code>get_caller_address</code> in the constructor calldata, remember that the UDC,  not the account, deploys that contract.
+Therefore, querying <code>get_caller_address</code> in a contract&#8217;s constructor returns the UDC&#8217;s address, <em>not the account&#8217;s address</em>.</p>
+</div>
 </td>
 </tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="origin_dependent"><a class="anchor" href="#origin_dependent"></a>Origin-dependent</h3>
+<div class="paragraph">
+<p>By making deployments dependent upon the origin address, users can reserve a whole address space to prevent someone else from taking ownership of the address.</p>
+</div>
+<div class="paragraph">
+<p>Only the owner of the origin address can deploy to those addresses.</p>
+</div>
+<div class="paragraph">
+<p>Achieving this type of deployment necessitates that the origin sets <code>unique</code> to <code>true</code> in the <code>deployContract</code> call.
+Under the hood, the function call leverages the origin&#8217;s address and creates a hashchain by hashing the origin&#8217;s address with the given salt.</p>
+</div>
+<div class="paragraph">
+<p>To deploy a unique contract address pass:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">let deployed_addr = udc.deployContract(class_hash, salt, true, calldata.span());</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="origin_independent"><a class="anchor" href="#origin_independent"></a>Origin-independent</h3>
+<div class="paragraph">
+<p>Origin-independent contract deployments create contract addresses independent of the deployer and the UDC instance.
+Instead, only the class hash, salt, and constructor arguments determine the address.
+This type of deployment enables redeployments of accounts and known systems across multiple networks.
+To deploy a reproducible deployment, set <code>unique</code> to <code>false</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let deployed_addr = udc.deployContract(class_hash, salt, false, calldata.span());</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="deploying_the_udc"><a class="anchor" href="#deploying_the_udc"></a>Deploying the UDC</h2>
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
 <tr>
-<td class="hdlist1">
-Operating your account via facial recognition
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
 </td>
-<td class="hdlist2">
-<p>With signature abstraction, you can use your phone&#8217;s native hardware to sign transactions, making it practically impossible to take control of another user&#8217;s account, even if your phone is stolen.</p>
+<td class="content">
+<div class="paragraph">
+<p>The UDC has already been deployed on most networks and development environments.
+The standard requires the UDC to be deployed passing <code>deploy_from_zero=true</code> and <code>salt=0</code> as arguments to the <a href="../../Smart_Contracts/system-calls-cairo1/#deploy" class="xref page">deploy syscall</a>. This results in a deterministic and predictable address across all instances of Starknet, facilitating SDK integration and reproducibility of deployments.</p>
+</div>
 </td>
 </tr>
 </table>
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="api_specification"><a class="anchor" href="#api_specification"></a>API specification</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="deploycontract_method"><a class="anchor" href="#deploycontract_method"></a><code>deployContract</code> method</h3>
+<div class="paragraph">
+<p>Deploy a contract through the Universal Deployer Contract.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">fn deployContract(
+    classHash: ClassHash,
+    salt: felt252,
+    unique: bool,
+    calldata: Span&lt;felt252&gt;
+) -&gt; ContractAddress</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="contractdeployed_event"><a class="anchor" href="#contractdeployed_event"></a><code>ContractDeployed</code> event</h3>
+<div class="paragraph">
+<p>Emitted when <code>deployer</code> deploys a contract through the Universal Deployer Contract.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[derive(Drop, starknet::Event)]
+struct ContractDeployed {
+    address: ContractAddress,
+    deployer: ContractAddress,
+    unique: bool,
+    classHash: ClassHash,
+    calldata: Span&lt;felt252&gt;,
+    salt: felt252,
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
 <nav class="pagination">
-  <span class="prev"><a href="../../Network_Architecture/messaging-mechanism/">L1-L2 messaging mechanics</a></span>
-  <span class="next"><a href="../approach/">Starknet&#8217;s account interface</a></span>
+  <span class="prev"><a href="../deploying_new_accounts/">Deploying new accounts</a></span>
+  <span class="next"><a href="../simplified_transaction_flow/">Simplified transaction flow</a></span>
 </nav>
 </article>
   </div>
