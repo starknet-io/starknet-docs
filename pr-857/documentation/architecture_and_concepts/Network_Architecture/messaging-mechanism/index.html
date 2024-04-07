@@ -690,7 +690,7 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 <div class="sect2">
 <h3 id="l2_l1_message_structure"><a class="anchor" href="#l2_l1_message_structure"></a>L2 &#8594; L1 message structure</h3>
 <div class="paragraph">
-<p>An L2 &#8594; L1 message structure is described as follows in the <a href="https://github.com/starkware-libs/starknet-specs/blob/b5c43955b1868b8e19af6d1736178e02ec84e678/api/starknet_api_openrpc.json#L3145"><code>starknet_api_openrpc.json</code></a>:</p>
+<p>The structure of an L2 &#8594; L1 message is described as follows under <code>MSG_TO_L1</code> in the <a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json">Starknet API JSON RPC</a> specification:</p>
 </div>
 <div class="hdlist stripes-odd">
 <table>
@@ -750,7 +750,7 @@ from_address (<code>felt252</code>)
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Sending an L2 to L1 message always incurs a fixed cost of 20,000 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core contract.</p>
+<p>Sending an L2 to L1 message always incurs a fixed cost of 20,000 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core Contract.</p>
 </div>
 </td>
 </tr>
@@ -771,7 +771,7 @@ from_address (<code>felt252</code>)
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>An L1 contract initiates a message to an L2 contract on Starknet by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract with the message parameters.</p>
+<p>An L1 contract induces a message to an L2 contract on Starknet by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract with the message parameters.</p>
 <div class="paragraph">
 <p>The Starknet Core Contract hashes the message parameters and updates the L1&#8594;L2 message mapping to indicate that a message with this hash was indeed sent. The L1 contract records the fee that the sender paid. For more information, see <a href="#l1-l2-message-fees">L1 &#8594; L2 message fees</a>.</p>
 </div>
@@ -793,10 +793,10 @@ from_address (<code>felt252</code>)
 <p>The L1 Handler transaction that was created in the previous step is added to a proof.</p>
 </li>
 <li>
-<p>The Core contract receives the state update.</p>
+<p>The Core Contract receives the state update.</p>
 </li>
 <li>
-<p>The message is cleared from the Core contract&#8217;s storage. At this point, the message is handled.</p>
+<p>The message is cleared from the Core Contract&#8217;s storage. At this point, the message is handled.</p>
 </li>
 </ol>
 </div>
@@ -836,7 +836,7 @@ from_address (<code>felt252</code>)
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The message nonce is maintained on the Starknet Core contract on L1, and is incremented whenever a message is sent to L2. The nonce is used to avoid a hash collision between different L1 handler transactions that is caused by the same message being sent on L1 multiple times.</p>
+<p>The message nonce is maintained on the Starknet Core Contract on L1, and is incremented whenever a message is sent to L2. The nonce is used to avoid a hash collision between different L1 handler transactions that is caused by the same message being sent on L1 multiple times.</p>
 </div>
 <div class="paragraph">
 <p>For more information, see <a href="#l1_l2_message_structure">L1&#8594;L2 structure</a>.</p>
@@ -850,20 +850,41 @@ from_address (<code>felt252</code>)
 </div>
 <div class="sect2">
 <h3 id="l2-l1_message_cancellation"><a class="anchor" href="#l2-l1_message_cancellation"></a>L1 &#8594; L2 message cancellation</h3>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Imagine a scenario where a user transfers an asset from L1 to L2. The flow starts with the user sending the asset to a Starknet bridge and the corresponding L1&#8594;L2 message generation. Now, imagine that the L2 message consumption doesn&#8217;t function, which might happen due to a bug in the dApp&#8217;s Cairo contract. This could result in the user losing custody over their asset forever.</p>
+<p>The flow described here should only be used in edge cases such as bugs on the Layer 2 contract preventing message consumption.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>To mitigate this risk, we allow the contract that initiated the L1&#8594;L2 message to cancel it after declaring the intent and waiting a suitable amount of time.</p>
+<p>Consider that Alice sends an L1 asset to a Starknet bridge to transfer it to L2, which generates the corresponding L1&#8594;L2 message. Now, consider that the L2 message consumption doesn&#8217;t function, which might happen due to a bug in the dApp&#8217;s Cairo contract. This bug could result in Alice losing custody of their asset forever.</p>
 </div>
 <div class="paragraph">
-<p>The user starts by calling <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L134"><code>startL1ToL2MessageCancellation</code></a> with the relevant message parameters in the Starknet Core Contract. Then, after a five days delay, the user can finalize the cancellation by calling <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L147"><code>cancelL1ToL2Message</code></a>.</p>
+<p>To mitigate this risk, the contract that initiated the L1&#8594;L2 message can cancel it by declaring the intent to cancel, waiting five days, and then completing the cancellation. This delay protects the sequencer from a DoS attack in the form of repeatedly sending and canceling a message before it is included in L1, rendering the L2 block which contains the activation of the corresponding L1 handler invalid.</p>
 </div>
 <div class="paragraph">
-<p>The reason for the delay is to protect the sequencer from a DoS attack in the form of repeatedly sending and canceling a message before it is included in L1, rendering the L2 block which contains the activation of the corresponding L1 handler invalid.</p>
+<p>The steps in this flow are as follows:</p>
 </div>
-<div class="paragraph">
-<p>Note that this flow should only be used in edge cases such as bugs on the Layer 2 contract preventing message consumption.</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>The user that initiated the L1&#8594;L2 message calls the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L134"><code>startL1ToL2MessageCancellation</code></a> function in the Starknet Core Contract.</p>
+</li>
+<li>
+<p>The user waits five days until she can finalize the cancellation.</p>
+</li>
+<li>
+<p>The user calls the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L147"><code>cancelL1ToL2Message</code></a> function.</p>
+</li>
+</ol>
 </div>
 </div>
 <div class="sect2">
@@ -872,7 +893,7 @@ from_address (<code>felt252</code>)
 <p>An L1 &#8594; L2 message induces a transaction on L2, which, unlike regular transactions, is not sent by an account. This calls for a different mechanism for paying the transaction&#8217;s fee, for otherwise the sequencer has no incentive of including L1 handler transactions inside a block.</p>
 </div>
 <div class="paragraph">
-<p>To avoid having to interact with both L1 and L2 when sending a message, L1 &#8594; L2 messages are payable on L1, by sending ETH with the call to the payable function <code>sendMessageToL2</code> on the Starknet Core contract.</p>
+<p>To avoid having to interact with both L1 and L2 when sending a message, L1 &#8594; L2 messages are payable on L1, by sending ETH with the call to the payable function <code>sendMessageToL2</code> on the Starknet Core Contract.</p>
 </div>
 <div class="paragraph">
 <p>The sequencer takes this fee in exchange for handling the message. The sequencer charges the fee in full upon updating the L1 state with the consumption of this message.</p>
@@ -885,10 +906,10 @@ from_address (<code>felt252</code>)
 <div class="sect2">
 <h3 id="l1_l2_message_structure"><a class="anchor" href="#l1_l2_message_structure"></a>L1 &#8594; L2 structure</h3>
 <div class="paragraph">
-<p>For completeness, we describe the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.</p>
+<p>For completeness, <a href="#l1_l2_message_structure">L1 &#8594; L2 structure</a> describes the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.</p>
 </div>
-<table class="tableblock frame-all grid-all fit-content stretch">
-<caption class="title">Table 1. L1 &#8594; L2 Message</caption>
+<table id="L1-L2_message_structure" class="tableblock frame-all grid-all fit-content stretch">
+<caption class="title">Table 1. L1 &#8594; L2 message structure</caption>
 <colgroup>
 <col>
 <col>
