@@ -1,0 +1,55 @@
+[id="block_execution_info"]
+= Execution information
+
+For the most up-to-date information, see the link:https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/info.cairo[`info.cairo`] contract.
+
+The struct `ExecutionInfo` contains the following information about the currently executing block and the transactions in the block.
+
+== The `ExecutionInfo` struct
+
+[horizontal,labelwidth="25",role="stripes-odd"]
+`block_info: Box<BlockInfo>`:: Contains information about a block. For details, see xref:#block_info[]
+`tx_info: Box<TxInfo>`:: Contains information about a transaction. For details, see xref:#tx_info[]
+`caller_address`: ContractAddress:: The address of the contract that invokes the `get_execution_info` syscall.
+`contract_address`: ContractAddress:: The address of the contract in which the `get_execution_info` syscall appears.
+`entry_point_selector`: felt252:: The function that includes the `get_execution_info` syscall.
+
+
+[#block_info]
+== The `BlockInfo` struct
+
+[horizontal,labelwidth="25",role="stripes-odd"]
+`_block_number_: u64`:: The number of the block that is currently being executed. When called from an account contract's +`__validate__`+, +`__validate_deploy__`+, or +`__validate_declare__`+ function, this value is rounded down to the nearest multiple of 100.
+`_block_timestamp_: u64`:: The timestamp showing the creation time of the block, in seconds since the Unix epoch, based on UTC time, rounded down to the nearest second. When called from an account contract's +`__validate__`+, +`__validate_deploy__`+, or +`__validate_declare__`+ function, this value is rounded down to the nearest hour.
+`_sequencer_address_: ContractAddress`:: The address of the Starknet sequencer contract.
+
+[#tx_info]
+== Transaction information: The `TxInfo` struct
+
+[horizontal,labelwidth="25",role="stripes-odd"]
+`_version_: felt252`:: The version of the transaction. It is fixed (currently, 3) in the OS, and should be signed by the account contract. This field allows invalidating old transactions, whenever the meaning of the other transaction fields is changed (in the OS).
+`_account_contract_address_: ContractAddress`:: The account contract from which this transaction originates.
+`_max_fee_: u128`:: The max_fee field of the transaction.
+`_signature_: Span<felt252>`:: The signature of the transaction.
+`_transaction_hash_: felt252`:: The hash of the transaction.
+`_chain_id_: felt252`:: The identifier of the chain.
+This field can be used to prevent replay of testnet transactions on mainnet.
+`_nonce_: felt252`:: The transaction's nonce.
+`_resource_bounds_: Span<ResourceBounds>`:: A span of `ResourceBounds` structs. For details, see xref:#resource_bounds[].
+`_tip_: u128`:: The tip.
+`_paymaster_data_: Span<felt252>`:: If specified, the paymaster should pay for the execution of the tx.
+The data includes the address of the paymaster sponsoring the transaction, followed by
+extra data to send to the paymaster.
+`_nonce_data_availability_mode_: u32`:: The data availability mode for the nonce.
+`_fee_data_availability_mode_: u32`:: The data availability mode for the account balance from which fee will be taken.
+`_account_deployment_data_: Span<felt252>`:: If nonempty, will contain the required data for deploying and initializing an account
+contract: its class hash, address salt and constructor calldata.
+
+[#resource_bounds]
+== The `ResourceBounds` struct
+
+[horizontal,labelwidth="25",role="stripes-odd"]
+`_resource_: felt252`:: The name of the resource.
+`_max_amount_: u64`:: The maximum amount of the resource allowed for usage during the execution.
+`_max_price_per_unit_: u128`:: The maximum price the user is willing to pay for the resource unit.
+

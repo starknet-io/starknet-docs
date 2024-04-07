@@ -2,13 +2,27 @@
 = Adding a token to StarkGate
 
 StarkGate supports permissionless bridging.
-You can add support for a token with the `enrollTokenBridge` function, using a block explorer or a CLI.
 
-The L2 ERC-20 contract is a standard contract, so it is not recommended to add tokens with non-standard behavior, such as inflationary tokens.
+To permissionlessly add support for an ERC-20 token, use the `enrollTokenBridge` function. You can access this function using a block explorer or a CLI.
 
 include::partial$snippet_enrollTokenBridge_note.adoc[]
 
-Adding a token that requires a customized bridging mechanism or a non-standard ERC-20 contract on L2 is currently not pemissionless, and can be done only by the StarkWare team. Please contact StarkWare at starkgate.support@starkware.co.
+When you enroll a new ERC-20 token, StarkGate does the following:
+
+. Adds bridge functionality for that token on L1 using the `StarknetTokenBridge.sol` contract.
+. Adds bridge functionality for that token on L2 using the `token_bridge.cairo` class.
+. Creates a new ERC-20 token contract on L2 based on a standard ERC-20 contract class. Each new contract uses the class hash of this contract class to identify its inheritance.
++
+[NOTE]
+====
+When the code of `token_bridge.cairo` is updated, its class hash changes. However,any existing contract continues to refer to the previous class hash. Any new contracts use the new class hash.
+====
+
+Be aware of the following:
+
+* The L2 ERC-20 contract is a standard contract, so it is not recommended to add tokens with non-standard behavior, such as inflationary tokens.
+
+* Adding a token that requires a customized bridging mechanism or a non-standard ERC-20 contract on L2 is currently not permissionless, and can be done only by the StarkWare team. Please contact StarkWare at support@starknetcommunity.io.
 
 == Additional resources
 

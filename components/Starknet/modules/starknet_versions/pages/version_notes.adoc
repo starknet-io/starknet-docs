@@ -5,40 +5,145 @@ The following release notes cover the ongoing version changes to Starknet. You c
 
 == Starknet environments
 
-Within Starknet's deployment pipeline there are separate and distinct networks that operate independently of each other for testing before deployment.
+Within Starknet's deployment pipeline, there are separate and distinct networks that operate independently of each other for testing before deployment.
 
 
-include::ROOT:partial$snippet_important_goerli2_removed.adoc[]
+include::ROOT:partial$snippet_important_goerli_removed.adoc[]
 
 .Current versions supported in each environment
 [%autowidth.stretch]
 |===
 |Environment |Starknet version|Sierra version|Cairo version
 
-|Mainnet|0.12.3|1.3.0|2.0.0 - 2.3.1
-
-|Sepolia Testnet|0.13.0|1.4.0|2.0.0 - 2.4.0
-|Goerli Testnet (deprecated)|0.13.0|1.4.0|2.0.0 - 2.4.0
+|Mainnet|0.13.1|1.5.0|2.0.0 - 2.6
+|Sepolia Testnet|0.13.1|1.5.0|2.0.0 - 2.6
+// |Goerli Testnet (deprecated)|0.13.1|1.5.0|2.0.0 - 2.6
 |===
 
-[id="version0.13.0"]
-== Starknet v0.13.0 (December 13th 23)
+[id="version0.13.1"]
+== Starknet v0.13.1 (March 13, 23)
 
-Starknet v0.13.0 is live on testnet.
+[discrete]
+=== New features and enhancements
+
+* *Cheaper data availability (DA):* Starknet uses link:https://eips.ethereum.org/EIPS/eip-4844[EIP-4844]. State diffs are now blobs, rather than calldata, requiring the addition of `data_gas` to the Starknet block header.
+* Time-related syscalls when called from an account contract's `+__validate__+`, `+__validate_deploy__+`, `+__validate_declare__+`, or `constructor` function:
+** `block_timestamp` returns the hour, rounded down.
+** `block_number` returns the block number, rounded down to the nearest multiple of 100.
+* *Optimization:* Load into memory only the functions in a contract that are actually used when generating the proof.
+
+[discrete]
+=== Block header updates
+The block header includes the following new fields:
+
+* `l1_da_mode`: A string enum that takes the value `CALLDATA` or `BLOB`, and indicates whether EIP-4844 is the data availability solution that is used for the block. Also appears in pending block.
+* `l1_data_gas_price`: Contains `price_in_wei` and `price_in_fri`, where 1 fri is 10^-18^ STRK. Also appears in pending block.
+* `l1_gas_price`: Replaces `eth_l1_gas_price` and `strk_l1_gas_price`. Contains the data gas price (EIP-4844) in addition to the regular gas price.
+
+[discrete]
+=== API: JSON RPC
+
+[discrete]
+==== Starknet API JSON RPC 0.6.0
+
+Starknet 0.13.1 is backward compatible with `starknet_api_openrpc.json` v0.6.0. Responses from 0.13.1 can be mapped naturally into v0.6.0 objects.
+
+[discrete]
+==== Starknet API JSON RPC 0.7.0
+
+A new version of `starknet_api_openrpc.json`, 0.7.0, accommodates the changes introduced by Starknet using EIP-4844.
+
+.`BLOCK_HEADER` includes two new fields to support EIP-4844:
+
+* `l1_data_gas_price`: contains `price_in_wei` and `price_in_fri` (10^-18^ denominations, similar to https://github.com/starkware-libs/starknet-specs/blob/49665932a97f8fdef7ac5869755d2858c5e3a687/api/starknet_api_openrpc.json#L3766[v0.6.0]).
+* `l1_da_mode`: An enum that indicates whether this block will use calldata or blobdata and can take the following values:
+** `CALLDATA`
+** `BLOB`
+
+.`FEE_ESTIMATE`
+
+* Includes two new fields:
+** `data_gas_consumed`
+** `data_gas_price`
+* `overall_fee` is now: +
+`gas_consumed` × `gas_price` + `data_gas_consumed` × `data_gas_price`
+* Fee estimates will change depending on the data availability solution used by current Starknet blocks. For example, if you estimate the fee against the pending block, and it’s currently using `CALLDATA`, then nodes are expected to return `data_gas_consumed=0` and compute the fee similarly to today, that is, get higher estimates.
+
+.Receipts and traces now include data availability resources
+
+* `COMMON_RECEIPT_PROPERTIES`, the main receipt object, now includes a new entry: execution_resources.
+* The `EXECUTION_RESOURCES` object now includes the field `data_availability`. Note that the resources of internal calls will remain the same/
+* For more information, see the https://github.com/starkware-libs/starknet-specs/pull/187/files[PR for the API JSON RPC specs]
+
+.`EXECUTION_RESOURCES`
+
+* Computation resources are separated from data availability resources. This is done by introducing the `data_availability` property, which includes `l1_gas` and `l1_data_gas`, which were consumed due to DA requirements. One of these will always be zero, depending on whether or not the block uses calldata or blobs, as specified by the `l1_da_mode` field in the block header.
+* Syscall costs are now included in the execution resources of traces and receipts. These are costs that are already being paid for but were not reported so far.
+
+[discrete]
+=== Pricing changes
+
+[discrete]
+==== Computation
+
+* A Cairo step now costs 0.0025 gas/step, a 50% reduction.
+* All builtins costs are accordingly reduced by 50%.
+
+[discrete]
+==== Calldata and signatures
+
+Each felt in the calldata and signature arrays of all transaction types now costs 0.128 gas/felt.
+
+[discrete]
+==== Class declaration
+* Each felt of a sierra_program in the contract class and of bytecode in the compiled contract class now costs 28 gas/felt.
++
+[NOTE]
+====
+v1 `DECLARE` transactions only include bytecode.
+====
+* Each character in the ABI costs 0.875 gas.
+
+[discrete]
+==== Events
+
+* An additional felt to the data array of an event now costs 0.128 gas/felt, similar to calldata.
+* An additional felt to the keys array now costs 0.256 gas/felt.
+
+[discrete]
+=== Infrastructure updates
+
+Starknet now supports multiple L1 providers.
+
+[discrete]
+=== Additional resources
+
+Community Forum Posts:
+
+* link:https://community.starknet.io/t/starknet-v0-13-1-eip4844-support-more-fee-reductions-stability-quality-of-life/112951[Starknet v0.13.1: EIP4844 Support, More Fee Reductions, Stability, Quality of Life]
+* link:https://community.starknet.io/t/starknet-v0-13-1-fee-reduction/113552[Starknet v0.13.1: Fee Reduction]
+* link:https://community.starknet.io/t/data-availability-with-eip4844/113065[Data availability with EIP4844]
+* link:https://community.starknet.io/t/starknet-v0-13-1-pre-release-notes/113664[Starknet v0.13.1 pre-release notes]
+
+
+[id="version0.13.0"]
+== Starknet v0.13.0 (Jan 10, 23)
+
+Starknet v0.13.0 is live on Mainnet.
 
 Starknet 0.13.0 includes the following changes:
 
 * v3 transactions, including:
 ** Fee payment in STRK
 ** Reserved fields for future features, such as Volition and payment master
-* `get_block` API: The `gas_price` field is replaced by the `eth_l1_gas_price` and `strk_l1_gas_price` fields. This change applies also to existing blocks. For more information on the new fields, see the link:https://github.com/starkware-libs/starknet-specs/releases/tag/v0.6.0[JSON RPC API Spec on Github]
+* `get_block` API: The `gas_price` field is replaced by the `eth_l1_gas_price` and `strk_l1_gas_price` fields. This change applies also to existing blocks. For more information on the new fields, see the link:https://github.com/starkware-libs/starknet-specs/releases/tag/v0.6.0[JSON RPC API Spec on GitHub]
 * Sierra v1.4.0. This new version of Sierra is part of Crate v2.4.0, in the Cairo 2.4.0 package. For more information, see link:https://community.starknet.io/t/cairo-v2-4-0-is-out/109275[Cairo v2.4.0 is out!] on the Community forum.
 * Improved performance of `secp256k1_mul` and `secp256r1_mul` syscalls
-* Computation cost is reduced by approximately 200% as a result of reduced Cairo steps and increased use of builtins. L1 data availability cost is reduced by approximtately 10%.
+* Computation cost is reduced by approximately 50% as a result of reduced Cairo steps and increased use of builtins. L1 data availability cost is reduced by approximately 10%-25%. For an ERC-20 transfer, the DA fee reduction is 25%.
 
 
 [id="version0.12.3"]
-== Starknet v0.12.3 (November 19th 23)
+== Starknet v0.12.3 (Nov 19, 23)
 
 Starknet v0.12.3 is live on Mainnet.
 
@@ -63,7 +168,7 @@ Move structs that are common to `secp256k1` and `secp256r1` to a separate file.
 
 
 [id="version0.12.2"]
-== Starknet v0.12.2 (September 4th 23)
+== Starknet v0.12.2 (Sep 04, 23)
 
 Starknet v0.12.2 is live on Mainnet.
 
@@ -74,7 +179,7 @@ This version includes the following changes:
 * Increased maximum Cairo steps per transaction from 1 million to 3 million.
 
 [id="version0.12.1"]
-== Starknet v0.12.1 (August 21st 23)
+== Starknet v0.12.1 (Aug 21, 23)
 
 Starknet v0.12.1 is live on Mainnet.
 
@@ -85,7 +190,7 @@ This version includes the following changes:
 * Keccak builtin.
 
 [id="version0.12.0"]
-== Starknet v0.12.0 (July 12th, 23)
+== Starknet v0.12.0 (July 12, 23)
 
 Starknet v0.12.0 is live on Mainnet.
 
@@ -265,7 +370,6 @@ Technical changes:
 
 [id="version0.9.1"]
 == Starknet v0.9.1 (July 20, 22)
-
 This version contains the following changes:
 
 Starknet:
