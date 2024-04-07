@@ -19,7 +19,11 @@ Interfaces are available through https://github.com/starkware-libs/cairo-lang/bl
 * xref:#cancelL1ToL2Message[`cancelL1ToL2Message`]
 * xref:#consumeMessageFromL2[`consumeMessageFromL2`]
 * xref:#getMaxL1MsgFee[`getMaxL1MsgFee`]
+* xref:#l1ToL2MessageCancellations[`l1ToL2MessageCancellations`]
+* xref:#l1ToL2MessageNonce[`l1ToL2MessageNonce`]
 * xref:#l1ToL2Messages[`l1ToL2Messages`]
+* xref:#l2ToL1Messages[`l2ToL1Messages`]
+* xref:#messageCancellationDelay[`messageCancellationDelay`]
 * xref:#sendMessageToL2[`sendMessageToL2`]
 * xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`]
 
@@ -54,7 +58,7 @@ Functions are listed in alphabetical order.
 [discrete]
 ==== Description
 
-Cancels an L1 to L2 message. Call this function after calling the xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`] function. The time between the calls to these two functions must be at least the number of seconds defined by the link:https://github.com/starkware-libs/cairo-lang/blob/caba294d82eeeccc3d86a158adb8ba209bf2d8fc/src/starkware/starknet/solidity/StarknetMessaging.sol#L25[`L1L2_MESSAGE_CANCELLATION_DELAY_TAG`] constant. #I can't find an actual value for this constant.#
+Cancels an L1 to L2 message. Call this function after calling the xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`] function. The time between the calls to these two functions must be at least the number of seconds defined by the xref:#messageCancellationDelay[`messageCancellationDelay`] function.
 
 Only a sender can cancel a message.
 
@@ -164,6 +168,73 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 
 '''
 
+[#l1ToL2MessageCancellations]
+=== `l1ToL2MessageCancellations`
+
+[discrete]
+==== Description
+
+Returns the timestamp at the time cancelL1ToL2Message was called with a given message hash.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`bytes32 _msgHash_`:: The message hash.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _result_`:: The timestamp at the time cancelL1ToL2Message was called with the given message hash `_msgHash_`. Returns 0 if cancelL1ToL2Message was never called with the given message hash `_msgHash_`.
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L73[`l1ToL2MessageCancellations`]
+
+'''
+
+[#l1ToL2MessageNonce]
+=== `l1ToL2MessageNonce`
+
+[discrete]
+==== Description
+
+Returns the nonce of the next message sending to L2 contract.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+None.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _nonce_`:: The nonce of the next message sending to L2 contract.
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L55[`l1ToL2MessageNonce`]
+
+'''
+
 [#l1ToL2Messages]
 === `l1ToL2Messages`
 
@@ -189,7 +260,7 @@ Indicates if a pending message is associated with a given message hash.
 Returns `uint256 _result_`, where `_result_` is one of the following:
 [horizontal,labelwidth="30",role=stripes-odd]
 `msg_fee + 1`:: A pending message is associated with the `_msgHash_` parameter. #What is `msg_fee`? I don't see it mentioned anywhere. Does it simply refer to the fee of the pending message? Why does it return `msg_fee + 1`? How is that value used?#
-`0`:: No pending message is associated with `_msgHash_`.
+`0`:: No pending message is associated with the `_msgHash_` parameter.
 
 [discrete]
 ==== Function definition
@@ -197,6 +268,75 @@ Returns `uint256 _result_`, where `_result_` is one of the following:
 Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
 
 * Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L39[`l1ToL2Messages`]
+
+'''
+
+[#l2ToL1Messages]
+=== `l2ToL1Messages`
+
+[discrete]
+==== Description
+
+Indicates if a pending message is associated with a given message hash.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`bytes32 _msgHash_`:: The message hash.
+
+[discrete]
+==== Returns
+
+Returns `uint256 _result_`, where `_result_` is one of the following:
+[horizontal,labelwidth="30",role=stripes-odd]
+`1`:: A pending message is associated with the `_msgHash_` parameter.
+`0`:: No pending message is associated with the `_msgHash_` parameter.
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L43[`l2ToL1Messages`]
+
+'''
+
+[#messageCancellationDelay]
+=== `messageCancellationDelay`
+
+[discrete]
+==== Description
+
+Returns the time interval after which you can cancel a message starting from the moment of calling the xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`] function. You can get the real value by calling the link:https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F11[`messageCancellationDelay`] function on etherscan.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+None.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _result_`:: The time interval.
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L59[`messageCancellationDelay`]
 
 '''
 
@@ -246,9 +386,7 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 
 Starts the cancellation of an L1 to L2 message.
 
-You can cancel a message after a predefined about of time from the moment this function is called. The amount of time is set by the link:https://github.com/starkware-libs/cairo-lang/blob/efa9648f57568aad8f8a13fbf027d2de7c63c2c0/src/starkware/starknet/solidity/StarknetMessaging.sol#L59[`messageCancellationDelay()`] function.
-
-#Where can I see the actual numerical value?#
+You can cancel a message after a predefined about of time from the moment this function is called. The amount of time is set by the xref:#messageCancellationDelay[`messageCancellationDelay`] function.
 
 You can only call this function for a message that is currently pending, and the caller must be the sender of that message.
 
