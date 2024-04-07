@@ -59,7 +59,7 @@ image::l2l1.png[L2->L1 message mechanism]
 
 // xref:#structure_l2-l1[] illustrates the structure of an L2 -> L1 message.
 
-An L2 -> L1 message structure is described as follows in the link:https://github.com/starkware-libs/starknet-specs/blob/b5c43955b1868b8e19af6d1736178e02ec84e678/api/starknet_api_openrpc.json#L3145[`starknet_api_openrpc.json`]:
+The structure of an L2 -> L1 message is described as follows under `MSG_TO_L1` in the link:https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json[Starknet API JSON RPC] specification:
 
 [horizontal,labelwidth="30",role="stripes-odd"]
 from_address (`felt252`):: The address of the L2 contract sending the message.
@@ -85,7 +85,7 @@ keccak256(
 
 [NOTE]
 ====
-Sending an L2 to L1 message always incurs a fixed cost of 20,000 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core contract.
+Sending an L2 to L1 message always incurs a fixed cost of 20,000 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core Contract.
 ====
 
 [id="l1-l2-messages"]
@@ -95,15 +95,15 @@ Contracts on L1 can interact asynchronously with contracts on L2 using the _L1->
 
 The protocol consists of the following stages:
 
-. An L1 contract initiates a message to an L2 contract on Starknet by calling the link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract with the message parameters.
+. An L1 contract induces a message to an L2 contract on Starknet by calling the link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract with the message parameters.
 +
 The Starknet Core Contract hashes the message parameters and updates the L1->L2 message mapping to indicate that a message with this hash was indeed sent. The L1 contract records the fee that the sender paid. For more information, see xref:#l1-l2-message-fees[L1 -> L2 message fees].
 . The message is then decoded into a Starknet transaction that invokes a function annotated with the `l1_handler` decorator on the target contract. Transactions like this on L2 are called *_L1 handler transactions_*.
  .. The Starknet sequencer, upon seeing enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction. #What does this mean: "upon seeing enough L1 confirmations..."? Is this talking about waiting for a batch?#
  .. The L2 transaction invokes the relevant `l1_handler` function.
 . The L1 Handler transaction that was created in the previous step is added to a proof.
-. The Core contract receives the state update.
-. The message is cleared from the Core contract's storage. At this point, the message is handled.
+. The Core Contract receives the state update.
+. The message is cleared from the Core Contract's storage. At this point, the message is handled.
 
 The above flow is illustrated in the following diagram:
 #THIS IMAGE IS WRONG & MISLEADING#
@@ -120,7 +120,7 @@ An L1->L2 message consists of #Where is an example of an L1->L2 message?#:
 +
 [NOTE]
 ====
-The message nonce is maintained on the Starknet Core contract on L1, and is incremented whenever a message is sent to L2. The nonce is used to avoid a hash collision between different L1 handler transactions that is caused by the same message being sent on L1 multiple times.
+The message nonce is maintained on the Starknet Core Contract on L1, and is incremented whenever a message is sent to L2. The nonce is used to avoid a hash collision between different L1 handler transactions that is caused by the same message being sent on L1 multiple times.
 
 For more information, see xref:#l1_l2_message_structure[L1->L2 structure].
 ====
@@ -128,22 +128,29 @@ For more information, see xref:#l1_l2_message_structure[L1->L2 structure].
 [id="l2-l1_message_cancellation"]
 === L1 -> L2 message cancellation
 
-Imagine a scenario where a user transfers an asset from L1 to L2. The flow starts with the user sending the asset to a Starknet bridge and the corresponding L1->L2 message generation. Now, imagine that the L2 message consumption doesn't function, which might happen due to a bug in the dApp's Cairo contract. This could result in the user losing custody over their asset forever.
+[NOTE]
+====
+The flow described here should only be used in edge cases such as bugs on the Layer 2 contract preventing message consumption.
+====
 
-To mitigate this risk, we allow the contract that initiated the L1->L2 message to cancel it after declaring the intent and waiting a suitable amount of time.
+Consider that Alice sends an L1 asset to a Starknet bridge to transfer it to L2, which generates the corresponding L1->L2 message. Now, consider that the L2 message consumption doesn't function, which might happen due to a bug in the dApp's Cairo contract. This bug could result in Alice losing custody of their asset forever.
 
-The user starts by calling https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L134[`startL1ToL2MessageCancellation`] with the relevant message parameters in the Starknet Core Contract. Then, after a five days delay, the user can finalize the cancellation by calling https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L147[`cancelL1ToL2Message`].
+To mitigate this risk, the contract that initiated the L1->L2 message can cancel it by declaring the intent to cancel, waiting five days, and then completing the cancellation. This delay protects the sequencer from a DoS attack in the form of repeatedly sending and canceling a message before it is included in L1, rendering the L2 block which contains the activation of the corresponding L1 handler invalid.
 
-The reason for the delay is to protect the sequencer from a DoS attack in the form of repeatedly sending and canceling a message before it is included in L1, rendering the L2 block which contains the activation of the corresponding L1 handler invalid.
+The steps in this flow are as follows:
 
-Note that this flow should only be used in edge cases such as bugs on the Layer 2 contract preventing message consumption.
+. The user that initiated the L1->L2 message calls the https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L134[`startL1ToL2MessageCancellation`] function in the Starknet Core Contract.
+. The user waits five days until she can finalize the cancellation.
+. The user calls the https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L147[`cancelL1ToL2Message`] function.
+
+
 
 [id="l1-l2-message-fees"]
 === L1 -> L2 message fees
 
 An L1 -> L2 message induces a transaction on L2, which, unlike regular transactions, is not sent by an account. This calls for a different mechanism for paying the transaction's fee, for otherwise the sequencer has no incentive of including L1 handler transactions inside a block.
 
-To avoid having to interact with both L1 and L2 when sending a message, L1 -> L2 messages are payable on L1, by sending ETH with the call to the payable function `sendMessageToL2` on the Starknet Core contract.
+To avoid having to interact with both L1 and L2 when sending a message, L1 -> L2 messages are payable on L1, by sending ETH with the call to the payable function `sendMessageToL2` on the Starknet Core Contract.
 
 The sequencer takes this fee in exchange for handling the message. The sequencer charges the fee in full upon updating the L1 state with the consumption of this message.
 
@@ -154,9 +161,10 @@ The fee itself is calculated in the xref:../Network_Architecture/fee-mechanism.a
 [#l1_l2_message_structure]
 === L1 -> L2 structure
 
-For completeness, we describe the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.
+For completeness, xref:#l1_l2_message_structure[] describes the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.
 
-.L1 -> L2 Message
+[#L1-L2_message_structure]
+.L1 -> L2 message structure
 [%autowidth.stretch]
 |===
 | FromAddress       | ToAddress      | Selector       | Payload              | Nonce          |
