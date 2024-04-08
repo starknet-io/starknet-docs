@@ -38,6 +38,62 @@ The _StarkGate Registry_::
 * contains the addresses to all supported bridges
 * enables a bridge developer to stop servicing an existing bridge
 
+[#legacy_bridge]
+== Legacy bridges
+
+All token bridges that existed prior to StarkGate 2.0 (Mainnet: January 2024) besides supporting all StarkGate 2.0 functionality, are backward compatible. Each token was bridged with a unique, custom pair of L1 and L2 bridge contracts. The L1 bridge is an instance of link:https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/solidity/LegacyBridge.sol[`LegacyBridge.sol`], and the L2 bridge is an instance of link:https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/cairo/legacy_bridge_eic.cairo[`legacy_bridge_eic.cairo`].
+
+[#example]
+=== Example: USDC contracts
+
+* L1 ERC-20 contract address: `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`
+* L2 ERC-20 contract address: `0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8`
+* L1 bridge contract address: `0xF6080D9fbEEbcd44D89aFfBFd42F098cbFf92816`
+* L2 bridge contract address: `0x05cd48fccbfd8aa2773fe22c217e808319ffcc1c5a6a463f7d8fa2da48218196`
+
+Consider the `Deposit` functions for the L1 bridge contract for USDC on Etherscan: link:https://etherscan.io/address/0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract[`0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract`]
+
+This contract has the following two `deposit` functions: `deposit (0x0efe6a8b)` and `deposit (0xe2bbb158)`, which shows that the bridge includes support for the legacy functionality as well as the modern functionality:
+
+[horizontal,labelwidth="25"]
+`deposit (0x0efe6a8b)`:: The StarkGate 2.0 contract, which includes support for all tokens within a single contract, requiring that you enter the address of the token in the deposit function.
+`deposit (0xe2bbb158)`:: The legacy contract, which is labeled *Support Legacy ABI*. This function does not include the `token (address)` parameter, because the contract that contains this function only supports USDC. Therefore, the address of the token is superfluous.
+
+[#legacy_bridges]
+=== List of legacy bridges
+
+The following tokens have legacy contracts as well as StarkGate 2.0 contracts:
+
+* Starknet Token (STRK)
+* Starknet Voting Token (vSTRK)
+* Wrapped BTC (WBTC)
+* USD Coin (USDC)
+* Tether USD (USDT)
+* Ether (ETH)
+* Dai Stablecoin (DAI)
+* Dai Stablecoin (DAI) (Dai v0)
+* Wrapped liquid staked Ether 2.0 (wstETH)
+* Rocket Pool ETH (rETH)
+* R Stablecoin +(R)+
+* Frax (FRAX)
+* Frax Share (FXS)
+* Staked Frax Ether (sfrxETH)
+* LUSD Stablecoin (LUSD)
+* Uniswap (UNI)
+
+For complete details, see the link:https://github.com/starknet-io/starknet-addresses/tree/master/bridged_tokens[`bridged_tokens`] directory on GitHub.
+
+[#stark_gate_withdrawal_limit]
+== Withdrawal limit
+
+By default, StarkGate imposes no limit on withdrawals. However, in order to mitigate risks associated with critical vulnerabilities that could result in the loss of user funds, StarkGate can enable a withdrawal limit.
+
+If a serious security issue arises, the security agent in the StarkGate contract can limit withdrawals to 5% of the Total Value Locked (TVL) per day for any affected token by calling the `setWithdrawLimitPCT()` function in the `WithdrawalLimit.sol` contract. A dedicated team can then investigate and resolve the issue.
+
+Only a security admin quorum can disable the withdrawal limit. The quorum will consist of Starknet Foundation members, Starknet ecosystem contributors, and StarkWare representatives. This diverse group will ensure that decisions reflect the Starknet community's broad interests.
+
+This approach, blending manual oversight with automated detection, aims to minimize potential losses.
+
 
 == Additional resources
 
@@ -46,5 +102,7 @@ The _StarkGate Registry_::
 * The xref:starkgate_function_reference.adoc[_StarkGate function reference_]. Lists functions exposed by the Registry, Manager, and the bridge itself, including:
 ** xref:starkgate_function_reference.adoc#getBridge[`getBridge`]
 ** xref:starkgate_function_reference.adoc#enrollTokenBridge[`enrollTokenBridge`]
-** L1 contracts on Github
-** L2 contracts on Github
+** L1 contracts on GitHub
+** L2 contracts on GitHub
+// Awaiting final URL.
+// * link:https://github.com/starknet-io/starkgate-contracts/blob/d62a255307d2f3de65665f18316766a2c69ead78/src/solidity/WithdrawalLimit.sol#L20[`setWithdrawLimitPCT`] in `WithdrawalLimit.sol`
