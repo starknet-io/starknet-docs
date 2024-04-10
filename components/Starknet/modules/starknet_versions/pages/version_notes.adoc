@@ -8,7 +8,7 @@ The following release notes cover the ongoing version changes to Starknet. You c
 Within Starknet's deployment pipeline, there are separate and distinct networks that operate independently of each other for testing before deployment.
 
 
-include::ROOT:partial$snippet_important_goerli2_removed.adoc[]
+include::ROOT:partial$snippet_important_goerli_removed.adoc[]
 
 .Current versions supported in each environment
 [%autowidth.stretch]
@@ -17,20 +17,68 @@ include::ROOT:partial$snippet_important_goerli2_removed.adoc[]
 
 |Mainnet|0.13.1|1.5.0|2.0.0 - 2.6
 |Sepolia Testnet|0.13.1|1.5.0|2.0.0 - 2.6
-|Goerli Testnet (deprecated)|0.13.1|1.5.0|2.0.0 - 2.6
+// |Goerli Testnet (deprecated)|0.13.1|1.5.0|2.0.0 - 2.6
 |===
 
 [id="version0.13.1"]
-== Starknet v0.13.1
+== Starknet v0.13.1 (March 13, 24)
 
 [discrete]
 === New features and enhancements
 
-* *Cheaper data availability:* Starknet uses link:https://eips.ethereum.org/EIPS/eip-4844[EIP-4844].
-* Time-related syscalls when called from an account contract's `+__validate__+` function:
-** `timestamp` returns the hour, rounded down.
+* *Cheaper data availability (DA):* Starknet uses link:https://eips.ethereum.org/EIPS/eip-4844[EIP-4844]. State diffs are now blobs, rather than calldata, requiring the addition of `data_gas` to the Starknet block header.
+* Time-related syscalls when called from an account contract's `+__validate__+`, `+__validate_deploy__+`, `+__validate_declare__+`, or `constructor` function:
+** `block_timestamp` returns the hour, rounded down.
 ** `block_number` returns the block number, rounded down to the nearest multiple of 100.
 * *Optimization:* Load into memory only the functions in a contract that are actually used when generating the proof.
+
+[discrete]
+=== Block header updates
+The block header includes the following new fields:
+
+* `l1_da_mode`: A string enum that takes the value `CALLDATA` or `BLOB`, and indicates whether EIP-4844 is the data availability solution that is used for the block. Also appears in pending block.
+* `l1_data_gas_price`: Contains `price_in_wei` and `price_in_fri`, where 1 fri is 10^-18^ STRK. Also appears in pending block.
+* `l1_gas_price`: Replaces `eth_l1_gas_price` and `strk_l1_gas_price`. Contains the data gas price (EIP-4844) in addition to the regular gas price.
+
+[discrete]
+=== API: JSON RPC
+
+[discrete]
+==== Starknet API JSON RPC 0.6.0
+
+Starknet 0.13.1 is backward compatible with `starknet_api_openrpc.json` v0.6.0. Responses from 0.13.1 can be mapped naturally into v0.6.0 objects.
+
+[discrete]
+==== Starknet API JSON RPC 0.7.0
+
+A new version of `starknet_api_openrpc.json`, 0.7.0, accommodates the changes introduced by Starknet using EIP-4844.
+
+.`BLOCK_HEADER` includes two new fields to support EIP-4844:
+
+* `l1_data_gas_price`: contains `price_in_wei` and `price_in_fri` (10^-18^ denominations, similar to https://github.com/starkware-libs/starknet-specs/blob/49665932a97f8fdef7ac5869755d2858c5e3a687/api/starknet_api_openrpc.json#L3766[v0.6.0]).
+* `l1_da_mode`: An enum that indicates whether this block will use calldata or blobdata and can take the following values:
+** `CALLDATA`
+** `BLOB`
+
+.`FEE_ESTIMATE`
+
+* Includes two new fields:
+** `data_gas_consumed`
+** `data_gas_price`
+* `overall_fee` is now: +
+`gas_consumed` × `gas_price` + `data_gas_consumed` × `data_gas_price`
+* Fee estimates will change depending on the data availability solution used by current Starknet blocks. For example, if you estimate the fee against the pending block, and it’s currently using `CALLDATA`, then nodes are expected to return `data_gas_consumed=0` and compute the fee similarly to today, that is, get higher estimates.
+
+.Receipts and traces now include data availability resources
+
+* `COMMON_RECEIPT_PROPERTIES`, the main receipt object, now includes a new entry: execution_resources.
+* The `EXECUTION_RESOURCES` object now includes the field `data_availability`. Note that the resources of internal calls will remain the same/
+* For more information, see the https://github.com/starkware-libs/starknet-specs/pull/187/files[PR for the API JSON RPC specs]
+
+.`EXECUTION_RESOURCES`
+
+* Computation resources are separated from data availability resources. This is done by introducing the `data_availability` property, which includes `l1_gas` and `l1_data_gas`, which were consumed due to DA requirements. One of these will always be zero, depending on whether or not the block uses calldata or blobs, as specified by the `l1_da_mode` field in the block header.
+* Syscall costs are now included in the execution resources of traces and receipts. These are costs that are already being paid for but were not reported so far.
 
 [discrete]
 === Pricing changes
@@ -63,18 +111,6 @@ v1 `DECLARE` transactions only include bytecode.
 * An additional felt to the keys array now costs 0.256 gas/felt.
 
 [discrete]
-=== API changes:
-
-Starknet block:
-
-* New field `l1_da_mode`, which indicates whether EIP-4844 was used in the block.
-* `eth_l1_gas_price` and `strk_l1_gas_price` were replaced, and the information now contains the data gas price (EIP-4844) in addition to the regular gas price
-* `execution_resources` in the transaction receipt now contains:
-** data availability resources
-** syscall resources, which contribute to the transaction fee but were not included in the receipt before this version.
-* `transaction_commitment` and `event_commitment` are added to the block. `0` is returned for old blocks.
-
-[discrete]
 === Infrastructure updates
 
 Starknet now supports multiple L1 providers.
@@ -91,7 +127,7 @@ Community Forum Posts:
 
 
 [id="version0.13.0"]
-== Starknet v0.13.0 (Jan 10, 23)
+== Starknet v0.13.0 (Jan 10, 24)
 
 Starknet v0.13.0 is live on Mainnet.
 

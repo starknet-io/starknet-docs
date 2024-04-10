@@ -3,32 +3,44 @@
 [id="block_structure"]
 = Block structure
 
-In Starknet, a block is a list of transactions, and a block header that contains the following fields:
+A Starknet block is a list of transactions and a block header that contains the following fields:
 
 
 [%autowidth]
 |===
-| Name | Type | Description | Implemented
+| Name | Type | Description
 
-| `parent_block_hash` | `FieldElement` | The hash of this block's parent | &#10003;
-|`block_number` | `Integer` | The number (height) of this block | &#10003;
-| `global_state_root` | `FieldElement` | The state xref:../Network_Architecture/starknet-state.adoc#state_commitment[commitment] after this block | &#10003;
-|`sequencer_address` | `FieldElement` | The Starknet address of the sequencer who created this block | &#10003;
-| `block_timestamp` | `Timestamp` | The time the sequencer created this block before executing transactions | &#10003;
-|`transaction_count` | `Integer` | The number of transactions in a block | &#10003;
-| `transaction_commitment` | `FieldElement` | A commitment to the transactions included in the block | &#10003;
-|`event_count` | `Integer` | The number of events | &#10003;
-| `event_commitment` | `FieldElement` | A commitment to the events produced in this block | &#10003;
-| `protocol_version` | `Integer` | The version of the Starknet protocol used when creating this block |
-| `extra data` | `FieldElement` | Extraneous data that might be useful for running transactions |
+| `parent_block_hash` | `FieldElement` | The hash of the block's parent.
+|`block_number` | `Integer` | The number, that is, the height, of this block.
+| `global_state_root` | `FieldElement` | The xref:../Network_Architecture/starknet-state.adoc#state_commitment[state commitment] after the block.
+|`sequencer_address` | `ContractAddress` | The Starknet address of the sequencer that created the block.
+| `block_timestamp` | `Timestamp` | The time at which the sequencer began building the block, in seconds since the Unix epoch.
+|`transaction_count` | `Integer` | The number of transactions in the block.
+| `transaction_commitment` | `FieldElement` | A commitment to the transactions included in the block.
+
+The root of a height-64 binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to stem:[$${h(\text{transaction_hash}, \text{signature})}$$].
+|`event_count` | `Integer` | The number of events in the block.
+| `event_commitment` | `FieldElement` | A commitment to the events produced in the block.
+
+The root of a height-64 binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] event.
+| `l1_gas_price` | `(Integer, Integer)` | The price of L1 gas that was used while constructing the block. L1 gas prices apply to storage updates and L1->L2 messages. As of March 2023, computation is also priced in terms of L1 gas, but this will change in the future.
+
+The first `Integer` value is the price in wei. The second is the price in fri.
+| `l1_data_gas_price` | `(Integer, Integer)` | The price of L1 blob gas that was used while constructing the block. If the `l1_DA_MODE` of the block is set to `BLOB`, L1 blob gas prices determines the storage update cost.
+
+The first `Integer` value is the price in wei. The second is the price in fri.
+| `l1_da_mode` | `String` | `CALLDATA` or `BLOB`, depending on how Starknet state diffs are sent to L1.
+| `protocol_version` | `String` | The version of the Starknet protocol used when creating the block.
+
+
 |===
 
-Where:
-
-
-[horizontal,labelwidth='30']
-`event_commitment`:: is the root of a 64-bit high binary Merkle Patricia tree. The leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] event.
-`transaction_commitment`:: is the root of a 64-bit high binary Merkle Patricia tree. The leaf at index stem:[$i$] corresponds to stem:[$${h(transaction \space hash, signature)}$$] if the stem:[$i'th$] transaction is an `invoke` transaction and stem:[$h(0,0)$] otherwise.
+// Where:
+//
+//
+// [horizontal,labelwidth='30']
+// `event_commitment`:: is the root of a 64-bit high binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] event.
+// `transaction_commitment`:: is the root of a 64-bit high binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to stem:[$${h(transaction \space hash, signature)}$$] if the stem:[$i'th$] transaction is an `invoke` transaction and stem:[$h(0,0)$] otherwise.
 
 
 
@@ -60,4 +72,9 @@ Where `_h_` is the xref:../../Cryptography/hash-functions.adoc#pedersen-hash[Ped
 [NOTE]
 ====
 Zeros inside the hash computation of an object are used as placeholders, to be replaced in the future by meaningful fields.
+====
+
+[NOTE]
+====
+Several properties of the block header, such as `l1_gas_price` and `l1_da_mode`, are not yet included in the block hash. This will change in a future Starknet version.
 ====
