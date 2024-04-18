@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>L1-L2 messaging :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/messaging-mechanism/">
-    <link rel="prev" href="../on-chain-data/">
-    <link rel="next" href="../../Accounts/introduction/">
+    <title>Starknet architecture: Overview :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/starknet_architecture_overview/">
+    <link rel="prev" href="../../../starknet_versions/deprecated/">
+    <link rel="next" href="../header/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -109,12 +109,11 @@
   <ul>
     <li><a href="../../../">Starknet</a></li>
     <li>Architecture</li>
-    <li>State</li>
-    <li><a href="./">L1-L2 messaging mechanism</a></li>
+    <li><a href="./">Overview</a></li>
   </ul>
 </nav>
   <div class="edit-this-page">
-    <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture_and_concepts/pages/Network_Architecture/messaging-mechanism.adoc"><img class="pencil">Edit this Page</a>
+    <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture_and_concepts/pages/Network_Architecture/starknet_architecture_overview.adoc"><img class="pencil">Edit this Page</a>
   </div>
 </div>
 <div class="body">
@@ -230,10 +229,10 @@
     <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">Architecture</span>
 <ul class="nav-list">
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../starknet_architecture_overview/">Overview</a>
+     href="./">Overview</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -269,10 +268,10 @@
        class="nav-link"
      href="../on-chain-data/">Data availability</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="3">
+  <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="./">L1-L2 messaging mechanism</a>
+     href="../messaging-mechanism/">L1-L2 messaging mechanism</a>
   </li>
 </ul>
   </li>
@@ -575,481 +574,317 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">L1-L2 messaging</h1>
-<div class="sect1">
-<h2 id="l2-l1_messages"><a class="anchor" href="#l2-l1_messages"></a>L2 &#8594; L1 messages</h2>
+<h1 class="page">Starknet architecture: Overview</h1>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Contracts on L2 can interact asynchronously with contracts on L1 using the L2&#8594;L1 messaging protocol.</p>
-</div>
-<div class="paragraph">
-<p>The protocol consists of the following stages:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>During the execution of a transaction, a contract on Starknet sends a message from L2 to L1 by calling the <code>send_message_to_L1</code> syscall.</p>
-</li>
-<li>
-<p>The sequencer attaches the message parameters to the state update that includes the syscall invocation. The message parameters include the address of the recipient contract on L1 and the message data.</p>
-<div class="paragraph">
-<p>For example:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let mut payload: Array&lt;felt252&gt; = ArrayTrait::new();
-let to_address: EthAddress = 1_felt252.try_into().unwrap();
-payload.append(1);
-// potentially add more elements to payload (payload[1], payload[2],  etc.)
-
-send_message_to_l1_syscall(to_address: to_address.into(), payload: payload.span());</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p>The prover proves the state update that includes this transaction.</p>
-</li>
-<li>
-<p>The sequencer updates the L1 state.</p>
-</li>
-<li>
-<p>The message is stored on L1 in the Starknet Core Contract and a counter on the Core Contract increases by one.<br></p>
-</li>
-<li>
-<p>The <code>processMessage</code> function, which is part of the Starknet Core Contract, emits the <code>LogMessageToL1</code> event, which contains the message parameters.</p>
-</li>
-<li>
-<p>The message recipient on L1 can access and consume the message by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119"><code>consumeMessageFromL2</code></a> function, which includes the message parameters within the transaction.
-This function, which is part of the Starknet Core Contract, verifies the following:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>The hashes of the L2 sent message parameters, now stored on the Core Contract, and the L1 received message parameters, are the same.</p>
-</li>
-<li>
-<p>The entity calling the function is indeed the recipient on L1.</p>
-<div class="paragraph">
-<p>In such a case, the counter corresponding to the message hash in the Starknet Core Contract decreases by one. For more information, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L130C7-L130C7#"><code>consumeMessageFromL2</code></a> function in <code>StarknetMessaging.sol</code>.</p>
-</div>
-</li>
-</ul>
-</div>
-</li>
-</ol>
-</div>
-<div class="paragraph">
-<p><mark><strong>Diagram comments</strong>:</mark></p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>StarkNet &#8594; Starknet</p>
-</li>
-<li>
-<p><mark>1: <strong>L2&#8594;L1 message</strong> is not clear if this is a function call or what.</mark></p>
-</li>
-<li>
-<p><mark>The title should have an actual arrow. Better to remove the title from the graphic and just use the caption.</mark></p>
-</li>
-<li>
-<p><mark>Step 3: Error in callout Stark<strong>N</strong>et OS notifies <strong>on</strong> the message, which is included in the proof</mark></p>
-</li>
-<li>
-<p><mark>All arrows appear as - &gt; instead of arrows.</mark></p>
-</li>
-<li>
-<p><mark>5 Unclear from where the consumer receives the message on L2. Why is the message consumer on L2 in the diagram? I thought that the consumer is on L1.</mark> <mark>Arni agrees that the consumer should be on L1, not L2.</mark></p>
-</li>
-<li>
-<p><mark>3 Blockchain Dispatcher takes place after verification. Need to check if the dispatcher queries the verifier and gets an answer. The current arrows are confusing.</mark></p>
-</li>
-<li>
-<p><mark>Add: The Verifier after it verifies stores the verified facts in the Fact Registry</mark></p>
-</li>
-<li>
-<p><mark>When the dispatcher sends the L1 tx to the Starknet Core Contract, the tx invokes the <code>updateState</code> function, which then reads the Fact Registry contract, and if the fact has been registered, it updates the Starknet state.</mark></p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p><a href="#diagram_l2-l1_messaging_mechanism">L2&#8594;L1 Messaging mechanism</a> illustrates this flow:</p>
-</div>
-<div id="diagram_l2-l1_messaging_mechanism" class="imageblock">
-<div class="content">
-<img src="../../_images/l2l1.png" alt="L2&#8594;L1 message mechanism">
-</div>
-<div class="title">Figure 1. L2&#8594;L1 Messaging mechanism</div>
-</div>
-<div class="sect2">
-<h3 id="l2_l1_message_structure"><a class="anchor" href="#l2_l1_message_structure"></a>L2 &#8594; L1 message structure</h3>
-<div class="paragraph">
-<p>The structure of an L2 &#8594; L1 message is described as follows under <code>MSG_TO_L1</code> in the <a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json">Starknet API JSON RPC</a> specification:</p>
-</div>
-<div class="hdlist stripes-odd">
-<table>
-<colgroup>
-<col style="width: 30%;">
-<col>
-</colgroup>
-<tr>
-<td class="hdlist1">
-from_address (<code>felt252</code>)
-</td>
-<td class="hdlist2">
-<p>The address of the L2 contract sending the message.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>to_address</code> (<code>EthAddress</code>)
-</td>
-<td class="hdlist2">
-<p>The target L1 address the message is sent to.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>payload</code> (<code>Array&lt;felt252&gt;</code>) 
-</td>
-<td class="hdlist2">
-<p>The payload of the message.</p>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect2">
-<h3 id="hashing_l2-l1"><a class="anchor" href="#hashing_l2-l1"></a>L2 &#8594; L1 message hashing</h3>
-<div class="paragraph">
-<p>The hash of an L2 &#8594; L1 message is computed on L1 as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">keccak256(
-    abi.encodePacked(
-        FromAddress,
-        uint256(ToAddress),
-        Payload.length,
-        Payload
-    )
-);</code></pre>
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Sending an L2 to L1 message always incurs a fixed cost of 20,000 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core Contract.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
+<p>Starknet is a coordinated system, with each component—sequencers,
+provers, and nodes—playing a specific yet interconnected role. Although
+Starknet is not yet fully decentralized, it’s actively moving toward
+that goal. This description of the system&#8217;s roles and how they interact should
+help you better grasp the intricacies of the Starknet ecosystem.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="l1-l2-messages"><a class="anchor" href="#l1-l2-messages"></a>L1 &#8594; L2 messages</h2>
+<h2 id="transaction_flow"><a class="anchor" href="#transaction_flow"></a>Transaction flow</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Contracts on L1 can interact asynchronously with contracts on L2 using the <em>L1&#8594;L2</em> messaging protocol.</p>
+<p>Starknet’s operation begins when a transaction is received by a gateway,
+which serves as the Mempool. This stage could also be managed by the
+sequencer. The transaction is initially marked as <code>RECEIVED</code>. The
+sequencer then incorporates the transaction into the network state and
+tags it as <code>ACCEPTED_ON_L2</code>. The final step involves the prover, which
+executes the operating system on the new block, calculates its proof,
+and submits it to Layer 1 (L1) for verification.</p>
 </div>
 <div class="paragraph">
-<p>The protocol consists of the following stages:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>An L1 contract induces a message to an L2 contract on Starknet by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract with the message parameters.</p>
-<div class="paragraph">
-<p>The Starknet Core Contract hashes the message parameters and updates the L1&#8594;L2 message mapping to indicate that a message with this hash was indeed sent. The L1 contract records the fee that the sender paid. For more information, see <a href="#l1-l2-message-fees">L1 &#8594; L2 message fees</a>.</p>
-</div>
-</li>
-<li>
-<p>The message is then decoded into a Starknet transaction that invokes a function annotated with the <code>l1_handler</code> decorator on the target contract. Transactions like this on L2 are called <strong><em>L1 handler transactions</em></strong>.</p>
-<div class="olist loweralpha">
-<ol class="loweralpha" type="a">
-<li>
-<p>The Starknet sequencer, upon seeing enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction. <mark>What does this mean: "upon seeing enough L1 confirmations&#8230;&#8203;"? Is this talking about waiting for a batch?</mark></p>
-</li>
-<li>
-<p>The L2 transaction invokes the relevant <code>l1_handler</code> function.</p>
-</li>
-</ol>
-</div>
-</li>
-<li>
-<p>The L1 Handler transaction that was created in the previous step is added to a proof.</p>
-</li>
-<li>
-<p>The Core Contract receives the state update.</p>
-</li>
-<li>
-<p>The message is cleared from the Core Contract&#8217;s storage. At this point, the message is handled.</p>
-</li>
-</ol>
-</div>
-<div class="paragraph">
-<p>The above flow is illustrated in the following diagram:
-<mark>THIS IMAGE IS WRONG &amp; MISLEADING</mark></p>
+<p>For more information on the transaction flow, see <a href="../transaction-life-cycle/" class="xref page">Transaction lifecycle</a>.</p>
 </div>
 <div class="imageblock">
 <div class="content">
-<img src="../../_images/l1l2.png" alt="l1l2">
+<img src="../../_images/transaction-flow.png" alt="transaction flow">
 </div>
 </div>
 <div class="paragraph">
-<p>An L1&#8594;L2 message consists of <mark>Where is an example of an L1&#8594;L2 message?</mark>:</p>
+<p>In essence, Starknet’s architecture involves multiple components:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>L1 sender&#8217;s address</p>
+<p>The <em>sequencer</em> receives transactions, orders
+them, and produces blocks. It operates similarly to validators in
+Ethereum or Bitcoin.</p>
 </li>
 <li>
-<p>L2 recipient&#8217;s contract address</p>
+<p>The <em>prover</em> generates proofs for the created blocks
+and transactions. It uses the Cairo Virtual Machine (Cairo VM) to run provable
+programs, thereby creating execution traces necessary for generating
+STARK proofs.</p>
 </li>
 <li>
-<p>Function selector</p>
-</li>
-<li>
-<p>Calldata array</p>
-</li>
-<li>
-<p>Message nonce</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The message nonce is maintained on the Starknet Core Contract on L1, and is incremented whenever a message is sent to L2. The nonce is used to avoid a hash collision between different L1 handler transactions that is caused by the same message being sent on L1 multiple times.</p>
-</div>
-<div class="paragraph">
-<p>For more information, see <a href="#l1_l2_message_structure">L1&#8594;L2 structure</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
+<p>L1, in this case, Ethereum, hosts a smart contract capable
+of verifying these STARK proofs. If the proofs are valid, Starknet’s
+state root on L1 is updated.</p>
 </li>
 </ul>
-</div>
-<div class="sect2">
-<h3 id="l2-l1_message_cancellation"><a class="anchor" href="#l2-l1_message_cancellation"></a>L1 &#8594; L2 message cancellation</h3>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The flow described here should only be used in edge cases such as bugs on the Layer 2 contract preventing message consumption.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>Consider that Alice sends an L1 asset to a Starknet bridge to transfer it to L2, which generates the corresponding L1&#8594;L2 message. Now, consider that the L2 message consumption doesn&#8217;t function, which might happen due to a bug in the dApp&#8217;s Cairo contract. This bug could result in Alice losing custody of their asset forever.</p>
-</div>
-<div class="paragraph">
-<p>To mitigate this risk, the contract that initiated the L1&#8594;L2 message can cancel it by declaring the intent to cancel, waiting five days, and then completing the cancellation. This delay protects the sequencer from a DoS attack in the form of repeatedly sending and canceling a message before it is included in L1, rendering the L2 block which contains the activation of the corresponding L1 handler invalid.</p>
-</div>
-<div class="paragraph">
-<p>The steps in this flow are as follows:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>The user that initiated the L1&#8594;L2 message calls the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L134"><code>startL1ToL2MessageCancellation</code></a> function in the Starknet Core Contract.</p>
-</li>
-<li>
-<p>The user waits five days until she can finalize the cancellation.</p>
-</li>
-<li>
-<p>The user calls the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L147"><code>cancelL1ToL2Message</code></a> function.</p>
-</li>
-</ol>
-</div>
-</div>
-<div class="sect2">
-<h3 id="l1-l2-message-fees"><a class="anchor" href="#l1-l2-message-fees"></a>L1 &#8594; L2 message fees</h3>
-<div class="paragraph">
-<p>An L1 &#8594; L2 message induces a transaction on L2, which, unlike regular transactions, is not sent by an account. This calls for a different mechanism for paying the transaction&#8217;s fee, for otherwise the sequencer has no incentive of including L1 handler transactions inside a block.</p>
-</div>
-<div class="paragraph">
-<p>To avoid having to interact with both L1 and L2 when sending a message, L1 &#8594; L2 messages are payable on L1, by sending ETH with the call to the payable function <code>sendMessageToL2</code> on the Starknet Core Contract.</p>
-</div>
-<div class="paragraph">
-<p>The sequencer takes this fee in exchange for handling the message. The sequencer charges the fee in full upon updating the L1 state with the consumption of this message.</p>
-</div>
-<div class="paragraph">
-<p>The fee itself is calculated in the <a href="../fee-mechanism/#overall_fee" class="xref page">same manner</a> as
-"regular" L2 transactions. You can use the <a href="../../../cli/starkli/#starknet-estimate_fee" class="xref page">CLI</a> to get an estimate of an L1 &#8594; L2 message fee.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="l1_l2_message_structure"><a class="anchor" href="#l1_l2_message_structure"></a>L1 &#8594; L2 structure</h3>
-<div class="paragraph">
-<p>For completeness, <a href="#l1_l2_message_structure">L1 &#8594; L2 structure</a> describes the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.</p>
-</div>
-<table id="L1-L2_message_structure" class="tableblock frame-all grid-all fit-content stretch">
-<caption class="title">Table 1. L1 &#8594; L2 message structure</caption>
-<colgroup>
-<col>
-<col>
-<col>
-<col>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">FromAddress</th>
-<th class="tableblock halign-left valign-top">ToAddress</th>
-<th class="tableblock halign-left valign-top">Selector</th>
-<th class="tableblock halign-left valign-top">Payload</th>
-<th class="tableblock halign-left valign-top">Nonce</th>
-<th class="tableblock halign-left valign-top"></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>EthereumAddress</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>List<FieldElement></code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="sect2">
-<h3 id="hashing_l1-l2"><a class="anchor" href="#hashing_l1-l2"></a>L1 &#8594; L2 hashing</h3>
-<div class="paragraph">
-<p>The hash of the message is computed on L1 as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">keccak256(
-    abi.encodePacked(
-        uint256(FromAddress),
-        ToAddress,
-        Nonce,
-        Selector,
-        Payload.length,
-        Payload
-    )
-);</code></pre>
-</div>
-</div>
-<table class="tableblock frame-all grid-all fit-content stretch">
-<caption class="title">Table 2. L1 handler transaction</caption>
-<colgroup>
-<col>
-<col>
-<col>
-<col>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Version</th>
-<th class="tableblock halign-left valign-top">ContractAddress</th>
-<th class="tableblock halign-left valign-top">Selector</th>
-<th class="tableblock halign-left valign-top">Calldata</th>
-<th class="tableblock halign-left valign-top">Nonce</th>
-<th class="tableblock halign-left valign-top"></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>List<FieldElement></code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-</tbody>
-</table>
-<div class="paragraph">
-<p>The hash of the corresponding L1 handler transaction on L2 is computed as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">l1_handler_tx_hash = ℎ(
-    "l1_handler",
-    version,
-    contract_address,
-    entry_point_selector,
-    ℎ(calldata),
-    chain_id,
-    nonce
-)</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(\text{l1_handler}\) is a constant prefix, encoded in bytes (ASCII), with big-endian.</p>
-</li>
-<li>
-<p>\(\text{chain_id}\) is a constant value that specifies the network to which this transaction is sent.</p>
-</li>
-<li>
-<p>\(h\) is the <a href="../../Cryptography/hash-functions/#pedersen_hash" class="xref page">Pedersen</a> hash</p>
-</li>
-</ul>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>In an <code>l1_handler</code> transaction, the first element of the calldata is always the Ethereum address of the sender.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="additional_resources"><a class="anchor" href="#additional_resources"></a>Additional resources</h2>
+<h2 id="starknets_state"><a class="anchor" href="#starknets_state"></a>Starknet&#8217;s state</h2>
 <div class="sectionbody">
-<div class="ulist">
-<ul>
+<div class="paragraph">
+<p>Starknet’s state is a comprehensive snapshot maintained through Merkle
+trees, much like in Ethereum. This establishes the architecture of the
+validity roll-up and the roles of each component.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="sequencers"><a class="anchor" href="#sequencers"></a>Sequencers</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Sequencers are the backbone of the Starknet network, similar to Ethereum’s
+validators. They usher transactions into the system.</p>
+</div>
+<div class="paragraph">
+<p>Validity Rollups, also known as ZK-Rollups,  excel at offloading some network chores, like bundling
+and processing transactions, to specialized players. This setup is
+similar to how Ethereum and Bitcoin delegate security to miners.
+Sequencing, like mining, demands hefty resources.</p>
+</div>
+<div class="paragraph">
+<p>Validity Rollups like Starknet outsource transaction processing to specialized
+entities and then verify their work. These specialized entities, in the
+context of Validity Rollups, are known as <em>sequencers</em>.</p>
+</div>
+<div class="paragraph">
+<p>Instead of providing security, as miners do, sequencers provide
+transaction capacity. They order, that is, sequence, multiple transactions into a
+single batch, execute them, and produce a block that is later
+proved by the prover and submitted to the Layer 1 network as a single,
+compact proof, known as a <em>rollup</em>. Just as validators
+in Ethereum and miners in Bitcoin are specialized actors securing the
+network, sequencers in Validity Rollup-based networks are specialized
+actors that provide transaction capacity.</p>
+</div>
+<div class="paragraph">
+<p>This mechanism enables Validity Rollups to handle a higher volume
+of transactions while maintaining the security of the underlying
+Ethereum network, enhancing scalability without compromising on
+security.</p>
+</div>
+<div class="paragraph">
+<p>Sequencers follow a systematic method for processing transactions:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p><a href="../../Smart_Contracts/system-calls-cairo1/#send_message_to_L1" class="xref page"><code>send_message_to_L1</code></a> syscall</p>
+<p>Sequencing: They collect transactions from users and order them.</p>
 </li>
 <li>
-<p><a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract</p>
+<p>Executing: Sequencers then process these transactions.</p>
 </li>
-</ul>
+<li>
+<p>Batching: Transactions are grouped together in batches for
+efficiency.</p>
+</li>
+<li>
+<p>Block Production: Sequencers produce blocks that contain batches of
+processed transactions.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Sequencers must be reliable and highly available, as their role is
+critical to the network’s smooth functioning. They need powerful and
+well-connected machines to perform their role effectively, as they must process transactions rapidly and continuously.</p>
+</div>
+<div class="paragraph">
+<p>The current roadmap for Starknet includes decentralizing the sequencer
+role. This shift towards decentralization will enable more participants
+to become sequencers, contributing to the robustness of the network.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="provers"><a class="anchor" href="#provers"></a>Provers</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Provers serve as the second line of verification in the Starknet
+network. Their main task is to validate the work of the sequencers, when
+they receive the block produced by the sequencer, and to generate proofs
+that these processes were correctly performed.</p>
+</div>
+<div class="paragraph">
+<p>A prover does the following:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Receives blocks:</strong> Provers receive blocks of processed transactions
+from sequencers.</p>
+</li>
+<li>
+<p><strong>Processes blocks:</strong> Provers process these blocks a second time, ensuring
+that all transactions within the block have been correctly handled.</p>
+</li>
+<li>
+<p><strong>Generates a proof:</strong> After processing, provers generate a proof of
+correct transaction processing.</p>
+</li>
+<li>
+<p><strong>Sends the proof to Ethereum:</strong> Finally, the proof is sent to the
+Ethereum network for validation. If the proof is correct, the
+Ethereum network accepts the block of transactions.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Provers need even more computational power than sequencers because they
+have to calculate and generate proofs, a process that is computationally
+heavy. However, the work of provers can be split into multiple parts,
+allowing for parallelism and efficient proof generation. The proof
+generation process is asynchronous, meaning it doesn’t have to occur
+immediately or in real-time. This flexibility allows for the workload to
+be distributed among multiple provers. Each prover can work on a
+different block, allowing for parallelism and efficient proof
+generation.</p>
+</div>
+<div class="paragraph">
+<p>The design of Starknet relies on these two types of actors—sequencers
+and provers—working in tandem to ensure efficient processing and
+secure verification of transactions.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="optimizing_sequencers_and_provers_debunking_common_misconceptions"><a class="anchor" href="#optimizing_sequencers_and_provers_debunking_common_misconceptions"></a>Optimizing sequencers and provers: Debunking common misconceptions</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The relationship between sequencers and provers in blockchain technology
+often sparks debate. A common misunderstanding suggests that either the
+prover or the sequencer is the main bottleneck. To set the record
+straight, let’s discuss the optimization of both components.</p>
+</div>
+<div class="paragraph">
+<p>Starknet, which uses the Cairo programming language, currently supports
+only sequential transactions. Plans are in place to introduce parallel
+transactions in the future. However, as of now, the sequencer operates
+one transaction at a time, making it the bottleneck in the system.</p>
+</div>
+<div class="paragraph">
+<p>In contrast, provers operate asynchronously and can execute multiple
+tasks in parallel. The use of proof recursion allows for task
+distribution across multiple machines, making scalability less of an
+issue for provers.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="nodes"><a class="anchor" href="#nodes"></a>Nodes</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>When it comes to defining what nodes do in Bitcoin or Ethereum, people
+often misinterpret their role as keeping track of every transaction
+within the network. This, however, is not entirely accurate.</p>
+</div>
+<div class="paragraph">
+<p>Nodes serve as auditors of the network, maintaining the state of the
+network, such as how much Bitcoin each participant owns or the current
+state of a specific smart contract. They maintain network state by processing
+transactions and preserving a record of all transactions, but that is a
+means to an end, not the end itself.</p>
+</div>
+<div class="paragraph">
+<p>In Validity Rollups and specifically within Starknet, this concept is
+somewhat reversed. Nodes don’t necessarily have to process transactions
+to get the state. In contrast to Ethereum or Bitcoin, Starknet nodes
+aren’t required to process all transactions to maintain the state of the
+network.</p>
+</div>
+<div class="paragraph">
+<p>You can access network state data by using the Starknet API, which uses the JSON RPC protocol, to communicate with a node. Previously, Starknet&#8217;s Gateway and Feeder Gateway APIs enabled querying the sequencer, but as the network has matured, the JSON RPC has become the standard.
+Operating your own node is typically faster than using a shared architecture, like the
+gateway.</p>
+</div>
+<div class="paragraph">
+<p>It’s worth noting that more people running nodes increases
+the resilience of the network and prevents server flooding, which has
+been an issue in other L2 networks.</p>
+</div>
+<div class="paragraph">
+<p>Currently, there are primarily three methods for a node to keep track of
+the network’s state and nodes can implement any of these
+methods:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Replaying Old Transactions</strong>: Like Ethereum or Bitcoin, a node can
+take all the transactions and re-execute them. Although this approach is
+accurate, it isn’t scalable unless you have a powerful machine that’s
+capable of handling the load. If you can replay all transactions, you
+can become a sequencer.</p>
+</li>
+<li>
+<p><strong>Relying on L2 Consensus</strong>: Nodes can trust the sequencer to
+execute the network correctly. When the sequencer updates the state and
+adds a new block, nodes accept the update as accurate.</p>
+</li>
+<li>
+<p><strong>Checking Proof Validation on L1</strong>: Nodes can monitor the state of
+the network by observing L1 and ensuring that every time a proof is
+sent, they receive the updated state. This way, they don’t have to trust
+anyone and only need to keep track of the latest valid transaction for
+Starknet.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Each type of node setup comes with its own set of hardware requirements
+and trust assumptions.</p>
+</div>
+<div class="sect2">
+<h3 id="nodes_that_replay_transactions"><a class="anchor" href="#nodes_that_replay_transactions"></a>Nodes that replay transactions</h3>
+<div class="paragraph">
+<p>Nodes that replay transactions require powerful machines to track and
+execute all transactions. These nodes don’t have trust assumptions; they
+rely solely on the transactions they execute, guaranteeing that the
+state at any given point is valid.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="nodes_that_rely_on_l2_consensus"><a class="anchor" href="#nodes_that_rely_on_l2_consensus"></a>Nodes that rely on L2 consensus</h3>
+<div class="paragraph">
+<p>Nodes that rely on L2 consensus require less computational power. They
+need sufficient storage to keep the state but don’t need to process a
+lot of transactions. The tradeoff here is a trust assumption.
+Currently, Starknet revolves around one sequencer, so these nodes
+trust StarkWare not to disrupt the network. However, once a consensus
+mechanism and leader election amongst sequencers are in place, these
+nodes will only need to trust that a sequencer who staked their stake to
+produce a block is not willing to lose it.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="nodes_that_check_proof_validation_on_l1"><a class="anchor" href="#nodes_that_check_proof_validation_on_l1"></a>Nodes that check proof validation on L1</h3>
+<div class="paragraph">
+<p>Nodes that only update their state based on proof validation on L1
+require the least hardware. They have the same requirements as an
+Ethereum node, and once Ethereum light nodes become a reality,
+maintaining such a node could be as simple as using a smartphone. The
+only tradeoff is higher latency. Proofs are sent to Ethereum intermittently, not for every block, resulting in delayed state updates. Plans are in
+place to produce proofs more frequently, even if they are not sent to
+Ethereum immediately, lowering node latency.</p>
+</div>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../on-chain-data/">Data availability</a></span>
-  <span class="next"><a href="../../Accounts/introduction/">What is an account?</a></span>
+  <span class="prev"><a href="../../../starknet_versions/deprecated/">Deprecated, unsupported, and removed features</a></span>
+  <span class="next"><a href="../header/">Block structure</a></span>
 </nav>
 </article>
   </div>
