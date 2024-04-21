@@ -60,50 +60,53 @@ pipeline {
                         fi
                     """
                     unstash 'artifact'
-                    sh label:"Push to branch gh-pages", script:
-                    """
-                        git status
-                        git config user.name "Jenkins Automation"
-                        git config user.email "noreply@github.com"
-                        git add .
+                    withCredentials([usernamePassword(credentialsId: 'idan-stark-starknet-docs', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                        sh label:"Push to branch gh-pages", script:
+                        """
+                            git status
+                            git config user.name "${GIT_USERNAME}"
+                            git config user.password "${GIT_PASSWORD}"
+                            git config user.email "noreply@github.com"
+                            git add .
 
-                        if ! git diff-index --quiet HEAD --; then
-                            # Debug information
-                            echo "Changes detected. Committing and pushing changes."
-
-                            commit_message="Adding or updating preview build for PR ${PR_ID}"
-                        
-                            # Debug message
-                            echo "Commit message: ${commitMessage}"
-                        
-                            # Commit changes
-                            git commit -m "${commitMessage}"
-
-                            # Check if commit was successful
-                            if [ \$? -eq 0 ]; then
-                            # Debug information
-                            echo "Commit successful. Pushing changes."
-                        
-                            # Push changes
-                            git push --set-upstream origin gh-pages
-                        
-                            # Check if push was successful
-                            if [ \$? -eq 0 ]; then
+                            if ! git diff-index --quiet HEAD --; then
                                 # Debug information
-                                echo "Push successful."
+                                echo "Changes detected. Committing and pushing changes."
+
+                                commit_message="Adding or updating preview build for PR ${PR_ID}"
+                            
+                                # Debug message
+                                echo "Commit message: ${commitMessage}"
+                            
+                                # Commit changes
+                                git commit -m "${commitMessage}"
+
+                                # Check if commit was successful
+                                if [ \$? -eq 0 ]; then
+                                # Debug information
+                                echo "Commit successful. Pushing changes."
+                            
+                                # Push changes
+                                git push --set-upstream origin gh-pages
+                            
+                                # Check if push was successful
+                                if [ \$? -eq 0 ]; then
+                                    # Debug information
+                                    echo "Push successful."
+                                else
+                                    # Debug information
+                                    echo "Error: Push failed."
+                                fi
+                                else
+                                # Debug information
+                                echo "Error: Commit failed."
+                                fi
                             else
                                 # Debug information
-                                echo "Error: Push failed."
+                                echo "No changes found."
                             fi
-                            else
-                            # Debug information
-                            echo "Error: Commit failed."
-                            fi
-                        else
-                            # Debug information
-                            echo "No changes found."
-                        fi
-                    """
+                        """
+                    }
                 }
             }
         }
