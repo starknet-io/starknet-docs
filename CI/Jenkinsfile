@@ -8,6 +8,7 @@ pipeline {
     environment {
         TEST = "test"
         PR_ID = "pr-${env.CHANGE_ID}"
+        GIT_CREDS = credentials('gh-starknet-docs-pat')
     }
     stages {
         stage('Build') {
@@ -48,25 +49,12 @@ pipeline {
             steps {
                 script {
                     def commitMessage = "Adding or updating preview build for PR: ${PR_ID}"
-                    checkout scmGit(
-                        branches: [[name: 'gh-pages']],
-                        userRemoteConfigs: [[
-                            credentialsId: 'gh-starknet-docs-pat',
-                            url: 'https://github.com/starknet-io/starknet-docs.git'
-                        ]]
-                    )
                     sh label:"Git config", script:
                     """
-                        git config --global --add safe.directory "*"
+                        git clone 'https://${GIT_CREDS_PSW}@github.com/starknet-io/starknet-docs.git'
                         git config --global user.name "Jenkins"
                         git config --global user.email "jenkins@noreplay.com"
-                        git fetch
-                        git checkout -b gh-pages origin/gh-pages
-                        pwd
-                        ls -la
-                        git branch -a
-                        git remote -v
-                        git status
+                        git checkout gh-pages
                     """
                     sh label:"Remove PR folder if exist", script:
                     """
