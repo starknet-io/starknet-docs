@@ -53,12 +53,57 @@ pipeline {
                         git fetch origin gh-pages:gh-pages
                         git checkout gh-pages
                     """
-                    unstash 'artifact'
                     sh label:"Remove PR folder if exist", script:
                     """
-                        pwd
-                        ls -la
-                        ls -la ${PR_ID}
+                        if [ -d $PR_ID ]
+                        then
+                            rm -rf $PR_ID
+                        fi
+                    """
+                    unstash 'artifact'
+                    sh label:"Push to branch gh-pages", script:
+                    """
+                        git status
+                        git config user.name "Jenkins Automation"
+                        git config user.email "noreply@github.com"
+                        git add .
+
+                        if ! git diff-index --quiet HEAD --; then
+                            # Debug information
+                            echo "Changes detected. Committing and pushing changes."
+
+                            commit_message="Adding or updating preview build for PR ${PR_ID}"
+                        
+                            # Debug message
+                            echo "Commit message: $commit_message"
+                        
+                            # Commit changes
+                            git commit -m "$commit_message"
+
+                            # Check if commit was successful
+                            if [ $? -eq 0 ]; then
+                            # Debug information
+                            echo "Commit successful. Pushing changes."
+                        
+                            # Push changes
+                            git push
+                        
+                            # Check if push was successful
+                            if [ $? -eq 0 ]; then
+                                # Debug information
+                                echo "Push successful."
+                            else
+                                # Debug information
+                                echo "Error: Push failed."
+                            fi
+                            else
+                            # Debug information
+                            echo "Error: Commit failed."
+                            fi
+                        else
+                            # Debug information
+                            echo "No changes found."
+                        fi
                     """
                 }
             }
