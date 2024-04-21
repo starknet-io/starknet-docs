@@ -43,14 +43,30 @@ pipeline {
                 }
             }
         }
+        stage('Checkout') {
+            checkout([
+                $class: 'GitSCM',
+                branches: scm.branches,
+                extensions: scm.extensions + [[$class: 'LocalBranch'], [$class: 'WipeWorkspace']],
+                userRemoteConfigs: [[credentialsId: 'idan-stark-starknet-docs', url: 'https://github.com/starknet-io/starknet-docs.git']],
+                doGenerateSubmoduleConfigurations: false
+            ])
+        }
         stage('Publish') {
             steps {
                 script {
                     def commitMessage = "Adding or updating preview build for PR: ${PR_ID}"
+                    // sh label:"Checkout gh-pages", script:
+                    // """
+                    //     git fetch origin gh-pages:gh-pages
+                    //     git checkout gh-pages
+                    // """
+                    
                     sh label:"Checkout gh-pages", script:
                     """
-                        git fetch origin gh-pages:gh-pages
-                        git checkout gh-pages
+                        git branch -u origin/gh-pages gh-pages
+                        git config user.email "noreply@github.com"
+                        git config user.name "Jenkins Automation"
                     """
                     sh label:"Remove PR folder if exist", script:
                     """
@@ -60,52 +76,46 @@ pipeline {
                         fi
                     """
                     unstash 'artifact'
-                    withCredentials([usernamePassword(credentialsId: 'idan-stark-starknet-docs', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
-                        sh label:"Push to branch gh-pages", script:
-                        """
-                            git status
-                            git config --global user.name "${GIT_USERNAME}"
-                            git config --global user.password "${GIT_PASSWORD}"
-                            git config --global user.email "noreply@github.com"
-                            git config --global url.https://${GIT_PASSWORD}@github.com
-                            git add ${PR_ID}
+                    sh label:"Push to branch gh-pages", script:
+                    """
+                        git status
+                        git add ${PR_ID}
 
-                            if ! git diff-index --quiet HEAD --; then
-                                # Debug information
-                                echo "Changes detected. Committing and pushing changes."
+                        if ! git diff-index --quiet HEAD --; then
+                            # Debug information
+                            echo "Changes detected. Committing and pushing changes."
 
-                                # Debug message
-                                echo "Commit message: ${commitMessage}"
-                            
-                                # Commit changes
-                                git commit -m "${commitMessage}"
+                            # Debug message
+                            echo "Commit message: ${commitMessage}"
+                        
+                            # Commit changes
+                            git commit -m "${commitMessage}"
 
-                                # Check if commit was successful
-                                if [ \$? -eq 0 ]; then
+                            # Check if commit was successful
+                            if [ \$? -eq 0 ]; then
+                            # Debug information
+                            echo "Commit successful. Pushing changes."
+                        
+                            # Push changes
+                            git push --set-upstream origin gh-pages
+                        
+                            # Check if push was successful
+                            if [ \$? -eq 0 ]; then
                                 # Debug information
-                                echo "Commit successful. Pushing changes."
-                            
-                                # Push changes
-                                git push --set-upstream origin gh-pages
-                            
-                                # Check if push was successful
-                                if [ \$? -eq 0 ]; then
-                                    # Debug information
-                                    echo "Push successful."
-                                else
-                                    # Debug information
-                                    echo "Error: Push failed."
-                                fi
-                                else
-                                # Debug information
-                                echo "Error: Commit failed."
-                                fi
+                                echo "Push successful."
                             else
                                 # Debug information
-                                echo "No changes found."
+                                echo "Error: Push failed."
                             fi
-                        """
-                    }
+                            else
+                            # Debug information
+                            echo "Error: Commit failed."
+                            fi
+                        else
+                            # Debug information
+                            echo "No changes found."
+                        fi
+                    """
                 }
             }
         }
