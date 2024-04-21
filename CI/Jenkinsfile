@@ -7,6 +7,7 @@ pipeline {
     }
     environment {
         TEST = "test"
+        PR_ID = "pr-${env.CHANGE_ID}"
     }
     stages {
         stage('Build') {
@@ -33,9 +34,12 @@ pipeline {
                     """
                         yarn generate
                     """
-                    dir("public_html") {
-                        stash includes: "*", name: 'site'
-                    }
+                    sh label:"Copy artifacts", script:
+                    """
+                        mkdir ${PR_ID}
+                        cp -r ./public_html/* ${PR_ID}
+                    """
+                    stash includes: "${PR_ID}/**/*", name: 'artifact'
                 }
             }
         }
@@ -43,20 +47,20 @@ pipeline {
             steps {
                 script {
                     def prId = env.CHANGE_ID
-                    println "Pull Request ID: pr-${prId}"
+                    println "Pull Request ID: ${PR_ID}"
                     sh label:"Checkout gh-pages", script:
                     """
                         git fetch origin gh-pages:gh-pages
                         git checkout gh-pages
                     """
-                    dir("pr-${prId}") {
-                        unstash 'site'
-                        sh label:"Remove PR folder if exist", script:
-                        """
-                            ls -la
-                        """
+                    unstash 'artifact'
+                    sh label:"Remove PR folder if exist", script:
+                    """
+                        pwd
+                        ls -la
+                        ls -la ${PR_ID}
+                    """
                     }
-                    
                 }
             }
         }
