@@ -44,13 +44,13 @@ pipeline {
             }
         }
         stage('Publish') {
+            agent {
+                docker {
+                    image 'ubuntu:latest'
+                    reuseNode true
+                }
+            }
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: scm.branches,
-                    extensions: scm.extensions + [[$class: 'LocalBranch'], [$class: 'WipeWorkspace']],
-                    userRemoteConfigs: [[credentialsId: 'idan-stark-starknet-docs', url: 'https://github.com/starknet-io/starknet-docs.git']]
-                ])
                 script {
                     def commitMessage = "Adding or updating preview build for PR: ${PR_ID}"
                     // sh label:"Checkout gh-pages", script:
@@ -61,9 +61,9 @@ pipeline {
                     
                     sh label:"Checkout gh-pages", script:
                     """
-                        git branch -u origin/gh-pages gh-pages
                         git config user.email "noreply@github.com"
                         git config user.name "Jenkins Automation"
+                        git branch -u origin/gh-pages gh-pages
                     """
                     sh label:"Remove PR folder if exist", script:
                     """
