@@ -55,11 +55,13 @@ pipeline {
             steps {
                 script {
                     def commitMessage = "Adding or updating preview build for PR: ${PR_ID}"
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: 'gh-pages']],
-                        doGenerateSubmoduleConfigurations: false
-                    ])
+                    checkout scmGit(
+                        branches: [[name: 'gh-pages']]
+                        userRemoteConfigs: [[
+                            url: 'https://$CREDENTIALS_USR:$CREDENTIALS:PWD@github.com/starknet-io/starknet-docs.git',
+                            credentialsId: 'idan-stark-starknet-docs'    
+                        ]]
+                    )
                     sh label:"Install Git", script:
                     """
                         apt update
