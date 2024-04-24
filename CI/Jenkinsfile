@@ -1,0 +1,94 @@
+pipeline {
+    agent { label "gcp-hodor-slave-generic"}
+    options {
+       // Add timestamps to output.
+       timestamps()
+       timeout(time: 10, unit: 'MINUTES')
+    }
+    environment {
+        TEST = "test"
+        PR_ID = "pr-${env.CHANGE_ID}"
+        GIT_CREDS = credentials('gh-starknet-docs-pat')
+    }
+    stages {
+        stage('Build') {
+            agent {
+                docker {
+                    image 'node:16.20.2'
+                    reuseNode true
+                }
+            }
+            environment {
+                ANTORA_CACHE_DIR="${WORKSPACE}/.cache"
+            }
+            steps {
+                script {
+                    sh label:"Listing current directory", script:
+                    """
+                        ls -la
+                    """
+                    sh label:"Install node modules", script:
+                    """
+                        yarn
+                    """
+                    sh label:"Generate site", script:
+                    """
+                        yarn generate
+                    """
+                    sh label:"Copy artifacts", script:
+                    """
+                        mkdir ${PR_ID}
+                        cp -r ./public_html/* ${PR_ID}
+                    """
+                    stash includes: "${PR_ID}/**/*", name: 'artifact'
+                    deleteDir()
+                }
+            }
+        }
+        stage('Publish') {
+            steps {
+                script {
+                    def commitMessage = "Adding or updating preview build for PR: ${PR_ID}"
+                    sh label:"Git config", script:
+                    """
+                        git clone 'https://$GIT_CREDS_PSW@github.com/starknet-io/starknet-docs.git'
+                        git config --global user.name "Jenkins"
+                        git config --global user.email "jenkins@noreplay.com"
+                    """
+                    dir('starknet-docs') {
+                        sh label:"Remove PR folder if exist", script:
+                        """
+                            if [ -d $PR_ID ]
+                            then
+                                rm -rf $PR_ID
+                            fi
+                        """
+                        sh label:"Checkout gh-pages", script:
+                        """
+                            git checkout gh-pages
+                        """
+                        unstash 'artifact'
+                        sh label:"Push to branch gh-pages", script:
+                        """
+                            git add ${PR_ID}
+                            if ! git diff-index --quiet HEAD --; then
+                                echo "Changes detected. Committing and pushing changes."
+                                echo "Commit message: ${commitMessage}"
+                                git commit -m "${commitMessage}"
+                                echo "Commit successful. Pushing changes."
+                                git push
+                            else
+                                echo "No changes found."
+                            fi
+                        """
+                    }
+                }
+            }
+        }
+    }
+    post {
+        cleanup {
+            deleteDir()
+        }
+    }
+}
