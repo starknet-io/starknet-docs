@@ -4,8 +4,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.io.OutputStreamWriter
 
-def test(String msg) {
-    println(msg)
+def test(String apiUrl, String authToken, String owner, String repo, int pullRequestNumber, String comment) {
+    println(apiUrl)
+    println(authToken)
+    println(owner)
+    println(repo)
+    println(pullRequestNumber)
+    println(comment)
 }
 
 def commentOnPullRequest(String apiUrl, String authToken, String owner, String repo, int pullRequestNumber, String comment) {
