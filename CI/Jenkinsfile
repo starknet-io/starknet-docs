@@ -1,3 +1,46 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.net.HttpURLConnection
+import java.net.URL
+import java.io.OutputStreamWriter
+
+def commentOnPullRequest(String apiUrl, String authToken, String owner, String repo, int pullRequestNumber, String comment) {
+    try {
+        // Construct the URL for the GitHub API endpoint
+        def url = new URL("${apiUrl}/repos/${owner}/${repo}/issues/${pullRequestNumber}/comments")
+        
+        // Open connection
+        def con = url.openConnection() as HttpURLConnection
+        
+        // Set request method and headers
+        con.setRequestMethod("POST")
+        con.setRequestProperty("Authorization", "token ${authToken}")
+        con.setRequestProperty("Content-Type", "application/json")
+        con.setDoOutput(true)
+        
+        // Construct JSON payload for the comment
+        def payload = JsonOutput.toJson([body: comment])
+        
+        // Write payload to request body
+        def writer = new OutputStreamWriter(con.getOutputStream())
+        writer.write(payload)
+        writer.flush()
+        
+        // Get response code
+        int responseCode = con.getResponseCode()
+        println("Response Code: ${responseCode}")
+        
+        // Read response body
+        def response = con.getInputStream().getText()
+        println("Response Body: ${response}")
+        
+        // Close connection
+        con.disconnect()
+    } catch (Exception e) {
+        println("Exception occurred: ${e.getMessage()}")
+    }
+}
+
 pipeline {
     agent { label "gcp-hodor-slave-generic"}
     options {
@@ -6,9 +49,13 @@ pipeline {
        timeout(time: 10, unit: 'MINUTES')
     }
     environment {
-        TEST = "test"
-        PR_ID = "pr-${env.CHANGE_ID}"
-        GIT_CREDS = credentials('gh-starknet-docs-pat')
+        apiUrl = 'https://api.github.com'
+        owner = 'starknet-io'
+        repo = 'starknet-docs'
+        comment = 'Test'
+        prId = "${env.CHANGE_ID}"
+        prPrefix = "pr"
+        gitCreds = credentials('gh-starknet-docs-pat')
     }
     stages {
         stage('Build') {
@@ -23,10 +70,6 @@ pipeline {
             }
             steps {
                 script {
-                    sh label:"Listing current directory", script:
-                    """
-                        ls -la
-                    """
                     sh label:"Install node modules", script:
                     """
                         yarn
@@ -37,10 +80,10 @@ pipeline {
                     """
                     sh label:"Copy artifacts", script:
                     """
-                        mkdir ${PR_ID}
-                        cp -r ./public_html/* ${PR_ID}
+                        mkdir ${prPrefix}-${prId}
+                        cp -r ./public_html/* ${prPrefix}-${prId}
                     """
-                    stash includes: "${PR_ID}/**/*", name: 'artifact'
+                    stash includes: "${prPrefix}-${prId}/**/*", name: 'artifact'
                     deleteDir()
                 }
             }
@@ -48,64 +91,43 @@ pipeline {
         stage('Publish') {
             steps {
                 script {
-                    def commitMessage = "Adding or updating preview build for PR: ${PR_ID}"
+                    def commitMessage = "Adding or updating preview build for PR: ${prId}"
+                    sh label:"Git clone", script:
+                    '''
+                        git clone https://$gitCreds_PSW@github.com/starknet-io/starknet-docs.git
+                    '''
                     sh label:"Git config", script:
                     """
-                        git clone 'https://${GIT_CREDS_PSW}@github.com/starknet-io/starknet-docs.git'
-                        git config --global user.name "Jenkins"
-                        git config --global user.email "jenkins@noreplay.com"
+                        git config --global user.name "Starkware Jenkins"
+                        git config --global user.email "starkware-jenkins@noreply.com"
                     """
                     dir('starknet-docs') {
                         sh label:"Remove PR folder if exist", script:
                         """
-                            if [ -d $PR_ID ]
+                            if [ -d ${prPrefix}-${prId} ]
                             then
-                                rm -rf $PR_ID
+                                rm -rf ${prPrefix}-${prId}
                             fi
+                        """
+                        sh label:"Checkout gh-pages", script:
+                        """
+                            git checkout gh-pages
                         """
                         unstash 'artifact'
                         sh label:"Push to branch gh-pages", script:
                         """
-                            git checkout gh-pages
-                            git add ${PR_ID}
-
+                            git add ${prPrefix}-${prId}
                             if ! git diff-index --quiet HEAD --; then
-                                # Debug information
                                 echo "Changes detected. Committing and pushing changes."
-
-                                # Debug message
                                 echo "Commit message: ${commitMessage}"
-                            
-                                # Commit changes
                                 git commit -m "${commitMessage}"
-
-                                # Check if commit was successful
-                                if [ \$? -eq 0 ]; then
-                                # Debug information
                                 echo "Commit successful. Pushing changes."
-                            
-                                # Push changes
                                 git push
-                            
-                                # Check if push was successful
-                                if [ \$? -eq 0 ]; then
-                                    # Debug information
-                                    echo "Push successful."
-                                else
-                                    # Debug information
-                                    echo "Error: Push failed."
-                                fi
-                                else
-                                # Debug information
-                                echo "Error: Commit failed."
-                                fi
                             else
-                                # Debug information
-                                echo "No changes found!."
+                                echo "No changes found."
                             fi
                         """
                     }
-                    
                 }
             }
         }
@@ -113,6 +135,12 @@ pipeline {
     post {
         cleanup {
             deleteDir()
+        }
+        success {
+            script {
+                // Call the function to comment on the pull request
+                commentOnPullRequest(env.apiUrl, env.gitCreds_PSW, env.owner, env.repo, env.prId, env.comment)
+            }
         }
     }
 }
