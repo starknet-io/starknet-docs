@@ -4,7 +4,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.io.OutputStreamWriter
 
-def test(String apiUrl, String authToken, String owner, String repo, int pullRequestNumber, String comment) {
+def test(String apiUrl, String owner, String repo, int pullRequestNumber, String comment) {
     println(apiUrl)
     println(owner)
     println(repo)
