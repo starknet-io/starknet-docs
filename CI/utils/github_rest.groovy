@@ -6,7 +6,6 @@ import java.io.OutputStreamWriter
 
 def test(String apiUrl, String authToken, String owner, String repo, int pullRequestNumber, String comment) {
     println(apiUrl)
-    println(authToken)
     println(owner)
     println(repo)
     println(pullRequestNumber)
