@@ -1,9 +1,3 @@
-import groovy.json.JsonOutput
-import groovy.json.JsonSlurper
-import java.net.HttpURLConnection
-import java.net.URL
-import java.io.OutputStreamWriter
-
 def commentOnPullRequest(String apiUrl, String authToken, String owner, String repo, int pullRequestNumber, String comment) {
     try {
         // Construct the URL for the GitHub API endpoint
