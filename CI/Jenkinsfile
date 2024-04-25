@@ -15,6 +15,13 @@ pipeline {
         gitCreds = credentials('gh-starknet-docs-pat')
     }
     stages {
+        stage('init') {
+            steps {
+                script {
+                    utils = load 'CI/utils/github_rest.groovy'
+                }
+            }
+        }
         stage('Build') {
             agent {
                 docker {
@@ -41,7 +48,6 @@ pipeline {
                         cp -r ./public_html/* ${prPrefix}-${prId}
                     """
                     stash includes: "${prPrefix}-${prId}/**/*", name: 'artifact'
-                    deleteDir()
                 }
             }
         }
@@ -93,7 +99,6 @@ pipeline {
         success {
             script {
                 // Call the function to comment on the pull request
-                utils = load 'CI/utils/github_rest.groovy'
                 utils.commentOnPullRequest(env.apiUrl, env.gitCreds_PSW, env.owner, env.repo, env.prId, env.comment)
             }
         }
