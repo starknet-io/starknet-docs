@@ -3,11 +3,17 @@
 
 The contract address is a unique identifier of the contract on Starknet. It is a chain hash of the following information:
 
-* `prefix` - The ASCII encoding of the constant string `STARKNET_CONTRACT_ADDRESS`.
-* `deployer_address` - The deployer address, unless `deploy_from_zero` is `true`, in which case it is `0`.
-* `salt` - The salt passed by the contract calling the syscall, provided by the transaction sender.
-* `class_hash` - See xref:./class-hash.adoc#computing_the_cairo_1_class_hash[the class hash documentation].
-* `constructor_calldata_hash` - xref:Cryptography/hash-functions.adoc#pedersen_array_hash[Array hash] of the inputs to the constructor.
+[horizontal,labelwidth="25"]
+`prefix`:: The ASCII encoding of the constant string `STARKNET_CONTRACT_ADDRESS`.
+`deployer_address`::
+* When the contract is deployed via a `DEPLOY_ACCOUNT` transaction: `0`
+* When the contract is deployed via a `deploy` system call from another contract:
+[horizontal,labelwidth="25"]
+`0`::: `deploy_from_zero` = `true`
+The caller's address::: `deploy_from_zero` = `false`
+`salt`:: The salt passed by the contract calling the syscall, provided by the transaction sender.
+`class_hash`:: See xref:./class-hash.adoc#computing_the_cairo_1_class_hash[the class hash documentation].
+`constructor_calldata_hash`:: xref:Cryptography/hash-functions.adoc#pedersen_array_hash[Array hash] of the inputs to the constructor.
 
 The address is computed as follows:
 
@@ -31,3 +37,4 @@ It also thwarts replay attacks by influencing the transaction hash with a unique
 .Additional resources
 
 * For more information on the address computation, see https://github.com/starkware-libs/cairo/blob/2c96b181a6debe9a564b51dbeaaf48fa75808d53/corelib/src/starknet/contract_address.cairo[contract_address.cairo] in the Cairo code repository.
+* xref:Smart_Contracts/system-calls-cairo1.adoc#deploy[`deploy` system call]
