@@ -85,10 +85,13 @@ pipeline {
                                 git commit -m "${commitMessage}"
                                 echo "Commit successful. Pushing changes."
                                 git push
-                                git checkout ${env.SOURCE_BRANCH}
                             else
                                 echo "No changes found."
                             fi
+                        """
+                        sh label:"Checkout ${env.SOURCE_BRANCH}", script:
+                        """
+                            git checkout ${env.SOURCE_BRANCH}
                         """
                         withCredentials([usernamePassword(credentialsId: 'gh-starknet-docs-pat', usernameVariable: 'GITHUB_USER', passwordVariable: 'GITHUB_PASSWORD')]) {
                             sh label:"Comment preview link on contributor pull request", script: 'python3 CI/scripts/comment_pr.py -a $GITHUB_PASSWORD' + " -o ${owner} -r ${repo} -p ${prId} -c ${comment}"
