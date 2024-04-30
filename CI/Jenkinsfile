@@ -11,6 +11,7 @@ pipeline {
         prId = "${env.CHANGE_ID}"
         prPrefix = "pr"
         comment = "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://${owner}.github.io/${repo}/${prId}/documentation/ ."
+        GITHUB_CREDENTIALS = credentials('gh-starknet-docs-pat')
     }
     
     stages {
@@ -51,12 +52,10 @@ pipeline {
             steps {
                 script {
                     def commitMessage = "Adding or updating preview build for PR: ${prId}"
-                    withCredentials([usernamePassword(credentialsId: 'gh-starknet-docs-pat', usernameVariable: 'GITHUB_USER', passwordVariable: 'GITHUB_PASSWORD')]) {
-                        sh label:"Git clone", script:
-                        '''
-                            git clone https://$GITHUB_PASSWORD@github.com/starknet-io/starknet-docs.git
-                        '''
-                    }
+                    sh label:"Git clone", script:
+                    '''
+                        git clone https://$GITHUB_CREDENTIALS_PSW@github.com/starknet-io/starknet-docs.git
+                    '''
                     sh label:"Git config", script:
                     """
                         git config --global user.name "Starkware Jenkins"
@@ -93,9 +92,7 @@ pipeline {
                         """
                             git checkout ${env.SOURCE_BRANCH}
                         """
-                        withCredentials([usernamePassword(credentialsId: 'gh-starknet-docs-pat', usernameVariable: 'GITHUB_USER', passwordVariable: 'GITHUB_PASSWORD')]) {
-                            sh label:"Comment preview link on contributor pull request", script: 'python3 CI/scripts/comment_pr.py -a $GITHUB_PASSWORD' + " -o ${owner} -r ${repo} -p ${prId} -c ${comment}"
-                        }
+                        sh label:"Comment preview link on contributor pull request", script: 'python3 CI/scripts/comment_pr.py -a $GITHUB_CREDENTIALS_PSW' + " -o ${owner} -r ${repo} -p ${prId} -c ${comment}"
                     }
                 }
             }
