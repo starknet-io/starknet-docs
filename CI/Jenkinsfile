@@ -13,7 +13,11 @@ pipeline {
         gitCreds = credentials('gh-starknet-docs-pat')
         comment = "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://${owner}.github.io/${repo}/${prId}/documentation/ ."
     }
+    
     stages {
+        when {
+            expression { $prId != null }
+        }
         stage('Build') {
             agent {
                 docker {
@@ -44,13 +48,16 @@ pipeline {
             }
         }
         stage('Publish') {
+            when {
+                expression { $prId != null }
+            }
             steps {
                 script {
                     def commitMessage = "Adding or updating preview build for PR: ${prId}"
                     sh label:"Git clone", script:
                     """
                         git clone 'https://$gitCreds_PSW@github.com/starknet-io/starknet-docs.git'
-                        source_branch="$(git branch --show-current)"
+                        source_branch=$(git branch --show-current)
                     """
                     sh label:"Git config", script:
                     """
