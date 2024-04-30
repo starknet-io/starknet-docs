@@ -50,8 +50,8 @@ pipeline {
                     def commitMessage = "Adding or updating preview build for PR: ${prId}"
                     sh label:"Git clone", script:
                     '''
-                        git clone https://${gitCreds_PSW}@github.com/starknet-io/starknet-docs.git
-                        source_branch=\$(git branch --show-current)
+                        git clone https://$gitCreds_PSW@github.com/starknet-io/starknet-docs.git
+                        source_branch=`git branch --show-current`
                         echo "source_branch: \$source_branch"
                     '''
                     sh label:"Git config", script:
@@ -77,12 +77,12 @@ pipeline {
                             git add ${prPrefix}-${prId}
                             if ! git diff-index --quiet HEAD --; then
                                 echo "Changes detected. Committing and pushing changes."
-                                echo "Commit message: ${commitMessage}"
-                                git commit -m ${commitMessage}
+                                echo "Commit message: $commitMessage"
+                                git commit -m $commitMessage
                                 echo "Commit successful. Pushing changes."
                                 git push
                                 git checkout \$source_branch
-                                python3 CI/scripts/comment_pr.py -a ${gitCreds_PSW} -o ${owner} -r ${repo} -p ${prId} -c ${comment}
+                                python3 CI/scripts/comment_pr.py -a $gitCreds_PSW -o $owner -r $repo -p $prId -c $comment
                             else
                                 echo "No changes found."
                             fi
