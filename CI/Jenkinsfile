@@ -49,10 +49,10 @@ pipeline {
                 script {
                     def commitMessage = "Adding or updating preview build for PR: ${prId}"
                     sh label:"Git clone", script:
-                    """
-                        git clone 'https://$gitCreds_PSW@github.com/starknet-io/starknet-docs.git'
+                    '''
+                        git clone https://$gitCreds_PSW@github.com/starknet-io/starknet-docs.git
                         source_branch=\$(git branch --show-current)
-                    """
+                    '''
                     sh label:"Git config", script:
                     """
                         git config --global user.name "Starkware Jenkins"
@@ -72,7 +72,7 @@ pipeline {
                         """
                         unstash 'artifact'
                         sh label:"Push to branch gh-pages", script:
-                        """
+                        '''
                             git add ${prPrefix}-${prId}
                             if ! git diff-index --quiet HEAD --; then
                                 echo "Changes detected. Committing and pushing changes."
@@ -80,15 +80,12 @@ pipeline {
                                 git commit -m "${commitMessage}"
                                 echo "Commit successful. Pushing changes."
                                 git push
+                                git checkout \$source_branch
+                                python3 CI/scripts/comment_pr.py -a $gitCreds_PSW -o $owner -r $repo -p $prId -c $comment
                             else
                                 echo "No changes found."
                             fi
-                        """
-                        sh label:"Comment preview link on pull-request", script:
-                        """
-                            git checkout \$source_branch
-                            python3 CI/scripts/comment_pr.py -a '$gitCreds_PSW' -o $owner -r $repo -p $prId -c $comment
-                        """
+                        '''
                     }
                 }
             }
