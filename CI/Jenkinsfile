@@ -50,6 +50,7 @@ pipeline {
                     sh label:"Git clone", script:
                     '''
                         git clone https://$gitCreds_PSW@github.com/starknet-io/starknet-docs.git
+                        source_branch="$(git branch --show-current)"
                     '''
                     sh label:"Git config", script:
                     """
@@ -66,6 +67,7 @@ pipeline {
                         """
                         sh label:"Checkout gh-pages", script:
                         """
+                            export 
                             git checkout gh-pages
                         """
                         unstash 'artifact'
@@ -84,6 +86,7 @@ pipeline {
                         """
                         sh label:"Comment preview link on pull-request", script:
                         '''
+                            git checkout $source_branch
                             python3 CI/scripts/comment_pr.py -a $gitCreds_PSW -o $owner -r $repo -p $prId -c $comment
                         '''
                     }
