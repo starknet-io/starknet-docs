@@ -16,11 +16,6 @@ pipeline {
     
     stages {
         stage('Build') {
-            when {
-                expression { 
-                    return env.CHANGE_ID != null
-                }
-            }
             agent {
                 docker {
                     image 'node:16.20.2'
@@ -50,11 +45,6 @@ pipeline {
             }
         }
         stage('Publish') {
-            when {
-                expression { 
-                    return env.CHANGE_ID != null
-                }
-            }
             steps {
                 script {
                     def commitMessage = "Adding or updating preview build for PR: ${prId}"
@@ -78,7 +68,6 @@ pipeline {
                         """
                         sh label:"Checkout gh-pages", script:
                         """
-                            export 
                             git checkout gh-pages
                         """
                         unstash 'artifact'
@@ -97,7 +86,7 @@ pipeline {
                         """
                         sh label:"Comment preview link on pull-request", script:
                         """
-                            git checkout $source_branch
+                            git checkout \$source_branch
                             python3 CI/scripts/comment_pr.py -a '$gitCreds_PSW' -o $owner -r $repo -p $prId -c $comment
                         """
                     }
