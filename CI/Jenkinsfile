@@ -6,13 +6,12 @@ pipeline {
        timeout(time: 10, unit: 'MINUTES')
     }
     environment {
-        apiUrl = 'https://api.github.com'
         owner = 'starknet-io'
         repo = 'starknet-docs'
-        comment = 'Test'
         prId = "${env.CHANGE_ID}"
         prPrefix = "pr"
         gitCreds = credentials('gh-starknet-docs-pat')
+        comment = "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://${owner}.github.io/${repo}/${prId}/documentation/ ."
     }
     stages {
         stage('Init') {
@@ -96,21 +95,11 @@ pipeline {
                                 echo "No changes found."
                             fi
                         """
+                        sh label:"Comment preview link on pull-request", script:
+                        '''
+                            python CI/scripts/comment_pr.py -a $gitCreds_PSW -o $owner -r $repo -p $prId -c $comment
+                        '''
                     }
-                }
-            }
-        }
-        stage('CommentOnPullRequest') {
-            steps {
-                script {
-                    utils.commentOnPullRequest (
-                        "${env.apiUrl}", 
-                        "${env.gitCreds_PSW}", 
-                        "${env.owner}", 
-                        "${env.repo}", 
-                        "${env.prId}", 
-                        "${env.comment}"
-                    )
                 }
             }
         }
