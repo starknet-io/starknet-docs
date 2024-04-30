@@ -23,6 +23,7 @@ def comment_pr(api_url, auth_token, owner, repo, pr_id, comment):
       print('Response:', response.json())
     else:
       print('Request failed with status code:', response.status_code)
+      exit(1)
   except Exception as e:
      print(e)
 
