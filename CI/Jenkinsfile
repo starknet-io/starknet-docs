@@ -28,6 +28,7 @@ pipeline {
                 script {
                     tmp = sh (label: "Get current branch name", script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
                     env.SOURCE_BRANCH = tmp
+                    println(env.SOURCE_BRANCH)
 
                     sh label:"Install node modules", script:
                     """
@@ -55,39 +56,41 @@ pipeline {
                         '''
                             git clone https://$GITHUB_PASSWORD@github.com/starknet-io/starknet-docs.git
                         '''
-                        sh label:"Git config", script:
+                    }
+                    sh label:"Git config", script:
+                    """
+                        git config --global user.name "Starkware Jenkins"
+                        git config --global user.email "starkware-jenkins@noreply.com"
+                    """
+                    dir('starknet-docs') {
+                        sh label:"Remove PR folder if exist", script:
                         """
-                            git config --global user.name "Starkware Jenkins"
-                            git config --global user.email "starkware-jenkins@noreply.com"
+                            if [ -d ${prPrefix}-${prId} ]
+                            then
+                                rm -rf ${prPrefix}-${prId}
+                            fi
                         """
-                        dir('starknet-docs') {
-                            sh label:"Remove PR folder if exist", script:
-                            """
-                                if [ -d ${prPrefix}-${prId} ]
-                                then
-                                    rm -rf ${prPrefix}-${prId}
-                                fi
-                            """
-                            sh label:"Checkout gh-pages", script:
-                            """
-                                git checkout gh-pages
-                            """
-                            unstash 'artifact'
-                            
-                            sh label:"Push to branch gh-pages", script:
-                            """
-                                git add ${prPrefix}-${prId}
-                                if ! git diff-index --quiet HEAD --; then
-                                    echo "Changes detected. Committing and pushing changes."
-                                    echo "Commit message: ${commitMessage}"
-                                    git commit -m "${commitMessage}"
-                                    echo "Commit successful. Pushing changes."
-                                    git push
-                                    git checkout ${env.SOURCE_BRANCH}
-                                else
-                                    echo "No changes found."
-                                fi
-                            """
+                        sh label:"Checkout gh-pages", script:
+                        """
+                            git checkout gh-pages
+                        """
+                        unstash 'artifact'
+                        
+                        sh label:"Push to branch gh-pages", script:
+                        """
+                            git add ${prPrefix}-${prId}
+                            if ! git diff-index --quiet HEAD --; then
+                                echo "Changes detected. Committing and pushing changes."
+                                echo "Commit message: ${commitMessage}"
+                                git commit -m "${commitMessage}"
+                                echo "Commit successful. Pushing changes."
+                                git push
+                                git checkout ${env.SOURCE_BRANCH}
+                            else
+                                echo "No changes found."
+                            fi
+                        """
+                        withCredentials([usernamePassword(credentialsId: 'gh-starknet-docs-pat', usernameVariable: 'GITHUB_USER', passwordVariable: 'GITHUB_PASSWORD')]) {
                             sh label:"Comment preview link on contributor pull request", script: 'python3 CI/scripts/comment_pr.py -a $GITHUB_PASSWORD' + " -o ${owner} -r ${repo} -p ${prId} -c ${comment}"
                         }
                     }
