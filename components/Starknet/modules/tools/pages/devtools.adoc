@@ -1,4 +1,288 @@
-include::1.0.0@docs-common-content:ROOT:partial$partial_devtools.adoc[]
-
-// To edit this topic, go to:
+//include::1.0.0@docs-common-content:ROOT:partial$partial_devtools.adoc[]
+// Previously, to edit this topic, you needed to go to:
 // https://github.com/starknet-io/docs-common-content/edit/main/modules/ROOT/partials/partial_devtools.adoc
+// This topic no longer needs to be shared, so the source is now directly coded here.
+[id="starknet_development_tools"]
+= Starknet developer tools
+
+While Starknet is a blockchain, it is different from blockchains built on the model of the Ethereum virtual machine (EVM), and so it requires many of its own developer tools. The tools discussed here are being developed in coordination with StarkWare and, in some cases, have received grants from StarkWare or the Starknet Foundation to make the development process as friendly as possible, with improvements happening constantly.
+
+While the stack of Starknet development tools was originally based mostly on Python, tool developers are moving towards building with Rust.
+
+See xref:#tools_per_stage_of_development[] below to understand where each tool fits in the development process.
+
+[NOTE]
+====
+The tools listed here do not represent all that are available.
+====
+
+[#tools_per_stage_of_development]
+.Tools for each stage of development
+image::1.0.0@docs-common-content:ROOT:image$tools_workflow.jpg[]
+
+[#starkli]
+== Starkli
+
+[discrete]
+=== What is it?
+
+Starkli, pronounced Stark-lie, is a fast command-line interface that replaces the legacy starknet-CLI. Starkli is a standalone interface, that is, you can use it on its own, rather than as a component of another tool. If you’re not actually developing on Starknet and just want to interact, such as by sending transactions, then a standalone CLI might be more appropriate than an interface such as Cast, which is an integrated component of the Foundry development environment.
+
+[discrete]
+=== Who maintains it?
+
+Starknet community contributor Jonathan Lei, the co-founder and CTO of zkLend.
+
+[discrete]
+=== Why should you care?
+
+Starkli is a Starknet CLI similar to cairo-lang but written in Rust. It’s easier to install and to navigate, and has no dependencies. The tool supports Braavos and Argent X smart wallets, and has embedded support for RPC endpoints.
+
+Starkli includes standard CLI functionality, such as the following:
+
+* Deploying accounts.
+* Interacting with contracts.
+* Getting Starknet data, such as information about blocks, transactions, and more.
+
+Starkli also includes the following features:
+
+* Compute class hashes from the Cairo file that defines the class.
+* Compute a function’s selector.
+* Encode messages.
+* Auto-completion.
+* Useful help commands.
+* The ability to make multi-calls.
+
+[discrete]
+=== Where do you get it?
+
+* link:https://medium.com/starknet-edu/starkli-the-new-starknet-cli-86ea914a2933[Starkli: The New Starknet CLI], on Medium, includes information on getting started, including installation instructions.
+* link:https://github.com/xJonathanLEI/starkli/[The Starkli Github repository]
+* link:https://book.starkli.rs/[The Starkli Book]
+
+[#sdks]
+== SDKs: A window into Starknet
+
+A Software Development Kit (SDK) is a library that abstracts the complexities of Starknet when building transactions and interacting with the blockchain, including the following:
+
+* Read and write API calls, using both the JSON-RPC and the Feeder gateway API.
+* Account creation.
+* Cryptography: Signature verification and signing, computing hashes used by Starknet.
+* Contract interactions: ABI import, constructing transactions.
+
+There are several SDKs for various languages, so you can choose the SDK according to your preferred language.
+
+
+[cols=",,,,",]
+|===
+| SDK name | Language | Used by | Maintainer | Where to get it
+
+|Starknet.js a|
+JavaScript, TypeScript
+|Dapps, Wallets |SpaceShard | link:https://github.com/0xs34n/starknet.js[starknet.js Github repository]
+|Starknet.py |Python |Useful scripts |Software Mansion (SWM) | link:https://github.com/software-mansion/starknet.py[starknet.py Github repository]
+|Starknet-rs |Rust |Starkli, Foundry |Jonathan Lei | link:https://github.com/xJonathanLEI/starknet-rs[starknet-rs Github repository]
+|Starknet-go |Go |Chainlink |Nethermind | link:https://github.com/NethermindEth/starknet.go[starknet-go Github repository]
+|===
+
+[#starknet-devnet-rs]
+== starknet-devnet-rs
+
+[discrete]
+=== What is it?
+
+A devnet is a Starknet instance that you run as a local node. A devnet enables much quicker development than is possible using testnet, as well as providing privacy prior to launching on testnet.
+
+starknet-devnet-rs can, among other features, fork the network at a given block, dump the current devnet state, and load it in a subsequent run. starknet-devnet-rs runs more quickly than the previous, Python-based starknet-devnet.
+
+[discrete]
+=== Who maintains it?
+
+SpaceShard
+
+[discrete]
+=== Why should you care?
+
+starknet-devnet-rs includes some accounts that are already funded with an ERC-20 token that can be used to pay fees. The ERC-20 contract that defines this token is also included.
+
+With starknet-devnet-rs, you can do the following:
+
+* Create mock accounts.
+* Send transactions using pre-deployed, pre-funded accounts, which are included.
+* Test tools.
+* Test RPC requests.
+* Deploy new contracts using an included Universal Deployer Contract (UDC).
+
+[discrete]
+=== Where do you get it?
+
+link:https://github.com/0xSpaceShard/starknet-devnet-rs[The starknet-devnet-rs Github repository]
+
+
+[#katana]
+== Katana
+
+[discrete]
+=== What is it?
+
+Katana, developed by the Dojo team, is an extremely fast devnet designed to support local development with Dojo, which is a gaming engine for Starknet. You can use Katana as a general purpose devnet as well. Katana lets developers test applications locally using the Katana network to test the transactions being sent during the game.
+
+* Katana provides convenient RPC methods that you can use to change the network's configuration as needed. For example, you can change the block time or allow zero-fee transactions.
+* Katana supports version v0.3.0 of the Starknet JSON-RPC specifications, the latest version as of June 2023. Katana lets you use native Starknet JSON calls, such as starknet_getTransactionReceipt, starknet_getStorageAt.
+
+[discrete]
+=== Where do you get it?
+
+link:https://book.dojoengine.org/toolchain/katana/overview.html[Katana] in the Dojo documentation includes information on installing and using Katana.
+
+[#scarb]
+== Scarb: The Cairo package manager
+
+[discrete]
+=== What is it?
+
+The official package manager for Starknet.
+
+[discrete]
+=== Who maintains it?
+
+Software Mansion
+
+[discrete]
+=== Why should you care?
+
+It makes life easier in the following ways:
+
+* When installing Cairo packages, it handles adding, updating, and removing dependencies.
+* You can use it to compile smart contracts.
+* When creating your own Cairo package, it takes care of patching any libraries you need from Github, and lets you know if there’s a version mismatch. You can then use it to build and test your project, using the Cairo test runner. Building is quite fast.
+* It includes the Cairo compiler, built-in, so unless you’re actually a compiler developer, you don’t need to set up any extra tooling.
+* It includes a bundled binary of the Cairo language server, which you can use
+* It works well with other tools in the Cairo ecosystem, such as Foundry and Dojo.
+
+[discrete]
+=== Where do you get it?
+
+link:https://docs.swmansion.com/scarb/[The Scarb site]
+
+[#starknet_foundry]
+== Starknet Foundry
+
+[discrete]
+=== What is it?
+
+Starknet Foundry is a toolchain for developing Starknet smart contracts. It helps with writing, deploying, and testing your smart contracts.
+
+[discrete]
+=== Who maintains it?
+
+Software Mansion
+
+[discrete]
+=== Why should you care?
+
+Starknet Foundry includes the following features:
+
+* Forge, a fast testing framework. Forge achieves performance comparable to the Cairo Test Runner with a better user experience. You can test standalone functions in your smart contracts and embed complex deployment flows.
+* Support for prints in contracts. According to the documentation, the debugging features will follow the addition of support in the Starknet compiler.
+* The online Foundry Book, with lots of helpful information and guidance in writing and running tests and interacting with Starknet.
+* Integrated compiling and dependency management, using Scarb.
+* Cast, which the documentation refers to by its command name, `sncast`. Cast is an integrated CLI specifically designed for performing Starknet RPC calls, sending transactions and getting Starknet chain data. You can use Cast to declare, deploy, and interact with contracts using the Starknet JSON-RPC.
+
+[discrete]
+=== Where do you get it?
+
+https://github.com/foundry-rs/starknet-foundry/[The Starknet Foundry Github repo]
+
+[#hardhat]
+== Hardhat (with a plugin)
+
+[discrete]
+=== What is it?
+
+A tool primarily for testing Cairo code. You can also deploy contracts using scripts in JavaScript.
+
+[discrete]
+=== Who maintains it?
+
+SpaceShard
+
+[discrete]
+=== Why should you care?
+
+Hardhat is a popular JavaScript development environment for Ethereum, and if you are already familiar with it and want to use it on Starknet, then this plugin can come in handy. You can run Starknet commands as tasks in Hardhat, such as compiling a Cairo contract.
+
+Hardhat is integrated with a local devnet, so you only need to worry about writing your tests, in JavaScript, of course.
+
+[discrete]
+=== Where do you get it?
+
+* Get Hardhat at link:https://hardhat.org/[the Hardhat site].
+
+* Get the Starknet plugin at the link:https://github.com/0xSpaceShard/starknet-hardhat-plugin[Starknet Hardhat plugin Github repo].
+
+* See examples of how to use the plugin at the link:https://github.com/0xSpaceShard/starknet-hardhat-example/tree/master[Starknet Hardhat example scripts Github repo].
+
+[#starknet_remix_plugin]
+== The Starknet Remix plugin
+
+[discrete]
+=== What is it?
+
+Remix is a browser-based integrated development environment (IDE) for Ethereum that you can use for learning, experimenting and finding vulnerabilities in smart contracts, without installing anything. The Starknet Remix plugin lets you use Remix for testing Starknet smart contracts, so you can focus on learning Cairo and Starknet without the distraction of setting up a toolchain.
+
+[discrete]
+=== Who maintains it?
+
+Nethermind
+
+[discrete]
+=== Why should you care?
+
+Remix and the Starknet Remix plugin include the following features:
+
+* Integrated compiling.
+* You can deploy contracts on any devnet, including the plugin’s own integrated devnet.
+* You can also deploy on testnet or Mainnet.
+* You can call functions of contracts that you have already deployed, to facilitate testing and interaction.
+* Seamless integration with Scarb.
+* Integration with block explorers such as Voyager, so you can easily check the execution of your transactions, in real time.
+* The Starknet Remix Plugin is integrated with link:https://starknet-by-example.voyager.online/[Starknet By Example], a rich repository of practical learning content.
+
+For more information on the Starknet Remix plugin, see link:https://medium.com/nethermind-eth/unlocking-onboarding-to-starknet-an-overview-of-the-starknet-remix-plugin-6b0658e73521[Unlocking Onboarding to Starknet: An Overview of the Starknet Remix Plugin].
+
+[discrete]
+=== Where do you get it?
+
+Get started with Remix at the link:https://remix-project.org[Remix Project site].
+
+Get started with the Starknet Remix plugin at link:https://github.com/NethermindEth/starknet-remix-plugin[the Starknet Remix plugin’s Github repo].
+
+[#vs_code_cairo_extension]
+== The Visual Studio Code Cairo extension
+
+[discrete]
+=== What is it?
+
+An extension for the Microsoft Visual Studio Code IDE that provides assistance when writing Cairo smart contracts, by using the Cairo Language Server.
+
+[discrete]
+=== Who maintains it?
+
+StarkWare
+
+[discrete]
+=== Why should you care?
+
+Features include:
+
+* Compiler support for Cairo files.
+* Live diagnostic highlighting for compile errors.
+* Quick fixes with suggestions.
+* Go to definitions for imports.
+* Code completion for imports.
+
+[discrete]
+=== Where do you get it?
+
+link:https://marketplace.visualstudio.com/items?itemName=starkware.cairo1[Cairo 1.0 - Visual Studio Marketplace]
