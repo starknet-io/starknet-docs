@@ -14,6 +14,26 @@ pipeline {
         GITHUB_CREDENTIALS = credentials('gh-starknet-docs-pat')
     }
     stages {
+        stage('Typos Tests') {
+            agent {
+                docker {
+                    image 'rust:latest'
+                    reuseNode true
+                }
+            }
+            steps {
+                script {
+                    sh label:"Install typos-cli", script:
+                    """
+                        cargo install typos-cli
+                    """
+                    sh label:"Run typos test", script:
+                    """
+                        typos
+                    """
+                }
+            }            
+        }
         stage('Build') {
             agent {
                 docker {
