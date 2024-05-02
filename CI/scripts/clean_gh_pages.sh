@@ -21,6 +21,7 @@ function delete_matching_dirs() {
         if [ -d "pr-${pr_number}" ]
         then
             echo "Deleting directory pr-${pr_number}"
+            rm -rf "pr-${pr_number}"
         fi
     done
 }
