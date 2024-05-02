@@ -8,19 +8,27 @@ pipeline {
     environment {
         repoOwner = "starknet-io"
         repoName = "starknet-docs"
-        prId = "${env.CHANGE_ID}"
-        prPrefix = "pr"
-        comment = "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://${repoOwner}.github.io/${repoName}/${prPrefix}-${prId}/documentation/ ."
         GITHUB_CREDENTIALS = credentials('gh-starknet-docs-pat')
     }
     stages {
-        stage('Build') {
+        stage('Clean') {
             steps {
                 script {
-                    sh label:"Install node modules", script:
+                    sh label:"Git config", script:
+                    """
+                        git config --global user.name "Starknet-Bot"
+                        git config --global user.email "starknet-bot@noreply.com"
+                    """
+                    sh label:"Delete closed PR's folders", script:
                     """
                         CI/scripts/clean_gh_pages.sh ${GITHUB_CREDENTIALS_PSW} ${repoOwner} ${repoName}
-                        git status
+                    """
+                    sh label:"Push changes", script:
+                    """
+                        git pull
+                        git add .
+                        git commit -m "Cleaned gh-pages"
+                        git push
                     """
                 }
             }
