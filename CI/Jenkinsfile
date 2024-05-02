@@ -11,6 +11,7 @@ pipeline {
         prId = "${env.CHANGE_ID}"
         prPrefix = "pr"
         comment = "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://${repoOwner}.github.io/${repoName}/${prPrefix}-${prId}/documentation/ ."
+        commitMessage = "Adding or updating preview build for PR: ${prId}"
         githubCredentials = credentials('gh-starknet-docs-pat')
     }
     stages {
@@ -66,7 +67,6 @@ pipeline {
         stage('Publish') {
             steps {
                 script {
-                    def commitMessage = "Adding or updating preview build for PR: ${prId}"
                     sh label:"Git clone", script:
                     '''
                         git clone https://$GITHUB_CREDENTIALS_PSW@github.com/starknet-io/starknet-docs.git
@@ -113,7 +113,7 @@ pipeline {
                             currentBuild.result = 'SUCCESS'
                             return
                         }
-                        sh label:"Checkout ${env.CHANGE_TARGET}", script: ""
+                        sh label:"Checkout ${env.CHANGE_TARGET}", script:
                         """
                             git checkout "${env.CHANGE_TARGET}"
                         """
