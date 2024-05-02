@@ -3,29 +3,29 @@ import argparse
 
 
 def comment_pr(api_url, auth_token, owner, repo, pr_id, comment):
-  url = f"{api_url}/repos/{owner}/{repo}/issues/{pr_id}/comments"
+    url = f"{api_url}/repos/{owner}/{repo}/issues/{pr_id}/comments"
 
-  headers = {
-    'Authorization': f'Bearer {auth_token}',
-    'Content-Type': 'application/json',
-    'Accept': 'application/vnd.github.v3+json',
-    'X-GitHub-Api-Version': '2022-11-28'
-  }
+    headers = {
+        'Authorization': f'Bearer {auth_token}',
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
 
-  payload = {
-     "body": comment
-  }
+    payload = {
+        "body": comment
+    }
 
-  try:
-    response = requests.post(url=url, headers=headers, json=payload)
-    if response.status_code in (200, 201):
-      print('Comment posted successfully!')
-      print('Response:', response.json())
-    else:
-      print('Request failed with status code:', response.status_code)
-      exit(1)
-  except Exception as e:
-     print(e)
+    try:
+        response = requests.post(url=url, headers=headers, json=payload)
+        if response.status_code in (200, 201):
+            print('Comment posted successfully!')
+            print('Response:', response.json())
+        else:
+            print('Request failed with status code:', response.status_code)
+    except Exception as e:
+        print(e)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Create a comment on Github pull request.")
@@ -40,6 +40,7 @@ def main():
     comment_pr(args.api_url, args.auth_token, args.owner, args.repo, args.pr, args.comment)
 
     exit(0)
+
 
 if __name__ == "__main__":
     main()
