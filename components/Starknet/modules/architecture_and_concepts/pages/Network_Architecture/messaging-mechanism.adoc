@@ -36,19 +36,6 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 // We need to separate out these functions into a reference.
 In such a case, the counter corresponding to the message hash in the Starknet Core Contract decreases by one. For more information, see the link:https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L130C7-L130C7#[`consumeMessageFromL2`] function in `StarknetMessaging.sol`.
 
-#*Diagram comments*:#
-
-* StarkNet -> Starknet
-* #1: *L2->L1 message* is not clear if this is a function call or what.#
-* #The title should have an actual arrow. Better to remove the title from the graphic and just use the caption.#
-* #Step 3: Error in callout Stark**N**et OS notifies *on* the message, which is included in the proof#
-* #All arrows appear as - > instead of arrows.#
-* #5 Unclear from where the consumer receives the message on L2. Why is the message consumer on L2 in the diagram? I thought that the consumer is on L1.# #Arni agrees that the consumer should be on L1, not L2.#
-* #3 Blockchain Dispatcher takes place after verification. Need to check if the dispatcher queries the verifier and gets an answer. The current arrows are confusing.#
-* #Add: The Verifier after it verifies stores the verified facts in the Fact Registry#
-* #When the dispatcher sends the L1 tx to the Starknet Core Contract, the tx invokes the `updateState` function, which then reads the Fact Registry contract, and if the fact has been registered, it updates the Starknet state.#
-
-
 xref:#diagram_l2-l1_messaging_mechanism[] illustrates this flow:
 
 [#diagram_l2-l1_messaging_mechanism]
@@ -99,18 +86,19 @@ The protocol consists of the following stages:
 +
 The Starknet Core Contract hashes the message parameters and updates the L1->L2 message mapping to indicate that a message with this hash was indeed sent. The L1 contract records the fee that the sender paid. For more information, see xref:#l1-l2-message-fees[L1 -> L2 message fees].
 . The message is then decoded into a Starknet transaction that invokes a function annotated with the `l1_handler` decorator on the target contract. Transactions like this on L2 are called *_L1 handler transactions_*.
- .. The Starknet sequencer, upon seeing enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction. #What does this mean: "upon seeing enough L1 confirmations..."? Is this talking about waiting for a batch?#
+ .. The Starknet sequencer, upon receiving enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction.
+// #What does this mean: "upon receiving enough L1 confirmations..."? Is this talking about waiting for a batch?#
  .. The L2 transaction invokes the relevant `l1_handler` function.
 . The L1 Handler transaction that was created in the previous step is added to a proof.
 . The Core Contract receives the state update.
 . The message is cleared from the Core Contract's storage. At this point, the message is handled.
 
-The above flow is illustrated in the following diagram:
-#THIS IMAGE IS WRONG & MISLEADING#
+// The above flow is illustrated in the following diagram:
+// #THIS IMAGE IS WRONG & MISLEADING#
 
-image::l1l2.png[l1l2]
+// image::l1l2.png[l1l2]
 
-An L1->L2 message consists of #Where is an example of an L1->L2 message?#:
+An L1->L2 message consists of the following:
 
 * L1 sender's address
 * L2 recipient's contract address
@@ -217,9 +205,9 @@ l1_handler_tx_hash = ℎ(
 
 Where:
 
-- stem:[\text{l1_handler}] is a constant prefix, encoded in bytes (ASCII), with big-endian.
-- stem:[\text{chain_id}] is a constant value that specifies the network to which this transaction is sent.
-- stem:[$$h$$] is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash
+- `l1_handler` is a constant prefix, encoded in bytes (ASCII), as big-endian.
+- `chain_id` is a constant value that specifies the network to which this transaction is sent.
+- _h_ is the xref:../Cryptography/hash-functions.adoc#pedersen_hash[Pedersen] hash
 
 [NOTE]
 ====
