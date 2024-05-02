@@ -67,10 +67,10 @@ pipeline {
             steps {
                 script {
                     def commitMessage = "Adding or updating preview build for PR: ${prId}"
-                    // sh label:"Git clone", script:
-                    // '''
-                    //     git clone https://$GITHUB_CREDENTIALS_PSW@github.com/starknet-io/starknet-docs.git
-                    // '''
+                    sh label:"Git clone", script:
+                    '''
+                        git clone https://$GITHUB_CREDENTIALS_PSW@github.com/starknet-io/starknet-docs.git
+                    '''
                     sh label:"Git config", script:
                     """
                         git config --global user.name "Starknet Bot"
@@ -79,7 +79,6 @@ pipeline {
                     dir('starknet-docs') {
                         sh label:"Checkout gh-pages", script:
                         """
-                            git fetch
                             git checkout gh-pages
                         """
                         sh label:"Remove PR folder if exist", script:
@@ -95,7 +94,6 @@ pipeline {
                             returnStatus: true,
                             script: 
                             '''
-                                git remote set-url origin https://$githubCredentials_PSW@github.com/starknet-io/starknet-docs.git
                                 git add ${prPrefix}-${prId}
                                 if ! git diff-index --quiet HEAD --; then
                                     echo "Changes detected. Committing and pushing changes."
@@ -103,10 +101,10 @@ pipeline {
                                     git commit -m "$commitMessage"
                                     echo "Commit successful. Pushing changes."
                                     git push
-                                    exit 0
+                                    exit 1
                                 else
                                     echo "No changes found."
-                                    exit 1
+                                    exit 0
                                 fi
                             '''
                         )
@@ -115,7 +113,7 @@ pipeline {
                             currentBuild.result = 'SUCCESS'
                             return
                         }
-                        sh label:"Checkout ${env.CHANGE_TARGET}", script:
+                        sh label:"Checkout ${env.CHANGE_TARGET}", script: ""
                         """
                             git checkout "${env.CHANGE_TARGET}"
                         """
