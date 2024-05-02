@@ -25,6 +25,6 @@ function delete_matching_dirs() {
     done
 }
 
-delete_matching_dirs()
+delete_matching_dirs
 
 exit 0
