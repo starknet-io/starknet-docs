@@ -16,7 +16,7 @@ function list_closed_prs() {
 
 function delete_matching_dirs() {
     local closed_prs=($(list_closed_prs))
-    for pr_number in "${closed_prs}"
+    for pr_number in "${closed_prs[@]}"
     do
         if [ -d "pr-${pr_number}" ]
         then
