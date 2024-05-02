@@ -1,0 +1,56 @@
+pipeline {
+    agent { label "gcp-hodor-slave-generic"}
+    options {
+       // Add timestamps to output.
+       timestamps()
+       timeout(time: 10, unit: 'MINUTES')
+    }
+    environment {
+        repoOwner = "starknet-io"
+        repoName = "starknet-docs"
+        commitMessage = "Starknet bot, scheduled branch cleanup."
+        githubCredentials = credentials('gh-starknet-docs-pat')
+    }
+    stages {
+        stage('Clean') {
+            steps {
+                script {
+                    sh label:"Git config", script:
+                    '''
+                        git config --global user.name "Starknet Bot"
+                        git config --global user.email "starknet-bot@noreply.com"
+                    '''
+                    sh label:"Checkout gh-pages", script:
+                    """
+                        git fetch
+                        git checkout gh-pages
+                    """
+                    def result = sh (
+                        label:"Delete closed PR's folders",
+                        script: 'CI/scripts/clean_gh_pages.sh $githubCredentials_PSW $repoOwner $repoName',
+                        returnStatus: true
+                    ).trim()
+
+                    if (result == 0) {
+                        echo 'Pipeline succeeded because there were no directories of closed pr`s to clean'
+                        currentBuild.result = 'SUCCESS'
+                        return
+                    }
+
+                    sh label:"Push changes", script:
+                    '''
+                        git remote set-url origin https://$githubCredentials_PSW@github.com/starknet-io/starknet-docs.git
+                        git add .
+                        git commit -m "$commitMessage"
+                        git push
+                    '''
+                }
+            }
+        }
+    }
+    post {
+        cleanup {
+            deleteDir()
+        }
+    }
+}
