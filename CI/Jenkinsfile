@@ -30,7 +30,15 @@ pipeline {
                     """
                     sh label:"Run typos test", script:
                     """
-                        typos
+                        set +x
+
+                        res = \$(typos)
+
+                        if [ \$? != 0 ]
+                        then
+                            python3 CI/scripts/comment_pr.py -a "$githubCredentials_PSW" -o "$repoOwner" -r "$repoName" -p "$prId" -c "Typo test failed, result: \$res"
+                            exit 1
+                        fi
                     """
                 }
             }            
@@ -109,7 +117,7 @@ pipeline {
                             '''
                         )
                         if (result == 10) {
-                            echo 'Pipeline succeeded because there were no changes. Marking pipeline as SUCCESS.'
+                            echo 'Pipeline succeeded because there were no changes to push. Marking pipeline as SUCCESS.'
                             currentBuild.result = 'SUCCESS'
                             return
                         } else if (result != 0) {
