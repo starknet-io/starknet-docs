@@ -20,6 +20,7 @@ pipeline {
                 docker {
                     image 'rust:latest'
                     reuseNode true
+                    args '--user root'
                 }
             }
             steps {
@@ -30,7 +31,17 @@ pipeline {
                     """
                     sh label:"Run typos test", script:
                     """
-                        typos
+                        set +e
+
+                        res=\$(typos)
+
+                        if [ \$? != 0 ]
+                        then
+                            apt update
+                            apt install -y python3-requests
+                            python3 CI/scripts/comment_pr.py -a "$githubCredentials_PSW" -o "$repoOwner" -r "$repoName" -p "$prId" -c "Oops, your pull request failed to pass the Typo tests stage :( . see the result: \n\$res\n\nPlease fix the typo, commit and push!"
+                            exit 1
+                        fi
                     """
                 }
             }            
@@ -100,6 +111,7 @@ pipeline {
                                     echo "Commit message: $commitMessage"
                                     git commit -m "$commitMessage"
                                     echo "Commit successful. Pushing changes."
+                                    git pull
                                     git push
                                     exit 0
                                 else
@@ -109,7 +121,7 @@ pipeline {
                             '''
                         )
                         if (result == 10) {
-                            echo 'Pipeline succeeded because there were no changes. Marking pipeline as SUCCESS.'
+                            echo 'Pipeline succeeded because there were no changes to push. Marking pipeline as SUCCESS.'
                             currentBuild.result = 'SUCCESS'
                             return
                         } else if (result != 0) {
