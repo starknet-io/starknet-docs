@@ -69,7 +69,7 @@ pipeline {
                 script {
                     sh label:"Git clone", script:
                     '''
-                        git clone https://$githubCredentials_PSW@github.com/starknet-io/starknet-docs.git
+                        git clone https://$GithubCredentials_PSW@github.com/starknet-io/starknet-docs.git
                     '''
                     sh label:"Git config", script:
                     """
@@ -101,16 +101,19 @@ pipeline {
                                     git commit -m "$commitMessage"
                                     echo "Commit successful. Pushing changes."
                                     git push
-                                    exit 1
+                                    exit 0
                                 else
                                     echo "No changes found."
-                                    exit 0
+                                    exit 10
                                 fi
                             '''
                         )
-                        if (result == 0) {
+                        if (result == 10) {
                             echo 'Pipeline succeeded because there were no changes'
                             currentBuild.result = 'SUCCESS'
+                            return
+                        } else if (result != 0) {
+                            currentBuild.result = 'FAILURE'
                             return
                         }
                         sh label:"Checkout ${env.CHANGE_TARGET}", script:
