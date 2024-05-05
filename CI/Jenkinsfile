@@ -1,0 +1,139 @@
+pipeline {
+    agent { label "gcp-hodor-slave-generic"}
+    options {
+       // Add timestamps to output.
+       timestamps()
+       timeout(time: 10, unit: 'MINUTES')
+    }
+    environment {
+        repoOwner = "starknet-io"
+        repoName = "starknet-docs"
+        prId = "${env.CHANGE_ID}"
+        prPrefix = "pr"
+        comment = "Your preview build is ready! ✨ Check the following link in 1-2 minutes: https://${repoOwner}.github.io/${repoName}/${prPrefix}-${prId}/documentation/ ."
+        commitMessage = "Adding or updating preview build for PR: ${prId}"
+        githubCredentials = credentials('gh-starknet-docs-pat')
+    }
+    stages {
+        stage('Typos Tests') {
+            agent {
+                docker {
+                    image 'rust:latest'
+                    reuseNode true
+                }
+            }
+            steps {
+                script {
+                    sh label:"Install typos-cli", script:
+                    """
+                        cargo install typos-cli
+                    """
+                    sh label:"Run typos test", script:
+                    """
+                        typos
+                    """
+                }
+            }            
+        }
+        stage('Build') {
+            agent {
+                docker {
+                    image 'node:16.20.2'
+                    reuseNode true
+                }
+            }
+            environment {
+                ANTORA_CACHE_DIR="${WORKSPACE}/.cache"
+            }
+            steps {
+                script {
+                    sh label:"Install node modules", script:
+                    """
+                        yarn
+                    """
+                    sh label:"Generate site", script:
+                    """
+                        yarn generate
+                    """
+                    sh label:"Copy artifacts", script:
+                    """
+                        mkdir ${prPrefix}-${prId}
+                        cp -r ./public_html/* ${prPrefix}-${prId}
+                    """
+                    stash includes: "${prPrefix}-${prId}/**/*", name: "artifact"
+                }
+            }
+        }
+        stage('Publish') {
+            steps {
+                script {
+                    sh label:"Git clone", script:
+                    '''
+                        git clone https://$githubCredentials_PSW@github.com/starknet-io/starknet-docs.git
+                    '''
+                    sh label:"Git config", script:
+                    """
+                        git config --global user.name "Starknet Bot"
+                        git config --global user.email "starknet-bot@noreply.com"
+                    """
+                    dir('starknet-docs') {
+                        sh label:"Checkout gh-pages", script:
+                        """
+                            git checkout gh-pages
+                        """
+                        sh label:"Remove PR folder if exist", script:
+                        """
+                            if [ -d ${prPrefix}-${prId} ]
+                            then
+                                rm -rf ${prPrefix}-${prId}
+                            fi
+                        """
+                        unstash 'artifact'
+                        def result = sh (
+                            label:"Push to branch gh-pages",
+                            returnStatus: true,
+                            script: 
+                            '''
+                                git add ${prPrefix}-${prId}
+                                if ! git diff-index --quiet HEAD --; then
+                                    echo "Changes detected. Committing and pushing changes."
+                                    echo "Commit message: $commitMessage"
+                                    git commit -m "$commitMessage"
+                                    echo "Commit successful. Pushing changes."
+                                    git push
+                                    exit 0
+                                else
+                                    echo "No changes found."
+                                    exit 10
+                                fi
+                            '''
+                        )
+                        if (result == 10) {
+                            echo 'Pipeline succeeded because there were no changes. Marking pipeline as SUCCESS.'
+                            currentBuild.result = 'SUCCESS'
+                            return
+                        } else if (result != 0) {
+                            echo 'Push to branch gh-pages step failed. Marking pipeline as FAILURE.'
+                            currentBuild.result = 'FAILURE'
+                            return
+                        }
+                        sh label:"Checkout ${env.CHANGE_TARGET}", script:
+                        """
+                            git checkout "${env.CHANGE_TARGET}"
+                        """
+                        sh label:"Comment preview link on contributor pull request", script:
+                        '''
+                            echo "Commenting preview link on PR: #$prId"
+                            python3 CI/scripts/comment_pr.py -a "$githubCredentials_PSW" -o "$repoOwner" -r "$repoName" -p "$prId" -c "$comment"
+                        '''
+                    }
+                }
+            }
+        }
+    }
+    post {
+        cleanup {
+            deleteDir()
+        }
+    }
+}
