@@ -4,17 +4,31 @@
 [id="introduction"]
 == Introduction
 
-In the current stage of the Alpha, Starknet operates in Validity Rollup mode, also referred to as ZK-Rollup mode. So when the onchain state update is accepted, the state diff between the previous and new state is sent as calldata to Ethereum.
+Starknet is a Validity Rollup, aka ZK-Rollup. 
+This means that when a bunch of L2 changes are "rolled-up" on L1, 
+updating the latest proven L2 state, the state diffs from the previous state to the new state are published on Ethereum.
 
 This data allows anyone that observes Ethereum to reconstruct the current state of Starknet.
 
 [NOTE]
 ====
-To update the Starknet state on L1, it suffices to send a valid proof, without information
-on the transactions or particular changes that this update caused.
+To update the Starknet state on L1, it suffices to send a valid proof along with the state-diff, without information
+on e.g. transactions and events.
 
-Consequently, more information must be provided in order to allow other parties to locally track Starknet's state.
+Consequently, depending on the usecase, more information may be needed to track Starknet's state.
 ====
+
+== Data availability: EIP4844, version 0.13.1 and forward
+
+As of Starknet v0.13.1, the state-diff may be published on Ethereum either as calldata or blobdata. 
+The decision of how to publish a particular block data is at the sequencer's discretion. The switching mechanism is kept in place for extreme scenarios in which blob prices spike beyond that of calldata, allowing the Starknet sequencer to switch back to calldata.
+In normal times, blobs are always used to publish Starknet's state-diff.
+
+The state-diff format is identical to that of 0.11.0, but the data sent to Ethereum is the FFT of the original data. 
+That is, to recover Starknet's state-diff based on blobs published on-chain, one needs to first perform IFFT over the raw blob, and only then proceed with decoding according to the format described below.
+For more information, see the https://community.starknet.io/t/data-availability-with-eip4844/[community forum post].
+
+For an example blob published on Ethereum by the Starknet sequencer, see the https://etherscan.io/tx/0x8a227491bc78424c2cac1b203c95cdd99ede5112d41f0e7eab26f3c8aa9c658d/[following state update transaction].
 
 == Data availability: v0.11.0 and forward
 
