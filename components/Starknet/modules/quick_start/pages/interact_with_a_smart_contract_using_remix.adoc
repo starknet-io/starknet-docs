@@ -1,36 +1,38 @@
-= Interacting with a smart contract with Remix
+[id="interacting-with-a-smart-contract-with-remix"]
+= Deploying and interacting with a Starknet smart contract with Remix
 
-To compile, deploy, and interact with our smart contract, use the Starknet Remix Plugin. This tool is essential for starting Starknet development without the need for any local installations on your machine.
+To compile, deploy, and interact with our smart contract, use the Starknet Remix plugin. This tool enables you to start to develop for Starknet without the need for any local installations on your machine.
 
-== Introduction
+== Set up your environment in Remix
 
-. Go to the https://remix.ethereum.org/#activate=Starknet&lang=en&optimize=false&runs=200&evmVersion=null&version=soljson-v0.8.24+commit.e11b9ed9.js[Remix IDE] website with the Starknet plugin activated.
-. Navigate to the `File Explorer` tab to review the details of the example project.
-. Select the `Settings` option and choose the Cairo version, which is the latest version available in Remix.
-. In the file `Scarb.toml`, you can find the version of this example project specified.
-. It is crucial to make sure that you match the version originally specified with the one found in our `Scarb.toml` file. Any inconsistencies should be corrected by configuration.
+. Go to the https://remix.ethereum.org/#activate=Starknet&lang=en&optimize=false&runs=200&evmVersion=null&version=soljson-v0.8.24+commit.e11b9ed9.js[Remix IDE website with the Starknet plugin activated].
+// . If Remix requests access to your file system, accept the request.
+. Click the *File Explorer* (image:quick_start:remix_file_explorer.png[]) tab to review the details of the example project.
+. Click the Starknet (add Starknet image here) tab, and click the *Settings* tab. Select the latest version of Cairo available in Remix.
+. Open the `Scarb.toml` file #How?# to verify the version of your project. Ensure it matches the version specified originally, and correct any discrepancies, if necessary.
 
-== Customizing for Ownable Contract
+== Customizing your environment for the `Ownable` contract
 
 [NOTE]
 ====
-A default example project is provided for the purposes of this tutorial. To achieve this, certain files and directories will need to be modified or removed.
+For this tutorial, a default example project is provided. Modify or remove certain files and directories as needed.
 ====
 
-. Rename the root directory as `ownable`. Within your `Scarb.toml`, under the [package] section, designate the name as `ownable`.
+. Rename the root directory to `ownable`. In your `Scarb.toml`, under the `[package]` section, set the name to `ownable`.
 . Delete the `balance.cairo` and `forty_two.cairo` files, if they exist.
-. Open `lib.cairo` and remove all its contents, making it empty.
+. Open `lib.cairo` and delete all its contents.
 
-== Introduction to Starknet Smart Contracts
+== Introduction to Starknet smart contracts
 
-Explore the foundational Ownable contract pattern crafted in Cairo for Starknet. It includes:
+Explore the `Ownable` contract pattern crafted in Cairo for Starknet. It includes:
 
 * An ownership system.
 * A method to transfer ownership.
 * A method to check the current owner.
 * An event notification for ownership changes.
 
-=== Cairo Example Contract
+[#example-cairo-contract]
+=== Example Cairo contract
 
 [source,cairo]
 ----
@@ -98,66 +100,65 @@ mod Ownable {
 }
 ----
 
-=== Components Breakdown
+=== Contract component breakdown
 
-.Dependencies and Interface:
+[horizontal,labelwidth="25",role="stripes-odd"]
+Dependencies and Interface::
 * `starknet::ContractAddress`: Represents a Starknet contract address.
 * `OwnableTrait`: Defines essential functions for transferring and retrieving ownership.
 
-.Events:
-* `OwnershipTransferred`: Indicates changes in ownership, providing details about the previous and new owners.
+Events::
+`OwnershipTransferred`: Indicates changes in ownership, providing details about the previous and new owners.
 
-.Storage:
-* Stores the contract's state, including the address of the current owner.
+Storage::
+Stores the contract's state, including the address of the current owner.
 
-.Constructor:
-* Sets up the contract by assigning an initial owner.
+Constructor::
+Sets up the contract by assigning an initial owner.
 
-.External Functions:
-* Contains functions for transferring ownership and fetching information about the current owner.
+External Functions::
+Contains functions for transferring ownership and fetching information about the current owner.
 
-.Private Methods:
-* `only_owner`: Validates if the caller is the current owner.
+Private Methods::
+`only_owner`: Validates if the caller is the current owner.
 
-== Compilation Process
+== Compiling the contract
 
 To compile using Remix:
 
-.File Creation
+. Click the *File Explorer* tab and open the `lib.cairo` file #I don't see this file# and insert the code from xref:#example-cairo-contract[].
+. Click the *Starknet* tab, then click the *Home* tab.
+* Under *1 Compile*, select `compile a single file`.
+* Grant the necessary permissions when prompted. Select *Remember my choice* for a smoother compilation process in the future.
+* The compilation process creates an `artifacts` directory containing the compiled contract in two formats: a Sierra file, in JSON format, and a CASM file. For Starknet deployment, Remix  uses the Sierra file.
+* Remix efficiently handles both compilation and deployment.
 
-* Go to the "File Explorer" tab in Remix's interface.
-* Find the file named lib.cairo and insert the provided code into it.
+== Deploying your contract on the development network (devnet)
 
-.Compilation
+Deploying a smart contract in Starknet requires two high-level steps:
 
-* Navigate to the `Starknet` tab within Remix, then click on `Home`.
-* In the 1 Compile section, choose compile a single file.
-* Grant the necessary permissions when prompted. Opt to Remember my choice for smoother processes in the future.
-* After compilation, you'll see an "artifacts" directory containing the compiled contract in two formats: Sierra (JSON file) and CASM. For Starknet deployment, Remix will use the Sierra file.
-* More detailed explanations on this process will follow in subsequent chapters. For now, Remix efficiently handles both compilation and deployment.
+. Declare the class of your contract, that is, send your contract’s code to the network.
++
+When you declare the contract class, you establish an initial owner by calling the class's `constructor` function.
+. Deploy an instance of the contract class.
 
-== Deployment on the Development Network
+This tutorial uses a development network (devnet) to deploy your smart contract. A devnet is a Starknet instance that you run as a local node. A devnet enables much quicker development than is possible using testnet, as well as providing privacy prior to launching on testnet.
 
-To initiate the operational phase of your smart contract, you need to establish an initial owner, which is achieved through the Constructor function.
+.Declaring the contract class
 
-Here's a systematic approach to deploying your smart contract on the development network
-
-.Select the Network
-
-* Click on the "Remote Devnet" button in the Starknet tab.
-
-.Choose a Devnet Account
-
-* In the "Devnet account selection" section, you'll see a list of accounts specific to the designated devnet.
-* Select an account from the list and note down its address for later use.  
-
-.Declare
-
-* Click on "Declare lib.cairo".
-* After declaration, Remix's terminal will provide various logs with important details such as:
+. Select the network by clicking the *Starknet* tab, and then clicking the *Remote Devnet* menu.
+. Under *Devnet account selection*, open the menu to view a list of accounts specific to the designated devnet.
+. Select a devnet account from the list and note its address for later use.
+. Click  *Declare `lib.cairo`*.
++
+Remix's terminal provides various logs with important details such as:
++
+--
 * `transaction_hash`: This unique hash identifies the transaction and can be used to track its status.
 * `class_hash`: Similar to an identifier, the class hash contains the definition of the smart contract.
-
+--
++
+.Remix terminal output after declaring the `ownable_Ownable` contract
 [source,bash]
 ----
 ------------------------ Declaring contract: ownable_Ownable ------------------------
@@ -168,16 +169,18 @@ Here's a systematic approach to deploying your smart contract on the development
 ---------------------- End Declaring contract: ownable_Ownable ----------------------
 ----
 
-.To initiate deployment
+.Deploying a contract instance
 
-* Paste the copied address into the init_owner variable.
-* Click on **"Deploy"**.
+. Paste the copied address into the `init_owner` variable.
+. Click *Deploy*.
 
-After deployment, Remix's terminal will display various logs containing important details:
+After deployment, Remix's terminal displays various logs containing important details, such as:
 
 * `transaction_hash`: This unique hash identifies the transaction and can be used to track its status.
 * `contract_address`: The address of the deployed contract. You'll use this address to interact with your contract.
 * `data`: Contains the `init_owner` address provided to the constructor.
+
+.Remix terminal output after deploying an instance of the `ownable_Ownable` class
 
 [source,bash]
 ----
@@ -195,22 +198,18 @@ After deployment, Remix's terminal will display various logs containing importan
 }
 ----
 
-To effectively deploy your smart contract on the development network, follow the procedure outlined above.
+== Interacting with the contract
 
-== Interaction with the Contract
+Now that the contract is operational on the development network, you can initiate interacting with it as follows:
 
-Now that the contract is operational on the development network, you can engage with it. Here's a guide on how to interact with your contract on Starknet:
+. Click the *Starknet* tab.
+. Click *Interact* to begin interaction.
 
-.Initiating Interaction
+=== Identifying the owner of the contract instance
 
-* Open the "Starknet" plugin tab in your interface.
-* Choose the "Interact" option to begin interaction.
-
-.Calling the `get_owner` Function
-
-* Select the get_owner function. Since it doesn't require any arguments, the calldata field remains empty. (Since this function reads data, its invocation is called a "call").
-* Execute the "Call" operation. The terminal will promptly display the outcome, revealing the owner's address provided during the contract's deployment within the calldata for the constructor:
-
+. Select the `get_owner` function. It doesn't require any arguments so the calldata field remains empty. This function reads data, so its invocation is referred to as a _call_.
+. Execute the `call` operation. The terminal displays the output, showing the owner's address, which you provided during the contract's deployment within the calldata for the constructor:
++
 [source,json]
 ----
 {
@@ -224,12 +223,12 @@ Now that the contract is operational on the development network, you can engage 
 }
 ----
 
-This call doesn't consume gas since the function doesn't modify the contract's state.
+This call doesn't consume gas because the function doesn't modify the contract's state.
 
-.Invoking the `transfer_ownership` Function
+=== Transferring ownership of the contract instance
 
-* Choose the "Write" option in the interaction area, where functions that alter the contract's state are listed.
-* Select the transfer_ownership function, which requires providing the new owner address as input.
+* Click the *Interact* menu and select *Write*, where functions that alter the contract's state are listed.
+* Select the `transfer_ownership` function, which requires providing the new owner address as input.
 * Fill in the new_owner field with the relevant address. (Choose any address from the "Devnet account selection" listed in the Environment tab for this purpose.)
 * Click the "Call" button. The terminal will then display the transaction hash indicating the change in the contract's state. Since this interaction modifies the contract's state, it's called an "invoke" and requires the signature of the account executing the function.
 * For such transactions, the terminal logs will include a "status" parameter indicating the outcome. A status of "ACCEPTED_ON_L2" signifies approval by the Sequencer, the entity responsible for receiving and processing transactions, indicating inclusion in an upcoming block. Conversely, a "REJECTED" status indicates disapproval by the Sequencer, preventing inclusion in the next block. Typically, transactions of this nature are approved, resulting in a modification of the contract's state.
