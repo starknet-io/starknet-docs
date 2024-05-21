@@ -141,7 +141,7 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 [discrete]
 ==== Description
 
-Returns the maximum fee, in Wei, that Starknet #charges# #(Is "charges" correct? It says "accepts" link:https://github.com/starkware-libs/cairo-lang/blob/efa9648f57568aad8f8a13fbf027d2de7c63c2c0/src/starkware/starknet/solidity/IStarknetMessaging.sol#L8[in the source file])# for a single message.
+Returns the maximum fee, in Wei, that Starknet accepts for a single message. If the fee passed is higher than this value, the transaction is not accepted.
 
 [discrete]
 ==== State Mutability
@@ -174,7 +174,7 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 [discrete]
 ==== Description
 
-Returns the timestamp at the time cancelL1ToL2Message was called with a given message hash.
+Returns the timestamp of the cancellation request.
 
 [discrete]
 ==== State Mutability
@@ -191,7 +191,9 @@ Returns the timestamp at the time cancelL1ToL2Message was called with a given me
 ==== Returns
 
 [horizontal,labelwidth="30",role=stripes-odd]
-`uint256 _result_`:: The timestamp at the time cancelL1ToL2Message was called with the given message hash `_msgHash_`. Returns 0 if cancelL1ToL2Message was never called with the given message hash `_msgHash_`.
+`uint256 _result_`:: The Ethereum block timestamp. 
+
+Returns `0` if `cancelL1ToL2Message` was not called with the message hash `_msgHash_`.
 
 [discrete]
 ==== Function definition
@@ -258,8 +260,8 @@ Indicates if a pending message is associated with a given message hash.
 ==== Returns
 
 Returns `uint256 _result_`, where `_result_` is one of the following:
-[horizontal,labelwidth="30",role=stripes-odd]
-`msg_fee + 1`:: A pending message is associated with the `_msgHash_` parameter. #What is `msg_fee`? I don't see it mentioned anywhere. Does it simply refer to the fee of the pending message? Why does it return `msg_fee + 1`? How is that value used?#
+[horizontal,labelwidth="5",role=stripes-odd]
+`message_fee + 1`:: A pending message is associated with the `_msgHash_` parameter.
 `0`:: No pending message is associated with the `_msgHash_` parameter.
 
 [discrete]
@@ -313,7 +315,7 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 [discrete]
 ==== Description
 
-Returns the time interval after which you can cancel a message starting from the moment of calling the xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`] function. You can get the real value by calling the link:https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F11[`messageCancellationDelay`] function on etherscan.
+Returns the time interval, in seconds, after which you can cancel a message starting from the moment of calling the xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`] function. You can get the real value by calling the link:https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F11[`messageCancellationDelay`] function on a block explorer, such as Etherscan.
 
 [discrete]
 ==== State Mutability
@@ -384,7 +386,7 @@ Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/star
 [discrete]
 ==== Description
 
-Starts the cancellation of an L1 to L2 message.
+Starts the cancellation of a message from L1 to L2.
 
 You can cancel a message after a predefined about of time from the moment this function is called. The amount of time is set by the xref:#messageCancellationDelay[`messageCancellationDelay`] function.
 
@@ -485,7 +487,7 @@ include::messaging_reference.adoc[tag=uint256_selector]
 [discrete]
 ==== Description
 
-This event is emitted when a message is sent from L2 to L1.
+This event is emitted when sending a message from L2 to L1.
 
 [discrete]
 ==== Event attributes
@@ -510,7 +512,7 @@ This event is emitted when a message is sent from L2 to L1.
 [discrete]
 ==== Description
 
-This event is emitted when a message is sent from L1 to L2.
+This event is emitted after calling the `sendMessageToL2` function.
 
 [discrete]
 ==== Event attributes
@@ -539,7 +541,7 @@ include::messaging_reference.adoc[tag=uint256_selector]
 [discrete]
 ==== Description
 
-This event is emitted when an L1 to L2 message is canceled.
+This event is emitted after calling the `cancelL1ToL2Message` function.
 
 [discrete]
 ==== Event attributes
@@ -567,7 +569,7 @@ include::messaging_reference.adoc[tag=uint256_selector]
 [discrete]
 ==== Description
 
-This event is emitted when the cancellation of an L1 to L2 message is started.
+This event is emitted after calling the `startL1ToL2MessageCancellation` function.
 
 [discrete]
 ==== Event attributes
