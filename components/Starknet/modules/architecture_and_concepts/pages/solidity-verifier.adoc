@@ -1,10 +1,10 @@
-= Solidity Verifier
+= Solidity verifier
 
 include::ROOT:partial$snippet-note-content-from-sn-book.adoc[]
 
 Before exploring this topic, review the xref:Network_Architecture/starknet_architecture_overview.adoc[] for foundational knowledge. Familiarity with concepts such as sequencers, provers, SHARP, and SHARP jobs is assumed.
 
-Starknet's Solidity Verifier plays a pivotal role in the rollup landscape, ensuring the truth of transactions and smart contracts.
+Starknet's Solidity verifier plays a pivotal role in the rollup landscape, ensuring the truth of transactions and smart contracts.
 
 == Quick review: SHARP and SHARP jobs
 
@@ -32,7 +32,7 @@ A Solidity verifier is an L1 smart contract, crafted in Solidity, designed to va
 
 === Previous architecture: Monolithic verifier
 
-Historically, the Solidity Verifier was a monolithic contract, both initiated and executed by the same contract. For illustration, the operator would invoke the `+update state+` function on the main contract, providing the state to be modified and confirming its validity. Subsequently, the main contract would present the proof to both the verifier and the validium committee. Once they validated the proof, the state would be updated in the main contract.
+Historically, the Solidity verifier was a monolithic contract, both initiated and executed by the same contract. For illustration, the operator would invoke the `+update state+` function on the main contract, providing the state to be modified and confirming its validity. Subsequently, the main contract would present the proof to both the verifier and the data availability committee. Once they validated the proof, the state would be updated in the main contract.
 
 .Previous architecture
 image::prehistoric-architecture.png[Previous architecture]
@@ -40,30 +40,86 @@ image::prehistoric-architecture.png[Previous architecture]
 
 However, this architecture faced several constraints:
 
-* Batching transactions frequently surpassed the original geth32kb transaction size limit (later adjusted to 128kb) due to accumulating excessive transactions.
+* Batching transactions frequently surpassed the original Geth 32 KB transaction size limit, later adjusted to 128 KB, due to accumulating excessive transactions.
 * The gas required often outstripped the block size (e.g., 8 Mgas), as the block couldn't accommodate a complete batch of proof.
 * A prospective constraint was that the verifier wouldn't support proof bundling, which is fundamental for SHARP.
 
 === Current architecture: Multiple smart contracts
 
-The current verifier utilizes multiple smart contracts rather than being a singular, monolithic structure.
+The current verifier uses multiple smart contracts rather than being a singular, monolithic structure.
 
 Here are some key smart contracts associated with the verifier:
 
 * https://etherscan.io/address/0x47312450b3ac8b5b8e247a6bb6d523e7605bdb60[`+GpsStatementVerifier+`]: This is the primary contract of the SHARP verifier. It verifies a proof and then registers the related facts using `+verifyProofAndRegister+`. It acts as an umbrella for various layouts, each named `+CpuFrilessVerifier+`. Every layout has a unique combination of built-in resources.
-
-.Verifier Layouts
++
+.Verifier layouts
 image::verifier-layouts.png[Verifier layouts]
-
++
 The system routes each proof to its relevant layout.
 
 * https://etherscan.io/address/0xfd14567eaf9ba941cb8c8a94eec14831ca7fd1b4[`+MemoryPageFactRegistry+`]: This registry maintains facts for memory pages, primarily used to register outputs for data availability in rollup mode. The Fact Registry is a separate smart contract ensuring the verification and validity of attestations or facts. The verifier function is separated from the main contract to ensure each segment works optimally within its limits. The main proof segment relies on other parts, but these parts operate independently.
-* https://etherscan.io/address/0x5899efea757e0dbd6d114b3375c23d7540f65fa4[`+MerkleStatementContract+`]: This contract verifies merkle paths.
+* https://etherscan.io/address/0x5899efea757e0dbd6d114b3375c23d7540f65fa4[`+MerkleStatementContract+`]: This contract verifies Merkle paths.
 * https://etherscan.io/address/0x3e6118da317f7a433031f03bb71ab870d87dd2dd[`+FriStatementContract+`]: It focuses on verifying the FRI layers.
 
 === SHARP verifier contract map
 
-The SHARP Verifier Contract Map contains roughly 40 contracts, detailing various components of the Solidity verifier. The images below display the contracts and their Ethereum Mainnet addresses.
+The SHARP verifier contract map contains roughly 40 contracts, detailing various components of the Solidity verifier. The images below display the contracts and their Ethereum Mainnet addresses.
+
+.SHARP verifier contract map
+These are currently the entire stack of contracts that comprise the SHARP verifier, with their Ethereum Mainnet addresses.
+
+[horizontal]
+Proxy:: 0x47312450B3Ac8b5b8e247a6bB6d523e7605bDb60
+CallProxy:: 0xD4C4044ACa68ebBcB81B13cC2699e1Bca2d3F458
+GpsStatementVerifier:: 0x47312450b3ac8b5b8e247a6bb6d523e7605bdb60
+MemoryPageFactRegistry:: 0xfd14567eaf9ba941cb8c8a94eec14831ca7fd1b4
+MerkleStatementContract:: 0x3e6118da317f7a433031f03bb71ab870d87dd2dd
+FriStatementContract:: 0x3e6118da317f7a433031f03bb71ab870d87dd2dd
+
+CairoBootloaderProgram:: 0x5d07afFAfc8721Ef3dEe4D11A2D1484CBf6A9dDf
+PedersenHashPointsXColumn:: 0xc4f21318937017B8aBe5fDc0D48f58dBc1d18940
+PedersenHashPointsYColumn:: 0x519DA5F74503dA351EbBED889111377d33096002
+EcdsaHashPointsXColumn::
+EcdsaHashPointsYColumn:: 0xcA59f6FD499ffF50c78Ffb420a9bcd0d273abf29
+
+CpuFrilessVerifier0::
+CpuOods0::
+CpuConstraintPoly0::
+
+CpuFrilessVerifier1::
+CpuOods1::
+CpuConstraintPoly1::
+
+CpuFrilessVerifier2::
+CpuOods2::
+CpuConstraintPoly2::
+
+CpuFrilessVerifier3::
+CpuOods3::
+CpuConstraintPoly3::
+
+CpuFrilessVerifier4::
+CpuOods4::
+CpuConstraintPoly4::
+
+CpuFrilessVerifier5::
+CpuOods5::
+CpuConstraintPoly5::
+
+CpuFrilessVerifier6::
+CpuOods6::
+CpuConstraintPoly6::
+PoseidonPoseidonFullRoundKey0Column6::
+PoseidonPoseidonFullRoundKey1Column6::
+PoseidonPoseidonFullRoundKey2Column6::
+PoseidonPoseidonPartialRoundKey0Column6::
+ם9999999999999999999ן::
+
+CpuFrilessVerifier7::
+CpuOods7::
+CpuConstraintPoly7::
+
+
 
 .SHARP verifier contract map
 image::sharp-contract-map-1.png[SHARP verifier contract map]
@@ -97,7 +153,7 @@ image::constructor-params.png[Constructor Parameters]
 * *Auxiliary Polynomial Contracts:* These include `+CpuConstraintPoly+`, `+PedersenHashPointsxColumn+`, `+PedersenHashPointsYColumn+`, `+EcdsaPointsXColumn+`, and `+EcdsaPointsYColumn+`.
 * *Poseidon-Related Contracts:* Several `+PoseidonPoseidonFullRoundKey+` and `+PoseidonPoseidonPartialRoundKey+` contracts.
 * *Sampling and Memory:* The contract uses `+CpuOods+` for out-of-domain sampling and `+MemoryPageFactRegistry+` for memory-related tasks.
-* *Verification:* It integrates with `+MerkleStatementContract+` for merkle verification and `+FriStatementContract+` for Fri-related tasks.
+* *Verification:* It integrates with `+MerkleStatementContract+` for Merkle verification and `+FriStatementContract+` for Fri-related tasks.
 * *Security:* The `+num_security_bits+` and `+min_proof_of_work_bits+` contracts ensure secure operation.
 
 [NOTE]
@@ -137,4 +193,4 @@ image::new-sharp-flow.png[SHARP verification flow]
 
 == Conclusion
 
-Starknet transformed the Solidity Verifier from a single unit to a flexible, multi-contract system, highlighting its focus on scalability and efficiency. Using SHARP and refining verification steps, Starknet makes sure the Solidity Verifier stays a strong cornerstone in its setup.
+Starknet transformed the Solidity verifier from a single unit to a flexible, multi-contract system, highlighting its focus on scalability and efficiency. Using SHARP and refining verification steps, Starknet makes sure the Solidity verifier stays a strong cornerstone in its setup.
