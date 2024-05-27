@@ -10,7 +10,7 @@ Starknet's Solidity Verifier plays a pivotal role in the rollup landscape, ensur
 
 [NOTE]
 ====
-For a more detailed explanation of SHARP and SHARP Jobs, see xref:architecture_and_concepts:provers-overview.adoc[Provers]. This is a brief review.
+For a more detailed explanation of SHARP and SHARP jobs, see xref:architecture_and_concepts:provers-overview.adoc[Provers]. This is a brief review.
 ====
 
 In Starknet, the Shared Prover, SHARP, aggregates various Cairo programs from distinct users. These programs, each with unique logic, run together, producing a common proof for all, optimizing cost and efficiency.
@@ -24,18 +24,18 @@ SHARP verifies numerous Starknet transactions, like transfers, trades, and state
 
 To illustrate SHARP: Think of commuting by bus. The bus driver, the prover, transports passengers, the Cairo programs. The driver checks only the tickets of passengers alighting at the upcoming stop, much like SHARP. The prover forms a single proof for all Cairo programs in a batch, but verifies only the proofs of programs executing in the succeeding block.
 
-*SHARP Jobs*. Known as Shared Prover Jobs, SHARP Jobs let multiple users present their Cairo programs for combined execution, distributing the proof generation cost. This shared approach makes Starknet more economical for users, enabling them to join ongoing jobs and leverage economies of scale.
+*SHARP jobs* enable multiple users to present their Cairo programs for combined execution, distributing the proof generation cost. This shared approach makes Starknet more economical for users, enabling them to join ongoing jobs and leverage economies of scale.
 
-== Solidity Verifiers
+== Solidity verifiers
 
-A Solidity verifier is an L1 smart contract, crafted in Solidity, designed to validate STARK proofs from SHARP (Shared Prover).
+A Solidity verifier is an L1 smart contract, crafted in Solidity, designed to validate STARK proofs from SHARP.
 
-=== Previous Architecture: Monolithic Verifier
+=== Previous architecture: Monolithic verifier
 
 Historically, the Solidity Verifier was a monolithic contract, both initiated and executed by the same contract. For illustration, the operator would invoke the `+update state+` function on the main contract, providing the state to be modified and confirming its validity. Subsequently, the main contract would present the proof to both the verifier and the validium committee. Once they validated the proof, the state would be updated in the main contract.
 
-.Previous Architecture
-image:prehistoric-architecture.png[Previous Architecture]
+.Previous architecture
+image::prehistoric-architecture.png[Previous architecture]
 
 
 However, this architecture faced several constraints:
@@ -44,7 +44,7 @@ However, this architecture faced several constraints:
 * The gas required often outstripped the block size (e.g., 8 Mgas), as the block couldn't accommodate a complete batch of proof.
 * A prospective constraint was that the verifier wouldn't support proof bundling, which is fundamental for SHARP.
 
-=== Current Architecture: Multiple Smart Contracts
+=== Current architecture: Multiple smart contracts
 
 The current verifier utilizes multiple smart contracts rather than being a singular, monolithic structure.
 
@@ -53,7 +53,7 @@ Here are some key smart contracts associated with the verifier:
 * https://etherscan.io/address/0x47312450b3ac8b5b8e247a6bb6d523e7605bdb60[`+GpsStatementVerifier+`]: This is the primary contract of the SHARP verifier. It verifies a proof and then registers the related facts using `+verifyProofAndRegister+`. It acts as an umbrella for various layouts, each named `+CpuFrilessVerifier+`. Every layout has a unique combination of built-in resources.
 
 .Verifier Layouts
-image:verifier-layouts.png[Verifier Layouts]
+image::verifier-layouts.png[Verifier layouts]
 
 The system routes each proof to its relevant layout.
 
@@ -61,15 +61,15 @@ The system routes each proof to its relevant layout.
 * https://etherscan.io/address/0x5899efea757e0dbd6d114b3375c23d7540f65fa4[`+MerkleStatementContract+`]: This contract verifies merkle paths.
 * https://etherscan.io/address/0x3e6118da317f7a433031f03bb71ab870d87dd2dd[`+FriStatementContract+`]: It focuses on verifying the FRI layers.
 
-=== SHARP Verifier Contract Map
+=== SHARP verifier contract map
 
 The SHARP Verifier Contract Map contains roughly 40 contracts, detailing various components of the Solidity verifier. The images below display the contracts and their Ethereum Mainnet addresses.
 
-.SHARP Verifier Contract Map
-image:sharp-contract-map-1.png[SHARP Verifier Contract Map]
+.SHARP verifier contract map
+image::sharp-contract-map-1.png[SHARP verifier contract map]
 
-.SHARP Verifier Contract Map (Continued)
-image:sharp-contract-map-2.png[SHARP Verifier Contract Map]
+.SHARP verifier contract map (continued)
+image::sharp-contract-map-2.png[SHARP verifier contract map]
 
 These contracts function as follows:
 
@@ -81,16 +81,16 @@ These contracts function as follows:
 * *CpuFrilessVerifier/CpuOods/CpuConstantPoly (0 - 7)*: These verifier contracts vary in layout as shown in the `+GpsStatementVerifier+` layout image. Each layout encompasses resources, built-ins, constraints, and more, designed for a specific task. Each has unique parameters for its constructor.
 * *PoseidonPoseidon*: These contracts back the new Poseidon built-in and contain Poseidon-specific lookup tables.
 
-=== Constructor Parameters of Key Contracts
+=== Constructor parameters of key contracts
 
 When constructing the primary verifier contracts, specific parameters are employed to facilitate functionality. These parameters reference other auxiliary contracts, decentralizing the logic and ensuring the main contract remains under the 24kb deployment limit.
 
 Below is a visual representation of these parameters in relation to key contracts `+CpuFrilessVerifiers+` and `+GpsStatementVerifier+`:
 
 .Constructor Parameters
-image:constructor-params.png[Constructor Parameters]
+image::constructor-params.png[Constructor Parameters]
 
-==== CpuFrilessVerifier Constructor Parameters
+==== CpuFrilessVerifier constructor parameters
 
 `+CpuFrilessVerifiers+` is designed to handle a diverse range of tasks. Its parameters encompass:
 
@@ -105,7 +105,7 @@ image:constructor-params.png[Constructor Parameters]
 For instances like `+CpuFrilessVerifier0+`, specific contracts (e.g., `+CpuConstraintPoly0+`, `+PoseidonPoseidonFullRoundKeyColumn0+`, `+CpuOods0+`) become particularly relevant.
 ====
 
-==== GpsStatementVerifier Constructor Parameters
+==== GpsStatementVerifier constructor parameters
 
 The `+GpsStatementVerifier+` functions as the hub of verifier operations, necessitating various parameters for effective functioning:
 
@@ -114,7 +114,7 @@ The `+GpsStatementVerifier+` functions as the hub of verifier operations, necess
 * *Sub-Verifiers:* It integrates a series of sub-verifiers (`+CpuFrilessVerifier0+` through `+CpuFrilessVerifier7+`) to decentralize tasks.
 * *Verification:* The hashes, `+hashed_supported_cairo_verifiers+` and `+simple_bootloader_program_hash+`, are essential for validation processes.
 
-=== Interconnection of Contracts
+=== Interconnection of contracts
 
 The `+GpsStatementVerifier+` serves as the primary verifier contract, optimized for minimal logic to fit within deployment size constraints. To function effectively:
 
@@ -125,10 +125,10 @@ In essence, while the diverse functionalities reside in separate contracts for c
 
 For future enhancements or adjustments, the proxy and callproxy contracts facilitate upgradability, allowing seamless updates to the `+GpsStatementVerifier+` without compromising its foundational logic.
 
-=== SHARP Verification Flow
+=== SHARP verification flow
 
 .SHARP Verification Flow
-image:new-sharp-flow.png[SHARP Verification Flow]
+image::new-sharp-flow.png[SHARP verification flow]
 
 
 . The SHARP dispatcher transmits all essential transactions for verification, including: a. `+MemoryPages+` (usually many). b. `+MerkleStatements+` (typically between 3 and 5). c. `+FriStatements+` (generally ranging from 5 to 15).
