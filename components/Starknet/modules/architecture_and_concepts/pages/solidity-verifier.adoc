@@ -1,20 +1,22 @@
 = Solidity Verifier
 
-Before exploring this chapter, review the Starknet Architecture chapter for foundational knowledge. Familiarity with concepts such as Sequencers, Provers, SHARP, and Sharp Jobs is assumed.
+include::ROOT:partial$snippet-note-content-from-sn-book.adoc[]
+
+Before exploring this topic, review the xref:Network_Architecture/starknet_architecture_overview.adoc[] for foundational knowledge. Familiarity with concepts such as sequencers, provers, SHARP, and SHARP jobs is assumed.
 
 Starknet's Solidity Verifier plays a pivotal role in the rollup landscape, ensuring the truth of transactions and smart contracts.
 
-== Quick Overview: SHARP and Sharp Jobs
+== Quick review: SHARP and SHARP jobs
 
 [NOTE]
 ====
-For a more detailed explanation of SHARP and Sharp Jobs, see xref:architecture_and_concepts:provers-overview.adoc[Provers]. This is a brief review.
+For a more detailed explanation of SHARP and SHARP Jobs, see xref:architecture_and_concepts:provers-overview.adoc[Provers]. This is a brief review.
 ====
 
-SHARP, or Shared Prover, in Starknet, aggregates various Cairo programs from distinct users. These programs, each with unique logic, run together, producing a common proof for all, optimizing cost and efficiency.
+In Starknet, the Shared Prover, SHARP, aggregates various Cairo programs from distinct users. These programs, each with unique logic, run together, producing a common proof for all, optimizing cost and efficiency.
 
-.Sharp Workflow
-image:shared-prover.png[Sharp workflow]
+.SHARP Workflow
+image:shared-prover.png[SHARP workflow]
 
 Furthermore, SHARP supports combining multiple proofs into one, enhancing its efficiency by allowing parallel proof processing and verification.
 
@@ -22,7 +24,7 @@ SHARP verifies numerous Starknet transactions, like transfers, trades, and state
 
 To illustrate SHARP: Think of commuting by bus. The bus driver, the prover, transports passengers, the Cairo programs. The driver checks only the tickets of passengers alighting at the upcoming stop, much like SHARP. The prover forms a single proof for all Cairo programs in a batch, but verifies only the proofs of programs executing in the succeeding block.
 
-*Sharp Jobs*. Known as Shared Prover Jobs, Sharp Jobs let multiple users present their Cairo programs for combined execution, distributing the proof generation cost. This shared approach makes Starknet more economical for users, enabling them to join ongoing jobs and leverage economies of scale.
+*SHARP Jobs*. Known as Shared Prover Jobs, SHARP Jobs let multiple users present their Cairo programs for combined execution, distributing the proof generation cost. This shared approach makes Starknet more economical for users, enabling them to join ongoing jobs and leverage economies of scale.
 
 == Solidity Verifiers
 
@@ -48,7 +50,7 @@ The current verifier utilizes multiple smart contracts rather than being a singu
 
 Here are some key smart contracts associated with the verifier:
 
-* https://etherscan.io/address/0x47312450b3ac8b5b8e247a6bb6d523e7605bdb60[`+GpsStatementVerifier+`]: This is the primary contract of the Sharp verifier. It verifies a proof and then registers the related facts using `+verifyProofAndRegister+`. It acts as an umbrella for various layouts, each named `+CpuFrilessVerifier+`. Every layout has a unique combination of built-in resources.
+* https://etherscan.io/address/0x47312450b3ac8b5b8e247a6bb6d523e7605bdb60[`+GpsStatementVerifier+`]: This is the primary contract of the SHARP verifier. It verifies a proof and then registers the related facts using `+verifyProofAndRegister+`. It acts as an umbrella for various layouts, each named `+CpuFrilessVerifier+`. Every layout has a unique combination of built-in resources.
 
 .Verifier Layouts
 image:verifier-layouts.png[Verifier Layouts]
@@ -59,15 +61,15 @@ The system routes each proof to its relevant layout.
 * https://etherscan.io/address/0x5899efea757e0dbd6d114b3375c23d7540f65fa4[`+MerkleStatementContract+`]: This contract verifies merkle paths.
 * https://etherscan.io/address/0x3e6118da317f7a433031f03bb71ab870d87dd2dd[`+FriStatementContract+`]: It focuses on verifying the FRI layers.
 
-=== Sharp Verifier Contract Map
+=== SHARP Verifier Contract Map
 
-The Sharp Verifier Contract Map contains roughly 40 contracts, detailing various components of the Solidity verifier. The images below display the contracts and their Ethereum Mainnet addresses.
+The SHARP Verifier Contract Map contains roughly 40 contracts, detailing various components of the Solidity verifier. The images below display the contracts and their Ethereum Mainnet addresses.
 
-.Sharp Verifier Contract Map
-image:sharp-contract-map-1.png[Sharp Verifier Contract Map]
+.SHARP Verifier Contract Map
+image:sharp-contract-map-1.png[SHARP Verifier Contract Map]
 
-.Sharp Verifier Contract Map (Continued)
-image:sharp-contract-map-2.png[Sharp Verifier Contract Map]
+.SHARP Verifier Contract Map (Continued)
+image:sharp-contract-map-2.png[SHARP Verifier Contract Map]
 
 These contracts function as follows:
 
@@ -123,14 +125,14 @@ In essence, while the diverse functionalities reside in separate contracts for c
 
 For future enhancements or adjustments, the proxy and callproxy contracts facilitate upgradability, allowing seamless updates to the `+GpsStatementVerifier+` without compromising its foundational logic.
 
-=== Sharp Verification Flow
+=== SHARP Verification Flow
 
-.Sharp Verification Flow
-image:new-sharp-flow.png[Sharp Verification Flow]
+.SHARP Verification Flow
+image:new-sharp-flow.png[SHARP Verification Flow]
 
 
-. The Sharp dispatcher transmits all essential transactions for verification, including: a. `+MemoryPages+` (usually many). b. `+MerkleStatements+` (typically between 3 and 5). c. `+FriStatements+` (generally ranging from 5 to 15).
-. The Sharp dispatcher then forwards the proof using `+verifyProofAndRegister+`.
+. The SHARP dispatcher transmits all essential transactions for verification, including: a. `+MemoryPages+` (usually many). b. `+MerkleStatements+` (typically between 3 and 5). c. `+FriStatements+` (generally ranging from 5 to 15).
+. The SHARP dispatcher then forwards the proof using `+verifyProofAndRegister+`.
 . Applications, such as the Starknet monitor, validate the status. Once verification completes, they send an `+updateState+` transaction.
 
 == Conclusion
