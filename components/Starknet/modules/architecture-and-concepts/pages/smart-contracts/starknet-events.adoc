@@ -1,0 +1,126 @@
+[id="events"]
+= Events
+:stem: latex
+
+A contract may emit events throughout its execution. Each event contains the following fields:
+
+* `from_address`: address of the contract emitting the events
+* `keys`: a list of field elements
+* `data`: a list of field elements
+
+The keys can be used for indexing the events, while the data may contain any information that we wish to log (note that we are dealing with two separate lists of possibly varying size, rather than a list of key-value pairs).
+
+[id="emitting_events"]
+== Emitting events
+
+Events can be defined in a contract using the `@event` decorator. Once an event `E` has been defined, the compiler automatically adds the function `E.emit()`. The following example illustrates how an event is defined and emitted:
+
+[source,cairo]
+----
+#[event]
+fn Transfer(from: ContractAddress, to: ContractAddress, value: u256) {}
+----
+
+[source,cairo]
+----
+Transfer(12345, 12345, 1)
+----
+
+
+The emit function emits an event with a single key, which is an identifier of the event, given by stem:[$\text{sn_keccak}(event\_name)$], where stem:[$event\_name$] is the ASCII encoding of the event's name and stem:[$\text{sn_keccak}$] is defined xref:../cryptography/hash-functions.adoc#starknet_keccak[here].
+
+To emit custom keys, one should use the low level `emit_event` system call:
+
+[source,cairo]
+----
+use starknet::syscalls::emit_event_syscall;
+
+let keys = array!['key', 'deposit'];
+let values = array![1, 2, 3];
+emit_event_syscall(keys, values).unwrap_syscall();
+----
+
+The above code emits an event with two keys, the https://www.cairo-lang.org/docs/how_cairo_works/consts.html#short-string-literals[strings] `key` and `deposit` (think of those as identifiers of the event that can be used for indexing) and three data elements 1, 2, 3.
+
+
+[TIP]
+====
+When using the higher level `emit` syntax, the event's data may be of complex types, for example:
+
+[source,cairo]
+----
+struct Point:
+    member x : felt
+    member y : felt
+end
+
+@event
+func message_received(arr_len : felt, arr: felt*, p: Point):
+end
+
+# ...
+
+let (data : felt*) = alloc()
+assert data[0] = 1
+assert data[1] = 2
+let p = Point(3,4)
+message_received.emit(2, data, p)
+----
+
+====
+
+The emitted events are part of the transaction receipt. For more information, see xref:architecture-and-concepts:network-architecture/transaction-life-cycle.adoc#transaction-receipt[Transaction receipt].
+
+[id="event_abi"]
+== Event definition in the ABI
+
+The event definition appears in the contract's ABI. It contains the list of data fields, with the name and type for each, and the list of the custom keys, that is, all keys except the event identifier discussed above. Below is an example of an event inside the ABI:
+
+[#example_of_an_event_in_the_abi]
+.Example of an event in the ABI
+[source,json]
+----
+{
+  "type": "event",
+  "name": "Transfer",
+  "inputs": [
+    {
+      "name": "from",
+      "type": "core::starknet::contract_address::ContractAddress"
+    },
+    {
+      "name": "to",
+      "type": "core::starknet::contract_address::ContractAddress"
+    },
+    {
+      "name": "value",
+      "type": "core::integer::u256"
+    }
+  ]
+}
+----
+
+
+
+[id="event_hash"]
+== Event hash
+
+The event hash is given by:
+
+[stem]
+++++
+h(h(h(h(0,from\_address),keys\_hash),data\_hash),3)
+++++
+
+Where:
+
+* stem:[$keys\_hash$] and stem:[$data\_hash$] are the hashes of the keys list and data list respectively. For more information, see xref:../cryptography/hash-functions.adoc#array_hashing[Array hashing].
+* stem:[$h$] is the Pedersen hash function.
+
+The event hashes are included in the xref:network-architecture/header.adoc[`event_commitment`] field of a block.
+
+== Additional resources
+
+* xref:architecture-and-concepts:cryptography/hash-functions.adoc#array_hashing[]
+* xref:architecture-and-concepts:cryptography/hash-functions.adoc#pedersen_hash[Pedersen hash function]
+* The `event_commitment` field in xref:network-architecture/header.adoc[]
