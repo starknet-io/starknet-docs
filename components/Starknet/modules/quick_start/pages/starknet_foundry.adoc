@@ -1,0 +1,206 @@
+= Declare, deploy, and interact with a smart contract using Staknet Foundry
+
+This tutorial guides you through deploying a Cairo smart contract onto Starknet Devnet.
+
+== Prerequisites
+
+The following tools are installed:
+
+* Starknet Foundry
+* Scarb
+* Starknet Devnet
+
+== Contract deployment and interaction
+
+=== Create a new project
+
+Create a new project using the `snforge` command. Let's name it `hello_starknet`.
+
+[source, bash]
+----
+snforge init hello_starknet
+----
+
+You will get to `scarb.toml` file as below.
+
+[source, toml]
+----
+[package]
+name = "hello_starknet"
+version = "0.1.0"
+edition = "2023_11"
+
+# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
+
+[dependencies]
+starknet = "2.5.4"
+
+[dev-dependencies]
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.24.0" }
+
+[[target.starknet-contract]]
+sierra = true
+
+[scripts]
+test = "snforge test"
+----
+
+Then you can check the `lib.cairo` file.
+
+[source, cairo]
+----
+#[starknet::interface]
+pub trait IHelloStarknet<TContractState> {
+    fn increase_balance(ref self: TContractState, amount: felt252);
+    fn get_balance(self: @TContractState) -> felt252;
+}
+
+#[starknet::contract]
+mod HelloStarknet {
+    #[storage]
+    struct Storage {
+        balance: felt252, 
+    }
+
+    #[abi(embed_v0)]
+    impl HelloStarknetImpl of super::IHelloStarknet<ContractState> {
+        fn increase_balance(ref self: ContractState, amount: felt252) {
+            assert(amount != 0, 'Amount cannot be 0');
+            self.balance.write(self.balance.read() + amount);
+        }
+
+        fn get_balance(self: @ContractState) -> felt252 {
+            self.balance.read()
+        }
+    }
+}
+----
+
+=== Compile contract and import an account
+
+Compile your contract using scarb.
+
+[source, bash]
+----
+scarb build
+----
+
+Having compiled the smart contract, it's time to import a prefunded account from Starknet Devnet.
+
+=== Create profile and import account
+
+Launch Starknet Devnet.
+
+[source, bash]
+----
+starknet-devnet --seed 42
+----
+
+After starting Starknet Devnet, a list of accounts is automatically generated and deployed. We use the `--seed` flag to keep the same pre-configured accounts each time we initiate Starknet Devnet.
+
+We look at the first generated account.
+
+[source, bash]
+----
+| Account address |  0x516dd7e4d25da119abf4d61bbd9a4aa79e19dddb2304dc2fe1b6f009a3e5beb 
+| Private key     |  0xb10070a1eaf2a466673432eb0ef138ba
+| Public key      |  0x6115113976012215e40010694301b5626d8dc7ca8acec3a09c6e4f40835a13e
+----
+
+With this information, we have to import that account and create our profile to interact with Starknet Foundry. Execute:
+
+[source, bash]
+----
+sncast --url http://127.0.0.1:5050 account add --name my_devnet_account \ 
+--address 0x516dd7e4d25da119abf4d61bbd9a4aa79e19dddb2304dc2fe1b6f009a3e5beb \
+--private-key 0xb10070a1eaf2a466673432eb0ef138ba --type oz --add-profile my_profile
+----
+
+Upon successful command execution, you'll obtain a `snfoundry.toml` with your profile information.
+
+=== Declare contract
+
+To declare your contract, execute:
+
+[source, bash]
+----
+sncast --profile my_profile declare --contract-name HelloStarknet
+----
+
+Upon successful command execution, you'll obtain a contract class hash. This unique hash serves as the identifier for your contract class within Starknet.
+
+[source, bash]
+----
+class_hash: 0x183cc71fac33a2823d5afb59ed7679e2e872b305acff9c57ebe0e70fea59ef3
+transaction_hash: 0x6262495c4ff2a25c7d79a27803662db6c738aaa3428ce531a218c84ff6c0340
+----
+
+=== Deploy contract
+
+[source, bash]
+----
+starkli --profile <profile> deploy <class_hash_of_the_contract_to_be_deployed> --constructor-calldata <constructor_calldata>...
+----
+
+For this contract, we did not specify a `constructor` function, so we don't need to pass any constructor arguments.
+
+[source, bash]
+----
+sncast --profile my_profile deploy --class-hash 0x183cc71fac33a2823d5afb59ed7679e2e872b305acff9c57ebe0e70fea59ef3
+----
+
+
+After running, expect an output similar to:
+
+[source, bash]
+----
+contract_address: 0x39a9a0f739ad27293656951fb65f715d3d1bf45947b45da92554969e1d41f10
+transaction_hash: 0x2bc40a931d6e27e304cb1cda492cdeff16f32156fb45571c23f8ed5feae182d
+----
+
+=== Call contract
+
+The first parameter is your profile, the second parameter is the contract address, the third parameter is the function to be called.
+
+[source, bash]
+----
+sncast --profile my_profile call --contract-address 0x39a9a0f739ad27293656951fb65f715d3d1bf45947b45da92554969e1d41f10 --function get_balance
+----
+
+After running, expect an output similar to:
+
+[source, bash]
+----
+command: call
+response: [0x0]
+----
+
+It means the value of `balance` is zero.
+
+=== Invoke contract
+
+The first parameter is your profile, the second parameter is the contract address, the third parameter is the function to be invoked, and the fourth parameter is the function parameter.
+Let's set the value of `balance` to 6.
+
+[source, bash]
+----
+sncast --profile my_profile invoke --contract-address 0x39a9a0f739ad27293656951fb65f715d3d1bf45947b45da92554969e1d41f10 --function increase_balance --calldata 6
+----
+
+Let's retrieve the new value of `balance`
+
+[source, bash]
+----
+sncast --profile my_profile call --contract-address 0x39a9a0f739ad27293656951fb65f715d3d1bf45947b45da92554969e1d41f10 --function get_balance
+----
+
+After running, expect an output similar to:
+
+[source, bash]
+----
+command: call
+response: [0x6]
+----
+
+Awesome! You deployed and interacted with a Cairo smart contract using Starknet Devnet and Starknet Foundry!
+You can now build more complex smart contracts and interact with them using the same process.
