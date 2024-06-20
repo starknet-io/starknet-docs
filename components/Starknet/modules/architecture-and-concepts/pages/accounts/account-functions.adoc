@@ -37,7 +37,7 @@ After successfully completing validation, the deployment is finalized.
 Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.
 
 [#attacks_that_validation_limitations_prevent]
-== Potential attacks
+== Potential attacks on `+__validate__+`
 
 The validation functions have limitations, described below, that are designed to prevent the following attacks:
 
@@ -77,6 +77,16 @@ So the fees you need to pay to invalidate transactions in the mempool are direct
 ** `get_block_hash`
 ** `get_sequencer_address` `get_sequencer_address` is only supported for Cairo 0 contracts.
 
+[#attacks_that_execute_limitations_prevent]
+== Potential attacks on `+__execute__+`
+* Deprecated `INVOKE` v0 transactions can call the `+__execute__+` function of all contracts without going through `+__validate__+ first. 
+* The `+__execute__+` function can be called by any contract.
+
+[#ways_to_mitigate_execute_attacks]
+== Ways to mitigate attacks on `+__execute__+`
+* Account contracts should explicitly assert in the `+__execute__+` function that the transaction version is 1 or above.
+* Account contracts should explicitly assert in the `+__execute__+` function that the sender is 0 (i.e., the sequencer).
+
 [id="invalid_transactions"]
 == Invalid transactions
 
@@ -103,11 +113,6 @@ For examples of account contracts that implement these functions, see link:https
 _Always required_
 
 Initiates the execution stage in the sequencer. The sequencer calls this function upon receiving an `INVOKE` transaction, after the `+__validate__+` function successfully completes.
-
-[WARNING]
-====
-Deprecated `INVOKE` v0 transactions can call the `+__execute__+` function of all contracts. To mitigate this risk, `+__execute__+` calls should explicitly assert that the transaction version is 1 or above.
-====
 
 In most implementations, `+__execute__+` initiates a sequence of calls from the account.
 
