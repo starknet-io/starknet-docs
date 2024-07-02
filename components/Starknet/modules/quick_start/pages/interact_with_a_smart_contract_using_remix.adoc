@@ -1,15 +1,15 @@
 [id="interacting-with-a-smart-contract-with-remix"]
 = Deploying and interacting with a Starknet smart contract with Remix
 
-To compile, deploy, and interact with our smart contract, use the Starknet Remix plugin. This tool enables you to start to develop for Starknet without the need for any local installations on your machine.
+To compile, deploy, and interact with our smart contract, use the Starknet Remix plugin. This tool enables you to start developing for Starknet without the need for any local installations on your machine.
 
-== Set up your environment in Remix
+== Setting up your environment in Remix
 
 . Go to the https://remix.ethereum.org/#activate=Starknet&lang=en&optimize=false&runs=200&evmVersion=null&version=soljson-v0.8.24+commit.e11b9ed9.js[Remix IDE website with the Starknet plugin activated].
 // . If Remix requests access to your file system, accept the request.
-. Click the *File Explorer* (image:quick_start:remix_file_explorer.png[]) tab to review the details of the example project.
-. Click the Starknet (add Starknet image here) tab, and click the *Settings* tab. Select the latest version of Cairo available in Remix.
-. Open the `Scarb.toml` file #How?# to verify the version of your project. Ensure it matches the version specified originally, and correct any discrepancies, if necessary.
+. Click the *File Explorer* (image:quick_start:remix_file_explorer.png[File Explorer]) tab to review the details of the example project.
+. Click the Starknet (image:quick_start:remix-starknet-icon.png[Starknet]) tab, and click the *Settings* tab. Select the latest version of Cairo available in Remix.
+. In the File explorer, open the `Scarb.toml` file to verify the version of your project. Ensure it matches the version specified originally, and correct any discrepancies, if necessary.
 
 == Customizing your environment for the `Ownable` contract
 
@@ -19,12 +19,12 @@ For this tutorial, a default example project is provided. Modify or remove certa
 ====
 
 . Rename the root directory to `ownable`. In your `Scarb.toml`, under the `[package]` section, set the name to `ownable`.
-. Delete the `balance.cairo` and `forty_two.cairo` files, if they exist.
+. Under `src/`, delete the `balance.cairo` and `forty_two.cairo` files, if they exist.
 . Open `lib.cairo` and delete all its contents.
 
-== Introduction to Starknet smart contracts
+== Exploring the `ownable` Starknet smart contract
 
-Explore the `Ownable` contract pattern crafted in Cairo for Starknet. It includes:
+Explore the xref:#example-cairo-contract[Example `Ownable` contract], crafted in Cairo for Starknet. It includes:
 
 * An ownership system.
 * A method to transfer ownership.
@@ -32,16 +32,16 @@ Explore the `Ownable` contract pattern crafted in Cairo for Starknet. It include
 * An event notification for ownership changes.
 
 [#example-cairo-contract]
-=== Example Cairo contract
+=== Example: `ownable` Cairo contract
 
 [source,cairo]
 ----
-use starknet::ContractAddress;
+use starknet::ContractAddress; <1>
 
 #[starknet::interface]
-trait OwnableTrait<T> {
-    fn transfer_ownership(ref self: T, new_owner: ContractAddress);
-    fn get_owner(self: @T) -> ContractAddress;
+trait OwnableTrait<T> { <2>
+    fn transfer_ownership(ref self: T, new_owner: ContractAddress); <3>
+    fn get_owner(self: @T) -> ContractAddress; <3>
 }
 
 #[starknet::contract]
@@ -52,11 +52,11 @@ mod Ownable {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-      OwnershipTransferred: OwnershipTransferred,
+      OwnershipTransferred: OwnershipTransferred, <4>
     }
 
     #[derive(Drop, starknet::Event)]
-    struct OwnershipTransferred {
+    struct OwnershipTransferred { <5>
         #[key]
         prev_owner: ContractAddress,
         #[key]
@@ -64,12 +64,12 @@ mod Ownable {
     }
 
     #[storage]
-    struct Storage {
+    struct Storage { <6>
         owner: ContractAddress,
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, init_owner: ContractAddress) {
+    fn constructor(ref self: ContractState, init_owner: ContractAddress) { <7>
         self.owner.write(init_owner);
     }
 
@@ -92,7 +92,7 @@ mod Ownable {
 
     #[generate_trait]
     impl PrivateMethods of PrivateMethodsTrait {
-        fn only_owner(self: @ContractState) {
+        fn only_owner(self: @ContractState) { <8>
             let caller = get_caller_address();
             assert(caller == self.owner.read(), 'Caller is not the owner');
         }
@@ -104,34 +104,34 @@ mod Ownable {
 
 [horizontal,labelwidth="25",role="stripes-odd"]
 Dependencies and Interface::
-* `starknet::ContractAddress`: Represents a Starknet contract address.
-* `OwnableTrait`: Defines essential functions for transferring and retrieving ownership.
+<1> `starknet::ContractAddress`: Represents a Starknet contract address.
+<2> `OwnableTrait`: Defines essential functions for transferring and retrieving ownership.
 
 Events::
-`OwnershipTransferred`: Indicates changes in ownership, providing details about the previous and new owners.
+<4> `OwnershipTransferred`: Indicates changes in ownership, providing details about the previous and new owners.
 
 Storage::
-Stores the contract's state, including the address of the current owner.
+<6> Stores the contract's state, including the address of the current owner.
 
 Constructor::
-Sets up the contract by assigning an initial owner.
+<7> Sets up the contract by assigning an initial owner.
 
 External Functions::
-Contains functions for transferring ownership and fetching information about the current owner.
+<3> Contains functions for transferring ownership and fetching information about the current owner.
 
 Private Methods::
-`only_owner`: Validates if the caller is the current owner.
+<8> `only_owner`: Validates if the caller is the current owner.
 
 == Compiling the contract
 
 To compile using Remix:
 
-. Click the *File Explorer* tab and open the `lib.cairo` file #I don't see this file# and insert the code from xref:#example-cairo-contract[].
+. Click the *File Explorer* tab and open the `lib.cairo` file and insert the code from xref:#example-cairo-contract[].
 . Click the *Starknet* tab, then click the *Home* tab.
-* Under *1 Compile*, select `compile a single file`.
-* Grant the necessary permissions when prompted. Select *Remember my choice* for a smoother compilation process in the future.
-* The compilation process creates an `artifacts` directory containing the compiled contract in two formats: a Sierra file, in JSON format, and a CASM file. For Starknet deployment, Remix  uses the Sierra file.
-* Remix efficiently handles both compilation and deployment.
+. Under *(1) Compile*, click *Compile lib.cairo*.
+. Grant the necessary permissions when prompted. Select *Remember my choice* for a smoother compilation process in the future.
+
+The compilation process creates an `artifacts` directory containing the compiled contract in two formats: a Sierra file, in JSON format, and a CASM file. For Starknet deployment, Remix  uses the Sierra file.
 
 == Deploying your contract on the development network (devnet)
 
@@ -149,7 +149,7 @@ This tutorial uses a development network (devnet) to deploy your smart contract.
 . Select the network by clicking the *Starknet* tab, and then clicking the *Remote Devnet* menu.
 . Under *Devnet account selection*, open the menu to view a list of accounts specific to the designated devnet.
 . Select a devnet account from the list and note its address for later use.
-. Click  *Declare `lib.cairo`*.
+. Click the *Declare `lib.cairo`* button.
 +
 Remix's terminal provides various logs with important details such as:
 +
@@ -158,32 +158,40 @@ Remix's terminal provides various logs with important details such as:
 * `class_hash`: Similar to an identifier, the class hash contains the definition of the smart contract.
 --
 +
-.Remix terminal output after declaring the `ownable_Ownable` contract
-[source,bash]
+.Remix terminal output after declaring the `ownable` contract
+[source,json]
 ----
------------------------- Declaring contract: ownable_Ownable ------------------------
+------------------------ Declaring contract: lib.cairo ------------------------
 {
   "transaction_hash": "0x36dabf43f4962c97cf67ba132fb520091f268e7e33477d77d01747eeb0d7b43",
   "class_hash": "0x540779cd109ad20f46cb36d8de1ce30c75469862b4dc75f2f29d1b4d1454f60"
 }
----------------------- End Declaring contract: ownable_Ownable ----------------------
+---------------------- End Declaring contract: lib.cairo ----------------------
 ----
+
+After Remix declares the contract class, the *Declare* button says *Declared lib.cairo*.
+
+Now you're ready to deploy an instance of the contract class.
 
 .Deploying a contract instance
 
-. Paste the copied address into the `init_owner` variable.
+. Paste the Devnet account address you used into the `init_owner` variable.
++
+image:quick_start:init_owner_field.png[]
 . Click *Deploy*.
 
-After deployment, Remix's terminal displays various logs containing important details, such as:
+After deployment, Remix's terminal displays various logs, including a transaction receipt, containing important details, such as:
 
 * `transaction_hash`: This unique hash identifies the transaction and can be used to track its status.
-* `contract_address`: The address of the deployed contract. You'll use this address to interact with your contract.
+* `contract_address`: The address of the deployed contract. You can use this address to interact with your contract.
 * `data`: Contains the `init_owner` address provided to the constructor.
 
-.Remix terminal output after deploying an instance of the `ownable_Ownable` class
+.Remix terminal output after deploying an instance of the `Ownable` class in `lib.cairo`
 
 [source,bash]
 ----
+------------------------ Deploying contract: lib.cairo ------------------------
+
 {
   "transaction_hash": "0x624f5b9f57e53f6b5b62e588f0f949442172b3ad5d04f0827928b4d12c2fa58",
   "contract_address": [
@@ -196,22 +204,23 @@ After deployment, Remix's terminal displays various logs containing important de
       ]
     ...
 }
+---------------------- End Deploying contract: lib.cairo ----------------------
 ----
 
 == Interacting with the contract
 
-Now that the contract is operational on the development network, you can initiate interacting with it as follows:
-
-. Click the *Starknet* tab.
-. Click *Interact* to begin interaction.
+Now that the contract is operational on the development network, you can start interacting with it on the *Starknet* tab, under
+ *(3) Interact*.
 
 === Identifying the owner of the contract instance
 
-. Select the `get_owner` function. It doesn't require any arguments so the calldata field remains empty. This function reads data, so its invocation is referred to as a _call_.
-. Execute the `call` operation. The terminal displays the output, showing the owner's address, which you provided during the contract's deployment within the calldata for the constructor:
-+
+* Under *Read* you should see the `get_owner()` function. Click the *Call* button. The function doesn't require any arguments so the calldata field remains empty. This function reads data, so its invocation is referred to as a _call_.
+
+The terminal displays the output, showing the owner's address, which you provided during the contract's deployment within the calldata for the constructor:
+
 [source,json]
 ----
+------------------- Calling get_owner ------------------------
 {
   "resp": {
     "result": [
@@ -221,66 +230,71 @@ Now that the contract is operational on the development network, you can initiat
   "contract": "lib.cairo",
   "function": "get_owner"
 }
+------------------- End calling get_owner --------------------
 ----
 
 This call doesn't consume gas because the function doesn't modify the contract's state.
 
 === Transferring ownership of the contract instance
 
-* Click the *Interact* menu and select *Write*, where functions that alter the contract's state are listed.
-* Select the `transfer_ownership` function, which requires providing the new owner address as input.
-* Fill in the new_owner field with the relevant address. (Choose any address from the "Devnet account selection" listed in the Environment tab for this purpose.)
-* Click the "Call" button. The terminal will then display the transaction hash indicating the change in the contract's state. Since this interaction modifies the contract's state, it's called an "invoke" and requires the signature of the account executing the function.
-* For such transactions, the terminal logs will include a "status" parameter indicating the outcome. A status of "ACCEPTED_ON_L2" signifies approval by the Sequencer, the entity responsible for receiving and processing transactions, indicating inclusion in an upcoming block. Conversely, a "REJECTED" status indicates disapproval by the Sequencer, preventing inclusion in the next block. Typically, transactions of this nature are approved, resulting in a modification of the contract's state.
+. Under *(3) Interact*, select *Write*, where functions that alter the contract's state are listed.
+. Select the `transfer_ownership()` function, which requires providing the new owner address as input.
+. Fill in the `new_owner` field with any Devnet address other than the one you used to deploy the contract.
++
+[TIP]
+====
+Under *Devnet account selection*, open the menu, select a Devnet account from the list, and copy its address.
+====
+. Click the *Call* button. The terminal displays the transaction hash indicating the change in the contract's state. Because this interaction is an `INVOKE` transaction, and it modifies the contract's state. An `INVOKE` transaction requires the signature of the account executing the function.
++
+For `INVOKE` transactions, the terminal logs include a `finality_status` parameter indicating the outcome. A status of `ACCEPTED_ON_L2` indicates approval by the Sequencer, the entity responsible for receiving and processing transactions, indicating inclusion in an upcoming block. Conversely, a `REJECTED` status indicates that the Sequencer did not approve the transaction, preventing its inclusion in the next block. Typically, transactions of this nature are approved, resulting in a modification of the contract's state.
 
 [source,json]
 ----
+---------- Invoke transfer_ownership transaction receipt ----------------
 {
   "resp": {
-    "result": [
-      "0x5495d56633745aa3b97bdb89c255d522e98fd2cb481974efe898560839aa472"
-    ]
+    "transaction_hash": "0x5495d56633745aa3b97bdb89c255d522e98fd2cb481974efe898560839aa472"
   },
   "contract": "lib.cairo",
   "function": "get_owner"
 }
+----------End Invoke transfer_ownership transaction receipt -------------
 ----
 
-== Deployment on Starknet Testnet
+== Deployment on Starknet testnet
 
-After testing your smart contract on a development network, the next step is deploying it onto the Starknet Testnet. The Starknet Testnet is a public platform accessible to all, providing an excellent environment for testing smart contracts and encouraging collaboration among developers.
+After testing your smart contract on a development network, the next step is deploying it onto the Starknet testnet. The Starknet testnet is a public platform accessible to all, providing an excellent environment for testing smart contracts and encouraging collaboration among developers.
 
-Before proceeding, you must create a Starknet account.
+=== Setting up a smart wallet and a Starknet account on testnet
 
-=== Smart Wallet Configuration
-
-Before deploying your smart contract on Starknet, it's crucial to address transaction costs. While deploying on the Starknet Sepolia Testnet is free, having an operational smart wallet account is essential. You can set up a smart wallet using either of the following platforms:
+Before deploying your smart contract on Starknet, it's crucial to address transaction costs. While deploying on the Starknet testnet is free, having an operational smart wallet account is essential. You can set up a smart wallet and a Starknet account using either of the following platforms:
 
 * https://www.argent.xyz/argent-x/[Argent]
 * https://braavos.app/[Braavos]
 
-Both options offer robust Starknet wallets with advanced security measures and enhanced accessibility features enabled by the capabilities of the Cairo VM. (More insights on this subject will be provided in subsequent sections of this guide.)
+Both options offer robust Starknet wallets with advanced security measures and enhanced accessibility features enabled by the capabilities of the Cairo VM.
 
-Here's how to set up your smart wallet:
+.Here's how to set up your smart wallet:
 
-. Install the recommended Chrome/Brave extension corresponding to your chosen wallet.
-. Follow the instructions provided by your wallet provider to deploy your account.
+. Install the recommended browser extension corresponding to your chosen wallet.
+. Follow the instructions provided by your wallet provider to deploy your account on testnet.
 . Use the https://starknet-faucet.vercel.app/[Starknet Faucet] to fund your account.
 . Execute the deployment of your account onto the network, typically completed within approximately 10 seconds.
 
-Once the setup is complete, you are primed to deploy your smart contracts onto the Starknet Testnet.
+Once the setup is complete, you are primed to deploy your smart contracts onto the Starknet testnet.
 
 === Deployment and Interaction
 
 . Proceed as per the aforementioned deployment steps.
-. Within the `Environment selection` tab, opt for `Wallet`.
+. Within the *Environment selection* tab, Select *Wallet*.
 . Select your Starknet account and proceed with the deployment and interaction processes for your contract.
 
-Monitoring transaction hashes and addresses can be facilitated through various Starknet block explorers such as:
+You can monitor transaction hashes and addresses by using various Starknet block explorers such as:
 
 * https://testnet.starkscan.co/[Starkscan]
 * https://sepolia.voyager.online/[Voyager]
 * https://viewblock.io/starknet[ViewBlock]
 * https://www.oklink.com/starknet[Oklink]
 
-These use offer a graphical depiction of transactions and modifications to the contract state. Noteworthy is the visibility provided when altering contract ownership through the `transfer_ownership` function, as the emitted event by the contract becomes observable within the block explorer. This mechanism serves as a potent means to monitor contractual events.
+These block explorers offer a graphical depiction of transactions and modifications to the contract state. Noteworthy is the visibility provided when altering contract ownership through the `transfer_ownership()` function, as the emitted event by the contract becomes observable within the block explorer. This mechanism serves as a potent means to monitor contractual events.
