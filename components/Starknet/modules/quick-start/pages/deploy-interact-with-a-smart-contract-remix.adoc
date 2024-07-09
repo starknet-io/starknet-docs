@@ -7,8 +7,8 @@ To compile, deploy, and interact with our smart contract, use the Starknet Remix
 
 . Go to the https://remix.ethereum.org/#activate=Starknet&lang=en&optimize=false&runs=200&evmVersion=null&version=soljson-v0.8.24+commit.e11b9ed9.js[Remix IDE website with the Starknet plugin activated].
 // . If Remix requests access to your file system, accept the request.
-. Click the *File Explorer* (image:quick-start:remix_file_explorer.png[File Explorer]) tab to review the details of the example project.
-. Click the Starknet (image:quick-start:remix-starknet-icon.png[Starknet]) tab, and click the *Settings* tab. Select the latest version of Cairo available in Remix.
+. Click the *File Explorer* image:quick-start:remix_file_explorer.png[File Explorer,24,24] tab to review the details of the example project.
+. Click the Starknet image:quick-start:remix-starknet-icon.png[Starknet, 24,24] tab, and click the *Settings*. Select the latest version of Cairo available in Remix.
 . In the File explorer, open the `Scarb.toml` file to verify the version of your project. Ensure it matches the version specified originally, and correct any discrepancies, if necessary.
 
 == Customizing your environment for the `Ownable` contract
@@ -39,9 +39,9 @@ Explore the xref:#example-cairo-contract[Example `Ownable` contract], crafted in
 use starknet::ContractAddress; <1>
 
 #[starknet::interface]
-trait OwnableTrait<T> { <2>
-    fn transfer_ownership(ref self: T, new_owner: ContractAddress); <3>
-    fn get_owner(self: @T) -> ContractAddress; <3>
+trait OwnableTrait<T> { <1>
+    fn transfer_ownership(ref self: T, new_owner: ContractAddress); <2>
+    fn get_owner(self: @T) -> ContractAddress; <2>
 }
 
 #[starknet::contract]
@@ -52,11 +52,11 @@ mod Ownable {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-      OwnershipTransferred: OwnershipTransferred, <4>
+      OwnershipTransferred: OwnershipTransferred, <3>
     }
 
     #[derive(Drop, starknet::Event)]
-    struct OwnershipTransferred { <5>
+    struct OwnershipTransferred { <3>
         #[key]
         prev_owner: ContractAddress,
         #[key]
@@ -64,12 +64,12 @@ mod Ownable {
     }
 
     #[storage]
-    struct Storage { <6>
+    struct Storage { <4>
         owner: ContractAddress,
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, init_owner: ContractAddress) { <7>
+    fn constructor(ref self: ContractState, init_owner: ContractAddress) { <5>
         self.owner.write(init_owner);
     }
 
@@ -92,7 +92,7 @@ mod Ownable {
 
     #[generate_trait]
     impl PrivateMethods of PrivateMethodsTrait {
-        fn only_owner(self: @ContractState) { <8>
+        fn only_owner(self: @ContractState) { <6>
             let caller = get_caller_address();
             assert(caller == self.owner.read(), 'Caller is not the owner');
         }
@@ -103,24 +103,20 @@ mod Ownable {
 === Contract component breakdown
 
 [horizontal,labelwidth="25",role="stripes-odd"]
-Dependencies and Interface::
-<1> `starknet::ContractAddress`: Represents a Starknet contract address.
-<2> `OwnableTrait`: Defines essential functions for transferring and retrieving ownership.
+<1> Dependencies and Interface: +
+`starknet::ContractAddress`: Represents a Starknet contract address.
+`OwnableTrait`: Defines essential functions for transferring and retrieving ownership.
 
-Events::
-<4> `OwnershipTransferred`: Indicates changes in ownership, providing details about the previous and new owners.
+<2> External Functions: Contains functions for transferring ownership and fetching information about the current owner.
 
-Storage::
-<6> Stores the contract's state, including the address of the current owner.
+<3> Events: `OwnershipTransferred` indicates changes in ownership, providing details about the previous and new owners.
 
-Constructor::
-<7> Sets up the contract by assigning an initial owner.
+<4> Storage: Stores the contract's state, including the address of the current owner.
 
-External Functions::
-<3> Contains functions for transferring ownership and fetching information about the current owner.
+<5> Constructor: Sets up the contract by assigning an initial owner.
 
-Private Methods::
-<8> `only_owner`: Validates if the caller is the current owner.
+
+<6> Private Methods: `only_owner` validates if the caller is the current owner.
 
 == Compiling the contract
 
