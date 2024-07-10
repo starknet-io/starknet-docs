@@ -1,0 +1,107 @@
+[id="account_interface_functions"]
+= Account interface function reference
+
+== Overview
+
+The functions in the table xref:#starknet_account_interface_functions[] are part of account contracts. Where required, you must include these functions within your account contract. The logic of these functions can be mostly arbitrary, with a few limitations. For information on these limitations, see xref:#limitations_of_validation[].
+
+[#starknet_account_interface_functions]
+.Starknet account interface functions
+[cols="1,3a"]
+|===
+| Function name | When required
+
+| `+__validate__+` | Always required
+| `+__execute__+` | Always required. The signatures of `+__validate__+` and `+__execute__+` must be identical.
+
+[WARNING]
+====
+At the moment of writing (Starknet 0.13.2), two critical validations must happen in `+__execute__+`, and their absence can lead to draining of the account's funds:
+
+(1) `assert!(get_caller_address().is_zero())`
+
+This asserts that the account's `+__execute__+` is not called from another contract, thus skipping validations (in later versions we may disallow calling `__execute__` from another contract at the protocol level)
+
+(2) `assert!(get_tx_info().unbox().version.into() >= 1_u32)`
+
+This asserts that the transaction's version is at least 1, preventing the account from accepting `INVOKE` v0 transactions. It is critical to explicitly disallow the deprecated v0 transaction type, as v0 transactions assume that the signature verification happens in `+__execute__+`, and are thus skipping `+__validate__+` entirely.
+====
+| `+__validate_declare__+` | Required for the account to be able to send a `DECLARE` transaction. This function must receive exactly one argument, which is the class hash of the declared class.
+| `+__validate_deploy__+` a| Required to allow deploying an instance of the account contract with a `DEPLOY_ACCOUNT` _transaction_. The arguments of `+__validate_deploy__+` must be the class hash of the account to be deployed, the salt used for computing the account's contract address, followed by the constructor arguments.
+
+[NOTE]
+====
+You can only use the `+__validate_deploy__+` function in an account contract to validate the `DEPLOY_ACCOUNT` transaction for that same contract.
+That is, this function runs at most once throughout the lifecycle of the account.
+====
+| `constructor` | All contracts have a `constructor` function. It can be explicitly defined in the contract, or if not explicitly defined, the sequencer uses a default `constructor` function, which is empty.
+|===
+
+When the sequencer receives a transaction, it calls the corresponding validation function with the appropriate input from the transaction's data, as follows:
+
+* For an `INVOKE` transaction, the sequencer calls the `+__validate__+` function with the transaction's calldata as input. The transaction's calldata will be deserialized to the arguments in the `+__validate__+` function's signature, it is up to the sender to make sure that the calldata is encoded appropriately according to validate's signature. After successfully completing validation, the sequencer calls the `+__execute__+` function with the same arguments.
+* For a `DEPLOY_ACCOUNT` transaction, the sequencer calls the `constructor` function with the transaction's `constructor_calldata` as input (as above, it is expected that the constructor's calldata successfully desieralizes to the arguments in the constructor signature). After the successful execution of the constructor, the sequencer validates the transaction by calling the `+__validate_deploy__+` function.
+* For a `DECLARE` transaction, the sequencer validates the transaction by calling the `+__validate_declare__+` function.
+
+* For more information on the available transaction types and their fields, see xref:architecture-and-concepts:network-architecture/transactions.adoc[Transaction types].
+* For more information on the validation and execution stages, see xref:architecture-and-concepts:network-architecture/transaction-life-cycle.adoc[Transaction lifecycle].
+
+Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.
+
+[#attacks_that_validation_limitations_prevent]
+== Potential DoS
+
+The validation functions have limitations, described below, that are designed to prevent the following DoS attacks on the sequencer:
+
+* An attacker could cause the sequencer to perform a large amount of work before a transaction fails validation. Two examples of such attacks are:
+** Spamming `INVOKE` transactions whose `+__validate__+` requires many steps, but eventually fails
+** Spamming `DEPLOY_ACCOUNT` transactions that are invalid as a result of the constructor or `+__validate_deploy__+` failing.
+* The above attacks are solved by making sure that the validation step is not resource-intensive, e.g. by keeping the maximal number of steps low. However, even if the validation is simple, the following "mempool pollution" attack could still be possible:
+. An attacker fills the mempool with transactions that are valid at the time they are sent.
+. The sequencer is ready to execute them, thinking that by the time it includes them in a block, they will still be valid.
+. Shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it's included in a block, e.g. by offering higher fees for this one transaction.
+An example of such an attack is having the implementation of `+__validate__+` checks that the value of a storage slot is `1`, and the attacker's transaction later sets it to `0`. Restricting validation functions from calling external contracts prevents this attack.
+
+[#limitations_of_validation]
+== Limitations on validation
+
+The limitations listed here apply to the following validation functions:
+
+* `+__validate__+`, `+__validate_deploy__+`, and `+__validate_declare__+`.
+* A constructor, when run in a `DEPLOY_ACCOUNT` transaction. That is, if an account is deployed from an existing class via the `deploy` syscall, these limitations do not apply.
+
+The validation functions have the following limitations:
+
+* You cannot call functions in external contracts, only in your account contract.
++
+[NOTE]
+====
+This restriction enforces a single storage update being able to invalidate only transactions from a single account. However, be aware that an account can always invalidate its own past transactions by e.g. changing its public key.
+
+This limitation implies that the fees you need to pay to invalidate transactions in the mempool are directly proportional to the number of unique accounts whose transactions you want to invalidate.
+====
+* The maximum number of computational steps, measured in Cairo steps, for a validation function is 1,000,000.
+* A builtin can be applied a limited number of times. For specific limits for each builtin, see xref:tools:limits-and-triggers.adoc[].
+* The `get_execution_info` syscall behaves differently When raised from one of the `validate` functions:
+** `sequencer_address` is set to zero
+** `block_timestamp` returns the time (in UTC), rounded to the most recent hour.
+** `block_number` returns the block number, rounded down to the nearest multiple of 100.
+* The following syscalls cannot be called:
+** `get_block_hash`
+** `get_sequencer_address` (this syscall is only supported for Cairo 0 contracts).
+
+[id="invalid_transactions"]
+== Invalid transactions
+
+When the `+__validate__+`, `+__validate_deploy__+`, or `+__validate_declare__+`, function fails, the account in question does not pay any fee, and the transaction's status is `REJECTED`.
+
+[id="reverted_transactions"]
+== Reverted transactions
+
+A transaction has the status `REVERTED` when the `+__execute__+` function fails. A reverted transaction is included in a block, and the sequencer is eligible to charge a fee for the work done up to the point of failure, similar to Ethereum.
+
+== Implementation reference
+
+Thanks to account abstraction, the logic of `+__execute__+` and the different validation functions is up to the party implementing the account. 
+To see a concrete implementation, see OpenZeppelin's link:https://github.com/OpenZeppelin/cairo-contracts/blob/v0.14.0/src/account/account.cairo#L72[account component].
+This implementation adheres to link:https://github.com/starknet-io/SNIPs/blob/main/SNIPS/snip-6.md[SNIP6], which defines a standard for account interfaces.

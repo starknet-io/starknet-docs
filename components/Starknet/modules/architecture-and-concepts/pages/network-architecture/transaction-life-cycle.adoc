@@ -1,0 +1,185 @@
+[id="transaction_lifecycle"]
+= Transaction lifecycle
+
+
+[id="transaction_flow"]
+== Transaction flow
+
+image::transaction-flow.png[]
+
+The high-level steps in the Starknet transaction lifecycle are as follows:
+
+. *Transaction submission:* A transaction is submitted to one of the gateways, which functions as the mempool, and marks the transaction status as `RECEIVED`.
+
+. *Mempool validation:*
+The mempool performs a preliminary validation on the transaction, such as ensuring that the current account balance exceeds the value of `max_fee` (prior to v3 transactions) or assuring the transaction's calldata length is within the legal limit. If the transaction is invalid, it does not proceed.
++
+Mempool validation in this context is analogous to Ethereum's signature checking, including running the account's `+__validate__+` function on an `INVOKE` transaction, `+__validate_declare__+` on a `DECLARE` transaction, or `+__validate_deploy__+` on a `DEPLOY_ACCOUNT` transaction, ensuring that the current account balance exceeds the value of `max_fee` (prior to v3 transactions), and more.
+
+. *Sequencer validation:* The sequencer performs preliminary validation on the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.
++
+This validation stage repeats the same validation run during the mempool validation.
+
+. *Execution:* The sequencer operation sequentially applies all transactions that passed the preliminary validation to the state. If a transaction fails during execution, it is included in the block with the status `REVERTED`.
+
+. *Proof generation and verification:* The Prover executes the operating system on the new block, computes the proof, and transmits it to the L1 verifier, which verifies the proof. At this point, the L1 state is updated to include the transaction.
+
+[id="transaction_status"]
+== Transaction status
+
+The diagram below illustrates how each transaction status fits into the overall transaction flow:
+
+image::txn-flow.png[]
+
+
+The following are the possible statuses of a transaction from the moment a user sends it until the moment it passes the L1 verifier:
+
+[cols="1,2,4",]
+|===
+|Status type |Status |Explanation
+
+.5+|*Finality* |`NOT_RECEIVED` |The transaction is not yet known to the sequencer.
+|`RECEIVED` a|The transaction was received by the mempool. The transaction now either executes successfully, is rejected, or reverted.
+
+The transaction has no execution status.
+|`REJECTED` a|The transaction was received by the mempool but failed validation in the sequencer. Such transactions are not included in a block.
+
+The transaction has no execution status.
+
+
+[NOTE]
+====
+A rejected transaction is stored in the mempool. You cannot send another transaction with the same transaction hash.
+====
+|`ACCEPTED_ON_L2` |The transaction was executed and entered an actual created block on L2.
+|`ACCEPTED_ON_L1` |The transaction was accepted on Ethereum.
+.2+|*Execution* |`REVERTED` a|The transaction passed validation but failed during execution in the sequencer. It is included in the block with the status `REVERTED`.
+
+[NOTE]
+====
+Since only `INVOKE` transactions have an execution phase, `DEPLOY_ACCOUNT` and `DECLARE` transactions cannot be reverted. If either the `+__VALIDATE_DEPLOY__+` or the `+__VALIDATE_DECLARE__+` function fails when run in the sequencer, then the transaction is rejected.
+====
+|`SUCCEEDED` |The transaction was successfully executed by the sequencer. It is included in the block.
+|===
+
+[id="transaction-state-implications"]
+== State implications of a reverted transaction
+
+When a transaction is marked as `REVERTED`, the following state implications occur:
+[horizontal,labelwidth="20",role="stripes-odd"]
+Nonce increases:: The nonce value for the account of the failed transaction iterates despite the failure.
+
+Fee charge:: The sequencer charges a fee for the execution of the transaction up to the point of failure. A `Transfer` event is emitted.
+
+Partial reversion:: All changes that occurred during the validation stage are not reverted. However, all changes that occurred during the execution stage are reverted, including all messages to L1 or any events that were emitted during this stage.
++
+Events might still be emitted from the validation stage or the fee charge stage.
+
+Fee calculation:: The fee charged for `REVERTED` transactions is the smaller of the following two values:
+
+* The maximum fee that the user is willing to pay, either `max_fee` (pre-v3 transactions) or stem:[\text{max_amount} \cdot \text{max_price_per_unit}] (v3 transactions).
+* The total consumed resources.
+
+// calculated as follows:
+// +
+// stem:[\text{actual_fee} = \text{Min(max_fee,consumed_resources)}]. For v3 transactions, max_fee is `max_amount` x `max_price_per_unit`.
+
+Consumed Resources:: The resources used for the execution of the transaction up to the point of failure. This includes Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the validation and execution stages.
+
+[id="transaction_receipt"]
+== Transaction receipt
+
+To get a receipt, use the JSON RPC method `starknet_getTransactionReceipt`.
+
+// For example, using a node with the API Key `1234`, and the transaction hash `0xdeadbeef`, you can enter the following `curl` command to get a receipt for a transaction on Sepolia testnet:
+//
+// [source,bash]
+// ----
+// curl https://starknet-sepolia.rpc_provider.io/v3/1234 \
+// -X POST \
+// -H "Content-Type: application/json" \
+// -d '{"jsonrpc":"2.0","method":"starknet_getTransactionReceipt","params":["0xdeadbeef"],"id":1}'
+// ----
+
+The transaction receipt contains the following fields:
+
+[horizontal,labelwidth="25",role="stripes-odd"]
+`transaction_hash`:: The hash of the transaction.
+`actual_fee`:: The actual fee paid for the transaction.
+`finality_status`:: The finality status of the transaction.
+`execution_status`:: The execution status of the transaction.
+`block_hash`:: The hash of the block that includes the transaction
+`block_number`:: The sequential number of the block that includes the transaction
+`messages_sent`:: A list of messages sent to L1.
+`events`:: The events emitted.
+`execution_resource`:: A summary of the execution resources used by the transaction.
+`type`:: The type of the transaction.
+
+The following is an example of a receipt:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "actual_fee": "0x221db5dbf6db",
+    "block_hash": "0x301fc0d09c5810600af7bb9610be10596ad6f4e6d28a60d397dd148f0962a88",
+    "block_number": 906096,
+    "events": [
+      {
+        "data": [
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
+          "0x0",
+          "0x9184e72a000",
+          "0x0"
+        ],
+        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "keys": [
+          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+        ]
+      },
+      {
+        "data": [
+          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
+          "0x9184e72a000",
+          "0x0",
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7"
+        ],
+        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
+        "keys": [
+          "0x194fc63c49b0f07c8e7a78476844837255213824bd6cb81e0ccfb949921aad1"
+        ]
+      },
+      {
+        "data": [
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
+          "0x1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
+          "0x221db5dbf6db",
+          "0x0"
+        ],
+        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "keys": [
+          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+        ]
+      }
+    ],
+    "execution_status": "SUCCEEDED",
+    "finality_status": "ACCEPTED_ON_L2",
+    "messages_sent": [
+      {
+        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
+        "payload": [
+          "0x0",
+          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
+          "0x9184e72a000",
+          "0x0"
+        ],
+        "to_address": "0xc3511006c04ef1d78af4c8e0e74ec18a6e64ff9e"
+      }
+    ],
+    "transaction_hash": "0xdeadbeef",
+    "type": "INVOKE"
+  },
+  "id": 1
+}
+----

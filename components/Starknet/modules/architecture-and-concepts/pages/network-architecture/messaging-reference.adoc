@@ -1,0 +1,611 @@
+[id="messaging_function_reference"]
+= Messaging function and event reference
+:description: Comprehensive function and event reference for the `StarknetMessaging` smart contracts.
+
+The `StarknetMessaging` smart contracts include functions and events that are required when sending messages between L1 and L2.
+
+For information on the messaging mechanism, see xref:architecture-and-concepts:network-architecture/messaging-mechanism.adoc[Messaging mechanism].
+
+The L1 functions, where available, are defined in the following smart contract:
+
+[cols=",,",]
+|===
+|Contract |Description |Functions
+
+|https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`] |
+The contract that implements messaging functions.
+
+Interfaces are available through https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessaging.sol[`IStarknetMessaging.sol`]. a|
+* xref:#cancelL1ToL2Message[`cancelL1ToL2Message`]
+* xref:#consumeMessageFromL2[`consumeMessageFromL2`]
+* xref:#getMaxL1MsgFee[`getMaxL1MsgFee`]
+* xref:#l1ToL2MessageCancellations[`l1ToL2MessageCancellations`]
+* xref:#l1ToL2MessageNonce[`l1ToL2MessageNonce`]
+* xref:#l1ToL2Messages[`l1ToL2Messages`]
+* xref:#l2ToL1Messages[`l2ToL1Messages`]
+* xref:#messageCancellationDelay[`messageCancellationDelay`]
+* xref:#sendMessageToL2[`sendMessageToL2`]
+* xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`]
+
+|===
+
+The L1 events, where available, are defined in the following smart contract:
+
+[cols=",,",]
+|===
+|Contract |Description |Events
+
+|https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol[`IStarknetMessagingEvents.sol`] |
+The contract that defines messaging events. a|
+* xref:#ConsumedMessageToL1[`ConsumedMessageToL1`]
+* xref:#ConsumedMessageToL2[`ConsumedMessageToL2`]
+* xref:#LogMessageToL1[`LogMessageToL1`]
+* xref:#LogMessageToL2[`LogMessageToL2`]
+* xref:#MessageToL2Canceled[`MessageToL2Canceled`]
+* xref:#MessageToL2CancellationStarted[`MessageToL2CancellationStarted`]
+
+|===
+
+== L1 function reference
+
+Functions are listed in alphabetical order.
+
+'''
+
+[#cancelL1ToL2Message]
+=== `cancelL1ToL2Message`
+
+[discrete]
+==== Description
+
+Cancels an L1 to L2 message. Call this function after calling the xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`] function. The time between the calls to these two functions must be at least the number of seconds defined by the xref:#messageCancellationDelay[`messageCancellationDelay`] function.
+
+Only a sender can cancel a message.
+
+If the message is missing, the call reverts.
+
+Be aware that the message fee is not refunded.
+
+[discrete]
+==== State Mutability
+
+None.
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _toAddress_`:: The address of the L2 contract.
+`uint256 _selector_`::
+// tag::uint256_selector[]
+The function, in the recipient L2 contract, that the message called.
+// end::uint256_selector[]
+`uint256[] calldata _payload_`:: The payload of the message.
+`uint256 _nonce_`:: The nonce of the message.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`bytes32 _msgHash_`:: The hash of the canceled message.
+
+[discrete]
+==== Emitted event
+
+xref:#MessageToL2Canceled[`MessageToL2Canceled`]
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L161[`cancelL1ToL2Message`]
+
+'''
+
+[#consumeMessageFromL2]
+=== `consumeMessageFromL2`
+
+[discrete]
+==== Description
+
+Consumes a message that was sent from an L2 contract.
+
+Returns the hash of the message.
+
+[discrete]
+==== State Mutability
+
+None.
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _fromAddress_`:: The address of the L2 contract sending the message.
+`uint256[] calldata _payload_`:: The payload of the message.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`bytes32 _msgHash_`:: The hash of the consumed message.
+
+[discrete]
+==== Emitted event
+
+xref:#ConsumedMessageToL1[`ConsumedMessageToL1`]
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L132[`consumeMessageFromL2`]
+
+'''
+
+[#getMaxL1MsgFee]
+=== `getMaxL1MsgFee`
+
+[discrete]
+==== Description
+
+Returns the maximum fee, in Wei, that Starknet accepts for a single message. If the fee passed is higher than this value, the transaction is not accepted.
+
+[discrete]
+==== State Mutability
+
+`pure`
+
+[discrete]
+==== Parameters
+
+None.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _MAX_L1_MSG_FEE_`:: The maximum fee, in Wei, that Starknet accepts for a single message.
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L31[`getMaxL1MsgFee`]
+
+'''
+
+[#l1ToL2MessageCancellations]
+=== `l1ToL2MessageCancellations`
+
+[discrete]
+==== Description
+
+Returns the timestamp of the cancellation request.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`bytes32 _msgHash_`:: The message hash.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _result_`:: The Ethereum block timestamp.
+
+Returns `0` if `cancelL1ToL2Message` was not called with the message hash `_msgHash_`.
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L73[`l1ToL2MessageCancellations`]
+
+'''
+
+[#l1ToL2MessageNonce]
+=== `l1ToL2MessageNonce`
+
+[discrete]
+==== Description
+
+Returns the nonce of the next message sent to the L2 contract. So if If `_n_` messages have been sent to Starknet, this function returns `_n_ + 1`.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+None.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _nonce_`:: The nonce of the next message sending to L2 contract.
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L55[`l1ToL2MessageNonce`]
+
+'''
+
+[#l1ToL2Messages]
+=== `l1ToL2Messages`
+
+[discrete]
+==== Description
+
+Indicates if a pending message is associated with a given message hash.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`bytes32 _msgHash_`:: The message hash.
+
+[discrete]
+==== Returns
+
+Returns `uint256 _result_`, where `_result_` is one of the following:
+[horizontal,labelwidth="5",role=stripes-odd]
+`message_fee + 1`:: A pending message is associated with the `_msgHash_` parameter.
+`0`:: No pending message is associated with the `_msgHash_` parameter.
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L39[`l1ToL2Messages`]
+
+'''
+
+[#l2ToL1Messages]
+=== `l2ToL1Messages`
+
+[discrete]
+==== Description
+
+Indicates if a pending message is associated with a given message hash.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`bytes32 _msgHash_`:: The message hash.
+
+[discrete]
+==== Returns
+
+Returns `uint256 _result_`, where `_result_` is one of the following:
+[horizontal,labelwidth="30",role=stripes-odd]
+`1`:: A pending message is associated with the `_msgHash_` parameter.
+`0`:: No pending message is associated with the `_msgHash_` parameter.
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L43[`l2ToL1Messages`]
+
+'''
+
+[#messageCancellationDelay]
+=== `messageCancellationDelay`
+
+[discrete]
+==== Description
+
+Returns the time interval, in seconds, after which you can cancel a message starting from the moment of calling the xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`] function. You can get the real value by calling the link:https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F11[`messageCancellationDelay`] function on a block explorer, such as Etherscan.
+
+[discrete]
+==== State Mutability
+
+`view`
+
+[discrete]
+==== Parameters
+
+None.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _result_`:: The time interval.
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L59[`messageCancellationDelay`]
+
+'''
+
+[#sendMessageToL2]
+=== `sendMessageToL2`
+
+[discrete]
+==== Description
+
+Sends a message to an L2 contract. The message fee is the cost of executing this function.
+
+[discrete]
+==== State Mutability
+
+`payable`
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _toAddress_`:: The address of the L2 contract.
+`uint256 _selector_`::
+include::messaging-reference.adoc[tag=uint256_selector]
+`uint256[] calldata _payload_`:: The payload of the message.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`bytes32 _msgHash_`:: The hash of the message.
+`uint256 _nonce_`:: The nonce of the message.
+
+[discrete]
+==== Emitted event
+
+xref:#LogMessageToL2[`LogMessageToL2`]
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L110[`sendMessageToL2`]
+
+'''
+
+[#startL1ToL2MessageCancellation]
+=== `startL1ToL2MessageCancellation`
+
+[discrete]
+==== Description
+
+Starts the cancellation of a message from L1 to L2.
+
+You can cancel a message after a predefined about of time from the moment this function is called. The amount of time is set by the xref:#messageCancellationDelay[`messageCancellationDelay`] function.
+
+You can only call this function for a message that is currently pending, and the caller must be the sender of that message.
+
+[discrete]
+==== State Mutability
+
+None.
+
+[discrete]
+==== Parameters
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`uint256 _toAddress_`:: The address of the L2 contract.
+`uint256 _selector_`::
+include::messaging-reference.adoc[tag=uint256_selector]
+`uint256[] calldata _payload_`:: The payload of the message.
+`uint256 _nonce_`:: The nonce of the message.
+
+[discrete]
+==== Returns
+
+[horizontal,labelwidth="30",role=stripes-odd]
+`bytes32 _msgHash_`:: The hash of the cancellation message.
+
+[discrete]
+==== Emitted event
+
+xref:#MessageToL2CancellationStarted[`MessageToL2CancellationStarted`]
+
+[discrete]
+==== Function definition
+
+Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol[`StarknetMessaging.sol`]
+
+* Function: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/StarknetMessaging.sol#L147[`startL1ToL2MessageCancellation`]
+
+== L1 event reference
+
+Events are listed in alphabetical order.
+
+// Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol[`IStarknetMessagingEvents`]
+
+'''
+
+[#ConsumedMessageToL1]
+=== `ConsumedMessageToL1`
+
+[discrete]
+==== Description
+
+This event is emitted when a message from L2 to L1 is consumed by the xref:#consumeMessageFromL2[`consumeMessageFromL2`] function.
+
+[discrete]
+==== Event attributes
+
+[horizontal,role=stripes-odd]
+`uint256 indexed _fromAddress_`:: The address of the sender on L2.
+`address indexed _toAddress_`:: The address of the receiver on L1.
+`uint256[] _payload_`:: The payload of the consumed message.
+
+[discrete]
+==== Event definition
+
+* Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol[`IStarknetMessagingEvents`]
+
+* Event: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol#L19[`ConsumedMessageToL1`]
+
+// '''
+//
+// [#ConsumedMessageToL2]
+// === `ConsumedMessageToL2`
+//
+// [discrete]
+// ==== Description
+//
+// This event is emitted when a message from L1 to L2 is consumed by the link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/Output.sol#L76[`processMessages`] function.
+//
+// [discrete]
+// ==== Event attributes
+//
+// [horizontal,role=stripes-odd]
+// `address indexed _fromAddress_`:: The address of the sender on L1.
+// `uint256 indexed _toAddress_`:: The address of the receiver on L2.
+// `uint256 indexed _selector_`::
+// include::messaging-reference.adoc[tag=uint256_selector]
+// `uint256[] _payload_`:: The payload of the consumed message.
+// `uint256 _nonce_`:: The nonce of the consumed message.
+//
+// [discrete]
+// ==== Event definition
+//
+// * Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol[`IStarknetMessagingEvents`]
+//
+// * Event: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol#L26[`ConsumedMessageToL2`]
+//
+// '''
+//
+// [#LogMessageToL1]
+// === `LogMessageToL1`
+//
+// [discrete]
+// ==== Description
+//
+// This event is emitted when a message is sent from L2 to L1 by the link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/Output.sol#L76[`processMessages`] function.
+//
+// [discrete]
+// ==== Event attributes
+//
+// [horizontal,role=stripes-odd]
+// `uint256 indexed _fromAddress_`:: The address of the sender on L2.
+// `address indexed _toAddress_`:: The address of the receiver on L1.
+// `uint256[] _payload_`:: The payload of the message.
+//
+// [discrete]
+// ==== Event definition
+//
+// * Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol[`IStarknetMessagingEvents`]
+//
+// * Event: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol#L6[`LogMessageToL1`]
+//
+'''
+
+[#LogMessageToL2]
+=== `LogMessageToL2`
+
+[discrete]
+==== Description
+
+This event is emitted when a message is sent from L1 to L2 by the xref:#sendMessageToL2[`sendMessageToL2`] function.
+
+[discrete]
+==== Event attributes
+
+[horizontal,role=stripes-odd]
+`address indexed _fromAddress_`:: The address of the sender on L1.
+`uint256 indexed _toAddress_`:: The address of the receiver on L2.
+`uint256 indexed _selector_`::
+include::messaging-reference.adoc[tag=uint256_selector]
+`uint256[] _payload_`:: The payload of the message.
+`uint256 _nonce_`:: The nonce of the message.
+`uint256 _fee_`:: The fee associated with the message.
+
+[discrete]
+==== Event definition
+
+* Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol[`IStarknetMessagingEvents`]
+
+* Event: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol#L9[`LogMessageToL2`]
+
+'''
+
+[#MessageToL2Canceled]
+=== `MessageToL2Canceled`
+
+[discrete]
+==== Description
+
+This event is emitted when an L1 to L2 message is canceled by the xref:#cancelL1ToL2Message[`cancelL1ToL2Message`] function.
+
+[discrete]
+==== Event attributes
+
+[horizontal,role=stripes-odd]
+`address indexed _fromAddress_`:: The address of the sender on L1.
+`uint256 indexed _toAddress_`:: The address of the receiver on L2.
+`uint256 indexed _selector_`::
+include::messaging-reference.adoc[tag=uint256_selector]
+`uint256[] _payload_`:: The payload of the canceled message.
+`uint256 _nonce_`:: The nonce of the canceled message.
+
+[discrete]
+==== Event definition
+
+* Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol[`IStarknetMessagingEvents`]
+
+* Event: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol#L44[`MessageToL2Canceled`]
+
+'''
+
+[#MessageToL2CancellationStarted]
+=== `MessageToL2CancellationStarted`
+
+[discrete]
+==== Description
+
+This event is emitted when the cancellation of an L1 to L2 message is started by the xref:#startL1ToL2MessageCancellation[`startL1ToL2MessageCancellation`] function.
+
+[discrete]
+==== Event attributes
+
+[horizontal,role=stripes-odd]
+`address indexed _fromAddress_`:: The address of the sender on L1.
+`uint256 indexed _toAddress_`:: The address of the receiver on L2.
+`uint256 indexed _selector_`::
+include::messaging-reference.adoc[tag=uint256_selector]
+`uint256[] _payload_`:: The payload of the message to be canceled.
+`uint256 _nonce_`:: The nonce of the message to be canceled.
+
+[discrete]
+==== Event definition
+
+* Contract: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol[`IStarknetMessagingEvents`]
+
+* Event: link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/solidity/IStarknetMessagingEvents.sol#L35[`MessageToL2CancellationStarted`]
+
