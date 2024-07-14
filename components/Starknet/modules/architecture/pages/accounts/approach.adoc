@@ -1,0 +1,32 @@
+[id="starknet_account_structure"]
+= Starknet's account interface
+
+Starknet's account structure is inspired by Ethereum's EIP-4337, where instead of EOAs, you use smart contract accounts with arbitrary verification logic.
+
+While not mandatory at the protocol level, you can use a richer standard interface for accounts, defined in link:https://github.com/starknet-io/SNIPs/blob/main/SNIPS/snip-6.md[Starknet Improvement Proposal #6 (SNIP-6)]. SNIP-6 was developed by community members at OpenZeppelin, in close collaboration with wallet teams and other Core Starknet developers.
+
+[#account_functions]
+== Account functions
+
+A valid account contract includes specific functions, depending on the type of the contract. For more information, see xref:architecture:accounts/account-functions.adoc[].
+
+[#replay_protection]
+== Replay protection
+
+In Starknet, similar to Ethereum, every contract has a nonce, including an account contract. This nonce is sequential. The nonce of a transaction sent from an account must match the nonce of that account. After the transaction is executed, whether or not it is reverted, the nonce is incremented by one.
+
+[NOTE]
+====
+In Starknet, only the nonce of account contracts, that is, those adhering to the above structure, can be non-zero.
+
+In contrast, in Ethereum, regular smart contracts, known as _Contract Accounts_, as opposed to _Externally Owned Accounts_ can increment their nonce by deploying smart contracts, that is, executing the `CREATE` and `CREATE2` opcodes.
+
+For more information on accounts in Ethereum, see link:https://ethereum.org/en/developers/docs/accounts/[Ethereum Accounts] in the Ethereum documentation.
+====
+
+A nonce serves two important roles:
+
+* It guarantees transaction hash uniqueness, which is important for a good user experience.
+* It provides replay protection to the account: Because the signature is bound to a particular nonce, a malicious party cannot replay the transaction.
+
+Starknet currently determines the nonce structure at the protocol level to be sequential. In the future, Starknet will consider a more flexible design, extending account abstraction to nonce management, previously referred to as _nonce abstraction_.

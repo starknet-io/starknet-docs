@@ -1,0 +1,75 @@
+[id="contract_hash"]
+= Class hash
+:description: A Cairo class hash is a hash of the components that define a Cairo class: `contract_class_version`, `external_entry_points`, `l1_handler_entry_points`, `constructor_entry_points`, `abi_hash`, and `sierra_program_hash`
+:keywords: class hash, Cairo class hash, Starknet class hash, Starknet contract class hash
+
+The class hash is a hash chain of the components that define the class. 
+
+Classes written in Cairo are compiled into Sierra code. The Sierra code generated is an intermediate representation of the class. This new contract class is then compiled by the sequencer, via the Sierra -> Casm compiler, to generate the Cairo
+assembly associated with this class. The resulting Casm code is then executed by the Starknet OS.
+
+For information on how the compiler converts code from Cairo to Sierra, see xref:smart-contracts/cairo-and-sierra.adoc[Cairo and Sierra].
+
+[id="cairo1_class"]
+== Components of a Cairo class definition
+
+The components that define a class are:
+
+[horizontal,labelwidth=35]
+contract_class_version:: The version of the contract class object. Currently, the Starknet OS
+supports version 0.1.0
+Array of external functions entry points:: An entry point is a pair `(_selector_, _function_idx_)`, where `_function_idx_` is the index of the function inside the Sierra program.
++
+[NOTE]
+====
+The selector is an identifier through which the function is callable in transactions or in other classes. The selector is the xref:../cryptography/hash-functions.adoc#starknet_keccak[starknet_keccak] hash of the function name, encoded in ASCII.
+====
+
+Array of xref:architecture:network-architecture/l1<>l2-messaging.adoc#l1-l2-message-fees[L1 handlers] entry points :: -
+Array of constructors entry points:: Currently, the compiler allows only one constructor.
+ABI:: A string representing the ABI of the class. The ABI hash (which affects the class hash) is given by:
++
+[source,python]
+----
+starknet_keccak(bytes(ABI, "UTF-8"))
+----
++
+[NOTE]
+====
+This string is supplied by the user declaring the class (and is signed on as part of the `DECLARE` transaction), and is not enforced to be the true ABI of the associated class.
+Without seeing the underlying source code (i.e. the Cairo code generating the class's Sierra), this ABI should be treated as the "intended" ABI by the declaring party, which may be incorrect (intentionally or otherwise).
+The "honest" string would be the json serialization of the contract's ABI as produced by the Cairo compiler.
+====
+Sierra program:: An array of field elements representing the Sierra instructions.
+
+[id="computing_the_cairo_1_class_hash"]
+== Computing the Cairo class hash
+
+The hash of the class is the chain hash of its components, computed as follows:
+
+
+[source,cairo]
+----
+class_hash = ℎ(
+    contract_class_version,
+    external_entry_points,
+    l1_handler_entry_points,
+    constructor_entry_points,
+    abi_hash,
+    sierra_program_hash
+)
+----
+
+Where
+
+* stem:[$h$] is the xref:../cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash function
+* The hash of an entry point array stem:[$(selector,index)_{i=1}^n$] is given by stem:[$h(\text{selector}_1,\text{index}_1,...,\text{selector}_n,\text{index}_n)$]
+* The `sierra_program_hash` is the xref:../cryptography/hash-functions.adoc#poseidon_hash[Poseidon] hash of the bytecode array
+
+[NOTE]
+====
+The Starknet OS currently supports contract class version 0.1.0, which is represented in the above hash computation as the ASCII encoding of the string `CONTRACT_CLASS_V0.1.0` (hashing the version in this manner gives us domain separation between
+the hashes of classes and other objects).
+====
+
+For more details, see the https://github.com/starkware-libs/cairo-lang/blob/7712b21fc3b1cb02321a58d0c0579f5370147a8b/src/starkware/starknet/core/os/contracts.cairo#L47[Cairo implementation].

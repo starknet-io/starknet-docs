@@ -1,0 +1,218 @@
+= Declare, deploy, and interact with a smart contract locally using Katana
+:page-aliases: community-guide.adoc, \
+
+This tutorial guides you through deploying a Cairo smart contract onto a local Katana devnet.
+
+== Prerequisites
+
+The following tools are installed:
+
+* Starkli
+* Scarb
+* Katana
+
+== Basics of Katana and Starkli
+
+=== Katana sequencer
+
+[source, bash]
+----
+katana --disable-fee
+----
+
+After starting Katana, a list of accounts is automatically generated and deployed.
+
+=== Starkli pre-configured accounts and configuration
+
+Starkli supports several pre-configured accounts for Katana. These account are reserved for local development. 
+For example the address of the `katana-0` pre-configured account is `0x6162896d1d7ab204c7ccac6dd5f8e9e7c25ecd5ae4fcb4ad32e57786bb46e03`.
+
+For the full list of account addresses, see the constant link:https://github.com/xJonathanLEI/starkli/blob/master/src/account.rs#L96[`BUILTIN_ACCOUNT` in `accounts.rs`] in the Starkli GitHub repo.
+
+We will need this `katana-0` pre-configured account later when we define our `STARKNET_ACCOUNT`. 
+For more details about accounts, please refer to the link:https://book.starkli.rs/accounts[accounts] section on the starkli book.
+
+== Contract deployment and interaction
+
+=== Create a new project
+
+Create a new project using the `scarb` command. Let's name it `simple_storage`.
+
+[source, bash]
+----
+scarb new simple_storage
+----
+
+Add contract dependencies to scarb.toml file.
+
+[source, toml]
+----
+[dependencies]
+starknet = "2.5.4"
+
+[[target.starknet-contract]]
+----
+
+Copy the simple storage contract to lib.cairo file.
+
+[source, cairo]
+----
+#[starknet::interface]
+trait ISimpleStorage<TContractState> {
+    fn set(ref self: TContractState, x: u128);
+    fn get(self: @TContractState) -> u128;
+}
+
+#[starknet::contract]
+mod SimpleStorage {
+    use starknet::get_caller_address;
+    use starknet::ContractAddress;
+
+    #[storage]
+    struct Storage {
+        stored_data: u128
+    }
+
+    #[abi(embed_v0)]
+    impl SimpleStorage of super::ISimpleStorage<ContractState> {
+        fn set(ref self: ContractState, x: u128) {
+            self.stored_data.write(x);
+        }
+        fn get(self: @ContractState) -> u128 {
+            self.stored_data.read()
+        }
+    }
+}
+----
+
+=== Compile contract and add environment variables
+
+Compile your contract using scarb.
+
+[source, bash]
+----
+scarb build
+----
+
+Having compiled the smart contract, it's time to declare it with `Starkli` and `Katana`.
+For clean environment management, place the following environment variables in a .env file within the `src/` directory.
+
+[source, bash]
+----
+export STARKNET_ACCOUNT=katana-0        #A pre-funded account on the local development network.
+export STARKNET_RPC=http://0.0.0.0:5050 #To specify the network, targeting the local Katana devnet.
+----
+
+Then, ensure your project acknowledges the environment variables:
+
+[source, bash]
+----
+source .env
+----
+
+These settings significantly streamline `Starkli` command operations, ensuring a smoother and more efficient workflow.
+
+=== Declare contract
+
+Make sure Katana is already running in separate terminal. Otherwise launch Katana.
+
+[source, bash]
+----
+katana --disable-fee
+----
+
+To declare your contract, execute:
+
+[source, bash]
+----
+starkli declare target/dev/simple_storage_SimpleStorage.contract_class.json
+----
+
+Upon successful command execution, you'll obtain a contract class hash.
+This unique hash serves as the identifier for your contract class within `Starknet`.
+
+[source, bash]
+----
+Sierra compiler version not specified. Attempting to automatically decide version to use...
+Unknown network. Falling back to the default compiler version 2.5.4. Use the --compiler-version flag to choose a different version.
+Declaring Cairo 1 class: 0x07ad2516dd66fb2e274e78d4357837cad689c9fffaa347feb9800b231b37b306
+Compiling Sierra class to CASM with compiler version 2.5.4...
+CASM class hash: 0x016052cc70f7462306aa149bdf0e0df3aecb1876a9b05283d60c493c92aa03f4
+Contract declaration transaction: 0x0555ba421c2aef3113f1a2d3866955b762191280092bb73956147f24a2d66aa6
+Class hash declared: // [!code hl]
+0x07ad2516dd66fb2e274e78d4357837cad689c9fffaa347feb9800b231b37b306 // [!code hl]
+----
+
+=== Deploy contract
+
+[source, bash]
+----
+starkli deploy <class_hash_of_the_contract_to_be_deployed>
+----
+
+For this contract we did not specified a `constructor` function, thus we don't need to pass any constructor argument
+
+[source, bash]
+----
+starkli deploy 0x07ad2516dd66fb2e274e78d4357837cad689c9fffaa347feb9800b231b37b306
+----
+
+After running, expect an output similar to:
+
+[source, bash]
+----
+Deploying class 0x07ad2516dd66fb2e274e78d4357837cad689c9fffaa347feb9800b231b37b306 with salt 0x02c93ad00ce6f894729baeafd1fd0456c5a5c540c1caa053ab5392f27ea8f130...
+The contract will be deployed at address 0x03da69257a94a06a1101c1413d78551e38d91ca180c0fc26004650a427238f4e
+Contract deployment transaction: 0x06817bc837ce4df879fe903ca4700a860ce8165742bd74bdadf379618e89cccd
+Contract deployed:
+0x03da69257a94a06a1101c1413d78551e38d91ca180c0fc26004650a427238f4e
+----
+
+=== Call contract
+
+The first parameter is the contract address, the second parameter is the function to be called.
+
+[source, bash]
+----
+starkli call 0x03da69257a94a06a1101c1413d78551e38d91ca180c0fc26004650a427238f4e get
+----
+
+After running, expect an output similar to:
+
+[source, bash]
+----
+[
+    "0x0000000000000000000000000000000000000000000000000000000000000000"
+]
+----
+
+It means the value of `stored_data` is zero.
+
+=== Invoke contract
+
+The first parameter is the contract address, the second parameter is the function to be invoked, and the third parameter is the function parameter.
+Let's set the value of `stored_data` to 42.
+
+[source, bash]
+----
+starkli invoke 0x03da69257a94a06a1101c1413d78551e38d91ca180c0fc26004650a427238f4e set 42
+----
+
+Let's retrieve the new vale of `stoted_data`
+
+[source, bash]
+----
+starkli call 0x03da69257a94a06a1101c1413d78551e38d91ca180c0fc26004650a427238f4e get
+----
+
+After running, expect an output similar to:
+
+[source, bash]
+----
+[
+    "0x000000000000000000000000000000000000000000000000000000000000002a"
+]
+----
+
+Awesome! You deployed and interacted with a raw Cairo smart contract using Katana and Starkli!
+You can now build more complex smart contracts and interact with them using the same process.
