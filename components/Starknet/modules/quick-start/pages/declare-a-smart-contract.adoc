@@ -159,3 +159,87 @@ If the contract you are declaring has previously been declared by someone else, 
 ----
 Not declaring class as its already declared. Class hash: <CLASS_HASH>
 ----
+
+
+== Declaring on Devnet
+
+For faster development, you might want to declare your contract on a local devnet. Starknet-devnet is a local environment, which simulates the Starknet network, but runs on your local machine.
+Developing with starknet-devnet can be faster, and it is not public, so you can test your contracts without any cost.
+You can restart the devnet at any time to start from a fresh state.
+
+To install starknet-devnet with cargo, you can run the following command:
+
+[source,bash]
+----
+cargo install starknet-devnet
+----
+
+For more information on using starknet-devnet, you can visit the starknet-devnet link:https://github.com/0xSpaceShard/starknet-devnet-rs[github repository], and the starknet-devnet link:https://0xspaceshard.github.io/starknet-devnet-rs/[documentation].
+
+Starknet-devnet comes with a set of pre-deployed and pre-funded accounts. Upon starting the devnet, you will a print out of the account addresses and their private keys.
+By default, the accounts change on each initialization. To have consistent account addresses between executions, specify the `--seed` flag with a seed value.
+In our example, we will use the random value `4` as the seed.
+
+Start starknet-devnet with the following command:
+
+[source,bash]
+----
+starknet-devnet --seed 4
+----
+
+The result should be similar to the following:
+
+[source,bash]
+----
+ETH Address: 0x49D36570D4E46F48E99674BD3FCC84644DDD6B96F7C741B1562B82F9E004DC7
+STRK Address: 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
+Class Hash: 0x046ded64ae2dead6448e247234bab192a9c483644395b66f2155f2614e5804b0
+
+Predeployed UDC
+Address: 0x41A78E741E5AF2FEC34B695679BC6891742439F7AFB8484ECD7766661AD02BF
+Class Hash: 0x7B3E05F48F0C69E4A65CE5E076A66271A527AFF2C34CE1083EC6E1526997A69
+
+Chain ID: SN_SEPOLIA (0x534e5f5345504f4c4941)
+
+| Account address |  0x25520dc049feafd95ecb7efe7816941776fea7912b36780e9d14430d0d4d754
+| Private key     |  0xec5409e6308b162799dbfb25ab55f80a
+| Public key      |  0x351c8a95507a79ec0477f1fa0b7b516657dd2e2cf4a28b613f2000c19daa5a4
+...
+----
+
+To use starknet-devnet with `starkli`, we must first import one of the accounts to file. Starkli supports the `--fetch` command for importing already deployed accounts to a file.
+
+With devnet running, execute the following command to import the first devnet account to a file:
+
+[source,bash]
+----
+starkli account fetch --rpc http://127.0.0.1:5050 0x25520dc049feafd95ecb7efe7816941776fea7912b36780e9d14430d0d4d754 --output oz-account-devnet.json
+----
+
+[NOTE]
+====
+Devnet runs by default on port `5050`. This can be configured in the devnet options.
+Notice the address of the fetched account is the same as the one printed out by the devnet.
+====
+
+To create a `starkli` signer which uses the correct private key, we need to create a new keystore, using the private key in the devnet printout.
+
+[source,bash]
+----
+starkli signer keystore from-key oz-signer-devnet.json
+----
+
+You will be prompted to enter the private key. Enter the private key from the devnet printout.
+
+Chose a password to secure the keystore file.
+
+The keystore file is now created and ready to be used with `starkli`.
+
+You can now declare your contract on devnet, similarly to the previous example. You will need to specify the `--rpc` flag with the devnet address, as well as the keystore and account values. (These can be configured as environment variables)
+
+[source,bash]
+----
+starkli declare ./target/dev/<CONTRACT_NAME>.json --rpc http://127.0.0.1:5050 --account ./oz-account-devnet.json --keystore ./oz-signer-devnet.json
+----
+
+
