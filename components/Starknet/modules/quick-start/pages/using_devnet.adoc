@@ -1,0 +1,142 @@
+[id="using_starknet_devnet]
+= Using a development network
+
+For a faster and more private development process, it is often preferable to use a local version of Starknet – also known as a development network (devnet) – which can be easily set up by either link:https://0xspaceshard.github.io/starknet-devnet-rs/[Starknet Devnet] or link:https://book.dojoengine.org/toolchain/katana[Katana].
+
+== Prerequisites
+
+Starkli is installed correctly. Ensure that the following command shows the version information for Starkli:
+[source, bash]
+----
+starkli --version
+----
+If this command fails, see xref:environment-setup.adoc[Setting up your environment].
+
+== Using Starknet Devnet (Devnet)
+
+. Install Devnet:
++
+[source,shell]
+----
+cargo install starknet-devnet
+----
++
+and start it using: 
++
+[source,shell]
+----
+starknet-devnet --seed 42
+----
++
+
+[NOTE]
+====
+Upon initialization, Devnet predeploys a fee token, universal deployer, and a set of funded accounts. By default, the set of predeployed accounts changes on each initialization, but specifying the same `--seed` value ensures consistent account addresses between executions.
+====
+The result should be similar to the following:
++
+[source,bash]
+----
+Predeployed FeeToken
+ETH Address: 0x49D36570D4E46F48E99674BD3FCC84644DDD6B96F7C741B1562B82F9E004DC7
+STRK Address: 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
+Class Hash: 0x046ded64ae2dead6448e247234bab192a9c483644395b66f2155f2614e5804b0
+
+Predeployed UDC
+Address: 0x41A78E741E5AF2FEC34B695679BC6891742439F7AFB8484ECD7766661AD02BF
+Class Hash: 0x7B3E05F48F0C69E4A65CE5E076A66271A527AFF2C34CE1083EC6E1526997A69
+
+Chain ID: SN_SEPOLIA (0x534e5f5345504f4c4941)
+
+| Account address |  0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba
+| Private key     |  0xb137668388dbe9acdfa3bc734cc2c469
+| Public key      |  0x5a5e37c60e77a0318643b111f88413a76af6233c891a0cfb2804106372006d4
+...
+----
++
+
+. xref:set-up-an-account.adoc[As previously described], import Devnet's first predeployed accounts to an account file (notice that the address of the fetched account is the same as the one printed out by Devnet):
++
+[source,bash]
+----
+starkli account fetch --rpc http://127.0.0.1:5050 0x34ba56f92265f0868c57d3fe72ecab144fc96f97954bbbc4252cef8e8a979ba --output ~/.starkli-wallets/devnet/account.json
+----
++
+[NOTE]
+====
+`http://127.0.0.1:5050` are Starknet Devnet's default host and port, which can be configured upon initialization using the `--host` and `--port` options 
+====
+and create the corresponding keystore file by executing:
++
+[source,bash]
+----
+starkli signer keystore from-key ~/.starkli-wallets/devnet/keystore.json
+----
++
+and entring `0xb137668388dbe9acdfa3bc734cc2c469` as private key (the same one as the one printed out by Devnet)
+. Now that you have an account set up, you can use Starkli to freely interact with Devnet. For example, you can redeploy Devnet's predeployed universal deployer using the following command:
+
+[source,bash]
+----
+starkli deploy --rpc http://127.0.0.1:5050 --account ~/.starkli-wallets/devnet/account.json --keystore ~/.starkli-wallets/devnet/keystore.json 0x7B3E05F48F0C69E4A65CE5E076A66271A527AFF2C34CE1083EC6E1526997A69
+----
+
+== Using Katana
+. Install Katana:
++
+[source,bash]
+----
+git clone https://github.com/dojoengine/dojo
+cd dojo
+cargo install --path ./bin/katana --locked --force
+----
+and start it using:
++
+[source,bash]
+----
+katana
+----
++
+[NOTE]
+====
+Upon initialization, Katana predeploys a fee token, universal deployer contract (UDC), and a set of funded accounts. By default, Katana predeploys the same set of accounts.
+====
+The result should be similar to the following:
++
+[source,bash]
+----
+PREDEPLOYED CONTRACTS
+==================
+
+| Contract        | Fee Token
+| Address         | 0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+| Class Hash      | 0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f
+
+| Contract        | Universal Deployer
+| Address         | 0x41a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf
+| Class Hash      | 0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69
+
+| Contract        | Account Contract
+| Class Hash      | 0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c
+
+
+PREFUNDED ACCOUNTS
+==================
+
+| Account address |  0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca
+| Private key     |  0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a
+| Public key      |  0x640466ebd2ce505209d3e5c4494b4276ed8f1cde764d757eb48831961f7cdea
+...
+----
++
+. Starkli comes with several built-in accounts for Katana's default initalization, which can be used to freely interact with Katana without any setup (for the full list of account addresses, see `BUILTIN_ACCOUNT` in link:https://github.com/xJonathanLEI/starkli/blob/master/src/account.rs[Starkli's accounts.rs file]). For example, you can redeploy Katana's predeployed universal deployer using the following command:
++
+[source,bash]
+----
+starkli deploy --rpc http://0.0.0.0:5050 --account katana 0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69 
+----
++
+[NOTE]
+====
+`http://0.0.0.0:5050` are Katana's default host and port, which can be configured upon initialization using the `--host` and `--port` options 
+====
