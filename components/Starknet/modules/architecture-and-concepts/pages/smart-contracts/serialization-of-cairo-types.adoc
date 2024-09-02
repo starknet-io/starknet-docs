@@ -141,6 +141,8 @@ An enum is serialized as follows:
 
 `<__index_of_enum_variant__>,<__serialized_variant__>`
 
+Note that enum variants indices are 0-based, not to confuse with their storage layout, which is 1-based, to distinguish the first variant from an uninitialized storage slot.
+
 .Enum serialization example 1
 
 Consider the following definition of an enum named `Week`:
@@ -148,12 +150,12 @@ Consider the following definition of an enum named `Week`:
 [source,cairo]
 ----
 enum Week {
-    Sunday: (), // Index=0. The variant type is the unit type.
+    Sunday: (), // Index=0. The variant type is the unit type (0-tuple).
     Monday: u256, // Index=1. The variant type is u256.
 }
 ----
 
-Now consider instantiations of the `Week` enum's variants as shown in the table xref:#serialization_of_Week[]:
+Now consider instantiations of the `Week` enum's variants as shown in the table below:
 
 [#serialization_of_Week]
 .Serialization of `Week` variants
@@ -162,8 +164,8 @@ Now consider instantiations of the `Week` enum's variants as shown in the table 
 |===
 |Instance |Description |Serialization
 
-|`Week::Sunday` | Index=`0`. The variant's type is the unit type. | `[1]`
-|`Week::Monday(5)` a| Index=`1`. The variant's type is `u256`.| `[2,5,0]`
+|`Week::Sunday` | Index=`0`. The variant's type is the unit type. | `[0]`
+|`Week::Monday(5)` a| Index=`1`. The variant's type is `u256`, hence serialized to `[5,0]`, as shown in xref:#serialization_in_u256_values[] .| `[1,5,0]`
 |===
 
 .Enum serialization example 2
@@ -180,7 +182,7 @@ enum MessageType {
 }
 ----
 
-Now consider instantiations of the `MessageType` enum's variants as shown in the table xref:#serialization_of_MessageType[]:
+Now consider instantiations of the `MessageType` enum's variants as shown in the table below:
 
 [#serialization_of_MessageType]
 .Serialization of `MessageType` variants
@@ -188,10 +190,13 @@ Now consider instantiations of the `MessageType` enum's variants as shown in the
 |===
 |Instance |Description |Serialization
 
-|`MessageType::A` | Index=`1`. The variant's type is the unit type. | `[1]`
-|`MessageType::B(6)` a| Index=`0`. The variant's type is `u128`. | `[0,6]`
+|`MessageType::A` | Index=`1`. The variant's type is the unit type. | `[0]`
+|`MessageType::B(6)` a| Index=`0`. The variant's type is `u128`. | `[1,6]`
 |`MessageType::C` | Index=`2`. The variant's type is the unit type. | `[2]`
 |===
+
+As you can see about, the `#[default]` attribute does not affect serialization. It only affects the storage layout of `MessageType`, where the default variant
+`B` will be stored as `0`.
 
 [#serialization_of_structs]
 == Serialization of structs
