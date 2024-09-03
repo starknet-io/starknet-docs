@@ -7,71 +7,181 @@ A Starknet block is a list of transactions and a block header that contains the 
 |===
 | Name | Type | Description
 
-| `parent_block_hash` | `FieldElement` | The hash of the block's parent.
-|`block_number` | `Integer` | The number, that is, the height, of this block.
-| `global_state_root` | `FieldElement` | The xref:../network-architecture/starknet-state.adoc#state_commitment[state commitment] after the block.
+|`block_number` | `u64` | The number, that is, the height, of this block.
+
+| `parent_block_hash` | `felt252` | The hash of the block's parent.
+
+| `global_state_root` | `felt252` | The xref:../network-architecture/starknet-state.adoc#state_commitment[state commitment] after the block.
+
 |`sequencer_address` | `ContractAddress` | The Starknet address of the sequencer that created the block.
+
 | `block_timestamp` | `Timestamp` | The time at which the sequencer began building the block, in seconds since the Unix epoch.
-|`transaction_count` | `Integer` | The number of transactions in the block.
-| `transaction_commitment` | `FieldElement` | A commitment to the transactions included in the block.
 
+|`transaction_count` | `u32` | The number of transactions in the block.
+
+|`events_count` | `u32` | The number of events in the block.
+
+|`state_diff_length`| `u32` | The sum of number of storage diffs, nonce updates, deployed contracts and declared classes.
+
+|`state_diff_commitment`| `felt252` | The poseidon hash of the state diff of the block, see below for more details.
+
+| `transactions_commitment` | `felt252` | A commitment to the transactions included in the block.
 The root of a height-64 binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to stem:[$${h(\text{transaction_hash}, \text{signature})}$$].
-|`event_count` | `Integer` | The number of events in the block.
-| `event_commitment` | `FieldElement` | A commitment to the events produced in the block.
 
-The root of a height-64 binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] event.
-| `l1_gas_price` | `(Integer, Integer)` | The price of L1 gas that was used while constructing the block. L1 gas prices apply to storage updates and L1->L2 messages. As of March 2023, computation is also priced in terms of L1 gas, but this will change in the future.
+| `events_commitment` | `felt252` | The root of a height-64 binary Merkle Patricia trie. 
+The leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] event emitted in the block.
+See below for a description on how event hashes are computed.
 
-The first `Integer` value is the price in wei. The second is the price in fri.
-| `l1_data_gas_price` | `(Integer, Integer)` | The price of L1 blob gas that was used while constructing the block. If the `l1_DA_MODE` of the block is set to `BLOB`, L1 blob gas prices determines the storage update cost.
+| `receipts_commitment`| `felt252` | The root of a height-64 Merkle-Patricia trie. 
+The leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] transaction receipt.
+See below for a description on how receipt hashes are computed.
 
-The first `Integer` value is the price in wei. The second is the price in fri.
+| `l1_gas_price` | `(u128, u128)` | The price of L1 gas that was used while constructing the block. L1 gas prices apply to storage updates and L1->L2 messages. As of March 2023, computation is also priced in terms of L1 gas, but this will change in the future.
+The first `u128` value is the price in wei. The second is the price in fri.
+
+| `l1_data_gas_price` | `(u128, u128)` | The price of L1 blob gas that was used while constructing the block. If the `l1_da_mode` of the block is set to `BLOB`, L1 blob gas prices determines the storage update cost.
+The first `u128` value is the price in wei. The second is the price in fri.
+
 | `l1_da_mode` | `String` | `CALLDATA` or `BLOB`, depending on how Starknet state diffs are sent to L1.
+
 | `protocol_version` | `String` | The version of the Starknet protocol used when creating the block.
 
-
 |===
-
-// Where:
-//
-//
-// [horizontal,labelwidth='30']
-// `event_commitment`:: is the root of a 64-bit high binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to the hash of the stem:[$i'th$] event.
-// `transaction_commitment`:: is the root of a 64-bit high binary Merkle Patricia trie. The leaf at index stem:[$i$] corresponds to stem:[$${h(transaction \space hash, signature)}$$] if the stem:[$i'th$] transaction is an `invoke` transaction and stem:[$h(0,0)$] otherwise.
-
-
-
 
 [#block_hash]
 == Block hash
 
-A block hash is defined as the Pedersen hash of the header's fields, as follows:
+A block hash is defined as the Poseidon hash of the header's fields, as follows:
 
 [,,subs="quotes"]
 ----
 _h_(𝐵) = _h_(
+    "STARKNET_BLOCK_HASH0",
     block_number,
     global_state_root,
     sequencer_address,
     block_timestamp,
-    transaction_count,
-    transaction_commitment,
-    event_count,
-    event_commitment,
-    0,
+    transaction_count || event_count || state_diff_length || l1_da_mode,
+    state_diff_commitment,
+    transactions_commitment
+    events_commitment,
+    l1_gas_price_in_wei,
+    l1_gas_price_in_fri,
+    l1_data_gas_price_in_wei,
+    l1_data_gas_price_in_fri
+    receipts_commitment
     0,
     parent_block_hash
 )
 ----
 
-Where `_h_` is the xref:../../cryptography/hash-functions.adoc#pedersen-hash[Pedersen hash].
+Where:
+
+- `_h_` is the xref:../../cryptography/hash-functions.adoc#poseidon-hash[Poseidon hash].
+- `||` denotes concatenation, `transaction_count`, `event_count` and `state_diff_length` are given 64 bits each, and `l1_da_mode` is one bit where 0 denotes `CALLDATA` and 1 denotes `BLOB`.
+
+For a reference implementation, see the link:https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L68[sequencer repository].
+
+[#state_diff_hash]
+== State diff commitment
+
+The state diff commitment is obtained by the chain-hash of the following:
+
+- updates to contract addresses stem:[$c_1,...,c_n$], with diffs stem:[$(k^1_1, v^1_1),...,(k^1_{m_1}, v^1_{m_1}),...,(k^n_1, v^n_1),...,(k^n_{m_n},v^n_{m_n})$]
+- deployed contracts stem:[$(\text{deployed_address}_1, \text{deployed_class_hash}_1),...,(\text{deployed_address}_\ell,\text{deployed_class_hash}_\ell)$]
+- declared classes stem:[$(\text{declared_class_hash}_1, \text{declared_compiled_class_hash}_1), ..., (\text{declared_class_hash}_d, \text{declared_compiled_class_hash}_d)$]
+- replaced classes stem:[$(\text{replaced_contract_address}_1, \text{new_class_hash}_1),...,(\text{replaced_contract_address}_r, \text{new_class_hash}_r)$]
+- updated nonces stem:[$(\text{account}_1, \text{new_nonce}_1),...,(\text{account}_k, \text{new_nonce}_k)$]
+
+More formally, the state-diff hash is given by:
+
+[stem]
+++++
+\begin{align}
+h\big( & \text{"STARKNET_STATE_DIFF0"}, \\
+& \quad \ell + r, \\
+& \quad \text{deployed_address}_1, \text{deployed_class_hash}_1,...,\text{deployed_address}_\ell,\text{deployed_class_hash}_\ell, \\
+& \quad \text{replaced_contract_address}_1, \text{new_class_hash}_1,...,\text{replaced_contract_address}_r, \text{new_class_hash}_r \\
+& \quad d, \\
+& \quad \text{declared_class_hash}_1, \text{declared_compiled_class_hash}_1, ..., \text{declared_class_hash}_d, \text{declared_compiled_class_hash}_d, \\
+& \quad 1, \\
+& \quad 0, \\
+& \quad n, \\
+& \quad c_1 \\
+& \quad k^1_1, v^1_1,...,k^1_{m_1}, v^1_{m_1} \\
+& \quad \vdots \\
+& \quad c_n \\
+& \quad k^n_1, v^n_1,...,k^n_{m_n},v^n_{m_n} \\
+& \quad k \\
+& \quad \text{account}_1, \text{new_nonce}_1,...,\text{account}_k, \text{new_nonce}_k\big)
+\end{align}
+++++
+
+Where:
+
+- stem:[$h$] is the  Poseidon hash function
+- stem:[$1, 0$] in the hash computation are placeholders that may be used in the future
+
+[#receipt_hash]
+== Receipt hash
+
+A transaction receipt consists of the following fields:
+
+[%autowidth]
+|===
+| Name | Type | Description
+
+| `transaction_hash` | `felt252` | the hash of the transaction
+| `actual_fee` | `u128` | the fee paid on-chain
+| `events` | `List<Event>` | ordered list of the events emitted by the transaction
+| `messages` | `List<L2toL1Message>` | ordered list of the l2->l1 messages sent by the transaction
+| `revert_reason`| `String`| The revert reason, in case the transaction was reverted
+| `l1_gas_consumed`| `u128` | The amount of l1 gas that was consumed
+| `l1_data_gas_consumed`| `u128` | The amount of l1 data (blob) gas that was consumed
+| `l2_gas_consumed`| `u128` | The amount of l2 gas that was consumed
+
+|===
+
+The hash of the transaction receipt is given by:
+
+[,,subs="quotes"]
+----
+_h_(receipt) = _h_(
+    transaction_hash,
+    actual_fee,
+    h(messages),
+    sn_keccak(revert_reason),
+    h(l2_gas_consumed, l1_gas_consumed, l1_data_gas_consumed)
+)
+----
+
+Where:
+
+- h is the Poseidon hash function
+- given messages stem:[$m_1=(\text{from}_1, \text{to}_1, \text{payload}_1)...m_n=(\text{from}_n, \text{to}_n, \text{payload}_n)$], their hash is given by:
+
+[stem]
+++++
+h(n, \text{from}_1, \text{to}_1, h(\text{payload}_1), ..., \text{from}_n, \text{to}_n, h(\text{payload}_n))
+++++
+
+where each message's payload is length-prefixed.
+
+- events are omitted from the receipt's hash since they are committed separately in the block.
+
+[#event_hash]
+== Event hash
+
+The hash of an event stem:[$(\text{keys}, \text{data})$] emitted by a contract whose address is `emitter_address` and a transaction whose hash is `tx_hash` is given by:
+
+[stem]
+++++
+h\big(\text{emitter_address}, \text{tx_hash}, h(\text{keys}), h(\text{data}) \big)
+++++
+
+Where stem:[$h$] is the Poseidon hash function.
 
 [NOTE]
 ====
 Zeros inside the hash computation of an object are used as placeholders, to be replaced in the future by meaningful fields.
-====
-
-[NOTE]
-====
-Several properties of the block header, such as `l1_gas_price` and `l1_da_mode`, are not yet included in the block hash. This will change in a future Starknet version.
 ====
