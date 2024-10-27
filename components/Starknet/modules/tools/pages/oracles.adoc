@@ -1,13 +1,8 @@
----
-Title: Use Oracles in Your Starknet Applications
----
+= Oracles
 
-import { Callout, Tabs } from "nextra/components";
-
-# Oracles  
 This reference guide presents various Oracles that you can utilize while building on Starknet. Oracles supply offchain data to the blockchain, enabling smart contracts to access a diverse range of information.
 
-## Pyth Network
+== Pyth Network
 
 The link:https://pyth.network/[Pyth Network] is one of the largest first-party Oracle network, delivering real-time data across link:https://docs.pyth.network/price-feeds/contract-addresses[a vast number of chains].
 
@@ -17,31 +12,30 @@ The network comprises some of the world’s link:https://pyth.network/publishers
 
 This guide explains how to use real-time Pyth data in Starknet contracts.
 
-## Install the Pyth SDK
+== Install the Pyth SDK
 
 Use the following dependency in your `Scarb.toml` file to use the latest Pyth Starknet package:
 
-```toml copy
+[source,toml]
+----
 [dependencies]
 pyth = { git = "https://github.com/pyth-network/pyth-crosschain.git", tag = "pyth-starknet-contract-v0.1.0"}
-```
+----
 
 Pyth also provides a javascript SDK to interact with the Pyth contract on Starknet. You can install it using the following command:
 
-<Tabs items={["npm", "yarn"]}>
-  <Tabs.Tab>
-    ```sh copy
-    npm install --save @pythnetwork/pyth-starknet-js
-    ```
-  </Tabs.Tab>
-  <Tabs.Tab>
-  ```sh copy
-  yarn add @pythnetwork/pyth-starknet-js
-  ```
-  </Tabs.Tab>
-</Tabs>
 
-## Write Contract Code
+[source,toml]
+----
+npm install --save @pythnetwork/pyth-starknet-js
+----
+
+[source,toml]
+----
+yarn add @pythnetwork/pyth-starknet-js
+----
+
+== Write Contract Code
 
 The code snippet below provides an example module fetching the STRK/USD price from Pyth price feeds:
 
@@ -129,16 +123,17 @@ The pyth_price_update argument contains verified prices from Pyth.
 Calling pyth.update_price_feeds with this value updates the on-chain Pyth price and ensures your application has recent price data.
 The pyth_price_update can be fetched from Hermes; Consult link:https://docs.pyth.network/price-feeds/fetch-price-updates[Fetch Price Updates] for more information on how to fetch the pyth_price_update.
 
-<Callout type="info" emoji="ℹ️">
-  Unlike Ethereum, there is no native token on Starknet. You cannot pass tokens
-  implicitly when calling functions. Moreover, there is no concept of a
-  designated payer account, unlike Solana. In Starknet, all token transfers must
-  be performed explicitly by calling functions on the token's ERC20 contract.
-  Regarding the Pyth contract on Starknet, the caller must approve the fee
-  transfer before calling `update_price_feeds` or using similar methods. You can
-  use **STRK** or **ETH** to pay the fee, but STRK is preferred. The fee is
-  currently set to the minimum possible value (1e-18 STRK, 1 WEI).
-</Callout>
+[IMPORTANT]
+====
+Unlike Ethereum, there is no native token on Starknet. You cannot pass tokens
+implicitly when calling functions. Moreover, there is no concept of a
+designated payer account, unlike Solana. In Starknet, all token transfers must
+be performed explicitly by calling functions on the token's ERC20 contract.
+Regarding the Pyth contract on Starknet, the caller must approve the feetransfer before
+calling `update_price_feeds` or using similar methods. You can use **STRK** or **ETH** to pay the fee, but STRK is preferred. 
+The fee is currently set to the minimum possible value (1e-18 STRK, 1 WEI).
+====
+  
 
 The code snippet above does the following things:
 
@@ -146,7 +141,7 @@ The code snippet above does the following things:
 1. Call `pyth.update_price_feeds` and pass `pyth_price_update` to update the Pyth price feeds.
 1. Call `pyth.get_price_no_older_than` to read the price, providing the link:https://pyth.network/developers/price-feed-ids[price feed ID] you wish to read.
 
-### Write Client Code
+=== Write Client Code
 
 The code snippet below provides an example of how to fetch price updates and convert to `ByteBuffer` for Starknet using the `pyth-starknet-js` in JavaScript:
 
@@ -172,20 +167,22 @@ const currentPrices = await connection.getLatestPriceFeeds([priceId]);
 const pythUpdate = ByteBuffer.fromBase64(currentPrices[0].vaa);
 ```
 
-<Callout type="info" emoji="ℹ️">
-  Price updates must be converted to `ByteBuffer` before being passed on to the
-  Pyth contract on Starknet. Use the `ByteBuffer` type from
-  `@pythnetwork/pyth-starknet-js` package as shown above.
-</Callout>
+[IMPORTANT]
+====
+Price updates must be converted to `ByteBuffer` before being passed on to the
+Pyth contract on Starknet. Use the `ByteBuffer` type from
+`@pythnetwork/pyth-starknet-js` package as shown above.
+====
 
-## Additional Resources
+
+== Additional Resources
 
 You may find these additional resources helpful for developing your Starknet application.
 
-### Interface
+=== Interface
 
 The link:https://github.com/pyth-network/pyth-crosschain/blob/main/target_chains/starknet/contracts/src/pyth/interface.cairo#L9[Starknet Interface] provides a list of functions that can be called on the Pyth contract deployed on Starknet.
 
-### Example Applications
+=== Example Applications
 
 - link:https://github.com/pyth-network/pyth-examples/tree/main/price_feeds/starknet[Send-USD], which updates and consumes STRK/USD price feeds on Starknet to send USD to a recipient.
