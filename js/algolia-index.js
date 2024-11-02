@@ -114,7 +114,7 @@ const startIndexing = (currentBranch) => {
         .replace("ROOT/index", "")
         .replace("index", "")
       const record = {
-        url: "https://docs.starknet.io/documentation" + url,
+        url: "https://docs.starknet.io" + url,
         ...file,
       };
       algoliaIndex.saveObject(record).wait();
