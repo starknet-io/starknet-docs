@@ -1,7 +1,3 @@
----
-assignees: landauraz
----
-
 ### Description of the Changes
 
 Please add a detailed description of the change you have made.
