@@ -1,5 +1,10 @@
 = Declaring a smart contract
 
+== Overview
+
+Before a contract is deployed on Starknet it first needs to be _declared_. Declaration is the process of submitting a contract's code to Starknet and making it available for future deployments, analogous to registering its blueprint.
+
+This page will guide you through the steps necesary to declare a smart contract on Starknet. For more details on declaration and its benefits, see xref:architecture-and-concepts:smart-contracts/contract-classes.adoc[Contract classes and instances].
 
 == Prerequisites
 
@@ -45,16 +50,13 @@ anywhere, and select the default Starknet Foundry as a test runner.
 
 [NOTE]
 ====
-The first time a project is built, some components of Scarb are compiled locally with the Rust toolchain. This process may take a few minutes. This will not happen in subsequent builds.
-====
-
-[NOTE]
-====
-Building a Starknet Foundry project with Scarb requires link:https://www.rust-lang.org/[Rust] to be installed. You can verify that Rust is installed by running:
+Building a Starknet Foundry project with Scarb requires https://www.rust-lang.org/[Rust] to be installed. You can verify that Rust is installed by running:
 
     rustc --version
 
-or install Rust by following the instructions in the link:https://doc.rust-lang.org/beta/book/ch01-01-installation.html[Rust documentation].
+or install Rust by following the instructions in the https://doc.rust-lang.org/beta/book/ch01-01-installation.html[Rust documentation].
+
+Moreover, the first time a project is built, some components of Scarb are compiled locally with the Rust toolchain. This process may take a few minutes, but will not happen in subsequent builds.
 ====
 
 In any case, the `Scarb.toml` file in the project's directory should resemble the following (up to versions number):
@@ -79,7 +81,7 @@ sierra = true
 
 == Setting an RPC provider
 
-In order to interact with Starknet, Starkli requires an RPC endpoint to be configured. For interactions with Starknet Sepolia and Starknet mainnet, Starkli supports default (and possibly limited) RPC endpoints when using the `--network` flag. Configuring a custom RPC endpoint can be done by either using Starkli's `--rpc` flag or setting up Starkli's `STARKNET_RPC` environment variable. To review all Starknet RPC providers, see the xref:tools:api-services.adoc[API providers section].
+In order to interact with Starknet, Starkli requires an RPC endpoint to be configured. For interactions with Starknet Sepolia and Starknet mainnet, Starkli supports default (and limited) RPC endpoints when using the `--network` flag. Configuring a custom RPC endpoint can be done by either using Starkli's `--rpc` flag or setting up Starkli's `STARKNET_RPC` environment variable (see more details in the https://book.starkli.rs/providers#using-an-rpc-url-directly[Starkli documentation]). To review all Starknet RPC providers, see xref:tools:api-services.adoc[API providers].
 
 For demonstration purposes, this tutorial uses Starkli's default Starknet Sepolia RPC endpoint by setting `--network=sepolia`.
 
@@ -90,19 +92,19 @@ A contract can be declared on Starknet using Starkli by running following comman
 
 [source,bash]
 ----
-starkli declare target/dev/<PROJECT_NAME>.json --network=sepolia
+starkli declare target/dev/<PROJECT_NAME>.sierra.json --network=sepolia
 ----
 
 When using `starkli declare`, Starkli will do its best to identify the compiler version of the declared class. In case it fails, the `--compiler-version` flag can be used to specify the version of the compiler as follows:
 
-. Find the compiler version supported by Starkli by running:
+. Find the compiler versions supported by Starkli by running:
 +
 [source,bash]
 ----
 starkli declare --help 
 ----
 +
-and reviewing details for the `--compiler-version` flag.
+and looking for the possible values of the `--compiler-version` flag.
 
 . Find the current Scarb version in use:
 +
@@ -111,7 +113,7 @@ and reviewing details for the `--compiler-version` flag.
 scarb --version
 ----
 
-. In this case you need to use a different compiler version, switch to a different Scarb version using `asdf`:
+. In case a different compiler version is required, switch to a different Scarb version using `asdf`:
 
 .. Install the desired Scarb version:
 +
@@ -127,14 +129,17 @@ asdf install scarb <VERSION>
 asdf local scarb <VERSION>
 ----
 
-The following is an example of declaring a contract with a specific compiler version, as well as a custom RPC provider:
+[TIP]
+====
+The following is an example of declaring a contract with both a a custom RPC endpoint (provided by https://www.infura.io/[Infura]) and a specific compiler version:
 
 [source,bash]
 ----
-starkli declare target/dev/contracts_Ownable.sierra.json \
+starkli declare target/dev/<PROJECT_NAME>.sierra.json \
+    --rpc=https://starknet-sepolia.infura.io/v3/<API_KEY> \
     --compiler-version=2.6.0 \
-    --rpc=https://starknet-sepolia.infura.io/v3/<API_KEY>
 ----
+====
 
 == Expected result
 
@@ -145,11 +150,13 @@ The output of a successful contract declaration using Starkli should resemble th
 Class hash declared: <CLASS_HASH>
 ----
 
-This hash is the identifier of the contract class in Starknet. You can think of it as the address of the contract class. You can use a block explorer like https://sepolia.starkscan.co/[StarkScan] or https://sepolia.voyager.online/[Voyager] to see the contract class on Starknet.
-
-On the other hand, if the contract you are declaring has previously been declared by someone else, the output should resemble the following:
+On the other hand, if the contract you are declaring has previously been declared, the output should resemble the following:
 
 [source,bash]
 ----
 Not declaring class as its already declared. Class hash: <CLASS_HASH>
 ----
+
+This is because declaration is a one-time process for each unique contract code, and a contract's class hash is its unique identifier (for more details, see xref:architecture-and-concepts:smart-contracts/class-hash.adoc[Class hash]).
+
+In both cases, however, you should be able to see the declated contract on a block explorer like https://sepolia.starkscan.co/[StarkScan] or https://sepolia.voyager.online/[Voyager] by searching for its class hash.
