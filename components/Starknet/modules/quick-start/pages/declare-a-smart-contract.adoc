@@ -3,7 +3,6 @@
 
 == Prerequisites
 
-=== Ensure Starkli and Scarb are installed correctly
 Ensure that the below commands are working properly on your system.
 
 [source, bash]
@@ -11,35 +10,66 @@ Ensure that the below commands are working properly on your system.
 starkli --version
 scarb --version
 snforge --version
+sncast --version
 ----
 
 If either of the above commands fails, see xref:environment-setup.adoc[Setting up your environment].
 
-== Introduction
+// == Introduction
 
-Deploying a smart contract in Starknet requires two steps:
+// Deploying a smart contract in Starknet requires two steps:
 
-* Declaring the class of your contract, i.e. sending your contract's code to the network.
-* Deploying a contract, i.e. creating an instance of the code you previously declared.
+// * Declaring the class of your contract, i.e. sending your contract's code to the network.
+// * Deploying a contract, i.e. creating an instance of the code you previously declared.
 
 
 == Compiling a smart contract
 
-Scarb is the preferred tool to create a new Starknet smart contract project and compile it.
+Before a smart contract can be declared, it first needs to be compiled. To compile an existing smart contract project, simply navigate into the project's directory and run:
 
-To create a new Starknet smart contract project with Scarb, run `scarb new <project_name>`, and select the default `Starknet Foundry` as a test runner. Alternatively,  run `scarb init` in an empty directory to achieve the same result.
-
-Navigate into the newly created directory:
 [source,bash]
 ----
-cd <project_name>
+scarb build
 ----
 
-The `Scarb.toml` file should look similar to this (versions might vary):
+The compiled contract should be saved in the `target/dev/` directory.
+
+If you require a new smart contract project, run either:
+
+[source,bash]
+----
+scarb init
+----
+
+in an empty folder or:
+
+[source,bash]
+----
+scarb new <project_name>
+----
+
+anywhere and select the default Starknet Foundry as a test runner.
+
+[NOTE]
+====
+The first time a project is built, some components of Scarb are compiled locally with the Rust toolchain. This process may take a few minutes. This will not happen in subsequent builds.
+====
+
+[NOTE]
+====
+Building a Starknet Foundry project with Scarb requires link:https://www.rust-lang.org/[Rust] to be installed. You can verify that Rust is installed by running:
+
+    rustc --version
+
+or install Rust by following the instructions in the link:https://doc.rust-lang.org/beta/book/ch01-01-installation.html[Rust documentation].
+====
+
+The `Scarb.toml` file in the project's directory should resemble the following (up to versions number):
+
 [source,toml]
 ----
 [package]
-name = "my_project"
+name = "sn_docs"
 version = "0.1.0"
 edition = "2023_11"
 
@@ -54,119 +84,79 @@ assert_macros = "2.8.4"
 sierra = true
 ----
 
-
-
-[NOTE]
-====
-Building a Starknet Foundry project with Scarb requires that a Rust toolchain is installed. You can install the Rust toolchain by running the following command: `curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh`.
-See more details on the Rust installation process at link:https://doc.rust-lang.org/beta/book/ch01-01-installation.html[Rust installation].
-====
-
-Run the following command:
-
-[source,bash]
-----
-scarb build
-----
-
-The compiled contract will be saved in the `target/dev/` directory.
-
-The contract is now compiled and ready to be declared.
-
-[NOTE]
-====
-The first time the project is built, some components of Scarb are compiled locally with the Rust toolchain. This process may take a few minutes. This will not happen in subsequent builds.
-====
-
 == Setting an RPC provider
 
-To interact with the Starknet network, you need to set an RPC endpoint for Starkli, as an environment variable or the flag `--rpc`. 
+In order to interact with Starknet, Starkli requires an RPC endpoint to be configured. For interactions with Starknet Sepolia and Starknet mainnet, Starkli supports default (and possiblly limitied) RPC endpoints when using the `--network` flag. Configuring a custom RPC endpoint can be done by either using Starkli's `--rpc` flag or setting up Starkli's `STARKNET_RPC` enviorment variable. To review all Starknet RPC providers, see the xref:tools:api-services.adoc[API providers section].
 
-The following are the RPC providers available for Starknet: xref:tools:api-services.adoc[API providers].
+For demonstration purposes, this tutorial uses Starkli's default Starknet Sepolia RPC endpoint by setting `--network=sepolia`.
 
-For interactions with Starknet Sepolia and Starknet mainnet, Starkli supports default RPC providers when using the `--network=sepolia` or `--network=mainnet` flags (limitations to these may apply).
 
 == Declaring a smart contract
 
-A contract can be declared on Starknet using the following command:
+A contract can be declared on Starknet using Starkli by running following command:
 
 [source,bash]
 ----
 starkli declare target/dev/<NAME>.json --network=sepolia
 ----
 
-[NOTE]
-====
-Starkli will do its best to identify the compiler version of the declare class. In case it fails, the `--compiler-version` flag can be used to specify the version of the compiler. 
-====
+When using `starkli declare`, Starkli will do its best to identify the compiler version of the declared class. In case it fails, the `--compiler-version` flag can be used to specify the version of the compiler as follows:
 
-
-You can find the compiler version supported by Starkli by running:
-
+. Find the compiler version supported by Starkli by running:
++
 [source,bash]
 ----
 starkli declare --help 
 ----
++
+and reviewing details for the `--compiler-version` flag.
 
-In the `--compiler-version` flag you will see possible versions of the compiler:
-
-[source,bash]
-----
---compiler-version <COMPILER_VERSION>
-          Statically-linked Sierra compiler version [possible values: ...]
-----
-
-To see the current Scarb version in use, run:
-
+. Find the current Scarb version in use:
++
 [source,bash]
 ----
 scarb --version
 ----
 
-In this case you need to use a different compiler version, switching to a different Scarb version is easy with `asdf.`
+. In this case you need to use a different compiler version, switch to a different Scarb version using `asdf`:
 
-First install the desired Scarb version:
-
+.. Install the desired Scarb version:
++
 [source,bash]
 ----
 asdf install scarb <VERSION>
 ----
 
-Then select it as the local version for the project:
-
+.. Select the desired Scarb version as the local version for the project:
++
 [source,bash]
 ----
 asdf local scarb <VERSION>
 ----
 
-
-== Expected result
+The following is an example of declaring a contract with a specific compiler version, as well as a custom RPC provider:
 
 [source,bash]
 ----
-starkli declare target/dev/<NAME>.json --network=sepolia
+starkli declare target/dev/contracts_Ownable.sierra.json \
+    --compiler-version=2.6.0 \
+    --rpc=https://starknet-sepolia.infura.io/v3/<API_KEY>
 ----
 
-The result of the declaration command is a contract class hash:
+== Expected result
+
+The output of a successful contract declaration using Starkli should resemble the following:
+
 [source,bash]
 ----
 Class hash declared: <CLASS_HASH>
 ----
 
-This hash is the identifier of the contract class in Starknet. You can think of it as the address of the contract class. You can use a block explorer like https://sepolia.starkscan.co/class/0x00e68b4b07aeecc72f768b1c086d9b0aadce131a40a1067ffb92d0b480cf325d[StarkScan] to see the contract class hash in the blockchain.
+This hash is the identifier of the contract class in Starknet. You can think of it as the address of the contract class. You can use a block explorer like https://sepolia.starkscan.co/[StarkScan] or https://sepolia.voyager.online/[Voyager] to see the contract class on Starknet.
 
-If the contract you are declaring has previously been declared by someone else, you will get an output like this:
+On the other hand, if the contract you are declaring has previously been declared by someone else, the output should resemble the following:
 
 [source,bash]
 ----
 Not declaring class as its already declared. Class hash: <CLASS_HASH>
-----
-
-An example of declaring a contract with a specific compiler version, and an RPC provider:
-
-[source,bash]
-----
-starkli declare target/dev/contracts_Ownable.sierra.json \
-    --rpc=https://starknet-sepolia.infura.io/v3/<API_KEY> \
-    --compiler-version=2.6.0
 ----
