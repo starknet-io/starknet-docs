@@ -5,7 +5,7 @@
 
 As an L2 validity rollup, Starknet's state on Ethereum can't be updated without proving that all the blocks between the current state and the new state are valid. But what "proving that a block is valid" exactly means? Technically, only statements of the form "_Cairo program stem:[P] ran successfully with output stem:[O]_" can be proven, which means that the statement "_Blocks stem:[B] is valid_" needs to expressed in the form of a Cairo program.
 
-This is where the Starknet operating system (OS) comes in – it is a Cairo Zero program that verifies the validity of blocks by getting an intial state stem:[S] and a list of transactions (i.e., block) stem:[B] as input and outputting the state that is the result of applying stem:[B] on stem:[S].
+This is where the Starknet operating system (OS) comes in – it is a Cairo Zero program that verifies the validity of blocks by getting an initial state stem:[S] and a list of transactions (i.e., block) stem:[B] as input and outputting the state that is the result of applying stem:[B] on stem:[S].
 
 The Starknet OS is the program required for updating Starknet's state on Ethereum (up to some xref:#caveats[caveats]). As so, is the final arbiter on what does it mean for a transaction to execute correctly. For example, while a malicious sequencer can deviate from xref:architecture-and-concepts:network-architecture/transaction-life-cycle.adoc#transaction_flow[the `INVOKE` transaction's behavior] by skipping the execution of `+__validate__+` before `+__execute__+` in the calling account contract, this specification is link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_transactions.cairo#L390[enforced by the Starknet OS] and therefore this sequencer will not be able to produce the proof for a block in which this transaction was included. 
 
@@ -81,7 +81,7 @@ To submit use an “applicative proof" to Ethereum, SHARP's verifier contract mu
 
 The way the applicative bootloader works is by executing one or more instances of `P`, and then use their outputs as input to `A`. In the case of Starknet, `P` is the Starknet OS and `A` is a new cairo program that squashes the state diffs of several blocks (the code of which can be found in the link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/aggregator/main.cairo#L8[cairo-lang GitHub repository]). This way, we can take individual executions of the Starknet OS for some block range, and end up with a single program whose valid execution attests to the validity of all blocks within that range, and whose output is the squashed state diff.
 
-On Ethereum, Starknet's core contract will update Starknet's state only if an “applicative proof" using #program-hashes[the expected Starknet OS and aggregator program] as `P` and `A` (respectively) was successfuly verified on chain.
+On Ethereum, Starknet's core contract will update Starknet's state only if an “applicative proof" using #program-hashes[the expected Starknet OS and aggregator program] as `P` and `A` (respectively) was successfully verified on chain.
 
 [id="program-hashes"]
 == Program hashes
