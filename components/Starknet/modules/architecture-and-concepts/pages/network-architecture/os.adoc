@@ -1,112 +1,87 @@
 [id="sn_os"]
-= The Starknet operating system
+= The Starknet OS
 
 == Introduction
 
-As an L2 validity rollup, Starknet's state on Ethereum can't be updated without proving that all the blocks between the current state and the new state are valid. But what "proving that a block is valid" exactly means? Technically, only statements of the form "_Cairo program stem:[P] ran successfully with output stem:[O]_" can be proven, which means that the statement "_Blocks stem:[B] is valid_" needs to expressed in the form of a Cairo program.
+The Starknet operating system (Starknet OS) is a key element in Starknet's architecture, but also one of its more complicated components. This page's aim is to gradually walk through what the Starknet OS, how does it work and interacts with the Starknet Core contract, and where its implementations can be found. Some parts may require reading more than once, but don't hesitate to https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Feedback%20for%20%22The%20Starknet%20operating%20system%22[reach out^] if you feel further clarification is needed. 
 
-This is where the Starknet operating system (OS) comes in – it is a Cairo Zero program that verifies the validity of blocks by getting an initial state stem:[S] and a list of transactions (i.e., block) stem:[B] as input and outputting the state that is the result of applying stem:[B] on stem:[S].
+== What is the Starknet OS?
 
-The Starknet OS is the program required for updating Starknet's state on Ethereum (up to some xref:#caveats[caveats]). As so, is the final arbiter on what does it mean for a transaction to execute correctly. For example, while a malicious sequencer can deviate from xref:architecture-and-concepts:network-architecture/transaction-life-cycle.adoc#transaction_flow[the `INVOKE` transaction's behavior] by skipping the execution of `+__validate__+` before `+__execute__+` in the calling account contract, this specification is link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_transactions.cairo#L390[enforced by the Starknet OS] and therefore this sequencer will not be able to produce the proof for a block in which this transaction was included. 
+As an L2 validity rollup, Starknet's state on Ethereum can't be updated without proving that all the blocks between the current state and the new state are valid. But what does "proving that a block is valid" mean exactly? Technically, only statements of the form "_Cairo program stem:[P] ran successfully with output stem:[O]_" can be proven, which means that the statement "_Blocks stem:[B] is valid_" needs to expressed in the form of a Cairo program.
 
-== High-level overview
+This is where the Starknet OS comes in: it is a Cairo Zero program that verifies the validity of blocks by getting an initial state stem:[S] and a list of transactions (i.e., block) stem:[B] as input and outputting the state that is the result of applying stem:[B] on stem:[S].
+
+The Starknet OS is the program required for updating Starknet's state on Ethereum (xref:#starknet_os_and_ethereum[up to some caveats]). As such, is it also the final arbiter on what does it mean for a transaction to execute correctly. For example, while a malicious sequencer can deviate from xref:architecture-and-concepts:network-architecture/transaction-life-cycle.adoc#transaction_flow[the `INVOKE` transaction's behavior] by skipping the execution of `+__validate__+` before `+__execute__+` in the calling account contract, this specification is https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_transactions.cairo#L390[enforced by the Starknet OS^] and therefore this sequencer will not be able to produce the proof for the block in which this transaction was included. 
+
+== How does the Starknet OS work?
+
+=== High-level overview
 
 Very roughly, the Starknet OS's execution consists of the following steps:
 
-* Preprocessing: preparing the Starknet OS's inputs, which include the various hints that will be needed throughout the execution (for example, 
+. Preprocessing: preparing the Starknet OS's inputs, which include the various hints that will be needed throughout the execution (for example, 
 the Merkle path of every accessed storage slot and the code of every accessed contract) 
+. Running the transactions: the bulk of the Starknet OS's execution, where transactions are executed sequentially such that for each transaction:
+    * The associated account contract is loaded into the memory and called
+    * Inner contracts are called, such that https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L149[the entry `(contract_address, class_hash)` is added to a global state updates dictionary^] for each loaded contract (which is needed to assert that the loaded code corresponds to the class hash that is part of the state commitment)
 
-* Running the transactions: the bulk of the Starknet OS's execution, where transactions are executed sequentially such that for each transaction:
-    ** The associated account contract is loaded into the memory and called
-    ** Inner contracts are called
-// For each loaded contract, we assert that the loaded code corresponds to the class hash that is part of the state commitment (this is enforced by 
-// link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L149[adding an entry to the state changes dictionary] with the initial `contract_address`, `class_hash` pair, 
-// and later use this information to compute the new state commitment in the link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/os.cairo#L106[state_update] function).
-// In fact, contract calls are done non-deterministically, we guess the contract's response and verify later, for more details see the syscall mechanism section.
-    ** State updates are accumulated in a _global state updates dictionary_
++
+[NOTE]
+====
+Contract calls are in fact done non-deterministically, i.e. the contract's response are guessed and verified later. For more details, see xref:#syscall-mechanism[Syscall mechanism].
+====
+    
+    * State updates are accumulated in the global state updates dictionary
+. Verifying that the new commitment corresponds to applying the updates accumulated in the global state updates dictionary to the old commitment (for more details, see the link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/state/state.cairo#L40[`state_update` function in `state.cairo`^]).
+. Encoding the state diff and adding it to the output segment for xref:network-architecture/data-availability.adoc[data availability] purposes (for more details, see the link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/output.cairo#L71[`serialize_os_output` function in `output.cairo`^])
 
-* Verifying that the new commitment corresponds to applying the updates accumulated in the global state updates dictionary to the old commitment (for more details, link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/state/state.cairo#L40[state.cairo]).
+[id="syscall-mechanism"]
+=== Syscall mechanism
 
-* Encoding the state diff and adding it to the output segment for xref:network-architecture/data-availability.adoc[data availability] purposes (for more details, see the link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/output.cairo#L71[serialize_os_output function])
+A contract can invoke xref:smart-contracts/system-calls-cairo1.adoc[system calls] throughout its execution, which pass the control from the currently executing contract to the Starknet OS itself. Such operations are required when a contract needs information that does not exist within its code, e.g. accessing the Starknet state to read a storage value or to call another contract.
 
-== Syscall mechanism
+The Starknet OS's code heavily relies on non-determinism to handle system calls. Whenever a contract invokes some syscall, the request, alongside the guessed response, is recorded in a syscalls array.
+At the end of every entry point execution, we go over the syscalls array and verify that the responses were correct (for more details, see the https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L286[`execute_entry_point` function in `execute_transactions.cairo`^]).
 
-A contract can invoke xref:architecture-and-concepts:network-architecture/smart-contracts/system-calls-cairo1[system calls] throughout its execution, which pass the control from the currently executing contract to the Starknet OS itself. Such operations are required when a contract needs information that does not exist within its code, e.g. accessing the Starknet state to read a storage value or to call another contract.
-
-The Starknet OS's code heavily relies on non-determinism to handle system calls. Whenever a contract invokes some syscall, the request, alongside the guessed response, is recorded in a _syscalls array_.
-At the end of every entry point execution, we go over the syscalls array and verify that the responses were correct (see more details in link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L286[execute_transactions.cairo]). For some syscalls, such as the xref:architecture-and-concepts:smart-contracts/system-calls-cairo1.adoc#get_execution_info[get_execution_info syscall] 
-which returns the block hash and number, correctness means consistency with the value given to the Starknet OS as input. correctness is very clear, 
-e.g. For contract calls, however, one needs to execute the called contract and verify that the actual response and the guessed response are identical.
-
-But how can we guess the responses to all the contract calls before executing them? For that, it is important to distinguish two different styles-of-execution that a Starknet block goes through:
+For syscalls such as xref:architecture-and-concepts:smart-contracts/system-calls-cairo1.adoc#get_execution_info[`get_execution_info`], 
+which returns the block hash and number, correctness means consistency with the value given to the Starknet OS as input. For contract calls, however, one needs to execute the called contract and verify that the actual response and the guessed response are identical. But how can we guess the responses to all the contract calls before executing them? For that, it is important to distinguish two different styles-of-execution that a Starknet block goes through:
 
 * The first one is done by a sequencer, when constructing the block from incoming transactions
 * The second one is done by a prover, when executing the Starknet OS in order to generate a proof for the (already finalized) block
 
 Therefore, when running the OS, we already know what is going to happen: the block has already been executed by the sequencer, and so we know exactly what contracts and storage slots will be accessed, what each internal call will return, and so on.
 
-Note that in the first execution, the sequencer can run in whatever way he chooses. In fact, he doesn't even have to run through the Cairo VM at all, but rather link:https://github.com/lambdaclass/cairo_native[precompile contracts to machine code and run them natively]. It is crucial, however, that both executions agree on the execution semantics, since, as we xref:#introduction[mentioned previously], the Starknet OS is the final arbiter and if it disagrees on the validity of the block, the sequencer will not be able to produce a proof for that block (and the only way forward would be a reorg on Starknet).
+It's worth noting that in the first execution, the sequencer can run in whatever way he chooses. In fact, he doesn't even have to run through the Cairo VM at all, but rather https://github.com/lambdaclass/cairo_native[precompile contracts to machine code and run them natively^]. Moreover, sequencers can also impose restrictions that are not enforced by the Starknet OS. Such discrepancy between the two executions may seem like a bug, but as long as these restrictions only protect the sequencers themselves, rather than the correctness of execution, there is no reason to enforce them in the Starknet OS. A good example for such restriction is the xref:architecture-and-concepts:accounts/account-functions#limitations_of_validation[limits on validation functions] that protect the sequencer from DoS attacks. It is crucial, however, that both executions agree on the execution semantics, since, as mentioned in xref:#introduction[What is the Starknet OS?], the Starknet OS is the final arbiter and if it disagrees on the validity of the block, the sequencer will not be able to produce a proof for that block (and the only way forward would be a reorg on Starknet).
 
-Sequencers can also impose restrictions that are not enforced by the Starknet OS. Such discrepancy between the two executions may seem like a bug, but as long as these restrictions only protect the sequencers themselves, rather than the correctness of execution, there is no reason to enforce them in the Starknet OS. A good example for such 
-restriction is the xref:architecture-and-concepts:accounts/account-functions#limitations_of_validation[validate-related limits] that protect the sequencer from DoS attacks.
+[id="os-and-core-contract"]
+== Starknet OS and the Starknet Core contract
+
+The Starknet Core contract is the contract responsible for storing and updating Starknet's state on Ethereum. As of Starknet v0.13.2 and as part of https://community.starknet.io/t/starknet-v0-13-2-pre-release-notes/114223#starknet-applicative-recursion-3[SHARP's applicative recursion feature^], proofs of the Starknet OS's execution are not enough to update the Starknet Core contract. Instead, it is required to submit an "applicative proof" of a different program called https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/cairo/bootloaders/applicative_bootloader/applicative_bootloader.cairo#L15[the applicative bootloader^].
+
+The way the applicative bootloader works is by verifying a proof of one or more executions of a base program stem:[B] and then using their outputs as input to an aggregator program stem:[A]. In the case of Starknet, stem:[B] is the Starknet OS and stem:[A] is a new cairo program that squashes the state diffs of several blocks (the code of which can be found in the https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/aggregator/main.cairo#L8[cairo-lang GitHub repository^]). This way, individual executions of the Starknet OS for some block range can be "squashed" into a single program whose valid execution attests to the validity of all blocks within that range and whose output is the squashed state diff of these blocks.
+
+In order to verify that an "applicative proof" used the correct Starknet OS and aggregator programs, their program hashes must be stored in the Starknet Core contract. As each Starknet version is associated with a given Starknet OS program, this means that breaking protocol changes must be accompanied by an update to the Starknet OS's (and possibly the aggregator's) program hash registered in the Starknet Core contract.
+
+[TIP]
+====
+To review the Starknet OS's and aggregator's program hashes in the recent Starknet versions, see xref:tools:important-addresses.adoc#important_program_hashes[Important program hashes].
+
+You can also read the current program hashes directly from the Starknet Core contract using its `programHash` and `aggregatorProgramHash` read functions (for example, https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract[using Etherscan^]).
+====
+
+Finally, the Starknet Core contract is also responsible for verifying the few things the Starknet OS can't, including:
+
+* Verifying that the state given to the Starknet OS as input is Starknet's current state on Ethereum
+* Verifying that all xref:architecture-and-concepts:network-architecture/messaging-mechanism.adoc#l1-l2-messages[L1→L2 messages] were sent on Ethereum
 
 == Implementations
 
-The Cairo code of the Starknet OS is available in the link:https://github.com/starkware-libs/cairo-lang/tree/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os[cairo-lang GitHub repository]. 
-However, this repository does not include all the hints implementiation, which are necessary to locally run the Starknet OS. The current implementation of these hints in Python is now deprecated, and will no longer be maintained in future Starknet versions. Instead, a new Rust implementation of the hints, including initializing all inputs of the Starknet OS via a Starknet full node connection, is available in the link:https://github.com/keep-starknet-strange/snos/tree/cb2a6d26faeb658492756fe100bbdf5b1600c768[SNOS GitHub repository]. At the time of writing, SNOS supports the execution of the Starknet OS for Starknet version 0.13.2.
+The Cairo code of the Starknet OS is available in the https://github.com/starkware-libs/cairo-lang/tree/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os[cairo-lang GitHub repository^]. 
+However, this repository does not include all the hints implementiation, which are necessary to locally run the Starknet OS. The current implementation of these hints in Python is now deprecated, and will no longer be maintained in future Starknet versions.
 
 [IMPORTANT]
 ====
 As part of the transition of Starknet's infrastructure to Rust, the Starknet OS's Pythonic hints implementiation is deprecated, and will no longer be maintained in future Starknet versions.
 ====
 
-== Caveats
-
-The Starknet OS leaves a few things unverified, to be later checked by Starknet's Core contract on Ethereum:
-
-* It ignores boundary conditions, i.e. one can generate a proof starting and ending at any two states, as long as the transition is legitimate. The fact that the starting state is indeed the last settled state of Starknet on L1 is left outside the OS (indeed, the OS can't check this).
-* It allows the injection of arbitrary xref:architecture-and-concepts:network-architecture/messaging-mechanism.adoc#l1-l2-messages[L1→L2 messages], and it is up to the Core contract to verify that these messages were indeed sent on Ethereum.
-
-
-Moreover, the Starknet OS should be executed by the xref:#aggregator[applicative bootloader program], and only proofs of its execution with the Starknet OS will be accepted by the Core contract.
-
-[id="applicative-bootloader-program"]
-== Applicative bootloader program
-
-Although the Starknet OS only deals with single blocks, the link:https://community.starknet.io/t/starknet-v0-13-2-pre-release-notes/114223#starknet-applicative-recursion-3[SHARP's applicative recursion feature] enables single proofs to attest to the validity of a sequence of blocks.
-
-// When using applicative recursion, proofs are registered differently on-chain (i.e. we can distinguish an "applicative fact" from a regular fact). 
-
-To submit use an “applicative proof" to Ethereum, SHARP's verifier contract must see a proof for the successful execution of the link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/cairo/bootloaders/applicative_bootloader/applicative_bootloader.cairo#L15[applicative bootloader program] with some base program `P`, and an aggregator program for `A`.
-
-The way the applicative bootloader works is by executing one or more instances of `P`, and then use their outputs as input to `A`. In the case of Starknet, `P` is the Starknet OS and `A` is a new cairo program that squashes the state diffs of several blocks (the code of which can be found in the link:https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/aggregator/main.cairo#L8[cairo-lang GitHub repository]). This way, we can take individual executions of the Starknet OS for some block range, and end up with a single program whose valid execution attests to the validity of all blocks within that range, and whose output is the squashed state diff.
-
-On Ethereum, Starknet's core contract will update Starknet's state only if an “applicative proof" using #program-hashes[the expected Starknet OS and aggregator program] as `P` and `A` (respectively) was successfully verified on chain.
-
-[id="program-hashes"]
-== Program hashes
-
-In order to verify that an "applicative proof" used the correct Starknet OS and aggregator programs, their program hashes must be stored in Starknet's core contract. As each Starknet version is associated with a given Starknet OS program, this means that breaking protocol changes must be accompanied with upgrading the Starknet OS's (and possibly the aggregator's) program hash registered Starknet's core contract.
-
-The following are the Starknet OS and aggregator program hashes for recent program versions:
-
-[discrete]
-=== Starknet OS program hashes
-
-[discrete]
-=== Aggregator program hashes
-
-[%autowidth]
-|===
-| Starknet version | OS program hash | Aggregator program hash
-
-| v0.13.2 | 0x1e324682835e60c4779a683b32713504aed894fd73842f7d05b18e7bd29cd70 | 0x29134351e8694cf55b54addda8b66eb7614791c3f6e98098e3e37b8e8592926
-
-| v0.13.3 | 0x54d3603ed14fb897d0925c48f26330ea9950bd4ca95746dad4f7f09febffe0d | 0x8ef7e2afc1754c5a0a3ca5891c1b1b91db899670a1685c630b9715aee5cd0
-
-|===
-
-[TIP]
-====
-You can read the program hash from the Starknet Core contract on Ethereum directly, e.g. via link:https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F13[Etherscan]
-====
+Instead, a new Rust implementation of the hints, including initializing all inputs of the Starknet OS via a Starknet full node connection, is available in the https://github.com/keep-starknet-strange/snos/tree/cb2a6d26faeb658492756fe100bbdf5b1600c768[SNOS GitHub repository^]. At the time of writing, SNOS supports the execution of the Starknet OS for Starknet version 0.13.2.
