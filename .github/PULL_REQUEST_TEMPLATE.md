@@ -12,7 +12,9 @@ Please paste the specific URL(s) of the content that this PR addresses here.
 
 ### Check List
 
-- [ ] Changes have been done against main branch, and PR does not conflict
+- [ ] Changes made against main branch and PR does not conflict
 - [ ] PR title is meaningful, e.g: `fix: minor typos in README`
+- [ ] Detailed description added under "Description of the Changes"
+- [ ] Specific URL(s) added under "PR Preview URL"
 
 

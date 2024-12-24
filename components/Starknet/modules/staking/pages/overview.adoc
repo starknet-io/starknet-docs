@@ -1,33 +1,48 @@
 [id="staking_overview"]
 = Staking Overview
 
+== Introduction
+Staking on Starknet involves locking STRK tokens in the staking protocol, contributing to network security and performance. Anyone holding STRK in their wallets can stake their tokens on Starknet either directly or by delegating their tokens to others, with rewards based on their level of participation and contribution.
 
-
-Staking on Starknet involves locking STRK tokens in the staking protocol, contributing to network security and performance. Users can either stake directly or delegate their tokens to others, with rewards based on their level of participation and contribution.
-
-The key terms used in this document are:
+=== Key terms
 
 * _Stake_: Locking STRK tokens into the staking protocol.
 * _Delegate_: Assigning STRK tokens to a validator to participate indirectly.
 * _Reward_: Earnings from participating in staking.
 
-[NOTE]
+[id="important-links"]
+=== Important links
+
+* https://www.starknet.io/staking[Staking page on starknet.io]
+* link:https://github.com/starkware-libs/starknet-staking[`starknet-staking` GitHub repository]
+* Staking dashboards:
+** link:https://voyager.online/staking-dashboard[Voyager]
+** link:https://www.stakingrewards.com/stake-app?input=starknet[Staking Rewards]
+** link:https://dashboard.endur.fi/[Endur]
+
+// [NOTE]
+// ====
+// STRK tokens never leave the Starknet protocol during these operations.
+// ====
+
+== First stage
+
+In the future, validators will be responsible for maintaining and securing the network by producing, attesting, and proving blocks, as part of Starknet's consensus protocol. However, handing over these responsibilities all in one day is neither feasible nor desirable.  Instead, the first stage of staking on Starknet will only require validators to run full nodes and test the protocol's economic incentive structure and some of its key smart contract components.
+
+[IMPORTANT]
 ====
-STRK tokens never leave the Starknet protocol during these operations.
+In the first phase of staking on Starknet, validators are required to run a full node in preparation for future staking phases
 ====
 
+Over time, validators' responsibilities will gradually increase, with each phase bringing additional tasks until validators fully maintain and secure the network. This incremental approach is necessary, as it allows for the following:
 
-== Staking Protocol Details
+* Gradual implementation: introducing features in small and manageable milestones, ensuring each step is carefully implemented and easily integrated, and allowing to refine the process and address issues as they arise
 
-=== Important addresses and links
+* Validators preparation: giving validators time to adapt to their new responsibilities and critical roles, maximizing the network's stability during the transition
 
-* Starknet Staking on Starknet.io (coming soon)
-* Starknet Staking link:https://github.com/starkware-libs/starknet-staking[repository].
-* For staking contract addresses, see the xref:#contract-addresses[Contract Addresses] section below.
-* Staking dashboards (coming soon):
-** link:https://voyager.online/staking-dashboard[Voyager].
-** link:https://www.stakingrewards.com/stake-app?input=starknet[Staking Rewards].
-** Karnot.
+* Proven reliability: having a proven set of sequencers that reliably produce and attest to blocks by the time validators perform their full responsibilities, cementifying the network's decentralization
+
+== Protocol details
 
 === Overview
 
@@ -38,8 +53,8 @@ The staking protocol features two main options:
 
 Validators and delegators can both unstake their funds, subject to network-defined latencies for security.
 
-
-=== Minting Curve
+[id=minting-curve]
+=== Minting curve
 
 The minting curve balances participation and inflation by adjusting rewards based on the total STRK locked in the protocol. It is defined by the formula:
 
@@ -48,15 +63,15 @@ The minting curve balances participation and inflation by adjusting rewards base
 M = \frac{C}{10} \times \sqrt{S}
 ++++
 
-Where:
+where:
 
-* stem:[S] is the staking rate as a percentage of the total token supply.
-* stem:[M] is the annual minting rate as a percentage of the total token supply.
-* stem:[C] is the maximum theoretical inflation percentage.
+* stem:[S] is the staking rate as a percentage of the total token supply
+* stem:[M] is the annual minting rate as a percentage of the total token supply
+* stem:[C] is the maximum theoretical inflation percentage
 
 For the first stage, stem:[C] is proposed to be 1.6%.
 
-=== Staking Rewards
+=== Staking rewards
 
 Rewards are distributed based on the amount staked and the commission policy constant stem:[CP] set by the validator. The yearly reward percentages are calculated using the following formulas:
 
@@ -68,50 +83,70 @@ Rewards are distributed based on the amount staked and the commission policy con
 \end{align}
 ++++
 
-M and S are the same as described above in the minting curve section.
+where stem:[M] and stem:[S] are the same as described in xref:#minting-curve[the minting curve section].
 
 === Latencies
 
-* **Current Version**: Immediate entry and exit from the staking protocol. However, funds are subject to a 21-day security lockup after signaling unstake intent.
-* **Future Versions**: Introduction of epochs to determine entry/exit latencies and continued 21-day lockup after signaling unstake intent.
+* Current version: Immediate entry and exit from the staking protocol. However, funds are subject to a 21-day security lockup after signaling unstake intent.
+* Future versions: Introduction of epochs to determine entry/exit latencies and continued 21-day lockup after signaling unstake intent.
 
 [NOTE]
 ====
 Stake delegators can switch between validators without waiting for the full lockup period, promoting a competitive delegation market.
 ====
 
-=== Economic Parameters
-
-The proposed economic parameters are:
-
-* **Minimum STRK for Staking:** 20,000 STRK
-* **Withdrawal Security Lockup:** 21 days
-* **Minting Curve Yearly Inflation Cap (stem:[C]):** 1.6% (see link:https://community.starknet.io/t/staking-on-starknet-voting-proposal/114442/[here] for the relevant voting proposal)
-* **Commission Policy Parameter (stem:[CP]):** Set by the validator (0 - 1). In this first version, it can only be lowered once set. In future versions, more elaborate commission policies would be enabled.
-
-These values are our proposed starting points for this version of the protocol. As part of the rationale behind this version, they are subject to change and may be adjusted to better suit the protocol’s needs under the proper governance procedures.
-
 [id="contract-addresses"]
-== Contract Addresses
-=== Sepolia
+== Contract addresses
 
-Below are the relevant contract addresses and parameters for interacting with the staking protocol on Sepolia testnet:
+=== L1 addresses
+[horizontal, labelwidth="15"]
 
-==== Addresses
+==== Reward supplier contract
 
-* **L1:**
-  - Reward supplier address: 0xE58d25681B9d290D60e4d7f379a05d5BFD973fFB
-  - Mint manager address: 0x648D1B35a932F5189e7ff97b2F795E03734DE4ce
+[horizontal, labelwidth="15"]
+Mainnet:: 0xCa1406D57eD09947E68DE121316C87113fBE9ff5
+Sepolia:: 0xE58d25681B9d290D60e4d7f379a05d5BFD973fFB
 
-* **L2:**
-  - Staking address: 0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1
-  - Operator address: 0x04ce1719fd581433d59100cc3f00387c66866492253b4f3a08688828ed9f6832
-  - Minting curve address: 0x0351c67dc2d4653cbe457be59a035f80ff1e6f6939118dad1b7a94317a51a454
-  - Reward supplier address: 0x02ebbebb8ceb2e07f30a5088f5849afd4f908f04f3f9c97c694e5d83d2a7cc61
+==== Mint manager contract
 
-==== Sepolia testing Economic Parameters
+[horizontal, labelwidth="15"]
+Mainnet:: 0xCa14076A3cec95448BaD179cc19B351A4204B88B
+Sepolia:: 0x648D1B35a932F5189e7ff97b2F795E03734DE4ce
 
-* **Minimum STRK for Staking:** 1 STRK
-* **Withdrawal Security Lockup:** 5 minutes
-* **Minting Curve Yearly Inflation Cap (stem:[C]):** 1.6
-* **Technical parameter for developers who want to deep dive:** The index update interval is set to a minimum of 1 minute on Sepolia, in contrast to the 24-hour interval used in production.
+=== L2 addresses
+
+==== Reward supplier contract
+
+[horizontal, labelwidth="15"]
+Mainnet:: 0x009035556d1ee136e7722ae4e78f92828553a45eed3bc9b2aba90788ec2ca112
+Sepolia:: 0x02ebbebb8ceb2e07f30a5088f5849afd4f908f04f3f9c97c694e5d83d2a7cc61
+
+==== Minting curve contract
+
+[horizontal, labelwidth="15"]
+Mainnet:: 0x00ca1705e74233131dbcdee7f1b8d2926bf262168c7df339004b3f46015b6984
+Sepolia:: 0x0351c67dc2d4653cbe457be59a035f80ff1e6f6939118dad1b7a94317a51a454
+
+==== Staking contract
+
+[horizontal, labelwidth="15"]
+Mainnet:: 0x00ca1702e64c81d9a07b86bd2c540188d92a2c73cf5cc0e508d949015e7e84a7
+Sepolia:: 0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1
+
+== Economic parameters
+
+[%autowidth]
+|===
+| Parameter | Mainnet | Sepolia
+
+| Minimum stake for validators | 20K STRK | 1 STRK
+
+| Withdrawal security lockup | 21 days | 5 minutes
+
+| Minting curve yearly inflation cap (stem:[C]) | 1.6 | 1.6
+|===
+
+[NOTE]
+====
+For developers who wish to dive deep, the index update interval parameter is set to a minimum of 1 minute in Starknet Sepolia and 30 minutes in Starknet mainnet.
+====

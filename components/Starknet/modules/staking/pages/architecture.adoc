@@ -3,6 +3,8 @@
 
 Staking on Starknet is designed to enhance network security and decentralization by allowing users to stake their STRK tokens directly or delegate them to other validators. The architecture is modular, with different contracts handling specific responsibilities to ensure flexibility, security, and ease of upgrades. For more details on the staking architecture, visit the following link: https://github.com/starkware-libs/starknet-staking[Starknet Staking Repository].
 
+image::staking-architecture.png[]
+
 == Components of the Staking Architecture
 
 Staking is divided into several key components, each responsible for different aspects of the staking process.
@@ -13,11 +15,8 @@ Staking is divided into several key components, each responsible for different a
 | Contract
 | Description
 
-| Operator Contract
-| Acts as the access point for all interactions with the staking system, wrapping around the staking contract. It enforces access control and whitelisting, ensuring that only authorized users can perform staking operations.
-
 | Staking Contract
-| The central contract that manages the staking process. It handles direct staking, rewards distribution, and interactions with delegation pools. Validators interact with this contract through the Operator contract to stake their tokens, claim rewards, and initiate unstaking.
+| The central contract that manages the staking process, which handles direct staking, rewards distribution, and interactions with delegation pools. Validators interact with this contract to stake their tokens, claim rewards, and initiate unstaking.
 
 | Delegation Pooling Contract
 | This contract manages the delegation process, allowing delegators to assign their tokens to a validator for staking. The contract is responsible for tracking each delegator's share, calculating their rewards, and managing the delegation and unstaking processes.
@@ -46,31 +45,20 @@ The following data structures are stored within the contracts and play a crucial
 
 For more technical details, you can refer to the full staking specification document available in: https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md[Staking Repository Spec].
 
-== Operator Contract
-
-The operator contract serves as the first point of interaction for all users. It manages access control, ensuring that only authorized users can stake, claim rewards, and interact with the staking system. The operator contract forwards user requests to the relevant contracts (e.g., staking contract) and includes features such as whitelisting, which restricts access to specific users if activated.
-
-*Key Functions and Responsibilities*: +
-`stake`: Allows users to stake their STRK tokens, forwarding the request to the staking contract. +
-`increase_stake`: Lets existing stakers add more tokens to their stake. +
-`claim_rewards`: Facilitates the claiming of rewards for stakers and delegators. +
-`unstake_intent`: Initiates the unstaking process by signaling intent, which the staking contract processes. +
-`unstake_action`: Finalizes the unstaking process after the waiting period.
-
 == Staking Contract
 
-The staking contract is the core of the staking system. It manages the entire lifecycle of staking, from initial staking to claiming rewards and unstaking. The operator contract interacts with the staking contract to execute these functions.
+The staking contract is the core of the staking system. It manages the entire lifecycle of staking, from initial staking to claiming rewards and unstaking.
 
-*Key Functions and Responsibilities (accessed via the Operator contract)*: +
-`stake`: Allows users to stake their STRK tokens. This is facilitated by the Operator contract and forwarded to the Staking contract. +
-`increase_stake`: Lets existing validators increase their stake, accessed through the Operator. +
-`unstake_intent`: Initiates the unstaking process, managed by the Operator contract, which interacts with the Staking contract to initiate and finalize the unstaking process. +
-`unstake_action`: Finalizes the unstaking process after the waiting period, returning tokens to the user through the Operator. +
-`claim_rewards`: Allows users to claim rewards, facilitated through the Operator contract.
+*Key Functions and Responsibilities *: +
+`stake`: Allows users to stake their STRK tokens. +
+`increase_stake`: Lets existing validators increase their stake. +
+`unstake_intent`: Initiates the unstaking process, which can be finalized using `unstake_action` if sufficient time has passed. +
+`unstake_action`: Finalizes the unstaking process after the waiting period, returning tokens to the validator address. +
+`claim_rewards`: Allows users to claim rewards.
 
 == Delegation Pooling Contract
 
-The delegation pooling contract enables users to delegate their tokens through the Operator contract. All interactions, such as entering or exiting the pool, are forwarded to the appropriate contracts via the Operator. This contract tracks each delegator's contribution, calculates their rewards, and manages the delegation lifecycle.
+The delegation pooling contract enables users to delegate their tokens. All interactions, such as entering or exiting the pool, are enabled through this contracts, which tracks each delegator's contribution, calculates their rewards, and manages the delegation lifecycle.
 
 *Key Functions and Responsibilities*: +
 `enter_delegation_pool`: Allows users to delegate their tokens to the pool associated with a validator. This function transfers the tokens, updates the delegator's record, and integrates them into the validator's pool. +
@@ -98,4 +86,4 @@ The minting curve contract defines the economic model that governs reward distri
 
 == Security and Upgradability
 
-The staking architecture on Starknet is designed with security and upgradability in mind. Each contract is modular, allowing for targeted upgrades and improvements without affecting the entire system. The introduction of the Operator contract adds an extra layer of access control, ensuring only authorized users can interact with the staking system. Access control mechanisms are in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process.
+The staking architecture on Starknet is designed with security and upgradability in mind. Each contract is modular, allowing for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process.
