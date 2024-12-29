@@ -1,16 +1,24 @@
 [id="StarkGate_architecture"]
 = StarkGate architecture
 
-While StarkGate is referred to as _a bridge_, technically, each supported token has its own bridge, each of which is defined in a corresponding pair of L1 and L2 contracts, as described in xref:#bridge_explanation_table[].
+StarkGate architecture, as presented in Figure 1 xref:#StarkGate_architecture_diagram[_StarkGate architecture diagram_], is composed of pairs of L1 and L2 StarkGate contract instances that communicate via Starknet’s L1-L2 messaging mechanism. 
 
-.Components of a bridge for an individual token
+For some tokens, a pair of bridges consist of a single StarkGate instance on L1 and a single StarkGate instance on L2. For most tokens, the pair of bridges is a multi- bridge, which has an instance on L1 and an instance on L2, serving multiple tokens.
+
+Each pair of bridges correspond with the relevant ERC-20 contracts on Ethereum and Starknet, as described in table 1 xref:#bridge_explanation_table[].
+
+._StarkGate architecture_
+[#StarkGate_architecture_diagram]
+image::sg-architecture.png[]
+
+._Components of a bridge for an individual token_
 [#bridge_explanation_table]
 [cols='1,8']
 |===
 | *L1*
 a|
 * ERC-20 contract that defines the token on Ethereum. This contract must exist before you can bridge it.
-* Bridge functionality for ERC-20 tokens is supported in `StarknetTokenBridge.sol`.
+* StarkGate solidity bridge contract instance for ERC-20 tokens which is supported in `StarknetTokenBridge.sol`.
 | *L2*
 a|
 * StarkGate Cairo bridge contract instance of the `token_bridge.cairo` contract class.
@@ -25,18 +33,18 @@ You can check if a token is currently supported with the L1 function `getBridge`
 
 // Ask Dan if he can add a feature that shows all currently supported ERC-20 tokens.
 
-You can permissionlessly add support for ERC-20 tokens to the multi-token bridge using the `enrollTokenBridge` function.
+You can permissionlessly add support for ERC-20 tokens to the multi-token bridge using the `enrollTokenBridge` function. For more information, go to https://docs.starknet.io/starkgate/adding-a-token/[Adding a token].
 
 [#StarkGate_manager_and_registry]
 == The StarkGate Manager and Registry
 
-StarkGate includes the following administration components:
+StarkGate includes the following administration components, which are L1 contracts:
 
 // [horizontal]
-The _StarkGate Manager_:: is responsible for adding bridges
-The _StarkGate Registry_::
-* contains the addresses to all supported bridges
-* enables a bridge developer to stop servicing an existing bridge
+* The _StarkGate Manager_: is responsible for adding tokens to the multi-bridge.
+* The _StarkGate Registry_:
+** Contains the addresses of all supported bridges and tokens.
+** Enables a bridge developer to stop servicing an existing bridge
 
 [#legacy_bridge]
 == Legacy bridges
@@ -97,12 +105,12 @@ This approach, blending manual oversight with automated detection, aims to minim
 
 == Additional resources
 
-* xref:adding-a-token.adoc[]
+* xref:adding-a-token.adoc[Adding a token]
 
 * The xref:function-reference.adoc[_StarkGate function reference_]. Lists functions exposed by the Registry, Manager, and the bridge itself, including:
 ** xref:function-reference.adoc#getBridge[`getBridge`]
 ** xref:function-reference.adoc#enrollTokenBridge[`enrollTokenBridge`]
-** L1 contracts on GitHub
-** L2 contracts on GitHub
+** https://github.com/starknet-io/starkgate-contracts/tree/cairo-1[L1 and L2 contracts on GitHub]
+
 // Awaiting final URL.
 // * link:https://github.com/starknet-io/starkgate-contracts/blob/d62a255307d2f3de65665f18316766a2c69ead78/src/solidity/WithdrawalLimit.sol#L20[`setWithdrawLimitPCT`] in `WithdrawalLimit.sol`
