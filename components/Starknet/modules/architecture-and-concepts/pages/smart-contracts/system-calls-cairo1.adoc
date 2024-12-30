@@ -480,7 +480,11 @@ extern fn keccak_syscall(
 [discrete]
 === Description
 
-Computes the Keccak-256 hash of the input data. This system call is particularly useful when interacting with Ethereum contracts or implementing Ethereum-compatible functionality, as Keccak-256 is widely used in the Ethereum ecosystem.
+Computes the link:https://docs.starknet.io/architecture-and-concepts/cryptography/hash-functions/#starknet_keccak[Keccak-256 hash] of the input data.
+
+This system call is particularly useful when interacting with Ethereum contracts or implementing Ethereum-compatible functionality, as Keccak-256 is widely used in the Ethereum ecosystem.
+
+Note that instead of using this syscall directly, it is recommended to use the functions provided in link:https://github.com/starkware-libs/cairo/blob/67c6eff9c276d11bd1cc903d7a3981d8d0eb2fa2/corelib/src/keccak.cairo[`keccak.cairo`] which provide a more convenient interface and handle the syscall under the hood.
 
 [discrete]
 === Arguments
@@ -491,40 +495,28 @@ Computes the Keccak-256 hash of the input data. This system call is particularly
 [discrete]
 === Return values
 
-* The Keccak-256 hash of the input data as a `u256` value, wrapped in `SyscallResult`.
+* The Keccak-256 hash of the input data as a `u256` value.
 
 [discrete]
 === Common library
 
-link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L84[`syscalls.cairo`^]
+link:https://github.com/starkware-libs/cairo/blob/67c6eff9c276d11bd1cc903d7a3981d8d0eb2fa2/corelib/src/starknet/syscalls.cairo#L107[`syscalls.cairo`^]
 
 [discrete]
 === Example
 
-The following example computes the Keccak-256 hash of an array containing two elements:
+The following example demonstrates how to compute a Keccak-256 hash using the recommended functions from `keccak.cairo`:
 
 [source,cairo]
 ----
 use array::ArrayTrait;
-use starknet::syscalls::keccak_syscall;
+use keccak::keccak_u256s_le_inputs;
 
 // Create input data
 let mut data = ArrayTrait::new();
-data.append(1);
-data.append(2);
+data.append(1_u256);
+data.append(2_u256);
 
-// Compute Keccak hash
-let hash = keccak_syscall(data.span()).unwrap_syscall();
+// Compute Keccak hash using the recommended function
+let hash = keccak_u256s_le_inputs(data.span());
 ----
-
-[NOTE]
-====
-* The input data is interpreted as a sequence of bytes when computing the hash
-* The returned hash is compatible with Ethereum's Keccak-256 implementation
-* This system call is commonly used for:
-** Computing message hashes for signatures
-** Generating contract addresses
-** Implementing Ethereum-compatible hashing functionality
-====
-
-
