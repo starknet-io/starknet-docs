@@ -463,3 +463,60 @@ None.
 .Common library
 
 link:https://github.com/starkware-libs/cairo/blob/cca08c898f0eb3e58797674f20994df0ba641983/corelib/src/starknet/syscalls.cairo#L70[`syscalls.cairo`^]
+
+[id="keccak"]
+== `keccak`
+
+[discrete]
+=== Function signature
+
+[source,cairo,subs="+quotes,+macros"]
+----
+extern fn keccak_syscall(
+    data: Span<felt252>
+) -> SyscallResult<u256> implicits(GasBuiltin, System) nopanic;
+----
+
+[discrete]
+=== Description
+
+Computes the link:https://docs.starknet.io/architecture-and-concepts/cryptography/hash-functions/#starknet_keccak[Keccak-256 hash] of the input data.
+
+This system call is particularly useful when interacting with Ethereum contracts or implementing Ethereum-compatible functionality, as Keccak-256 is widely used in the Ethereum ecosystem.
+
+Note that instead of using this syscall directly, it is recommended to use the functions provided in link:https://github.com/starkware-libs/cairo/blob/67c6eff9c276d11bd1cc903d7a3981d8d0eb2fa2/corelib/src/keccak.cairo[`keccak.cairo`] which provide a more convenient interface and handle the syscall under the hood.
+
+[discrete]
+=== Arguments
+
+[horizontal,labelwidth=35]
+`_data_: Span<felt252>`:: The input data to be hashed, represented as an array of field elements.
+
+[discrete]
+=== Return values
+
+* The Keccak-256 hash of the input data as a `u256` value.
+
+[discrete]
+=== Common library
+
+link:https://github.com/starkware-libs/cairo/blob/67c6eff9c276d11bd1cc903d7a3981d8d0eb2fa2/corelib/src/starknet/syscalls.cairo#L107[`syscalls.cairo`^]
+
+[discrete]
+=== Example
+
+The following example demonstrates how to compute a Keccak-256 hash using the recommended functions from `keccak.cairo`:
+
+[source,cairo]
+----
+use array::ArrayTrait;
+use keccak::keccak_u256s_le_inputs;
+
+// Create input data
+let mut data = ArrayTrait::new();
+data.append(1_u256);
+data.append(2_u256);
+
+// Compute Keccak hash using the recommended function
+let hash = keccak_u256s_le_inputs(data.span());
+----
