@@ -2,7 +2,8 @@
 
 == Introduction
 
-Interactions with Starknet such as declaring, deploying, and interacting with Starknet smart contracts require a deployed account. Starkli supports both importing an already deployed account (e.g., created by Argent or Braavos) as well as creating and deploying new account from scratch. 
+Interactions with Starknet such as declaring, deploying, and interacting with Starknet smart contracts require a deployed account.
+Starkli supports both importing an already deployed account (e.g., created by Argent or Braavos) as well as creating and deploying new account from scratch. 
 
 In this tutorial, we will use Starkli to create and deploy a new account on Starknet Sepolia.
 
@@ -18,7 +19,6 @@ If this command fails, see xref:environment-setup.adoc[Setting up your environme
 == Creating a signer
 
 Creating a Starkli account requires first creating a Starkli signer, which Starkli uses to sign transactions.
-
 Theoratically, a signer can be anything that can provide valid signatures for transactions.
 
 In this tutorial, we will use an encrypted keystores signer.
@@ -59,7 +59,7 @@ starkli account oz init account.json
 
 [NOTE]
 ====
-`oz` stand for OpenZeppelin, which, along with Argent and Braavos, are the accounts classes that are already declared on Starknet and supported by Starkli.
+`oz` stand for OpenZeppelin, which, along with Argent and Braavos, are the accounts variants supported by Starkli.
 ====
 
 The result should be similar to the following:
@@ -75,6 +75,13 @@ Deploy this account by running:
     starkli account deploy account.json
 ----
 
+Similar to the keystore, exporting the account path is highly recommended as it prevents specifying `--account` in every command. To export the account path, run:
+
+[source,terminal]
+----
+export STARKNET_ACCOUNT=$(pwd)/account.json
+----
+
 == Deploying an account
 
 Finally, to deploy your account run:
@@ -84,14 +91,18 @@ Finally, to deploy your account run:
 starkli account deploy account.json
 ----
 
-[NOTE]
-====
-This command requires a signer. If you receive an error after running this command, ensure you have the `STARKNET_KEYSTORE` environment variable set as per xref:environment-setup.adoc#setting_up_starkli_environment_variables[these instructions].
-====
-
 This command sends a `DEPLOY_ACCOUNT` transaction, which requires the account to contain enough ETH to pay for the transaction fee. 
 When run, the command shows instructions on how to fund the account before proceeding.
 You can fund your wallet using one of the https://www.starknet.io/en/ecosystem/bridges-and-onramps[Starknet Sepolia faucets^].
+
+[NOTE]
+====
+To sends the `DEPLOY_ACCOUNT` transaction with STRK as fee token, use:
+[source,terminal]
+----
+starkli account deploy account.json --strk
+----
+====
 
 The following is an example output for a successful account deployment:
 
@@ -102,4 +113,8 @@ The estimated account deployment fee is 0.000011483579723913 ETH. However, to av
 to the following address:
     0x01cf4d57ba01109f018dec3ea079a38fc08b789e03de4df937ddb9e8a0ff853a
 Press [ENTER] once you've funded the address.
+Waiting for transaction 0x06a9a08208084ac376f10657c745a3020362fa65e7730b13e08ec03d0cd7e59d to confirm.
+If this process is interrupted, you will need to run `starkli account fetch` to update the account file.
+Transaction not confirmed yet...
+Transaction 0x06a9a08208084ac376f10657c745a3020362fa65e7730b13e08ec03d0cd7e59d confirmed
 ----
