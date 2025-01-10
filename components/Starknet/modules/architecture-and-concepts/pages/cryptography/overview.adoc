@@ -1,52 +1,68 @@
 :stem: latexmath
 [id="cryptography"]
 = Cryptography
+
 [id="stark-field"]
 == The STARK field
+
+[NOTE]
+====
+The `felt252` type in Cairo refers to elements of the STARK field.
+====
+
 The STARK field is the finite field stem:[$$\mathbb{F}_P$$], where stem:[$$P$$] is a prime number defined by:
+
 [stem]
 ++++
 P = 2^{251} + 17*2^{192} + 1
 ++++
-[NOTE]
-====
-The `felt252` type in Cairo refers to elements of this field.
-====
+
 [id="stark-curve"]
 == The STARK curve
+
 [NOTE]
 ====
 The STARK curve is commonly used in smart contracts but not distinguished by the Starknet protocol.
 ====
+
 The STARK curve is an elliptic curve defined over the xref:#stark-field[STARK field] by:
+
 [stem]
 ++++
 y^2 \equiv x^3 + \alpha \cdot x + \beta \pmod{P}
 ++++
 where:
+
 * stem:[\alpha = 1]
 * stem:[\beta = 3141592653589793238462643383279502884197169399375105820974944592307816406665]
 and the generator point used in the ECDSA scheme is defined by:
 * stem:[G_x = 874739451078007766457464989774322083649278607533249481151382481072868806602]
 * stem:[G_y = 152666792071518830868575557812948353041420400780739481342941381225525861407]
+
 [id="hash_functions"]
 == Hash functions
 There are three hash functions used throughout Starknet's specifications that map inputs to elements in the xref:#stark-field[STARK field].
+
 [id="starknet_keccak"]
 === Starknet Keccak
 Starknet Keccak, commonly denoted by stem:[$\text{sn_keccak}$], is defined as the first 250 bits of Ethereum's link:https://github.com/ethereum/eth-hash[keccak256].
+
 [id="pedersen_hash"]
 === Pedersen hash
 Pedersen hash is then defined by:
+
 [stem]
 ++++
 h(a,b) = \left[\text{shift_point} + a_{low} \cdot P_0 + a_{high} \cdot P1 + b_{low} \cdot P2  + b_{high} \cdot P3\right]_x
 ++++
+
 where:
+
 * stem:[a_{low}] and stem:[b_{low}] are the 248 low of stem:[a] and stem:[b], respectively
 * stem:[a_{high}] and stem:[b_{high}] are the 4 high bits of stem:[a] and stem:[b], respectively
 * The values of the constants stem:[\text{shift_point}, P_0, P_1, P_2, P_3] can be found in link:https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/crypto/signature/fast_pedersen_hash.py[fast_pedersen_hash.py^]
 * stem:[[P\]_x] denotes the stem:[x] coordinate of point stem:[$P$]
+
 [id="pedersen_array_hash"]
 ==== Array hashing
 Let stem:[$h$] denote the pedersen hash function, then given an array stem:[$a_1,...,a_n$] of stem:[$n$] field elements
@@ -55,26 +71,34 @@ we define stem:[$h(a_1,...,a_n)$] to be:
 ++++
 h(...h(h(0, a_1),a_2),...,a_n),n)
 ++++
+
 [id="poseidon_hash"]
 === Poseidon hash
+
 [TIP]
 ====
 Poseidon is a family of hash functions designed to be very efficient as algebraic circuits. As such, they can be very useful in ZK-proving systems such as STARKs.
 ====
+
 Starknet's version of Poseidon is based on a three-element state Hades permutation and defined of up to 2 elements by:
+
 [stem]
 ++++
 \text{poseidon}(x) := \left[\text{hades_permutation}(x,0,1)\right]_0
 ++++
+
 [stem]
 ++++
 \text{poseidon}(x,y) := \left[\text{hades_permutation}(x,y,2)\right]_0
 ++++
+
 Where latexmath:[[\cdot\]_j] denotes taking the stem:[j]'th coordinate of a tuple.
+
 [id="poseidon_array_hash"]
 ==== Array hashing
 Let stem:[$\text{hades}:\mathbb{F}_P^3\rightarrow\mathbb{F}_P^3$] denote the Hades permutation with Starknet's parameters, then given an array stem:[$a_1,...,a_n$] of stem:[$n$] field elements
 we define stem:[$\text{poseidon}(a_1,...,a_n)$] to be the first coordinate of stem:[$H(a_1,...,a_n;0,0,0)$], where:
+
 [stem]
 ++++
 H(a_1,...,a_n;s_1,s_2,s_3)=\begin{cases}
@@ -83,10 +107,13 @@ H\big(a_3,...,a_n;\text{hades}(s_1+a_1, s_2+a_2, s_3)\big), & \text{if  } n\ge 2
 \text{hades}(s_1+1,s_2,s_3), & \text{if  } n=0 \\
 \end{cases}
 ++++
+
 [TIP]
 ====
 For reference implementations of the above see link:https://github.com/starkware-libs/cairo-lang/blob/12ca9e91bbdc8a423c63280949c7e34382792067/src/starkware/cairo/common/poseidon_hash.py#L46[poseidon_hash.py] and link:https://github.com/starkware-libs/cairo-lang/blob/12ca9e91bbdc8a423c63280949c7e34382792067/src/starkware/cairo/common/builtin_poseidon/poseidon.cairo#L28[poseidon.cairo] in the cairo-lang GitHub repository.
 ====
+
 ==== Additional resources
+
 * link:https://github.com/starkware-industries/poseidon/blob/main/poseidon3.txt[Parameters for defining the Poseidon permutation used in Starknet]
 * link:https://github.com/CryptoExperts/poseidon[Implementation in C and assembly by CryptoExperts]
