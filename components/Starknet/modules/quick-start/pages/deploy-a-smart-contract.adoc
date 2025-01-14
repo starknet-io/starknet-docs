@@ -2,84 +2,116 @@
 
 == Introduction
 
-Welcome to the fourth installment of Starknet 101!
+Welcome to the fourth installment of the "Hello, Starknet!" quickstart series, the official tutorial for starting your journey as a Starknet developer! 🚀
 
-Now that your contract is declared, it can finally be deployed. This installment of the series will therefore guide you through the steps necessary to deploy your contract on Starknet Sepolia and interact with it.
+Deploying a smart contract involves creating an instance of a previously declared code on Starknet. Once a contract is deployed, it can be interacted with via its various functions. This installment of the series will therefore walk you through the steps necessary to use Starkli for deploying the `HelloStarknet` contract on Starknet Sepolia and interacting with it.
 
-== Deploying a smart contract
+== Deploying `HelloStarknet`
 
-Deploying a smart contract involves creating an instance of a previously declared code on Starknet. The deployment command requires the contract's class hash and any arguments expected by its constructor. For our example, if the constructor expects an integer, the deployment command would resemble the following: 
+Starkli's deployment command requires the contract's class hash and any arguments expected by its constructor. For our example, if the constructor expects two integers, the deployment command would resemble the following: 
 
 [source,console]
 ----
 $ starkli deploy \
-    0x00e68b4b07aeecc72f768b1c086d9b0aadce131a40a1067ffb92d0b480cf325d \
+    <CONTRACT_CLASS_HASH> \
+    4 \
+    2 \
+    --network=sepolia
+----
+
+However, since `HelloStarknet` doesn't implement a construct, it implicitly uses the Starknet's default constructor, which take no arguments. Therefore, `HelloStarknet` can be deployed on Starknet Sepolia by simply running:
+
+[source,console]
+----
+$ starkli deploy \
+    0x0785c92bf4aa7a89fb62371802aef2f58e2333d8df7e2aadf938efa83735431c \
+    --network=sepolia
+----
+
+[IMPORTANT]
+====
+Note that this is indeed the same class hash as in xref:declare-a-smart-contract.adoc[Declaring `HelloStarknet`].
+====
+
+The output of a successful deployment command should resemble the following:
+
+[source,console]
+----
+Deploying class 0x0785c92bf4aa7a89fb62371802aef2f58e2333d8df7e2aadf938efa83735431c with salt 0x024094fe319e0d44752392a9f487633a4cbd37a678f10cec7cc39444565dd2ce...
+The contract will be deployed at address 0x055adcccc3de77a9d23cd8250965b388179e1ebd6d6be32f5bc6a08a34805e5e
+Contract deployment transaction: 0x01c59c66ad52f3c0e4c23735a61914ddb6d422ef4f93bd6dad418bec74fc94b8
+Contract deployed: 0x055adcccc3de77a9d23cd8250965b388179e1ebd6d6be32f5bc6a08a34805e5e
+----
+
+and you should be able to see the deployed contract on one of xref:tools:ref-block-explorers.adoc[Starknet Sepolia's block explorers] by searching for its address.
+
+== Interacting with `HelloStarknet`
+
+Now that your contract has been deployed, you (and everyone else) are able to interact with it. Starkli enables interaction with smart contracts via two primary methods:
+
+* `call` for read functions that don't modify Starknet's state.
+
+* `invoke` for write functions that modify Starknet's state.
+
+=== Calling `get_balance`
+
+The `call` command allows querying a smart contract function without sending a transaction. For example, you can call `HelloStarknet` 's `get_balance` function which doesn't expect any arguments and returns the contract's balance by running:
+
+[source,console]
+----
+$ starkli call \
+    0x055adcccc3de77a9d23cd8250965b388179e1ebd6d6be32f5bc6a08a34805e5e \
+    get_balance \
+    --network=sepolia
+----
+
+where `0x055adcccc3de77a9d23cd8250965b388179e1ebd6d6be32f5bc6a08a34805e5e` is the contract's deployed address. If called before invoking the `increase_balance` function, the result should resemble the following (since the contract's intial balance is preset to `0`):
+[source,console]
+----
+[
+    "0x0000000000000000000000000000000000000000000000000000000000000000"
+]
+----
+
+=== Invoking `increase_balance`
+
+Unlike the `call` command, the `invoke` command modifies the state of the smart contract by submitting a transaction to the network. For example, you can invoke `HelloStarknet` 's `increase_balance` function, which expect an integer as argument, by running:
+
+[source,console]
+----
+$ starkli invoke \
+    0x055adcccc3de77a9d23cd8250965b388179e1ebd6d6be32f5bc6a08a34805e5e \
+    increase_balance \
     42 \
     --network=sepolia
 ----
 
-After running the command and adding your password, the output should resemble the following:
+If the invokation was successful, Starkli's output should resemble the following:
 
-[source,bash]
+[source,console]
 ----
-Deploying class 0x00e68b4b07aeecc72f768b1c086d9b0aadce131a40a1067ffb92d0b480cf325d with salt 0x04bc3fc2284c8e41fb3d2a37bb0354fd0506131cc77a8c91e4e67ce3aed1d19e...
-The contract will be deployed at address 0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e
-Contract deployment transaction: 0x0086972e7463d5673d8b553ae521ec2df974a97c2ce6aafc1d1c20d22c6b96c6
-Contract deployed: 0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e
+Invoke transaction: 0x0146cfed26a0d62bff0e6c27490204690a5e144266b274b1c84cb32ee7ba6200
 ----
 
-== Interacting with a smart contract
+and you should be able to see the transaction on one of xref:tools:ref-block-explorers.adoc[Starknet Sepolia's block explorers] by searching for its hash.
 
-Now that your contract has been deployed, you (and everyone else) are able to interact with it. Starkli enables interaction with smart contracts via two primary methods:
 
-* `call for` read-only functions.
+After the transaction's status is changed to "Accepted on L2", you can confirm that Starknet's state indeed changed by calling the `get_balance` function again:
 
-* `invoke` for write functions that modify Starknet's state.
-
-=== Calling a function
-
-The `call` command allows querying a smart contract function without sending a transaction. As an example you can use the `get_owner` function which doesn't expect any arguments and returns the address of the current owner:
-
-[source,bash]
+[source,console]
 ----
-starkli call \
-    0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e \
-    get_owner --network=sepolia
+$ starkli call \
+    0x055adcccc3de77a9d23cd8250965b388179e1ebd6d6be32f5bc6a08a34805e5e \
+    get_balance \
+    --network=sepolia
 ----
 
-This will return the address that we passed to the constructor during deployment:
+If this was the first time the `increase_balance` was invoked, the result should resemble the following (`42~10~ = 2a~16~`):
 
-[source,bash]
+[source,console]
 ----
 [
-    "0x02cdab749380950e7a7c0deff5ea8edd716feb3a2952add4e5659655077b8510"
+    "0x000000000000000000000000000000000000000000000000000000000000002a"
 ]
 ----
-
-=== Invoking a function
-
-To modify the state of the smart contract, use the `invoke` command. Unlike the `call` command, `invoke` submits a transaction to the network.
-
-In this example, we'll invoke the `transfer_ownership` function to transfer the ownership from our deployer address to a different smart wallet address:
-
-[source,bash]
-----
-starkli invoke \
-    0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e \
-    transfer_ownership \
-    0x011088d3cbe4289bc6750ee3a9cf35e52f4fa4e0ac9f42fb0b62e983139e135a \
-    --network=sepolia
-----
-
-After the transaction is accepted on L2, you can confirm the state transition by calling the `get_owner` function again:
-
-[source,bash]
-----
-starkli call \
-    0x014825acb37c36563d3b96c450afe363d2fdfa3cfbd618b323f95b68b55ebf7e \
-    get_owner \
-    --network=sepolia
-----
-
-The `get_owner` function now returns the new owner address, confirming the successful ownership transfer.
 
