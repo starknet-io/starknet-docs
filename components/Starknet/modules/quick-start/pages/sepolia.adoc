@@ -1,0 +1,193 @@
+[id="using_starknet_devnet]
+
+= Deploying and interacting with the `HelloStarknet` contract on Starknet Sepolia
+
+== Introduction
+
+Welcome to the fourth installment of the "Hello, Starknet!" quickstart series, the official tutorial for starting your journey as a Starknet developer! 🚀
+
+Starknet Sepolia is Starknet's testnet environment designed to provide developers with a testing ground that mirrors the behavior of the Starknet Mainnet while being connected to the Ethereum Sepolia testnet, making it ideal for debugging and optimizing your code before deploying it to production. This installment of the series will therefore guide you through the steps necessary to deploy and interact with the `HelloStarknet` contract on Starknet Sepolia.
+
+== Deploying up a new Sepolia account
+
+Similar to interacting with a Starknet Devnet instance, to interact with Starknet Sepolia you first need an account. However, instead fetching a predeployed Sepolia account, we will create a _new_ account and deploy a new Starkli ourselves.
+
+[NOTE]
+====
+To learn how to fetch a predeployed Sepolia account, check out xref:troubleshooting.adoc[Troubleshooting].
+====
+
+Creating a new Starkli account requires first creating a Starkli signer, which will again be an encrypted keystore signer. To create a new encrypted keystore signer, run:
+
+[source,terminal]
+----
+starkli signer keystore new keystore.json
+----
+
+and enter a password that will be used to encrypt your private key. If successful, the result should resemble the following:
+
+[source,terminal]
+----
+Created new encrypted keystore file: keystore.json
+Public key: 0x03dfdb739fbd3ddab0f851bf1131079e31ca266c7af94f05cef4d9481f837509
+----
+
+To avoid specifying the keystore file in every subsequent Starkli command, export the keystore path by running:
+
+[source,terminal]
+----
+export STARKNET_KEYSTORE=$(pwd)/keystore.json
+----
+
+Now that you have a Starkli signer, you can create a new account by running:
+
+[source,terminal]
+----
+starkli account oz init account.json
+----
+
+[NOTE]
+====
+`oz` stand for OpenZeppelin, which, along with Argent and Braavos, are the accounts variants supported by Starkli.
+====
+
+The result should resemble the following:
+
+[source,terminal]
+----
+Created new account config file: account.json
+
+Once deployed, this account will be available at:
+    0x01cf4d57ba01109f018dec3ea079a38fc08b789e03de4df937ddb9e8a0ff853a
+
+Deploy this account by running:
+    starkli account deploy account.json
+----
+
+To avoid specifying the account file in every subsequent Starkli command, export the account path by running:
+
+[source,terminal]
+----
+export STARKNET_ACCOUNT=$(pwd)/account.json
+----
+
+Finally, to deploy your account run:
+
+[source,terminal]
+----
+starkli account deploy account.json \
+    --network=sepolia \
+    --strk
+----
+
+This command sends a `DEPLOY_ACCOUNT` transaction, which requires the account to contain enough STRK to pay for the transaction fee. 
+When run, the command shows instructions on how to fund the account before proceeding, which can easily be done using the https://starknet-faucet.vercel.app/[Starknet Sepolia faucet^]. If the account was funded and deployed successfully, the output of the deployment should resemble the following:
+
+[source,terminal]
+----
+The estimated account deployment fee is 0.000615910614837578 STRK. However, to avoid failure, fund at least:
+    0.001358626332416775 STRK
+to the following address:
+    0x01cf4d57ba01109f018dec3ea079a38fc08b789e03de4df937ddb9e8a0ff853a
+Press [ENTER] once you've funded the address.
+Waiting for transaction 0x06a9a08208084ac376f10657c745a3020362fa65e7730b13e08ec03d0cd7e59d to confirm.
+If this process is interrupted, you will need to run `starkli account fetch` to update the account file.
+Transaction not confirmed yet...
+Transaction 0x06a9a08208084ac376f10657c745a3020362fa65e7730b13e08ec03d0cd7e59d confirmed
+----
+
+and you should be able to see the deployed account on one of xref:tools:ref-block-explorers.adoc[Starknet Sepolia's block explorers] by searching for its address.
+
+== Deploying `HelloStarknet` on Sepolia
+
+Unlike when using a Starknet Devnet instance, there's no need for us to declare `HelloStarknet` on Sepolia as it has already been declared before (remember: declaration is a one-time process for each unique contract code). To verify that, you can try declaring it by navigating into the `hello_starknet` directory created in xref:compiling-hellostarknet.adoc[Compiling the `HelloStarknet` contract], running:
+
+[source,terminal]
+----
+starkli declare \
+    target/dev/hello_starknet_HelloStarknet.contract_class.json \
+    --network=sepolia
+    --strk
+----
+
+and entering your password. The result should resemble to the following:
+
+[source,terminal]
+----
+Not declaring class as it's already declared. Class hash:
+0x0785c92bf4aa7a89fb62371802aef2f58e2333d8df7e2aadf938efa83735431c
+----
+
+With `HelloStarknet` already declared, you can deploy an instance of it by running:
+
+[source,terminal]
+----
+starkli deploy \
+    0x0785c92bf4aa7a89fb62371802aef2f58e2333d8df7e2aadf938efa83735431c \
+    --network=sepolia \
+    --strk
+----
+
+and entering your password. If successful, the result should resemble the following:
+
+[source,terminal]
+----
+Deploying class 0x0785c92bf4aa7a89fb62371802aef2f58e2333d8df7e2aadf938efa83735431c with salt 0x07154f9d7e9602d3d3dd0034168be00f044ba15caf80b6fe09f6fef8f2568f57...
+The contract will be deployed at address 0x00ed474ec67f690901bcc56ee69491163c4203ededf473198e08c24fe2ab0a29
+Contract deployment transaction: 0x066ccbbbdd2c3967620a039d7579bf5e03a5c15c77819d53a8b21dbdee705f8d
+Contract deployed:
+0x00ed474ec67f690901bcc56ee69491163c4203ededf473198e08c24fe2ab0a29
+----
+
+and you should be able to see your deployed contract on one of xref:tools:ref-block-explorers.adoc[Starknet Sepolia's block explorers] by searching for its contract address.
+
+[IMPORTANT]
+====
+Your deployed contract's address will be different the than one listed above. Make sure to use the address of your own deployed contract when searching for it in a block explorer and interacting with it. 
+====
+
+== Interacting with `HelloStarknet` on Sepolia
+
+Now that your instance of `HelloStarknet` is deployed, you can invoke its `increase_balance` function by running:
+
+[source,terminal]
+----
+starkli invoke \
+    0x00ed474ec67f690901bcc56ee69491163c4203ededf473198e08c24fe2ab0a29 \
+    increase_balance 66 \
+    --network=sepolia \
+    --strk
+----
+
+and entering your password. If successful, the result should resemble the following:
+
+[source,terminal]
+----
+Invoke transaction: 0x063b85d93491e678fe051952c39575c80ea397fa1be4076fe28616356d673595
+----
+
+and you should be able to see the `INVOKE` transaction on one of xref:tools:ref-block-explorers.adoc[Starknet Sepolia's block explorers] by searching for its hash.
+
+[IMPORTANT]
+====
+Your transaction's hash will be different the than one listed above. Make sure to use the hash of your own invoke transaction when searching for it in a block explorer. 
+====
+
+After the transaction's status is changed to `Accepted on L2`, you can confirm that the state of Starknet Sepolia has indeed changed by calling your deployed contract's `get_balance` function by running:
+
+[source,terminal]
+----
+starkli call \
+    0x00ed474ec67f690901bcc56ee69491163c4203ededf473198e08c24fe2ab0a29 \
+    get_balance \
+    --network=sepolia
+----
+
+and entering your password. If all goes well, the result should resemble the following (`66~10~ = 42~16~`):
+
+[source,console]
+----
+[
+    "0x0000000000000000000000000000000000000000000000000000000000000042"
+]
+----
