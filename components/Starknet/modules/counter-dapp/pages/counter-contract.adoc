@@ -1,0 +1,75 @@
+[id="counter-dapp"]
+= "counter-DAPP" guide
+
+image::counter-dapp:screenshot-dapp.png[]
+
+The goal of this document is to provide a step-by-step guide to create a small React DAPP powered by Starknet.
+
+This DAPP has been deployed https://starknet-counter-dapp.vercel.app/[here] and is using the Starknet Sepolia Testnet network.
+
+[TIP]
+====
+To access to the source code, just follow the link in the lower banner of the DAPP.
+====
+
+*Pre-required skills:*
+
+* Javascript/Typescript
+* basic understanding of node.js / Next.js framework
+* React/JSX
+* minimal understanding of html/css
+
+*Useful documentations:*
+
+* https://www.starknet-react.com/docs/getting-started[starknet-react]
+* https://starknetjs.com[starknet.js]
+
+== Write a smart-contract
+
+First, install Starkli & Scarb (at least v2.9.2), as detailed xref:quick-start:environment-setup.adoc[here].
+
+If necessary, create an account in Starknet Sepolia Testnet, as described xref:quick-start:sepolia.adoc#deploying_up_a_new_sepolia_account[here].
+
+[TIP]
+====
+If you need some ETH/STRK to pay the fees, you can use the https://starknet-faucet.vercel.app/[Starknet testnet faucet]
+====
+
+This "counter-DAPP" uses a very simple smart-contract that stores, reads & increments a counter. Initialize, compile, and if necessary, declare the contract as explained xref:quick-start:sepolia.adoc#deploying_hellostarknet_on_sepolia[here]. +
+The source code is:
+
+.lib.cairo
+[source,cairo]
+----
+#[starknet::interface]
+trait ITestSession<TContractState> {
+    fn increase_counter(ref self: TContractState,value:u128);
+    fn get_counter(self: @TContractState)->u128;
+}
+
+#[starknet::contract]
+mod test_session {
+    use starknet::storage::StoragePointerWriteAccess;
+    use starknet::storage::StoragePointerReadAccess;
+
+    #[storage]
+    struct Storage {
+        count: u128,
+    }
+
+    #[abi(embed_v0)]
+    impl TestSession of super::ITestSession<ContractState> {
+        fn increase_counter(ref self: ContractState,value:u128) {
+                self.count.write(self.count.read() + value)
+            }
+
+        fn get_counter(self: @ContractState)->u128 {
+            self.count.read()
+        }
+    }
+}
+----
+
+Then, deploy this contract, as detailed xref:quick-start:sepolia.adoc#deploying_hellostarknet_on_sepolia[here].
+
+Note the address of the contract ; it will be necessary in the DAPP.

@@ -1,0 +1,354 @@
+[id="counter-dapp"]
+== Connect a wallet
+
+Once the contract deployed, install in your browser a Starknet wallet extension. The most common wallets are https://www.argent.xyz/argent-x[ArgentX] & https://braavos.app/[Braavos].
+
+If you don’t have Node.js installed, install it from https://nodejs.org/en/[here]. +
+Now, create a https://nextjs.org/docs/app/getting-started/installation[Next.js] project:
+
+[source, bash]
+----
+npx  create-next-app@latest counter-dapp --use-npm
+----
+
+To be able to install starknet-react, change these lines in the `package.json` file :
+
+[source, json]
+----
+"react": "^18.3.1",
+"react-dom": "^18.3.1",
+----
+
+To be able to use the `bigint` type, change a line in `tsconfig.json`:
+
+[source, json]
+----
+"target": "ESNext",
+----
+
+Now, install the necessary libs:
+
+[source, bash]
+----
+npm i starknet @starknet-react/chains @starknet-react/core
+----
+
+Create in `src/app/` a `components` directory. 
+
+Then create inside this directory a file named `Starknet-provider.tsx`, with the following code, to configure the Starknet provider: 
+
+.Starknet-provider.tsx
+[source,jsx]
+----
+"use client";
+
+import React from "react";
+import { sepolia, mainnet } from "@starknet-react/chains";
+import {
+  StarknetConfig,
+  publicProvider,
+  argent,
+  braavos,
+  useInjectedConnectors,
+  voyager
+} from "@starknet-react/core";
+
+/**
+ * Initialization of Starknet-React
+ */
+export function StarknetProvider({ children }: { children: React.ReactNode }) {
+
+  const { connectors } = useInjectedConnectors({
+    // Show these connectors if the user has no connector installed.
+    recommended: [
+      argent(),
+      braavos(),
+    ],
+    includeRecommended: "onlyIfNoConnectors",
+    order: "random"
+  });
+
+  return (
+    <StarknetConfig
+      chains={[mainnet, sepolia]}
+      provider={publicProvider()}
+      connectors={connectors}
+      explorer={voyager}
+    >
+      {children}
+    </StarknetConfig>
+  );
+}
+----
+
+Wrap your app in the provider just created, in `layout.tsx`:
+
+.layout.tsx
+[source,jsx]
+----
+import { StarknetProvider } from './components/Starknet-provider'
+import './globals.css'
+
+export const metadata = {
+  title: 'Starknet-counter-DAPP',
+  description: 'Minimalistic DAPP using Starknet',
+  icons: {
+    icon: "./favicon.ico",
+  },
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body>
+          <StarknetProvider>
+            {children}
+          </StarknetProvider>
+      </body>
+    </html>
+  )
+}
+----
+
+You can now use the Starknet-react hooks from any component wrapped by the root provider.
+
+Replace the content of `page.tsx`, with:
+
+.page.tsx
+[source,jsx]
+----
+"use server";
+
+import Image from 'next/image'
+import * as CSS from 'csstype';
+import "./custom.css";
+
+import starknetReactImg from "./Images/starknet-logo.svg";
+import { DisplayConnected } from './components/DisplayConnected';
+import LowerBanner from './components/LowerBanner';
+
+export default async function Page() {
+    const align: "left" | "center" | "right" = "center";
+    const titleStyle: CSS.Properties = {
+        color: 'rgb(20, 14, 75)',
+        fontSize: "24px",
+        fontFamily: 'sans-serif',
+        fontWeight: '500',
+        textAlign: align,
+        padding: "20px",
+    }
+
+
+    return (
+        <div>
+            <div className='titleBar' style={titleStyle}>
+                <div>
+                    <Image
+                        src={starknetReactImg}
+                        alt='starknet.js'
+                        height={40}
+                    />
+                </div>
+                counter APP
+            </div>
+            <div className="textStyle">
+                Please connect to Sepolia Testnet network
+                
+            </div>
+            <DisplayConnected></DisplayConnected>
+                
+                <LowerBanner></LowerBanner>
+        </div >
+    )
+}
+----
+
+[IMPORTANT]
+====
+Non essential files of this project (images, css, LowerBanner, utils, ...) have to be copied from the https://github.com/PhilippeR26/Starknet-Counter-DAPP/tree/main/src/app[repo].
+====
+
+Create a `DisplayConnected.tsx` file in `components`, that includes:
+
+.DisplayConnected.tsx
+[source,jsx]
+----
+"use client";
+
+import { constants } from "starknet";
+import { useAccount, useNetwork } from "@starknet-react/core";
+import ConnectWallet from "./ConnectWallet";
+import PlayWithCairo from "./PlayWithCairo";
+
+
+export function DisplayConnected() {
+    const { chain } = useNetwork();
+    const { address } = useAccount();
+
+    return (
+        <>
+            <div style={{ textAlign: "center", paddingBottom: "5px" }}>
+                <ConnectWallet></ConnectWallet>
+            </div>
+            {address && (
+                <>
+                    <br />
+                    {
+                        chain.id === BigInt(constants.StarknetChainId.SN_SEPOLIA) ? <>
+                            <PlayWithCairo></PlayWithCairo>
+                        </> : <div 
+                        className="textStyle"
+                        style={{color:"orangered"}}
+                        >
+                            Wrong network. Change to Sepolia Testnet network.
+                        </div>
+                    }
+                </>
+            )
+            }
+        </>
+    )
+}
+----
+
+We have here our two first Starknet-react hooks:
+
+* useNetwork()
++
+[source,jsx]
+----
+const { chain } = useNetwork();
+----
+Once a wallet connected, you will have a `chain` object, that can be used to get the current chain (Mainnet or Testnet). If you change the current network in the browser wallet extension, this `chain` object is updated immediately. This hook is used in this component to check that you have selected the right network.
+
+* useAccount()
++
+[source,jsx]
+----
+const { address } = useAccount();
+----
+Once a wallet connected, you will have the `address` of the current account. Here also, it's automatically updated if you change the current account in the wallet. `address` is used here to be sure that the wallet has been selected before showing the `PlayWithCairo` component.
+
+Now, create a `ConnectWallet.tsx` file in `components` directory, with:
+
+.ConnectWallet.tsx
+[source,jsx]
+----
+"use client";
+
+import { useState } from 'react';
+import { useAccount, useDisconnect } from "@starknet-react/core";
+import SelectWallet from './SelectWallet';
+
+export default function ConnectWallet() {
+    const [displaySelectWalletUI,setSelectWalletUI]=useState<boolean>(false);
+
+    const { disconnect } = useDisconnect();
+    const { address, isConnected } = useAccount();
+
+
+    return (
+        <>
+            {!isConnected ? (
+                <>
+                    <button
+                  className='myButton'
+                        onClick={() => {
+                            setSelectWalletUI(true);
+                        }}
+                    >
+                        Connect Wallet
+                    </button>
+                    {displaySelectWalletUI && <SelectWallet></SelectWallet>}
+                </>
+            ) : (
+                <>
+                    {address ?
+                            <button className='myButton'
+                                onClick={() => {
+                                    disconnect();
+                                    setSelectWalletUI(false)
+                                }}
+                            >
+                                {`Your wallet : ${address?.slice(0, 7)}...${address?.slice(-4)} is connected`
+                                }
+                            </button>
+                        : "No address"
+                    }
+                </>
+            )
+            }
+        </>
+    )
+}
+----
+
+In this code we have 2 Starknet hooks :
+
+* useAccount()
++
+[source,jsx]
+----
+const { isConnected } = useAccount();
+----
+`isConnected` becomes true once you have accepted in the wallet to use this DAPP.
+
+* useDisconnect()
++
+[source,jsx]
+----
+const { disconnect } = useDisconnect();
+----
+`disconnect` is a command to use to end the connection with the wallet.
+
+Now, create the SelectWallet component, that will show a list of the wallets available in your browser.
+
+image::counter-dapp:select-wallet.png[]
+
+.SelectWallet.tsx
+[source,jsx]
+----
+"use client";
+
+import { useConnect } from "@starknet-react/core";
+
+
+export default function SelectWallet() {
+  const { connect, connectors, status } = useConnect();
+
+  return (
+    <div >
+      <div style={{ paddingTop: "10px" }}>
+        {connectors.map((connector) => (
+          <button
+            className="walletButton"
+            style={{ margin: "3px" }}
+            key={connector.id}
+            onClick={() => {
+              connect({ connector });
+            }}
+            disabled={status === "pending"}
+          >
+            {connector.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+----
+
+Here is an important hook to select a wallet:
+
+[source,jsx]
+----
+const { connect, connectors } = useConnect();
+----
+
+- `connect` is a command to select a wallet.
+- `connectors` is a list of available wallets in the browser.
+
