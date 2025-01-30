@@ -1,0 +1,412 @@
+= Starknet version 0.13.4 pre-release notes
+
+include::partial$snippet-tip-devs-newsletter.adoc[]
+
+== Estimated release dates
+
+* Testnet: End of Febuary, 2025
+* Mainnet: End of March, 2025
+
+== Conceptual Changes
+
+=== Cairo native
+
+The https://github.com/lambdaclass/cairo_native[cairo-native^] project is a Sierra → MLIR compiler developed by Lambdaclass, which uses the LLVM compiler framework to convert Sierra to native machine code. The motivation for such a compiler is that it allows running native code, rather than having contracts run through the Cairo VM, which significantly reduces the execution time. In a world where Starknet sequencers only execute native code, the Cairo VM only becomes relevant where it is actually needed at the proving stage.
+
+As of Starknet v0.13.4, declared classes that were compiled with Sierra Sierra ≥ 1.7.0, will also be compiled via cairo-native.
+
+[NOTE]
+====
+Sierra ≥ 1.7.0 is a necessary condition but, for v0.13.4, most likely an insufficient one, as we will also have a whitelist of contracts that are allowed to run with native.
+====
+
+This can be thought of as a sequencer optimization, as the protocol is oblivious to the existence of cairo-native. As long as the native execution and the Cairo VM execution agree on semantics (or more accurately, the native code produced by cairo-native agrees with the CASM that is emitted by the Sierra→CASM compiler), the protocol doesn't care which is being executed.
+
+The transition to executing native code instead of the Cairo VM means that we'll no longer be able to charge according to VM resources as done today (the current fee is based on the # of steps and # of builtin applications). To this end, we introduce the notion of L2 gas, on which we expand in the following sections.
+
+=== L2 gas
+
+Today, v3 transactions are able to sign over `max_amount` and `max_price_per_unit` for L1 gas. In Starknet v0.13.4, the Starknet sequencer will accept such transactions (v3 transactions that only specify L1 gas bounds, or specifies zero L2 gas and no data gas bound), and also transactions that provide `max_amount` and `max_price_per_unit` for the triplet:
+
+* L1 gas  
+* L2 gas  
+* L1 data gas (aka blob gas)
+
+*In a nutshell, L2 gas is supposed to pay for L2 resources*. This includes computation, and other blockchain-related resources such as tx payload, events emission, etc. We’ll separate our treatment here between backward compatibility (what happens when a transaction does not provide all three gas bounds) and the “new kind” of transactions. *As of Starknet v0.14.0, only transactions that specify all three bounds will be accepted by the sequencer, while any other transaction will be considered ill-formed*.
+
+==== All three bounds are present
+
+When all bounds are present, each is responsible for a different aspect of the transaction’s potential resource consumption:
+
+* L2 gas should cover L2 resources. This obviously includes computation, but also tx payload, event emission, code size for `DECLARE` transactions, and potentially other L2 resources that are currently not priced.  
+  * Units: a single Cairo step costs 100 L2 gas.  
+  * The costs of other resources are determined by their current L1 gas cost, using the following to convert between the units:  
+     `1 Cairo step = 0.0025 L1 gas = 100 L2 gas`.   
+    For example, a calldata felt that today costs `0.128 L1 gas`, will cost `0.128*4*10^4 L2 gas`  
+* L1 gas should cover L2→L1 messages sent by the transaction  
+* L1 data gas (aka blob gas) should cover the cost incurred by the sequencer for submitting the state diffs as blobs on L1. Recall that already as of Starknet v0.13.3, users are paying for the expected marginal contribution of their transaction to the blobs sent to L1.
+
+==== Backward compatibility
+
+When only `L1_gas` is bounded, either via an “old” v3 transaction or implicitly via `max_fee` in older transaction versions, then the raw resources consumed, e.g. steps, builtins, Sierra gas (see the [Sierra gas section](#sierra-gas-accounting)), events, calldata, etc. will be converted to `L1_gas` to determine the final costs.
+
+==== L2 gas price
+
+Until the fee market is present in Starknet (expected in v0.14.0), *we will have a fixed price, denominated in fri, for a single unit of L2 gas*. This fixed cost will be determined towards the release of the version, and will be reflected in the block header similarly to the other resources.
+
+=== Sierra gas accounting
+
+As we mentioned in the xref:#cairo-native[Cairo native section], when a contract is not executed via the Cairo VM, we need a new measure of complexity to be able to stop the transaction when there is not enough “gas” and to be able to define the transaction fee.
+
+Luckily, Sierra has a built-in gas accounting mechanism. We proceed to give a very rough description of the mechanism. For a comprehensive treatment of Sierra's gas accounting, see the https://github.com/starkware-libs/cairo/blob/main/docs/other/gas_blog_post.pdf[gas accounting post by CryptoExperts^].
+
+A Sierra program has a simple structure: types and function declaration, and then a sequence of libfunc applications. Libfuncs are the basic logical units of Sierra (think opcodes, for example, u8_add is a libfunc). The Cairo compiler defines a libfunc costs table, where the cost of each libfunc is determined by its expanded CASM generated via the Sierra → CASM compiler. 
+
+*This cost is measured in “Sierra gas”, which has a 1-1 conversion with L2 gas (that is, a libfunc which costs 500 Sierra gas adds 500 to the overall tx's L2 gas consumption)*.  
+
+While L2 gas accounts for “everything L2”, Sierra gas strictly deals in computation, hence the distinction in terminology. 100 Sierra gas is the equivalent of 1 Cairo step, i.e. if a libfunc's assembly includes 10 Cairo steps, it will cost 1000 gas units.
+
+Sierra has special libfuncs for gas-handling, for example the `withdraw_gas` libfunc. If a function has no recursion or branching, the Cairo→Sierra compiler adds a single `withdraw_gas(C)` call in the beginning of the function, where `C` is the sum over the costs of the libfuncs included in the function. Whenever we have a branching instruction, before the actual branching, the compiler adds a call to `withdraw_gas(C)` where `C` is the maximal branch cost (in the latest compiler version, we added a call to redeposit_gas with the difference on the cheaper branches).
+
+Some costs, e.g. in the case of recursion, can only be known in runtime. This is where things get tricky. To handle such cases, the compiler constructs the call graph induced by the program, and asserts that every cycle includes a `withdraw_gas(X)` instruction, where `X` should cover the cost of a single run through the cycle.
+
+Note that the naive gas accounting mechanism would have been to have a `withdraw_gas` instruction post every libfunc, but since `withdraw_gas` itself has some cost (reducing from a counter and handling the insufficient gas case), this would incur a large burden on the program. The above solution greatly reduces the overhead compared to the naive mechanism.
+
+==== Note on fee estimates and gas redeposits
+
+With the introduction of `redeposit_gas`, the latest gas counter at the end of the execution may no longer be enough to deduce the required l2_gas amount for the successful execution of the transaction.
+
+Full nodes are expected to simulate a transaction and return the amount of l2_gas that the sender needs to sign in order for the transaction to succeed. Assume the following naive implementation of fee estimations by full nodes: start from a large amount of l2_gas, look at the end gas counter, and report the required l2_gas amount to be the difference between the end counter and that start gas. Without redeposits, this would have been fine, however, when the gas counter throughout the run is not monotonically decreasing, `start_gas-remaining_gas` may not be enough for a successful execution, since `remaining_gas` is the amount post redeposits.
+
+The nature of gas redeposits is local, that is, unless one writes manual Sierra, a `redeposit_gas` instance is only attempting to redeposit for the “closest” `withdraw_gas`. The canonical example is a `withdraw_gas` just before an if/else statement, with `if` being expensive and `else` being cheap. In this example, the redeposit statement does not go beyond covering this gap. In particular, it does not account for calls that happen within the `if` branch, since they are treated with their own `withdraw_gas` instructions.
+
+```
+fn foo(n: u32) {
+   withdraw_gas(FOO_GAS);
+   if cond {
+      // expensive logic
+      let res = bar() // usually bar will have its own withdraw_gas, hence the redeposit statement in the else branch does not attempt to cover the costs of bar
+   }
+   else {
+      // cheap
+      redeposit_gas(X) // X is the difference between the branches costs
+   }
+   foo(n-1)
+}
+```
+
+This goes to show that in most cases, the naive implementation will give an accurate enough estimate for the required l2_gas. For the above code example, the naive implementation is wrong by at most `X` gas (one redeposit_gas instance). However, if we turn `foo` to be non tail-recursive by moving `foo(n-1)` to the first line of `foo`, then our error now increases with `n`. This is because now, redeposits happen after the actual work. First, we get to the deepest frame, going through all the `withdraw_gas` statements, and only upon rolling back we start getting the redeposits, creating a large gap between the final gas counter and the necessary start gas to complete the run.
+
+To handle more esoteric gas-pricing machinations, e.g. around non-tail recursion, full nodes are expected to find the minimal amount of l2_gas required for the transaction to succeed via binary search. At the time of writing, the VM or native executions do not expost the redeposited gas, hence some heuristic is required to make sure that the returned amount in the json-rpc method `starknet_estimateFee` is indeed close to the minimal amount required for the transaction to succeed.
+
+=== Sierra gas vs vm resources, what do we count? 
+
+As explained earlier in the post, computation can be measured by either Sierra gas or raw vm resources (steps & builtins). To determine what does the sequencer count when running the contract, we need to know:
+
+* *What was counted in the parent call*: resource counting is hereditary, if the parent call counted steps & builtins, so will the child call. If the parent call counted Sierra gas, then depending on the second condition, the child call may also count Sierra gas.  
+* *Sierra version*: only contracts whose class is of Sierra version ≥ 1.7.0 use Sierra gas to measure computation
+
+Note that if the account contract had Sierra version < 1.7.0, then due to the first condition, all the inner calls will measure computation in raw steps & builtins. 
+
+=== Stateful compression
+
+Since Starknet v0.13.3, blobs are submitted to L1 in a compressed form. In Starknet v0.13.4, we have two layers of compression:
+
+* Stateless compression: a simple lossless compression scheme applied to the raw state diff encoding. The majority of the gain is repetitive keys and leading zeros in small values (unchanged from v0.13.3)  
+* Stateful compression: starting with the first block of v0.13.4, the state diffs submitted to L1 will be dependent. That is, one cannot decode the state diffs of a given block range without knowing the state diffs of the previous blocks (only relevant for post v0.13.4 state-diffs, older state diffs remain self-contained). This allows us to map storage keys to the index of their first appearance a state update, thus encoding them with potentially much less than the full 32bytes required for a storage key.
+
+The majority of the “incompressible” parts of the state-diff are storage keys (which are usually the result of hashes and hence require the full 252 bits to represent), contract addresses and class hashes. Stateful compression is based on the observation that we can index those based on their first occurrence in a state-diff, and refer to subsequent updates by the index rather than the full key or contract address, hopefully saving many bits.
+
+We will have a global counter starting at 0 in the first block of v0.13.4. This counter will increase whenever a new key is written to. When a state update repeats keys that were previously written to, the keys will be encoded via their index. Note that writing to a new key adds two words (uncompressed, the second word is short) since we need to add the key and its corresponding index.
+
+*To achieve the above, we introduce a new system contract at address 0x2:*
+
+* Slot `0x0` of the contract `0x2` is the value of the global counter  
+* The contract at address `0x2` holds the value → index mapping  
+* Storage keys that are bounded by 127 will not be indexed but rather referred to directly. The same applies to addresses of system contracts (ATM 0x1 and 0x2)  
+* The counter will be initialized to 128 at the beginning of the first block of Starknet v0.13.4  
+* Whenever a non-indexed storage key, contract address, or class hash appears in a state diff, they are mapped to the current value of the counter, and the counter is increased  
+* The (uncompressed) state-diff includes the corresponding counter values from the `value→index` mapping rather than the original values.
+
+To see the application of stateful compression of transaction fees, see the xref:#da_costs[DA costs section].
+
+=== Catching errors
+
+Up until now, a panic in a Cairo contract would lead to the immediate abort of the execution. For example, if contract A called contract B, then A has no way of acting upon B's failure. While the language itself does support this via https://book.cairo-lang.org/ch15-02-interacting-with-another-contract.html#interacting-with-another-contract[safe dispatchers^], Starknet itself was not able to support this, and the sequencer aborted the execution immediately upon reaching the panic in contract B. To illustrate this, consider the following code:
+
+```
+#[starknet::interface]
+pub trait IFailableContract<TState> {
+   fn can_fail(self: @TState) -> u32;
+}
+
+fn interact_with_failable_contract() -> u32 {
+   let contract_address = 0x123.try_into().unwrap();
+   let faillable_dispatcher = IFailableContractSafeDispatcher { contract_address };
+   let response = faillable_dispatcher.can_fail();
+
+   // the failure branch is unreachable in the current Starknet version
+   match response {
+       Result::Ok(x) => x,
+       Result::Err(_) => 0
+   }
+}
+```
+The above code calls the function `can_fail` in the contract whose address is 0x123 via the safe dispatcher, which calls the contract without unwrapping the result (as opposed to regular dispatchers). Seemingly, `interact_with_failable_contract` is working as expected, and in case of failure goes to the failure branch and returns zero. However, if `can_fail` failed in the called contract, the control flow will never reach `match response` since the execution is aborted immediately, without returning to the caller.
+
+This situation will change in v0.13.4, and panics will no longer result in aborting the execution. *Note that means that the behavior of existing code can change*, after the upgrade, the above code will go through the failure flow.
+
+Some cases will still lead to an immediate revert without returning to the caller. Those will be handled in future versions, and are covered below:
+
+* Failure in a Cairo Zero contract (in the case of such a failure, the transaction is reverted without returning to the caller)  
+* Library call with a non-existent class hash  
+* Contract call with a non-existent contract address  
+* Using the deploy syscall with a non-existent class hash  
+* Using the replace_class syscall with a non-existent class hash
+
+Within the contract that is matching over `SyscallResult`, whose error variant is an `Array<felt252>`, you can now expect the following:
+
+* When we return to the caller upon a failure in a library or contract call, the felt `ENTRYPOINT_FAILED`, 0x454e545259504f494e545f4641494c4544, is added to the end of the panic reason of the called contract  
+* When the requested entrypoint was not found in a library or contract call, the panic reason array contains a single felt, `ENTRYPOINT_NOT_FOUND`, 0x454e545259504f494e545f4e4f545f464f554e44.
+
+=== Feeder gateway API changes
+
+The following will change in the feeder gateway's responses:
+
+* `get_block`: the `l2_gas_price` property will be added to blocks. It will contain prices in wei and fri, similarly to the other resource types. As mentioned in the xref:#l2_gas[L2_gas section], throughout v0.13.4 the price will be fixed.  
+* `get_transaction_receipt`: the `execution_resources` property of receipts will also contain the triplet of consumed resources `(l1_gas_consumed, l2_gas_c	onsumed, l1_data_gas_consumed)`.
+
+⚠️ Note that steps and builtin consumption reported by the feeder gateway's receipts may not be accurate when Contracts with Sierra ≥ 1.7.0 are involved. For more details see the xref:#block_explorers_and_indexers[block explorers and indexers section].
+
+=== Wallet<>Dapp API
+
+Until now, for a Dapp to connect to a Starknet wallet, it received an Account object injected into the window by the wallets and interacted with the wallet with all the methods supported by the Account class in starknet.js. This meant, in part, that if a new version of Starknet.js was released, both wallets and Dapps were required to upgrade to the new version to stay compatible with the latest Starknet API and Starknet.js features.  
+This coupling stifled progress and required redundant coordination overhead to move the ecosystem forward.  
+Moving to an API message-based communication means wallets and Dapps no longer need to support specific Starknet.js versions as long as they communicate with the same API.  
+In the latest version, starknet-js provides a new class WalletAccount, which abstracts the new API. Major wallet providers already support and work with the new API. More details, example, and reference Dapps are available in the https://community.starknet.io/t/new-starknet-wallet-dapp-api/114295/1[full post^].
+
+=== Starknet JSON RPC
+
+We release a new version of Starknet's json-rpc [v0.8.0](https://github.com/starkware-libs/starknet-specs/releases/tag/v0.8.0-rc0).
+
+⚠️ *Note that following this release nodes will only support json-rpc versions v0.6.0 onwards, any dapp depending on v0.5.0 or earlier must update its SDK version*
+
+Below we cover the main updates in v0.8.0, for an exhaustive list of changes see the release notes:
+
+* A new web-socket json-rpc spec is added. Users will now be able to register to incoming blocks/transactions and events.  
+* wallet-rpc spec is officially added to the spec repo, defining the wallet<>dapp interaction  
+* execution resources are replaced from vm internals (steps & builtins) to the new `(l1_gas, l1_data_gas, l2_gas)` triplet  
+* `getTransactionStatus` now returns the failure reason in case the status is REVERTED/REJECTED  
+* A new `getMessageStatus` endpoint is added to help track l1→l2 messages  
+* A new `getStorageProof` endpoint to support variant kinds of storage proofs  
+* A new endpoint is added for getting the compiled CASM of classes in the case it is stored by the node
+
+=== Block and transaction hash updates
+
+==== Block hash
+
+The block hash will be changed to the following (updates emphasized):
+
+```
+Poseidon(
+   "STARKNET_BLOCK_HASH1", // UPDATED
+   block_number,
+   global_state_root,
+   sequencer_address,
+   block_timestamp,
+   concat_counts,
+   state_diff_hash,
+   transaction_commitment, // UPDATED
+   event_commitment,
+   receipt_commitment,
+   gas_prices_hash, // UPDATED 
+   starknet_version,
+   0,
+   parent_block_hash
+)
+```
+
+That is, the domain separator is updated to `STARKNET_BLOCK_HASH1` and gas prices are separated to `gas_prices_hash`, which is described below:
+
+```
+Poseidon(“STARKNET_GAS_PRICES0”, gas_price_wei, gas_price_fri, data_gas_price_wei, data_gas_price_fri, l2_gas_price_wei, l2_gas_price_fri)
+```
+
+We also slightly change `transaction_commitment` to handle the empty signature issue: as in the previous version, a leaf in the transactions Patricia tree is `Poseidon(transaction_hash, *transaction_signature)`  
+In this version, empty transaction signatures are interpreted as `[]` instead of `[0]`.
+
+==== Transaction hash
+
+We need to define the hash of v3 transactions that include l1_data_gas bounds. The hash structure still follows the definition in https://github.com/starknet-io/SNIPs/blob/main/SNIPS/snip-8.md#protocol-changes[SNIP8^], with the new resource name used for the hash being `L1_DATA` (as it needs to fit in 7 bytes). The ordering of the resources is: L1_gas, L2_gas, L1_data_gas.
+
+== Cairo v2.10.0
+
+A new compiler version will be released for 0.13.4, Cairo 2.10.0. This includes a Sierra upgrade to v1.7.0, i.e. contracts compiled with the new compiler will only be accepted on Starknet v0.13.4 onwards.
+
+The Starknet-related features that will be added in this Cairo version include:
+
+* `get_class_hash_at(contract_adddress)` syscall: a new syscall will be added that, given a contract address, returns the class hash of the contract in that address, and 0 if no contract is deployed.  
+* A `redeposit_gas` heuristic is introduced: previous compiler versions did not add this instruction. This means that Sierra gas accounting was extremely worst-case. An extreme example is a loop with an if/else statement, where one branch is very cheap and the other very expensive but expected to happen only once. Older compiler versions will charge for the expensive branch at every iteration, regardless of what path was chosen. Using the new compiler on the same high-level code may result in significantly lower fees
+
+== Blockifier updates
+
+Below we cover a few significant changes in the blockifier's flow, for an exhaustive list of changes see the release notes
+
+=== Cairo native
+
+The blockifier now has a separate flow to execute contracts whose native code is available. Native has a dedicated syscall handler which is responsible for handling the communication between the blockifier and the native executor. To dive into the code, start https://github.com/starkware-libs/sequencer/tree/native/add-entry-point-execution/crates/blockifier/src/execution/native[here^].
+
+ATM, the blockifier will only use native to execute a given contract if all previous calls in the transaction were through native. On the first occurrence of the Cairo VM, which is used for:
+
+* Cairo Zero execution  
+* Contracts with Sierra < 1.7.0  
+* (TBD) Non-native-whitelisted contracts. This list will gradually grow larger as cairo-native gains more milage on mainnet
+
+the rest of the transaction will run through the VM. This limitation will be relaxed in the future, as more contracts will be executed through native (the Sierra version limitation is somewhat artificial, and only exists since older versions don't contain `redeposit_gas` calls, and hence can result in higher pricing for the same high-level code).
+
+=== L2 gas and Sierra gas metering
+
+There are two high-level changes in the way resource consumption is tracked in the blockifier:
+
+* Depending on whether or not the transaction signed all 3 resources, L2_gas will be used to pay for computation and Starknet resources (such as events, calldata, etc.). For v1 or v3 transactions that only signed over L1_gas, all resource consumption will be eventually converted to L1_gas.  
+* Depending on the Sierra version of a contract, either Sierra gas or vm resources (steps & builtins) will be used for measuring computation. You can find the logic related to tracking Sierra gas https://github.com/starkware-libs/sequencer/blob/0fc3b23ab9897cc35d43f764006d8ef169eab08d/crates/blockifier/src/transaction/account_transaction.rs#L814[here^].
+
+=== Returning to the calling contract upon failure
+
+The blockifier will no longer abort the vm execution once a called contract failed, but rather gracefully return to the caller. There are some edge cases related to syscall failures (as opposed to contract panics, that are now handled) for which the situation remains the same and the transaction will be reverted immediately. For more details, see the xref:#catching_errors[catching errors] section above.
+
+=== Miscellaneous
+
+* `TransactionExecutionInfo` now has a structured error stack instead of a string  
+* No more special treatment of `max_fee` or `max_amount` being 0. If the `charge_fee` flag is on, then the transaction will fail due to insufficient resources. If the flag is off, then `max_fee` and `max_amount` are ignored, and the `receipt` property of `TransactionExecutionInfo` will contain the consumed resources.
+
+== Pricing Changes
+
+=== Computation
+
+When we measure computation by Sierra gas (in v0.13.4, this is only relevant for classes with Sierra ≥ 1.7.0), then prices of low-level resources (steps & builtins) will be determined by their trace-cells count (a measure of proving complexity), as opposed to the situation today where builtins are priced according to a fixed layout that is no longer relevant. 
+
+To elaborate further, consider the following example. Before Starknet supported dynamic layouts, each block had to contain at most N steps and M bitwise instances. Reaching the capacity in either builtins or steps led to closing the block, hence the infamous unintuitive `max` expression in Starknet's xref:architecture-and-concepts:network-architecture/fee-mechanism.adoc#calculation_of_computation_costs[fee formula]. With the dynamic layouts feature, which has been used in Starknet since v0.13.2, we no longer need to determine N and M in advance but rather can adapt to the particular resource consumption of the block. 
+
+In practice, this means that we can switch the maximum with a sum, while simultaneously lowering the cost of most builtins. For example, trace-cells-wise, bitwise is equivalent to ~6 steps, while due to the ratio between N and M in the old no-longer-used layout, we charged for the equivalent of 64 steps (10x factor!). Below you can find the L2 gas costs of builtins, now that we're no longer bound to a specific layout and charge w.r.t trace cells consumption:
+
+
+[%header, cols=","]
+|===
+| Builtin
+| L2 gas cost
+
+| range_check
+| 70
+
+| pedersen
+| 4050
+
+| poseidon
+| 491
+
+| bitwise
+| 583
+
+| ecdsa
+| -
+
+| ec_op
+| 4085
+| keccak
+| -
+
+| add_mod
+| 230
+| mul_mod
+| 604
+|===
+
+*💡 While we discuss the new (effective) builtin costs, steps & builtins are in fact no longer our basic computation units. That would be a Sierra libfunc, the compiler has a cost table for all libfuncs, where internally this cost is determined by the expanded CASM of each libfunc (so builtins affect our new basic computation unit indirectly).*
+
+Looking at the new costs table, you can notice that:
+
+* Most builtins are now significantly cheaper. For example, a single range check used to cost the equivalent of 16 steps, while its true proving complexity (trace cells count) was less than a single step.  
+* While Pedersen became ~25% more expensive (~40 step equivalent as opposed to 32), the trace cell difference between Pedersen and Poseidon is now reflected in the fact that Poseidon is almost 10x cheaper (note that in the future, with the transition to Stwo, this relationship will reverse due to Pedersen proving optimizations that are now made possible, but both prices will most likely be reduced, hence there is no degradation expected).  
+* ecdsa is omitted from this list because Cairo1 contracts can't use the ecdsa builtin (only ec_op)  
+* keccak is omitted from this list since Cairo1 contracts can't access the builtin directly, but rather only use the syscall. The syscall cost will be determined by the trace cells consumption of the keccak builtin, which in terms of L2 gas is ~140k (compared to the existing prices, keccak price drops by ~25%).
+
+A few things to note regarding this computation pricing change:
+
+* It is only relevant when we use Sierra gas metering. In v0.13.4, this only happens for contracts whose Sierra version is ≥ 1.7.0. That is, to enjoy the potential benefits you need to use the new compiler (i.e. potentially upgrade on-chain contracts).  
+* Since using the new metrics for computation depends on the parent call (see xref:#sierra_gas_vs_vm_resources_what_do_we_count[above]), the same contract may be priced differently in different transactions, depending on the caller.  
+* Syscalls are indirectly affected, as their current price is determined by their step & builtin consumption. For example, a transaction that does one `secp256r1_mul` pays for ~14k range checks at the cost of 16 steps for range check. If this syscall is executed from a contract with Sierra ≥ 1.7.0, then builtins will be priced according to the new table, leading to an almost 40% discount 
+
+The difference in the computation fee formula can be summed as:
+
+* max → sum  
+* weights of builtins reflect trace cell consumption rather than an arbitrary layout
+
+This means that for step-heavy transactions, the computation fee will most likely slightly increase, as you will also pay for the builtin consumption. On the other hand, builtin-heavy transactions will (depending on the builtin that maximized the old fee) become much cheaper (with the exception of Pedersen).
+
+=== DA costs
+
+Stateful compression affects the transaction fees in the following ways:
+
+* There will be a new uniform discount factor (TBD) to account for the additional compression  
+* Storage updates from zero to a non-zero value will cost an additional 32 blob gas to account for updating the key→index mapping
+
+== Action Items
+
+=== Full nodes
+
+* Full nodes are expected to release a new version that supports the new Starknet's json-rpc, v0.8.0.  
+* Nodes may drop support for all RPC versions before v0.6.0.  
+* Implement fee estimation heuristics to find the minimal amount of start l2_gas required for the transaction to succeed. More details of the xref:#note_on_fee_estimates_and_gas_redeposits[gas accounting] section.
+
+=== API providers
+
+Once the corresponding node versions are released, API providers should upgrade to avoid falling out of sync
+
+=== SDKs
+
+SDKs are expected to release a new version with support for the https://github.com/starkware-libs/starknet-specs/releases/tag/v0.8.0-rc2[new JSON-RPC version^].
+
+Starknet.js provides the class (https://starknetjs.com/docs/guides/walletAccount/[WalletAccount^] to support the new Wallet<>Dapp API
+
+=== Wallets
+
+==== New resource bounds in v3 transactions
+
+⚠️ *As of v0.14.0, only v3 transactions that sign on all three resource bounds (namely `l1_gas`, `l1_data_gas` and `l2_gas`) will be accepted by the sequencer*
+
+Wallets should gradually migrate from the currently used transaction structure (no `l2_gas` bounds specified) to the new one.
+
+==== Wallet<>Dapp API
+
+Wallets should support the new Wallet<>Dapp API. This will allow Dapps to migrate to the new Starknet.js and starknet-react versions and maintain compatibility with the wallets. 
+
+=== DApps
+
+==== New compiler version and effect on pricing
+
+DApps are encouraged to recompile their contracts with the latest compiler and upgrade. The benefits are two-fold:
+
+* Initially, only contracts compiled with the new compiler will run through native. The more contracts migrate, the larger the potential effect on the throughput of the network.  
+* *⚠️ Contracts that do not upgrade are exposed to a potential price spike ⚠️*
+  In the future, we may shift more Cairo contracts to run via native. At this point, the pricing of transactions going through these contracts will be determined by the Sierra declared on the network, which includes gas accounting set by older compilers that did not use `redeposit_gas`.
+
+==== Upgrade SDK
+
+**⚠️ Make sure that the SDK you're working with can handle Starknet's json-rpc v0.6.0 onwards, as previous RPC versions will no longer be served by nodes**
+
+For Starknet.js, this is v6 onwards.
+
+==== Wallet<>Dapp API
+
+*⚠️ Dapps are encouraged to migrate to Starknet.js v6 onwards and https://starknet-react-website.vercel.app/docs/upgrading-to-v3[starknet-react v3^] onwards (preferably the latest versions)*
+
+These versions support the new wallet<>Dapp API. This API is already supported by the main wallet providers. Wallets are not guaranteed to support Starknet.js versions 5 and older.
+
+=== Block explorers and indexers
+
+⚠️ *using RPC v0.7.0 throughout v0.13.4 may result in inaccurate computation resources in traces and receipts*
+
+Computation resources in v0.7.0 are denominated in terms of VM steps  & builtin consumption (there is no l1_gas or l2_gas for computation, which is not the case for the new spec version). These steps and builtins count may not reflect the actual resource consumption when Sierra 1.7.0 contracts were involved in the execution. For such contracts, computation is measured in Sierra gas, and is only reflected in the final `l1_gas` or `l2_gas` consumption of the transaction.
+
+This means that the VM resources displayed by explorers and indexers relying on v0.7.0 of the spec will be partial (in the extreme case where all the execution is done in Sierra ≥ 1.7.0, the reported VM resources will be the constant OS overhead of the transaction type, which completely disregards user-code execution).

@@ -1,0 +1,35 @@
+[id="current-version"]
+= Starknet version 0.13.3
+
+include::partial$snippet-tip-devs-newsletter.adoc[]
+
+== Release dates
+
+* Testnet: N/A
+* Mainnet: November 20, 2024
+
+== Release notes
+
+Blob gas on Starknet is now 5x cheaper (!) using:
+
+* Squashing discount factor: Users pay for the expected marginal contribution of their transaction to the blobs sent to L1
+
+* State diff compression: Starknet submits compressed state diffs to L1. To better lends itself to the new compression scheme as well as allow its construction to be based on the state diff alone, the uncompressed encoding of contract diff headers changes to:
++
+[stem]
+++++
+\underbrace{\text{new_nonce (if changed)}}_{\text{64 bits}} |
+\underbrace{\text{n_updates}}_{\text{8 or 64 bits}} | \underbrace{\text{n_updates_len}}_{\text{1 bit}} | \underbrace{\text{flag}}_{\text{1 bit}}
+++++
++
+where:
+
+** The semantics of `flag` is unchanged (i.e., it indicates whether or not the class was replaced)
+** `n_updates_len` is 0 if the number of updates is less than 256 (and therefore can fit in 8 bits), and 1 otherwise
+** `n_updates` can spread over 8 or 64 bits, depending on `n_updates_len`
+** If the nonce of the contract is unchanged, the value of `new_nonce` is zero (and not the unchanged nonce)
+
+== Additional resources
+
+* https://community.starknet.io/t/starknet-v0-13-3/115053[Starknet v0.13.3 post in the Starknet community forum^]
+* https://community.starknet.io/t/fall-roadmap-updates/115001[Fall roadmap updates post on the Starknet community forum^]
