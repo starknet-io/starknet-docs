@@ -1,98 +1,134 @@
 [id="StarkGate_architecture"]
 = StarkGate architecture
 
-StarkGate architecture, as presented in Figure 1 xref:#StarkGate_architecture_diagram[_StarkGate architecture diagram_], is composed of pairs of L1 and L2 StarkGate contract instances that communicate via Starknet’s L1-L2 messaging mechanism. 
+[IMPORTANT]
+====
+This page is a deep-dive into Starknet's different components. To learn how to use StarkGate, go to xref:overview.adoc[_Guides_].
+====
 
-For some tokens, a pair of bridges consist of a single StarkGate instance on L1 and a single StarkGate instance on L2. For most tokens, the pair of bridges is a multi- bridge, which has an instance on L1 and an instance on L2, serving multiple tokens.
+== Introduction
 
-Each pair of bridges correspond with the relevant ERC-20 contracts on Ethereum and Starknet, as described in table 1 xref:#bridge_explanation_table[].
+https://starkgate.starknet.io[StarkGate^], developed by StarkWare, bridges ETH and ERC-20 tokens between Ethereum and Starknet. The following is an illustration of its overall architecture:
 
-._StarkGate architecture_
-[#StarkGate_architecture_diagram]
 image::sg-architecture.png[]
 
-._Components of a bridge for an individual token_
-[#bridge_explanation_table]
-[cols='1,8']
-|===
-| *L1*
-a|
-* ERC-20 contract that defines the token on Ethereum. This contract must exist before you can bridge it.
-* StarkGate solidity bridge contract instance for ERC-20 tokens which is supported in `StarknetTokenBridge.sol`.
-| *L2*
-a|
-* StarkGate Cairo bridge contract instance of the `token_bridge.cairo` contract class.
-* ERC-20 Cairo token contract instance of a standard ERC-20 Cairo token contract class. Each new contract uses the hash of this class to define its inheritance. StarkGate creates this contract automatically when creating the bridge in StarkGate.
-|===
-
-// Need to add the Ethereum addresses of these contracts
-
-include::partial$snippet_backwards_compatibility_note.adoc[]
-
-You can check if a token is currently supported with the L1 function `getBridge`.
-
-// Ask Dan if he can add a feature that shows all currently supported ERC-20 tokens.
-
-You can permissionlessly add support for ERC-20 tokens to the multi-token bridge using the `enrollTokenBridge` function. For more information, go to https://docs.starknet.io/starkgate/adding-a-token/[Adding a token].
-
-[#StarkGate_manager_and_registry]
-== The StarkGate Manager and Registry
-
-StarkGate includes the following administration components, which are L1 contracts:
-
-// [horizontal]
-* The _StarkGate Manager_: is responsible for adding tokens to the multi-bridge.
-* The _StarkGate Registry_:
-** Contains the addresses of all supported bridges and tokens.
-** Enables a bridge developer to stop servicing an existing bridge
+As illustrated, while StarkGate is referred to as a single bridge, some xref:#legacy_bridge[legacy tokens] have their own bridge, each of which is defined in a corresponding pair of L1 and L2 contracts. Moreover, StarkGate also includes additional xref:#l1_components[L1 components], used for administrative purposes. To best understand the interplay between the different components, it's recommended to follow the xref:#lifecycles[lifecycles of a deposit and withdrawal].
 
 [#legacy_bridge]
 == Legacy bridges
 
-All token bridges that existed prior to StarkGate 2.0 (Mainnet: January 2024) besides supporting all StarkGate 2.0 functionality, are backward compatible. Each token was bridged with a unique, custom pair of L1 and L2 bridge contracts. The L1 bridge is an instance of link:https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/solidity/LegacyBridge.sol[`LegacyBridge.sol`], and the L2 bridge is an instance of link:https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/cairo/legacy_bridge_eic.cairo[`legacy_bridge_eic.cairo`].
+Prior to StarkGate 2.0 (Mainnet: January 2024) tokens were bridged with a unique, custom pair of L1 and L2 bridge contracts, where the L1 contract is an instance of https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/solidity/LegacyBridge.sol[`LegacyBridge.sol`^] and the L2 contract is an instance of https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/cairo/legacy_bridge_eic.cairo[`legacy_bridge_eic.cairo`^]. These legacy token bridges are supported by StarkGate 2.0 in a fully backward-compatible fashion, as illustrated in the following example.
 
 [#example]
-=== Example: USDC contracts
+=== Example: USDC
 
-* L1 ERC-20 contract address: `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`
-* L2 ERC-20 contract address: `0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8`
-* L1 bridge contract address: `0xF6080D9fbEEbcd44D89aFfBFd42F098cbFf92816`
-* L2 bridge contract address: `0x05cd48fccbfd8aa2773fe22c217e808319ffcc1c5a6a463f7d8fa2da48218196`
+[NOTE]
+====
+For the complete list of legacy bridges, see the https://github.com/starknet-io/starknet-addresses/tree/master/bridged_tokens[`bridged_tokens`^] directory on GitHub.
+====
 
-Consider the `deposit` functions for the L1 bridge contract for USDC on Etherscan: link:https://etherscan.io/address/0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract[`0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract`]
+Consider the `deposit` functions for the L1 bridge contract for USDC on Etherscan: https://etherscan.io/address/0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract[`0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract`^]
 
 This contract has the following two `deposit` functions: `deposit (0x0efe6a8b)` and `deposit (0xe2bbb158)`, which shows that the bridge includes support for the legacy functionality as well as the modern functionality:
 
 [horizontal,labelwidth="25"]
-`deposit (0x0efe6a8b)`:: The StarkGate 2.0 contract, which includes support for all tokens within a single contract, requiring that you enter the address of the token in the deposit function.
+`deposit (0x0efe6a8b)`:: The multi-bridge contract, which includes support for all tokens within a single contract, requiring that you enter the address of the token in the deposit function.
 `deposit (0xe2bbb158)`:: The legacy contract, which is labeled *Support Legacy ABI*. This function does not include the `token (address)` parameter, because the contract that contains this function only supports USDC. Therefore, the address of the token is superfluous.
 
-[#legacy_bridges]
-=== List of legacy bridges
+== L1 components
 
-The following tokens have legacy contracts as well as StarkGate 2.0 contracts:
+[cols=",", options="header"]
+|===
+| Contract
+| Description
 
-* Starknet Token (STRK)
-* Starknet Voting Token (vSTRK)
-* Wrapped BTC (WBTC)
-* USD Coin (USDC)
-* Tether USD (USDT)
-* Ether (ETH)
-* Dai Stablecoin (DAI)
-* Dai Stablecoin (DAI) (Dai v0)
-* Wrapped liquid staked Ether 2.0 (wstETH)
-* Rocket Pool ETH (rETH)
-* R Stablecoin +(R)+
-* Frax (FRAX)
-* Frax Share (FXS)
-* Staked Frax Ether (sfrxETH)
-* LUSD Stablecoin (LUSD)
-* Uniswap (UNI)
+| https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/StarkgateManager.sol[`StarkgateManager.sol`^]
+| Responsible for adding tokens to the multi-bridge.
 
-For complete details, see the link:https://github.com/starknet-io/starknet-addresses/tree/master/bridged_tokens[`bridged_tokens`] directory on GitHub.
+An interface is available through https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/IStarkgateManager.sol[`IStarkgateManager.sol`].
+
+| https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/StarkgateRegistry.sol[`StarkgateRegistry.sol`^]
+| Contains the addresses of all supported bridges and tokens and enables to stop servicing an existing bridge.
+
+An interface is available through https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/IStarkgateRegistry.sol[`IStarkgateRegistry.sol`].
+
+| https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/StarknetTokenBridge.sol[`StarknetTokenBridge.sol`]
+| The primary StarkGate bridge contract, where the main user bridge functionality are defined.
+
+| https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/IStarkgateService.sol[`IStarkgateService.sol`]
+| An interface to check if a contract is servicing a token.
+|===
+
+== Lifecycles
+
+=== Deposit lifecycle
+
+==== Step 1: Initiating a deposit on L1
+
+. A call to the L1 `deposit` function initiates a deposit.
+. The function does the following:
++
+--
+* Transfers the funds from the user's account to the Starknet bridge.
+* Emits a `Deposit` event that includes the L1 and L2 addresses of the user, and the amount deposited.
+* Sends a message to the corresponding L2 bridge with the amount deposited, and the recipient's address.
+--
++
+Starknet's sequencer is now aware of the deposit transaction.
+
+. The sequencer waits for enough L1 block confirmations to fill its quota to run before the corresponding deposit transaction is initiated on L2. During this period of time, the status of the L2 deposit transaction is xref:architecture-and-concepts:network-architecture/transaction-life-cycle.adoc#not_received[`NOT_RECEIVED`].
+
+==== Step 2: Triggering a deposit on L2
+
+. The sequencers refer to the deposit
+request by triggering the L1 handler using the
+https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/cairo/token_bridge.cairo#L135[`handle_deposit`] function on the L2 bridge.
+
+. The `handle_deposit` function verifies that the deposit indeed came from the corresponding L1 bridge. It then calls the relevant token's contract on Starknet and mints the specified amount of the token on L2 for the user.
+
+. The sequencers complete constructing the block.
+
+The status of the deposit request is now xref:architecture-and-concepts:network-architecture/transaction-life-cycle.adoc#accepted_on_l2[`ACCEPTED_ON_L2`].
+
+==== Step 3: Proving the block that includes the deposit
+
+. Starknet's provers prove the validity of the block and submit a state update to L1.
+
+. The message confirming transfer of the funds is cleared from the Starknet Core Contract, and the fact that the user has transferred their funds is part of the now finalized state of Starknet.
+
+[NOTE]
+====
+If the message wasn't on L1 to begin with, that is, if the deposit request was fraudulently created on Starknet, the state update fails.
+====
+
+=== Withdrawal lifecycle
+
+==== Step 1: Initiating a withdrawal on L2
+
+. A call to the L2 `initiate_token_withdraw` function initiates a withdrawal.
+. The function does the following:
+* Burns the transferred amount of tokens from the balance of the withdrawal's initiator.
+* Sends a message to the relevant L1 bridge with the amount to be transferred and the recipient's address.
+
+==== Step 2: Proving the block that includes the withdrawal
+
+// Once the sequencer completes the block construction, Starknet's provers prove the validity of the block and submit a state update to L1. The message from the previous step is then stored in the Starknet Core Contract.
+
+. The sequencer completes the block construction
+. Starknet's provers prove the validity of the block and submit a state update to L1.
+. The message from the previous step is stored in the Starknet Core Contract.
+
+==== Step 3: Transferring the funds on L1
+
+After the withdrawal message has been recorded on the Starknet Core Contract, anyone can finalize the transfer on L1 from the bridge back to the user, by calling the xref:function-reference.adoc#withdraw[`withdraw`] function.
+
+[NOTE]
+====
+This step is permissionless, anyone can do it. The recipient's address is part of the recorded message on L1, so they receive the funds regardless of who calls the `withdraw` function on L1.
+====
 
 [#stark_gate_withdrawal_limit]
-== Withdrawal limit
+==== Withdrawal limit
 
 By default, StarkGate imposes no limit on withdrawals. However, in order to mitigate risks associated with critical vulnerabilities that could result in the loss of user funds, StarkGate can enable a withdrawal limit.
 
@@ -105,12 +141,4 @@ This approach, blending manual oversight with automated detection, aims to minim
 
 == Additional resources
 
-* xref:adding-a-token.adoc[Adding a token]
-
-* The xref:function-reference.adoc[_StarkGate function reference_]. Lists functions exposed by the Registry, Manager, and the bridge itself, including:
-** xref:function-reference.adoc#getBridge[`getBridge`]
-** xref:function-reference.adoc#enrollTokenBridge[`enrollTokenBridge`]
-** https://github.com/starknet-io/starkgate-contracts/tree/cairo-1[L1 and L2 contracts on GitHub]
-
-// Awaiting final URL.
-// * link:https://github.com/starknet-io/starkgate-contracts/blob/d62a255307d2f3de65665f18316766a2c69ead78/src/solidity/WithdrawalLimit.sol#L20[`setWithdrawLimitPCT`] in `WithdrawalLimit.sol`
+* https://research.lazer1.xyz/blog/making-sense-of-starknet-architecture-and-l1-l2-messaging/[_Making sense of Starknet architecture and L1-L2 Messaging_ by Lazer 1 Research]
