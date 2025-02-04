@@ -1,6 +1,8 @@
 [id="entering-staking"]
 = Becoming a Validator
 
+include::partial$snippet-important-staking-v2.adoc[]
+
 :description: How to enter the staking protocol on Starknet by interacting directly with the staking contract.
 
 Using the Starknet staking contract to stake STRK tokens requires interacting with the `stake` function. The `stake` function does the following:
@@ -11,37 +13,67 @@ Using the Starknet staking contract to stake STRK tokens requires interacting wi
 
 Subsequently, the validator’s tokens will be locked in the staking contract, and the validator will begin earning rewards based on their stake.
 
-For more information on what happens during the staking process, see xref:architecture.adoc#staking-contract[Staking Contract Architecture].
+For more information on what happens during the staking process, see xref:architecture.adoc#staking-contract[Staking Architecture].
 
 .Prerequisites
 
-* Validators are expected to run full nodes in preparation for the following stages of the protocol. You can use any full node implementation you choose:
-** link:https://github.com/NethermindEth/juno[Juno] by Nethermind - link:https://juno.nethermind.io/hardware-requirements/#recommended-requirements[Spec].
-** link:https://github.com/eqlabs/pathfinder[Pathfinder] by EQLabs - https://github.com/eqlabs/pathfinder?tab=readme-ov-file#hardware-requirements[Spec].
-** link:https://github.com/madara-alliance/madara[Madara] by Madara Alliance - link:https://docs.madara.build/get-started/requirements[Spec].
-* A Starknet-compatible block explorer or CLI tool.
+* Validators are required to run full nodes in preparation for the following stages of the protocol. You can use any full node implementation you choose:
+** https://github.com/NethermindEth/juno[Juno] by Nethermind: https://juno.nethermind.io/hardware-requirements[juno.nethermind.io/hardware-requirements]
+** https://github.com/eqlabs/pathfinder[Pathfinder] by Equilibrium: https://github.com/eqlabs/pathfinder?tab=readme-ov-file#hardware-requirements[github.com/eqlabs/pathfinder?tab=readme-ov-file#hardware-requirements]
+** https://github.com/madara-alliance/madara[Madara] by Madara Alliance: https://docs.madara.build/Installation/requirements[docs.madara.build/Installation/requirements]
+* A Starknet-compatible xref:tools:ref-block-explorers.adoc[block explorer] or xref:tools:devtools/clis.adoc[CLI tool].
 * Sufficient STRK token balance in your wallet.
++
+[NOTE]
+====
+For validators who wish to use a secure hardware wallet, the https://www.ledger.com/[Ledger hardware wallet] is supported by both https://www.argent.xyz/blog/ledger-argent-integration/[Argent] and https://braavos.app/wallet-features/ledger-on-braavos/[Braavos] wallets.
+
+====
 
 .Procedure
 
-. Pre-approve the STRK ERC20 contract for the transfer of tokens from your address to the staking contract (and *not* the operator contract):
-+
-* Using a Starknet block explorer, navigate to the STRK ERC20 contract (link:https://starkscan.co/token/0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d[Starkscan], link:https://voyager.online/contract/0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d[Voyager]).
-* Approve the staking contract to transfer the specified amount of STRK tokens on your behalf.
-. Using a Starknet block explorer, navigate to the operator contract. 
-. In the contract interface, locate and select the `stake` function.
-. Enter the following parameters:
-+
-* In *`reward_address`*, enter the address where the rewards will be sent.
-* In *`operational_address`*, enter the operational address associated with this stake.
-* In *`amount`*, enter the number of STRK tokens you want to stake.
-* In *`pooling_enabled`*, enter `true` if you wish to enable delegation pooling, otherwise enter `false`.
-* In *`commission`*, enter the commission rate for any delegated staking. The rate should be entered as a percentage with precision, where 10000 represents 100%. For example, to set a 5% commission, you would enter 500.
-. Submit the transaction to execute the staking operation.
+. If you are using a block explorer:
+.. Navigate to the STRK contract by searching for xref:tools:important-addresses.adoc#fee_tokens[its address]
+.. In the contract interface, locate and select the `approve` function.
+. Pre-approve the STRK ERC20 contract for the transfer of tokens from your address to the staking contract by invoking its `approve` function with the following parameters:
+* In the first parameter (`spender`), enter the xref:overview.adoc#staking_contract[staking contract's address].
+* In the second parameter (`amount`), enter the number of STRK tokens you want to stake (note the xref:overview.adoc#economic_parameters[minimum stake for validators] and that STRK has 18 decimals).
 
-.Secured hardware wallets:
-Ledger hardware wallet is supported through:
+[TIP]
+====
+If you using Starkli as CLI tool, the following example, which approves the STRK contract to transfer 1 STRK to the staking contract on Sepolia, can be used as reference: 
 
-* link:https://braavos.app/wallet-features/ledger-on-braavos/[Braavos wallet]
+[source,bash]
+----
+starkli invoke 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d approve \
+0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 u256:1000000000000000000 \
+--network=sepolia
+----
 
-* link:https://www.argent.xyz/blog/how-to-use-your-hardware-wallet-with-argent/[Argent wallet]
+====
+
+[start=3]
+. If you are using a block explorer:
+.. Navigate to the staking contract by searching for xref:overview.adoc#staking_contract[its address].
+.. In the contract interface, locate and select the `stake` function.
+. Invoke the staking contract's `stake` function with the following parameters:
+* In the first parameter (`reward_address`), enter the address where the rewards will be sent.
+* In the second parameter (`operational_address`), enter the address that xref:overview.adoc#first_stage[in the future] will be used for block attestations and sequencing.
+* In the third parameter (`amount`), enter the number of STRK tokens you want to stake (note the xref:overview.adoc#economic_parameters[minimum stake for validators] and that STRK has 18 decimals).
+* In the fourth parameter (`pool_enabled`), enter `1` (true) if you wish to enable delegation pooling, otherwise enter `0` (false).
+* In the fifth parameter (`commission`), enter the commission rate for any delegated staking. The rate should be entered as a percentage with precision, where 10000 represents 100%. For example, to set a 5% commission, you would enter 500.
+
+[TIP]
+====
+If you are using Starkli as CLI tool, the following example, which stakes 1 STRK with delegation pooling enabled and 1% commission on Sepolia, can be used as reference:
+
+[source,bash]
+----
+starkli invoke 0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 stake \
+<reward_address> <operational_address> 1000000000000000000 1 100 \
+--network=sepolia 
+----
+====
+
+[start=5]
+. Register your validator on link:https://forms.gle/BUMEZx9dpd3DcdaT8[Karnot's], link:https://stakingrewards.typeform.com/to/aZdO6pW7[Staking Rewards'], and link:https://forms.gle/WJqrRbUwxSyG7M9x7[Voyager's] dashboards.

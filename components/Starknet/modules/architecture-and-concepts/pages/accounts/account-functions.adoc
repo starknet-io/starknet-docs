@@ -16,7 +16,7 @@ The functions in the table xref:#starknet_account_interface_functions[] are part
 
 [WARNING]
 ====
-At the moment of writing (Starknet 0.13.2), two critical validations must happen in `+__execute__+`, and their absence can lead to draining of the account's funds:
+Two critical validations must happen in `+__execute__+`, and their absence can lead to draining of the account's funds:
 
 (1) `assert!(get_caller_address().is_zero())`
 
@@ -40,7 +40,7 @@ That is, this function runs at most once throughout the lifecycle of the account
 When the sequencer receives a transaction, it calls the corresponding validation function with the appropriate input from the transaction's data, as follows:
 
 * For an `INVOKE` transaction, the sequencer calls the `+__validate__+` function with the transaction's calldata as input. The transaction's calldata will be deserialized to the arguments in the `+__validate__+` function's signature, it is up to the sender to make sure that the calldata is encoded appropriately according to validate's signature. After successfully completing validation, the sequencer calls the `+__execute__+` function with the same arguments.
-* For a `DEPLOY_ACCOUNT` transaction, the sequencer calls the `constructor` function with the transaction's `constructor_calldata` as input (as above, it is expected that the constructor's calldata successfully desieralizes to the arguments in the constructor signature). After the successful execution of the constructor, the sequencer validates the transaction by calling the `+__validate_deploy__+` function.
+* For a `DEPLOY_ACCOUNT` transaction, the sequencer calls the `constructor` function with the transaction's `constructor_calldata` as input (as above, it is expected that the constructor's calldata successfully deserializes to the arguments in the constructor signature). After the successful execution of the constructor, the sequencer validates the transaction by calling the `+__validate_deploy__+` function.
 * For a `DECLARE` transaction, the sequencer validates the transaction by calling the `+__validate_declare__+` function.
 
 * For more information on the available transaction types and their fields, see xref:architecture-and-concepts:network-architecture/transactions.adoc[Transaction types].
@@ -48,29 +48,15 @@ When the sequencer receives a transaction, it calls the corresponding validation
 
 Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from Denial of Service (DoS) attacks.
 
-[#attacks_that_validation_limitations_prevent]
-== Potential DoS
-
-The validation functions have limitations, described below, that are designed to prevent the following DoS attacks on the sequencer:
-
-* An attacker could cause the sequencer to perform a large amount of work before a transaction fails validation. Two examples of such attacks are:
-** Spamming `INVOKE` transactions whose `+__validate__+` requires many steps, but eventually fails
-** Spamming `DEPLOY_ACCOUNT` transactions that are invalid as a result of the constructor or `+__validate_deploy__+` failing.
-* The above attacks are solved by making sure that the validation step is not resource-intensive, e.g. by keeping the maximal number of steps low. However, even if the validation is simple, the following "mempool pollution" attack could still be possible:
-. An attacker fills the mempool with transactions that are valid at the time they are sent.
-. The sequencer is ready to execute them, thinking that by the time it includes them in a block, they will still be valid.
-. Shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it's included in a block, e.g. by offering higher fees for this one transaction.
-An example of such an attack is having the implementation of `+__validate__+` checks that the value of a storage slot is `1`, and the attacker's transaction later sets it to `0`. Restricting validation functions from calling external contracts prevents this attack.
-
 [#limitations_of_validation]
 == Limitations on validation
 
-The limitations listed here apply to the following validation functions:
+The following validation functions:
 
 * `+__validate__+`, `+__validate_deploy__+`, and `+__validate_declare__+`.
-* A constructor, when run in a `DEPLOY_ACCOUNT` transaction. That is, if an account is deployed from an existing class via the `deploy` syscall, these limitations do not apply.
+* A constructor, when run in a `DEPLOY_ACCOUNT` transaction (in particular, *not* when an account is deployed from an existing class via the `deploy` syscall)
 
-The validation functions have the following limitations:
+are subject to the following limitations:
 
 * You cannot call functions in external contracts, only in your account contract.
 +
@@ -88,6 +74,17 @@ This limitation implies that the fees you need to pay to invalidate transactions
 * The following syscalls cannot be called:
 ** `get_block_hash`
 ** `get_sequencer_address` (this syscall is only supported for Cairo 0 contracts).
+
+These limitations are designed to prevent the following DoS attacks on the sequencer:
+
+* An attacker could cause the sequencer to perform a large amount of work before a transaction fails validation. Two examples of such attacks are:
+** Spamming `INVOKE` transactions whose `+__validate__+` requires many steps, but eventually fails
+** Spamming `DEPLOY_ACCOUNT` transactions that are invalid as a result of the constructor or `+__validate_deploy__+` failing.
+* The above attacks are solved by making sure that the validation step is not resource-intensive, e.g. by keeping the maximal number of steps low. However, even if the validation is simple, the following "mempool pollution" attack could still be possible:
+. An attacker fills the mempool with transactions that are valid at the time they are sent.
+. The sequencer is ready to execute them, thinking that by the time it includes them in a block, they will still be valid.
+. Shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it's included in a block, e.g. by offering higher fees for this one transaction.
+An example of such an attack is having the implementation of `+__validate__+` checks that the value of a storage slot is `1`, and the attacker's transaction later sets it to `0`. Restricting validation functions from calling external contracts prevents this attack.
 
 [id="invalid_transactions"]
 == Invalid transactions
