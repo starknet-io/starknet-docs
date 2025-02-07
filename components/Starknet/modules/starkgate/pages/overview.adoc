@@ -1,123 +1,44 @@
 [id="starkgate_token_bridge"]
-= StarkGate bridge overview
+= The StarkGate bridge guide overview
 
-StarkGate, developed by StarkWare, bridges ETH and ERC-20 tokens between Ethereum and Starknet. Each supported token is associated with an L1 and L2 bridge contract that communicates via Starknet's messaging mechanism.
+[IMPORTANT]
+====
+This guide is a hands-on tutorial for using StarkGate. To learn about the different components of StarkGate, go to xref:architecture.adoc[_Architecture_].
+====
 
-To use the StarkGate web app, go to https://starkgate.starknet.io.
-
-A bridge enables you to fund your L2 wallet with ETH and ERC-20 tokens that reside on L1.
-
-The terms _deposit_, _transact_, and _transfer_ refer to various operations involving a bridge, even though ETH and ERC-20 tokens never actually leave Ethereum.
-
-include::partial$snippet_backwards_compatibility_note.adoc[]
-
-[#starkgate_addresses]
-== StarkGate addresses
-
-L1 and L2 addresses for StarkGate bridges and supported tokens are listed in the JSON files shown in the table xref:#table_StarkGate_token_addresses[].
+https://starkgate.starknet.io[StarkGate^], developed by StarkWare, bridges ETH and ERC-20 tokens between Ethereum and Starknet. StarkGate supports many tokens, each by its own L1 and L2 contracts. For a comprehensive list of tokens that StarkGate supports, including their L1 and L2 addresses, see the JSON files shown in the following table:
 
 [#table_StarkGate_token_addresses]
-.StarkGate bridged tokens and their addresses
+[%autowidth]
 |===
-| Network | StarkGate bridged tokens JSON file
+| Network | JSON file
 
 | Mainnet | link:https://starkgate.starknet.io/static/tokens.json[tokens.json]
 | Sepolia | link:https://sepolia.starkgate.starknet.io/static/tokens.json[tokens.json]
 |===
 
-[#starkgate_supported_tokens]
-== Supported tokens in StarkGate
+[TIP]
+====
+You can also check if a token is supported using the `getBridge` function.
 
-StarkGate supports many tokens, including ETH, WBTC, USDC, DAI, and many more.
+For full details about this and all other functions and events, see the xref:function-reference.adoc[functions and events reference].
+====
 
-For a comprehensive list of tokens that StarkGate supports, including their L1 and L2 addresses, see the JSON files shown in the table xref:#table_StarkGate_token_addresses[].
+This guide will walk you through the various procedures enabled by StarkGate, including:
+
+* https://docs.starknet.io/starkgate/depositing/[Depositing funds]: Depositing ETH and ERC-20 tokens from your L1 wallet on Ethereum to your L2 wallet on Starknet, using a lock-and-mint mechanism.
+
+* https://docs.starknet.io/starkgate/automated-actions-with-bridging/[Performing a Smart Deposit]:  Depositing ETH and ERC-20 tokens from your L1 wallet on Ethereum to your L2 wallet on Starknet, with an option to add subsequent actions (e.g., depositing funds and transferring those funds to another recipient within the same transaction).
+
+* https://docs.starknet.io/starkgate/cancelling-a-deposit/[Canceling a deposit]: Canceling a previous deposit or deposit with message, if you don't see your deposited funds appear on L2 within a reasonable amount of time.
+
+* https://docs.starknet.io/starkgate/withdrawing/[Withdrawaling funds]: Withdrawing ETH and ERC-20 tokens from your L2 wallet on Starknet to your L1 wallet on Ethereum, using a burn-and-unlock mechanism.
+
+* https://research.lazer1.xyz/blog/making-sense-of-starknet-architecture-and-l1-l2-messaging/#enroll-a-token-bridge[Adding a token^]: Permissionlessly enrolling a token bridge on StarkGate.
 
 [NOTE]
 ====
-Previously, StarkGate placed limitations for each supported token on the amount that could be deposited and the total value locked in the L1 bridge contract on Mainnet. These limits have been removed.
+StarkGate enforces xref:architecture-and-concepts:network-architecture/messaging-mechanism.adoc#l1-l2-message-fees[fees] for all procedures to account for L1->L2 message costs.
+
+Fees for depositing funds or enrolling a token bridge on StarkGate, can be estimated using the `estimateDepositFeeWei` or `estimateEnrollmentFeeWei` function.
 ====
-
-[id="l1l2_transfer_deposit"]
-== L1->L2 transfer (deposit)
-
-[id="step_1_call_the_deposit_function_on_l1"]
-=== Step 1: Call the deposit function on L1
-
-
-. A call to the L1 `deposit` function initiates a deposit.
-. The function does the following:
-+
---
-* Transfers the funds from the user's account to the Starknet bridge.
-* Emits a `Deposit` event that includes the L1 and L2 addresses of the user, and the amount deposited.
-* Sends a message to the corresponding L2 bridge with the amount deposited, and the recipient's address.
---
-+
-Starknet's sequencer is now aware of the deposit transaction.
-
-. The sequencer waits for enough L1 block confirmations to fill its quota to run before the corresponding deposit transaction is initiated on L2. During this period of time, the status of the L2 deposit transaction is xref:architecture-and-concepts:network-architecture/transaction-life-cycle.adoc#not_received[`NOT_RECEIVED`].
-
-[id="step_2_deposit_triggered_on_starknet"]
-=== Step 2: Deposit triggered on Starknet
-
-. The sequencers refer to the deposit
-request by triggering the L1 handler using the
-https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/cairo/token_bridge.cairo#L135[`handle_deposit`] function on the L2 bridge.
-
-. The `handle_deposit` function verifies that the deposit indeed came from the corresponding L1 bridge. It then calls the relevant token's contract on Starknet and mints the specified amount of the token on L2 for the user.
-
-. The sequencers complete constructing the block.
-
-The status of the deposit request is now xref:architecture-and-concepts:network-architecture/transaction-life-cycle.adoc#accepted_on_l2[`ACCEPTED_ON_L2`].
-
-[id="step_3_the_block_that_includes_the_transfer_is_proved"]
-=== Step 3: The block that includes the transfer is proved
-
-. Starknet's provers prove the validity of the block and submit a state update to L1.
-
-. The message confirming transfer of the funds is cleared from the Starknet Core Contract, and the fact that the user has transferred their funds is part of the now finalized state of Starknet.
-
-[NOTE]
-====
-If the message wasn't on L1 to begin with, that is, if the deposit request was fraudulently created on Starknet, the state update fails.
-====
-
-[id="l2l1_transfer_withdraw"]
-== L2->L1 transfer (withdrawal)
-
-[id="step_1_call_the_withdraw_function_on_l2"]
-=== Step 1: Initiate a withdrawal from L2
-
-. A call to the L2 `initiate_token_withdraw` function initiates a withdrawal.
-. The function does the following:
-* Burns the transferred amount of tokens from the balance of the withdrawal's initiator.
-* Sends a message to the relevant L1 bridge with the amount to be transferred and the recipient's address.
-
-
-[#proving_the_block_that_includes_the_withdrawal_transaction]
-=== Step 2: Proving the block that includes the withdrawal transaction
-
-// Once the sequencer completes the block construction, Starknet's provers prove the validity of the block and submit a state update to L1. The message from the previous step is then stored in the Starknet Core Contract.
-
-. The sequencer completes the block construction
-. Starknet's provers prove the validity of the block and submit a state update to L1.
-. The message from the previous step is stored in the Starknet Core Contract.
-
-[id="step_3_transferring_the_funds_on_l1"]
-=== Step 3: Transferring the funds on L1
-
-After the withdrawal message has been recorded on the Starknet Core Contract, anyone can finalize the transfer on L1 from the bridge back to the user, by calling the xref:function-reference.adoc#withdraw[`withdraw`] function.
-
-[NOTE]
-====
-This step is permissionless, anyone can do it. The recipient's address is part of the recorded message on L1, so they receive the funds regardless of who calls the `withdraw` function on L1.
-====
-
-== Additional resources
-
-* xref:architecture-and-concepts:network-architecture/messaging-mechanism.adoc[L1-L2 messaging]
-* The _StarkGate developer's reference_:
-** xref:function-reference.adoc#deposit[`deposit` function, `Deposit` event]
-** xref:function-reference.adoc#withdraw[`withdraw`]
-** xref:function-reference.adoc#initiate_token_withdraw[`initiate_token_withdraw`]
-* link:https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/cairo/token_bridge.cairo#L135[`handle_deposit`] function on the L2 bridge
