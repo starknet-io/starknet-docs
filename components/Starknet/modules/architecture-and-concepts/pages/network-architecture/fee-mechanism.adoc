@@ -77,39 +77,37 @@ You can find more details in the https://community.starknet.io/t/starknet-v0-13-
 
 === Overall fee
 
-This section details the formula for determining a transaction's fee, while the following subsections dive into the different fee components and explain how this formula was derived.
-
-==== Gas prices
-
-For L1 gas and L1 data gas (aka blob gas), the Starknet sequencer samples the base price on L1 every 60 seconds. The price of L1 gas and L1 data gas on Starknet is set to the average of the last 60 gas price samples, plus 1 gwei.
-
-The price of L2 gas is a fixed amount denominated in WEI (the price in FRI is only dependent on the WEI to FRI ratio). In the future, the price of L2 gas will be determined by Starknet's fee market with the introduction of EIP1559.
-
-==== Blobs vs. calldata
+[IMPORTANT]
+====
+This subsection details the formula for determining a transaction's overall fee, while the following subsections dive into the different fee components and explain how this formula was derived.
+====
 
 Starting with Starknet v0.13.1, Starknet distinguishes between blocks whose state diffs are sent to L1 as calldata and blocks whose state diffs are sent to L1 as blobs. The `l1_da_mode` property in the Starknet block header contains this information. The cost of computation remains the same on both options, but the cost related to data availability differs.
 
-==== Overall fee with blobs
-
-The following formula describes the overall fee, stem:[F], for a transaction in blocks whose state diffs are sent to L1 as blobs:
+The following formula describes the overall fee of a transaction:
 
 [stem]
 ++++
 \begin{align}
-F  = & \text{l1_gas_price} \cdot\Bigg( \\
+\qquad & \text{l1_gas_price} \cdot\Bigg( \\
 & \qquad \text{message_calldata_cost}\cdot 3t \; + \\
 & \qquad \; (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
 & \qquad \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t \\
 & \Bigg) + \; \text{l2_gas_price} \cdot (\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) \\
-& \quad + \;\; \text{l1_data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\big(\ell + 2(n-1) + 2(m-1) + 2D \big)
+& \quad + \; \begin{cases}\text{l1_data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\big(\ell + 2(n-1) + 2(m-1) + 2D \big) & \text{if l1_da_mode is BLOB} \\ \\ \text{l1_gas_price} \cdot \Big( \\ \qquad \text{da_calldata_cost} \cdot \left(\ell + 2(n-1)+2(m-1) + 2D\right) \; - \\ \qquad \text{contract_update_discount}\cdot (n-1) \; - & \text{if l1_da_mode is CALLDATA} \\ \qquad \text{sender_balance_update_discount} \\ \Big)\end{cases}
 \end{align}
 ++++
 
 where:
 
-* stem:[$\text{message_calldata_cost}$] is 1124 gas per 32-byte word, stem:[$\text{l1_log_data_cost}$] is 256 gas, stem:[$\text{l1_storage_write_cost}$] is 20,000 gas (the cost of writing to a new storage slot on Ethereum), and stem:[$\text{log_message_to_l1_cost}$] is 1637 gas. For more information, see xref:#l2l1_messages[].
+* stem:[\text{l1_gas_price}] and stem:[\text{l1_data_gas_price}] the the averages of the last 60 L1 base gas prices sampled by the Starknet sequencer — sampled every 60 seconds — plus 1 Gwei
+
+
+* stem:[$\text{message_calldata_cost}$] is 1124 gas, stem:[$\text{l1_log_data_cost}$] is 256 gas, stem:[$\text{l1_storage_write_cost}$] is 20,000 gas (the cost of writing to a new storage slot on Ethereum), and stem:[$\text{log_message_to_l1_cost}$] is 1637 gas. For more information, see xref:#l2l1_messages[].
 
 * stem:[$t$] is the number of L2->L1 messages sent, where the corresponding payload sizes are denoted by stem:[$q_1,...,q_t$]
+
+* stem:[\text{l2_gas_price}] is a fixed amount denominated in WEI (the price in FRI is only dependent on the WEI to FRI ratio). With introduction of EIP1559, this price will be determined by Starknet's fee market.
 
 * stem:[$v$] is a vector that represents resource usage, where each of its entries, stem:[$v_k$], corresponds to the usage of a different resource type (Cairo steps or number of applications of each builtin). For more information see xref:#computation[].
 
@@ -127,54 +125,22 @@ where:
 
 * stem:[$D$] is 1 if the transaction is of type `DECLARE` and 0 otherwise, as declare transactions need to post on L1 the new class hash and compiled class hash which are added to the state.
 
+* stem:[$\text{da_calldata_cost}$] is 551 gas, derived as follows: 
++
+** 512 gas per 32-byte word for calldata
+** ~100 gas for onchain hashing that happens for every word sent.
+** a 10% discount for not incurring additional costs for repeated updates to the same storage slot within a single block
+
+* stem:[$\text{contract_update_discount}$] is 312 gas. See more information in xref:#storage_updates[].
+
+* stem:[\text{sender_balance_update_discount}] is stem:[$240$] gas. For more information, see xref:#storage_updates[].
+
 [NOTE]
 ====
 The same transaction can track both raw vm resources (reflected by stem:[$v_k$]) and Sierra gas, depending on what classes it goes through. For more details see the xref:#computation[].
 
 If the transaction does not sign over L2 gas bounds (which will not be possible in Starknet v0.14.0), then stem:[$\text{l2_gas_price}$] in the above formula should be replaced by stem:[$\text{l1_gas_price}$] and the units of stem:[$w_k$] and stem:[$\text{l2_payload_costs}$] should correspond to the resource used by the transaction (L2 gas if it was signed on, L1 gas otherwise).
 ====
-
-==== Overall fee with calldata
-
-The following formula describes the overall fee, stem:[F], for a transaction in blocks whose state diffs are sent to L1 as calldata:
-
-[stem]
-++++
-\begin{align}
-F  & = l1\_gas\_price \cdot\Bigg(\text{message_calldata_cost}\cdot 3t \; + \\
-& \qquad + \; (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
-& \qquad + \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t + \; \\
-& \qquad + \; \text{da_calldata_cost}\left(2(n-1)+2(m-1) + \ell + 2D\right) - \text{contract_update_discount}\cdot (n-1) - 240 \Bigg) + \; \\ 
-& + \; \text{l2_gas_price}(\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) \; \\
-\end{align}
-++++
-
-[NOTE]
-====
-If the transaction does not sign over L2 gas bounds (this will not be possible in Starknet v0.14.0), 
-then the role of stem:[$\text{l2_gas_price}$] in the above formula is taken by stem:[$\text{l1_gas_price}$]. 
-The units of stem:[$w_k$] and stem:[$\text{l2_payload_costs}$] should correspond to the resource used by the transaction (L2 gas if it was signed on, L1 gas otherwise).
-====
-
-[NOTE]
-====
-The same transaction can track both raw vm resources (reflected by stem:[$v_k$]) and Sierra gas, depending on what classes it goes through.
-For more details see the xref:#computation[computation section].
-====
-
-where:
-
-* The following constants are defined in the same manner as in the blob-based formula:
-** stem:[$v, w, n, m, t, \ell, D$]
-** stem:[$\text{message_calldata_cost}, \; \text{l1_log_data_cost}, \; \text{log_message_to_l1_cost}, \; \text{l1_storage_write_cost}$]
-** stem:[$\text{l2_payload_costs}$]
-* stem:[$\text{da_calldata_cost}$] is 551 gas per 32-byte word. This cost is derived as follows: 
-+
-** 512 gas per 32-byte word for calldata.
-** ~100 gas for onchain hashing that happens for every sent word.
-** a 10% discount, because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.
-* stem:[$240$] is the gas discount for updating the sender's balance, for the derivation of this number see xref:#storage_updates[].
-* stem:[$\text{contract_update_discount}$] is 312 gas, for the derivation of this discount see xref:#storage_updates[].
 
 === Computation
 
