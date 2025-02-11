@@ -35,6 +35,8 @@ A Starknet block is a list of transactions and a block header that contains the 
 
 | `l1_data_gas_price` | `(u128, u128)` | The price of L1 blob gas that was used while constructing the block, where the first value is the price in wei and the second is the price in fri (see xref:./fee-mechanism.adoc[] for more details)
 
+| `l2_gas_price` | `(u128, u128)` | The price of L2 gas that was used while constructing the block, where the first value is the price in wei and the second is the price in fri (see xref:./fee-mechanism.adoc[] for more details)
+
 | `l1_da_mode` | `String` | `CALLDATA` or `BLOB`, depending on how Starknet state diffs are sent to L1
 
 | `protocol_version` | `String` | The version of the Starknet protocol used when creating the block
@@ -49,7 +51,7 @@ A block hash is defined by:
 [,,subs="quotes"]
 ----
 h(
-    "STARKNET_BLOCK_HASH0",
+    "STARKNET_BLOCK_HASH1",
     block_number,
     global_state_root,
     sequencer_address,
@@ -58,11 +60,8 @@ h(
     state_diff_commitment,
     transactions_commitment
     events_commitment,
-    l1_gas_price_in_wei,
-    l1_gas_price_in_fri,
-    l1_data_gas_price_in_wei,
-    l1_data_gas_price_in_fri
-    receipts_commitment
+    receipts_commitment,
+    gas_prices_hash
     0,
     parent_block_hash
 )
@@ -111,7 +110,8 @@ Where:
 == Transactions, events, and receipts commitments
 The commitment to transactions, the commitment to events and the commitment to receipts are all roots of height-64 binary Merkle Patricia tries where the leaf at index `i` corresponds to:
 
-* For transactions: `h(transaction_hash, signature)` for the ``i``'th transaction included in the block, where `h` is the xref:../../cryptography/hash-functions.adoc#poseidon-hash[Poseidon hash function]
+* For transactions: `h(transaction_hash, signature)` for the ``i``'th transaction included in the block, where `h` is the xref:../../cryptography/hash-functions.adoc#poseidon-hash[Poseidon hash function].
+Note that the signature is itself a (possibly empty) array of field elements.
 * For events: The xref:#event_hash[event hash] of the ``i``'th emitted event included in the block
 * For receipts: The xref:#receipt_hash[receipt hash] of the ``i``'th transaction receipt included in the block
 
@@ -160,3 +160,26 @@ h(
     from~1~, to~1~, h(len(payload~1~) || payload~1~), ... , from~n~, to~n~, h(len(payload~n~) || payload~n~)
 )
 ----
+
+[#gas_prices]
+== gas prices hash
+
+The `gas_prices_hash` field in the block hash is given by a chain hash of the Wei and Fri denominated prices for 
+all three resource types: L1 gas, L1 data gas, and L2 gas.
+
+The exact computation is described below:
+
+[,,subs="quotes"]
+----
+h(
+    "STARKNET_GAS_PRICES0",
+    l1_gas_price_wei,
+    l1_gas_price_fri,
+    l1_data_gas_price_wei,
+    l1_data_gas_price_fri,
+    l2_gas_price_wei,
+    l2_gas_price_fri
+)
+----
+
+Where stem:[$h$] is the xref:../../cryptography/hash-functions.adoc#poseidon-hash[Poseidon hash function].
