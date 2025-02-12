@@ -1,6 +1,8 @@
 [id="block_structure"]
 = Block structure
 
+== Introduction
+
 A Starknet block is a list of transactions and a block header that contains the following fields:
 
 [%autowidth]
@@ -71,6 +73,22 @@ Where:
 
 - `h` is the xref:../../cryptography/hash-functions.adoc#poseidon-hash[Poseidon hash function]
 - `transaction_count || event_count || state_diff_length || l1_da_mode` is the concatenation of the 64-bit representations of `transaction_count`, `event_count`, and `state_diff_length` with 0 if `l1_da_mode` is `CALLDATA` and 1 if `l1_da_mode` is `BLOB`
+- `gas_prices_hash` is defined by:
++
+[,,subs="quotes"]
+----
+h(
+    "STARKNET_GAS_PRICES0",
+    l1_gas_price_wei,
+    l1_gas_price_fri,
+    l1_data_gas_price_wei,
+    l1_data_gas_price_fri,
+    l2_gas_price_wei,
+    l2_gas_price_fri
+)
+----
++
+where `h` is the xref:../../cryptography/hash-functions.adoc#poseidon-hash[Poseidon hash function] and `l1_gas_price_wei`, `l1_gas_price_fri`, `l1_data_gas_price_wei`, `l1_data_gas_price_fri`, `l2_gas_price_wei`, and `l2_gas_price_fri` are the wei and fri denominated prices for the three resource types.
 
 [TIP]
 ====
@@ -115,7 +133,7 @@ Note that the signature is itself a (possibly empty) array of field elements.
 * For events: The xref:#event_hash[event hash] of the ``i``'th emitted event included in the block
 * For receipts: The xref:#receipt_hash[receipt hash] of the ``i``'th transaction receipt included in the block
 
-[#event_hash]
+[discrete]
 === Event hash
 
 The hash of an xref:../smart-contracts/starknet-events.adoc[event] emitted by a contract whose address is `emitter_address` and a transaction whose hash is `tx_hash` is defined by:
@@ -132,7 +150,7 @@ h(
 
 Where `h` is the xref:../../cryptography/hash-functions.adoc#poseidon-hash[Poseidon hash function].
 
-[#receipt_hash]
+[discrete]
 === Receipt hash
 
 The hash of a xref:./transaction-life-cycle.adoc#transaction-receipt[transaction receipt] is defined by:
@@ -160,26 +178,3 @@ h(
     from~1~, to~1~, h(len(payload~1~) || payload~1~), ... , from~n~, to~n~, h(len(payload~n~) || payload~n~)
 )
 ----
-
-[#gas_prices]
-== gas prices hash
-
-The `gas_prices_hash` field in the block hash is given by a chain hash of the Wei and Fri denominated prices for 
-all three resource types: L1 gas, L1 data gas, and L2 gas.
-
-The exact computation is described below:
-
-[,,subs="quotes"]
-----
-h(
-    "STARKNET_GAS_PRICES0",
-    l1_gas_price_wei,
-    l1_gas_price_fri,
-    l1_data_gas_price_wei,
-    l1_data_gas_price_fri,
-    l2_gas_price_wei,
-    l2_gas_price_fri
-)
-----
-
-Where stem:[$h$] is the xref:../../cryptography/hash-functions.adoc#poseidon-hash[Poseidon hash function].
