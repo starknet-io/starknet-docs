@@ -520,3 +520,274 @@ data.append(2_u256);
 // Compute Keccak hash using the recommended function
 let hash = keccak_u256s_le_inputs(data.span());
 ----
+
+== secp256r1
+
+The secp256r1 curve (also known as NIST P-256) is commonly used in traditional PKI and secure communications.
+
+[IMPORTANT]
+Note that instead of using these syscalls directly, it is recommended to use the traits and implementations provided in the https://docs.swmansion.com/scarb/corelib/core-starknet-secp256r1.html[`secp256_module`^] which provide a more convenient interface and handle the syscalls under the hood.
+
+`secp256r1_new_syscall`
+
+==== Function signature
+
+[source,cairo,subs="+quotes,+macros"]
+----
+extern fn secp256r1_new_syscall(
+    x: u256, y: u256
+) -> SyscallResult<Option<Secp256r1Point>> implicits(GasBuiltin, System) nopanic;
+----
+
+==== Description
+
+Creates a new point on the secp256r1 curve (also known as NIST P-256) from its x and y coordinates.
+
+==== Arguments
+
+[horizontal,labelwidth=35]
+`_x_: u256`:: The x-coordinate of the point.
+`_y_: u256`:: The y-coordinate of the point.
+
+==== Return values
+
+Returns `Some(point)` if the coordinates represent a valid point on the curve, `None` otherwise.
+
+==== Common library
+
+https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/secp256r1.cairo#L73[`secp256r1.cairo`^]
+
+==== Example
+
+The following example demonstrates how to create a new point on the secp256r1 curve:
+
+[source,cairo]
+----
+use starknet::secp256r1::Secp256r1Point;
+
+// Known valid point coordinates on secp256r1 curve (generator point)
+let x = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296_u256;
+let y = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5_u256;
+
+// Create a new point using the recommended function
+let point = secp256r1_new_syscall(x, y).unwrap_syscall();
+match point {
+    Option::Some(p) => {
+        // Point is valid and can be used for further operations
+        // For example, you could get its coordinates back:
+        let (px, py) = secp256r1_get_xy_syscall(p).unwrap_syscall();
+    },
+    Option::None => {
+        // Point was not on the curve
+    }
+}
+----
+
+`secp256r1_add_syscall`
+
+==== Function signature
+
+[source,cairo,subs="+quotes,+macros"]
+----
+extern fn secp256r1_add_syscall(
+    p0: Secp256r1Point, p1: Secp256r1Point,
+) -> SyscallResult<Secp256r1Point> implicits(GasBuiltin, System) nopanic;
+----
+
+==== Description
+
+Adds two points on the secp256r1 curve.
+
+==== Arguments
+
+[horizontal,labelwidth=35]
+`_p0_: Secp256r1Point`:: The first point on the curve.
+`_p1_: Secp256r1Point`:: The second point on the curve.
+
+==== Return values
+
+The resulting point from adding `p0` and `p1`.
+
+==== Common library
+
+https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/secp256r1.cairo#L73[`secp256r1.cairo`^]
+
+==== Example
+
+The following example demonstrates how to add two points on the secp256r1 curve:
+
+[source,cairo]
+----
+use starknet::secp256r1::Secp256r1Point;
+
+// Create two points to add (using generator point)
+let x = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296_u256;
+let y = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5_u256;
+
+// Create first point
+let point1 = secp256r1_new_syscall(x, y).unwrap_syscall().expect('Invalid point1');
+// Create second point (using same point for example)
+let point2 = secp256r1_new_syscall(x, y).unwrap_syscall().expect('Invalid point2');
+
+// Add the points
+let sum = secp256r1_add_syscall(point1, point2).unwrap_syscall();
+
+// Get the resulting coordinates
+let (sum_x, sum_y) = secp256r1_get_xy_syscall(sum).unwrap_syscall();
+----
+
+`secp256r1_mul_syscall`
+
+==== Function signature
+
+[source,cairo,subs="+quotes,+macros"]
+----
+extern fn secp256r1_mul_syscall(
+    p: Secp256r1Point, scalar: u256,
+) -> SyscallResult<Secp256r1Point> implicits(GasBuiltin, System) nopanic;
+----
+
+==== Description
+
+Multiplies a point on the secp256r1 curve by a `scalar` value.
+
+==== Arguments
+
+[horizontal,labelwidth=35]
+`_p_: Secp256r1Point`:: The point to be multiplied.
+`_scalar_: u256`:: The scalar value to multiply the point by.
+
+==== Return values
+
+The resulting point from the `scalar` multiplication.
+
+==== Common library
+
+https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/secp256r1.cairo#L83[`secp256r1.cairo`^]
+
+==== Example
+The following example demonstrates how to multiply a point by a scalar on the secp256r1 curve:
+[source,cairo]
+----
+use starknet::secp256r1::Secp256r1Point;
+
+// Create a point to multiply (using generator point)
+let x = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296_u256;
+let y = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5_u256;
+
+// Create the point
+let point = secp256r1_new_syscall(x, y).unwrap_syscall().expect('Invalid point');
+
+// Multiply point by scalar
+let scalar = 0x2_u256;  // Example scalar value of 2
+let product = secp256r1_mul_syscall(point, scalar).unwrap_syscall();
+
+// Get the resulting coordinates
+let (product_x, product_y) = secp256r1_get_xy_syscall(product).unwrap_syscall();
+----
+
+`secp256r1_get_point_from_x_syscall`
+
+==== Function signature
+
+[source,cairo,subs="+quotes,+macros"]
+----
+extern fn secp256r1_get_point_from_x_syscall(
+    x: u256, y_parity: bool,
+) -> SyscallResult<Option<Secp256r1Point>> implicits(GasBuiltin, System) nopanic;
+----
+
+==== Description
+
+Recovers a point on the curve given its x-coordinate and y-parity. Since the secp256r1 curve has an even and an odd solution for y given x, the y_parity parameter determines which y value to use.
+
+==== Arguments
+
+[horizontal,labelwidth=35]
+`_x_: u256`:: The x-coordinate of the point.
+`_y_parity_: bool`:: If true, choose the odd y value; if false, choose the even y value.
+
+==== Return values
+
+Returns `Some(point)` if a point exists with the given `x` coordinate, `None` otherwise.
+
+==== Common library
+
+https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/secp256r1.cairo#L101[`secp256r1.cairo`^]
+
+==== Example
+
+The following example demonstrates how to recover a point from its x-coordinate and y-parity:
+
+[source,cairo]
+----
+use starknet::secp256r1::Secp256r1Point;
+
+// Known x-coordinate of a valid point (generator point x-coordinate)
+let x = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296_u256;
+let y_is_odd = false;
+
+// Recover the point
+let point = secp256r1_get_point_from_x_syscall(x, y_is_odd).unwrap_syscall();
+match point {
+    Option::Some(p) => {
+        // Point was successfully recovered
+        let (recovered_x, recovered_y) = secp256r1_get_xy_syscall(p).unwrap_syscall();
+        assert(recovered_x == x, 'x coordinate mismatch');
+    },
+    Option::None => {
+        // No point exists with this x-coordinate
+        panic!('Point recovery failed')
+    }
+}
+----
+
+`secp256r1_get_xy_syscall`
+
+==== Function signature
+
+[source,cairo,subs="+quotes,+macros"]
+----
+extern fn secp256r1_get_xy_syscall(
+    p: Secp256r1Point,
+) -> SyscallResult<(u256, u256)> implicits(GasBuiltin, System) nopanic;
+----
+
+==== Description
+
+Returns the coordinates of a point on the secp256r1 curve.
+
+==== Arguments
+
+[horizontal,labelwidth=35]
+
+==== Return values
+
+A tuple containing the `x` and `y` coordinates of the point.
+
+==== Common library
+
+https://github.com/starkware-libs/cairo/blob/main/corelib/src/starknet/secp256r1.cairo#L106[`secp256r1.cairo`^]
+
+==== Example
+
+The following example demonstrates how to get the coordinates of a point on the secp256r1 curve:
+
+[source,cairo]
+----
+use starknet::secp256r1::Secp256r1Point;
+
+// Create a point to extract coordinates from (using generator point)
+let x = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296_u256;
+let y = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5_u256;
+
+// Create the point
+let point = secp256r1_new_syscall(x, y).unwrap_syscall().expect('Invalid point');
+
+// Get the coordinates
+let (point_x, point_y) = secp256r1_get_xy_syscall(point).unwrap_syscall();
+
+// Verify the coordinates match the original values
+assert(point_x == x, 'x coordinate mismatch');
+assert(point_y == y, 'y coordinate mismatch');
+----
