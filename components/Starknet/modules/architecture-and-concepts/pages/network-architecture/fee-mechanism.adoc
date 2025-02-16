@@ -45,7 +45,7 @@ is mostly arbitrary at this point due to our use of dynamic layouts (for more in
 L1 data gas pays for xref:#onchain_data_components[onchain data].
 
 For transactions prior to v3, an overall `max_fee` was provided in WEI.
-For transactions v3 and later, a max price for each of these resources is denominated in STRK.
+For transactions v3 and later, a max price per unit for each of these resources is denominated in STRK.
 
 At the time of writing, the only limitation on the sequencer, which is enforced by the Starknet OS, 
 is that the actual fee charged is bounded by the maximal fee specified in the transaction. 
@@ -91,7 +91,7 @@ The following formula describes the overall fee, stem:[F], for a transaction in 
 [stem]
 ++++
 \begin{align}
-F  & = l1\_gas\_price \cdot\Bigg(\text{message_calldata_cost}\cdot 3t \; + \\
+F  & = \text{l1_gas_price} \cdot\Bigg(\text{message_calldata_cost}\cdot 3t \; + \\
 & \qquad + \; (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
 & \qquad + \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t\Bigg) + \; \\
 & + \; \text{l2_gas_price}(\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) + \; \\
@@ -108,7 +108,7 @@ The units of stem:[$w_k$] and stem:[$\text{l2_payload_costs}$] should correspond
 
 [NOTE]
 ====
-The same transaction can track both raw vm resources (reflected by stem:[$v_k$]) and Sierra gas, depending on what classes it goes through.
+The same transaction can track both raw VM resources (reflected by stem:[$v_k$]) and Sierra gas, depending on what classes it goes through.
 For more details see the xref:#computation[computation section].
 ====
 
@@ -118,6 +118,7 @@ where:
 +
 For more information see xref:#calculation_of_computation_costs[Calculation of computation costs].
 * stem:[$w$] is the xref:#calculation_of_computation_costs[`CairoResourceFeeWeights`] vector.
+* stem[$\text{sierra_gas_consumed}$] is the amount of xref:#sierra_gas[Sierra gas] charged for computation, 
 * stem:[$n$] is the number of unique contracts updated, which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, stem:[$n\ge\ell$]. Notice that stem:[$n\ge 1$] always holds, because the fee token contract is always updated, which does not incur any fee.
 * stem:[$m$] is the number of values updated, not counting multiple updates for the same key. Notice that stem:[$m\ge 1$] always holds, because the sequencer's balance is always updated, which does not incur any fee.
 * stem:[$t$] is the number of L2->L1 messages sent, where the corresponding payload sizes are denoted by stem:[$q_1,...,q_t$].
@@ -144,11 +145,11 @@ The following formula describes the overall fee, stem:[F], for a transaction in 
 [stem]
 ++++
 \begin{align}
-F  & = l1\_gas\_price \cdot\Bigg(\text{message_calldata_cost}\cdot 3t \; + \\
+F  & = \text{l1_gas_price} \cdot\Bigg(\text{message_calldata_cost}\cdot 3t \; + \\
 & \qquad + \; (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
 & \qquad + \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t + \; \\
 & \qquad + \; \text{da_calldata_cost}\left(2(n-1)+2(m-1) + \ell + 2D\right) - \text{contract_update_discount}\cdot (n-1) - 240 \Bigg) + \; \\ 
-& + \; \text{l2_gas_price}(\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) \; \\
+& + \; \text{l2_gas_price}\cdot(\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) \; \\
 \end{align}
 ++++
 
@@ -161,7 +162,7 @@ The units of stem:[$w_k$] and stem:[$\text{l2_payload_costs}$] should correspond
 
 [NOTE]
 ====
-The same transaction can track both raw vm resources (reflected by stem:[$v_k$]) and Sierra gas, depending on what classes it goes through.
+The same transaction can track both raw VM resources (reflected by stem:[$v_k$]) and Sierra gas, depending on what classes it goes through.
 For more details see the xref:#computation[computation section].
 ====
 
@@ -211,7 +212,8 @@ A Cairo program execution yields an execution trace. When proving a Starknet blo
 Starknet's prover generates proofs for execution traces, up to some maximal length stem:[$L$], derived from the specs of the proving machine and the desired proof latency.
 
 Tracking the execution trace length associated with each transaction is simple.
-Each assertion over field elements, such as verifying addition/multiplication over the field, requires the same, constant number of trace cells.
+Each Cairo step, requires the same, constant number of trace cells 
+(this is no longer true with Stwo, which handles some opcodes more efficiently than others, but we neglect such intricacies for the purposes of this discussion).
 Therefore, in a world without builtins, the fee of the transaction stem:[$tx$] is correlated with stem:[$\text{TraceCells}[tx\]/L$].
 
 When we introduce builtins into the equation, we need to consider an a priori limit for each builtin in the proof. This set of limits is known as the proof's layout 
@@ -322,7 +324,7 @@ The Sierra gas costs of various builtins is described in the following table:
 | MUL_MOD | 604 |
 |===
 
-Note that EC_OP and Keccak pricing is missing from the above table since they can not be accessed directly from Cairo contracts 
+Note that EC_OP and Keccak pricing is missing from the above table since they cannot be accessed directly from Cairo contracts 
 (as opposed to CairoZero contracts, which are no longer declarable). 
 These operations are called from syscalls, whose price is determined by the underlying trace cell consumption of the builtins involved. 
 To see the pricing for various syscalls in different Starknet versions, 
@@ -359,7 +361,7 @@ The following formula describes the storage update fee for a transaction
 
 [stem]
 ++++
-data\_gas\_price\cdot\text{felt_size_in_bytes}\cdot\bigg(2(n-1)+2(m-1) + \ell +2D \bigg)
+\text{data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\bigg(2(n-1)+2(m-1) + \ell +2D \bigg)
 ++++
 
 where:
@@ -419,20 +421,20 @@ As of Starknet v0.13.1 onwards, L2 data is taken into account during pricing. Th
 * CASM bytecode (for all available `DECLARE` transactions, where in version ≥ 2 this refers to the compiled class)
 * Sierra bytecode (relevant only for `DECLARE` transactions of version ≥ 2)
 
-The pricing of the above components in terms of L1 gas is given by the following table:
+The pricing of the above components in terms of L2 gas is given by the following table:
 
 |===
-| Resource | L1 Gas cost
+| Resource | L2 Gas cost
 
-| Event key | 0.256 gas/felt
-| Event data | 0.128 gas/felt
-| Calldata | 0.128 gas/felt
-| CASM bytecode | 1 gas/felt
-| Sierra bytecode | 1 gas/felt
-| ABI | 0.032 gas/character
+| Event key | 10,240 gas/felt
+| Event data | 5,120 gas/felt
+| Calldata | 5,120 gas/felt
+| CASM bytecode | 40,000 gas/felt
+| Sierra bytecode | 40,000 gas/felt
+| ABI | 1,280 gas/character
 |===
 
 [NOTE]
 ====
-When the transaction's L2 cost is paid for by L2 gas, the above numbers are translated via the standard conversion rate of: 1 L1 gas = 40,000 L2_gas
+When the transaction's L2 cost is paid for by L1 gas, the above numbers are translated via the standard conversion rate of: 1 L1 gas = 40,000 L2_gas
 ====
