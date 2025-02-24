@@ -27,7 +27,32 @@ Before Starknet version 0.11.0, state diffs contained information on every contr
 +
 ** The key and new value for each storage update
 
-See xref:#pre_v0_11_0_example[] to review an example of this format.
+This format is demonstrated by the following example:
+
+[source,json]
+----
+[
+  2, <1>
+  2472939307328371039455977650994226407024607754063562993856224077254594995194, <2>
+  1336043477925910602175429627555369551262229712266217887481529642650907574765, <3>
+  1, <4>
+  2019172390095051323869047481075102003731246132997057518965927979101413600827, <5>
+  18446744073709551617, <6>
+  5, <7>
+  102, <8>
+]
+----
+
+<1> The number of deployed contracts
+<2> The address of the first, and only, contract whose state changed
+<3> The class hash of the first, and only, contract whose state changed
+<4> The number of contracts whose storage was updated
+<5> The address of the first, and only, contract whose storage was updated
+<6> The `uint256` value that encodes the number of storage updates and updated nonce of the first, and only, contract whose storage was updated, which equals stem:[$2^{64}+1 = 0^{128}|0^{63}1|0^{63}1$] and therefore:
+* One storage cell was updated
+* The updated nonce is `1`
+<7> The key of the first, and only, storage update of the first, and only, contract whose storage was updated
+<8> The new value of the first, and only, storage update of the first, and only, contract whose storage was updated
 
 === v0.11.0
 
@@ -51,7 +76,33 @@ where the class information flag's value is `1` if the contract was deployed or 
 * The number of classes that were declared
 * The class hash and compiled class hash of each declared class
 
-See xref:#v0_11_0_example[] to review an example of this format.
+This format is demonstrated by the following example:
+
+[source,json]
+----
+[
+  1, <1>
+  2019172390095051323869047481075102003731246132997057518965927979101413600827, <2>
+  18446744073709551617, <3>
+  100, <4>
+  200, <5>
+  1, <6>
+  1351148242645005540004162531550805076995747746087542030095186557536641755046, <7>
+  558404273560404778508455254030458021013656352466216690688595011803280448032 <8>
+]
+----
+<1> The number of contracts whose storage was updated
+<2> The address of the first, and only, contract whose storage changed
+<3> The 32-byte word that encodes the updated nonce and meta information about the storage updates of the first, and only, contract whose storage was updated, which equals stem:[$2^{64}+1 = 0^{127}|0|0^{63}1|0^{63}1$] and therefore:
+* One storage cell was update
+* The new nonce is `1`
+* The class information flag is `0`, which means that the contract was not deployed or replaced and therefore the next word shouldn't be treated as the class hash
+<4> The key of the first, and only, storage update of the first, and only, contract whose storage was updated
+<5> The new value of the first, and only, storage update of the first, and only, contract whose storage was updated 
+These two elements, `100` and `200`, encode the storage update, where the value of key `100` is set to `200`.
+<6> The number of classes that were declared
+<7> The class hash of the first, and only, declared class
+<8> The compiled class hash of the first, and only, declared class
 
 === v0.13.1
 
@@ -149,63 +200,6 @@ As its name suggests, stateful compression introduces dependency between state d
 ====
 Starknet v0.13.4 introduces dependency between state diffs, making post-v0.13.4 state diffs non-decodable without knowledge of previous post-v0.13.4 state diffs.
 ====
-
-=== Examples
-
-====  Pre-v0.11.0 example
-
-[source,json]
-----
-[
-  2, <1>
-  2472939307328371039455977650994226407024607754063562993856224077254594995194, <2>
-  1336043477925910602175429627555369551262229712266217887481529642650907574765, <3>
-  1, <4>
-  2019172390095051323869047481075102003731246132997057518965927979101413600827, <5>
-  18446744073709551617, <6>
-  5, <7>
-  102, <8>
-]
-----
-
-<1> The number of deployed contracts
-<2> The address of the first, and only, contract whose state changed
-<3> The class hash of the first, and only, contract whose state changed
-<4> The number of contracts whose storage was updated
-<5> The address of the first, and only, contract whose storage was updated
-<6> The `uint256` value that encodes the number of storage updates and updated nonce of the first, and only, contract whose storage was updated, which equals stem:[$2^{64}+1 = 0^{128}|0^{63}1|0^{63}1$] and therefore:
-* One storage cell was updated
-* The updated nonce is `1`
-<7> The key of the first, and only, storage update of the first, and only, contract whose storage was updated
-<8> The new value of the first, and only, storage update of the first, and only, contract whose storage was updated
-
-==== v0.11.0 example
-
-[source,json]
-----
-[
-  1, <1>
-  2019172390095051323869047481075102003731246132997057518965927979101413600827, <2>
-  18446744073709551617, <3>
-  100, <4>
-  200, <5>
-  1, <6>
-  1351148242645005540004162531550805076995747746087542030095186557536641755046, <7>
-  558404273560404778508455254030458021013656352466216690688595011803280448032 <8>
-]
-----
-<1> The number of contracts whose storage was updated
-<2> The address of the first, and only, contract whose storage changed
-<3> The 32-byte word that encodes the updated nonce and meta information about the storage updates of the first, and only, contract whose storage was updated, which equals stem:[$2^{64}+1 = 0^{127}|0|0^{63}1|0^{63}1$] and therefore:
-* One storage cell was update
-* The new nonce is `1`
-* The class information flag is `0`, which means that the contract was not deployed or replaced and therefore the next word shouldn't be treated as the class hash
-<4> The key of the first, and only, storage update of the first, and only, contract whose storage was updated
-<5> The new value of the first, and only, storage update of the first, and only, contract whose storage was updated 
-These two elements, `100` and `200`, encode the storage update, where the value of key `100` is set to `200`.
-<6> The number of classes that were declared
-<7> The class hash of the first, and only, declared class
-<8> The compiled class hash of the first, and only, declared class
 
 == Data extraction
 
