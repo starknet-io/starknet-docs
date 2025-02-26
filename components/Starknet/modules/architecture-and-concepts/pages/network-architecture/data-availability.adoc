@@ -4,7 +4,7 @@
 [id="introduction"]
 == Introduction
 
-Starknet is a Validity Rollup, which means that after consolidating and proving a set of changes to Starknet's state, it updates the latest proven state on Ethereum. Alongside the proof, it sends the xref:#state_diff_format[formatted] difference between the previous and new states, also known as _state diff_, allowing anyone monitoring Ethereum to xref:#data_extraction[use this data and reconstruct Starknet's current state].
+Starknet is a Validity Rollup, which means that after consolidating and proving a set of changes to Starknet's state, it updates the latest proven state on Ethereum. Alongside the proof, it sends the xref:#state_diff_format[formatted] difference between the previous and new states, also known as _state diff_, allowing anyone monitoring Ethereum to use this data and reconstruct Starknet's current state.
 
 == State diff format
 
@@ -185,22 +185,20 @@ To achieve this, a new system contract at address `0x2` was introduced, defined 
 
 * Storage slot `0x0` of the contract is the value of a global counter, initialized to `128` in the beginning of the first block of v0.13.4.
 
-* Whenever a non-indexed storage key, contract address, or class hash appears in a state diff, it is mapped to the current value of the counter, and the counter is increased.
+* Whenever a non-indexed storage key, it is mapped to the current value of the counter, and the counter is increased.
 +
 [NOTE]
 ====
-Storage keys that require at most 127 bits and addresses of system contracts (currently, `0x1` and `0x2`) are not mapped and continue to be referred to directly.
+Storage keys that require at most 127 bits are not mapped and continue to be referred to directly.
+
+Indexing contract address and class hashes is planned for future versions.
 ====
 
 * The (uncompressed) state-diff includes the corresponding counter values from the value-to-index mapping rather than the original values.
 
-As its name suggests, stateful compression introduces dependency between state diffs submitted to Ethereum. That is, state diffs of a given block cannot be decode without knowing the state diffs of the previous blocks. This dependency is only relevant for post-v0.13.4 state diffs, while pre-v0.13.4 state diffs remain self-contained.
+As its name suggests, stateful compression introduces dependency between state diffs submitted to Ethereum. That is, state diffs of a given block cannot be decoded without knowing the state diffs of the previous blocks. This dependency is only relevant for post-v0.13.4 state diffs, while pre-v0.13.4 state diffs remain self-contained.
 
 [IMPORTANT]
 ====
 Starknet v0.13.4 introduces dependency between state diffs, making post-v0.13.4 state diffs non-decodable without knowledge of previous post-v0.13.4 state diffs.
 ====
-
-== Data extraction
-
-The data described above is sent across several Ethereum transactions, each holding a part of this array as calldata. Both https://github.com/eqlabs/pathfinder/blob/2fe6f549a0b8b9923ed7a21cd1a588bc571657d6/crates/pathfinder/src/ethereum/state_update/retrieve.rs[Rust^] and https://github.com/eqlabs/pathfinder/blob/2fe6f549a0b8b9923ed7a21cd1a588bc571657d6/crates/pathfinder/resources/fact_retrieval.py[Python] versions of the code for extracting this data from Ethereum can be found in Pathfinder's (the first Starknet full node implementation) codebase.
