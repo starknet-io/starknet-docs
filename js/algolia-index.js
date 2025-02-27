@@ -111,7 +111,7 @@ const startIndexing = (currentBranch) => {
         .split("modules")[1]
         .replace("/pages", "")
         .replace(".adoc", "")
-        .replace(/ROOT\/[^/]+/, "")
+        .replace(/ROOT\/, "")
         .replace("index", "")
       const record = {
         url: "https://docs.starknet.io" + url,
