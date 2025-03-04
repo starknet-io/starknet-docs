@@ -1,6 +1,11 @@
 [id="setup"]
 = Setting up your Starknet development environment
 
+[IMPORTANT]
+====
+If you encounter an issue while following this tutorial, check out xref:troubleshooting.adoc[_Troubleshooting_].
+====
+
 == Introduction
 
 Welcome to the first installment of the "Hello, Starknet!" quickstart series, the official tutorial for starting your journey as a Starknet developer! 🚀
@@ -26,18 +31,56 @@ To review these tools in more detail, as well as all other Starknet developer to
 
 Installing Scarb, Starknet Foundry, Starkent Devnet, and Starkli require https://www.rust-lang.org/[Rust] to be installed. You can verify that Rust is installed and up-to-date by running:
 
-    rustc --version
+[source,terminal]
+----
+rustc --version
+----
 
 or install the latest Rust version by following the instructions in the https://doc.rust-lang.org/beta/book/ch01-01-installation.html[Rust documentation].
 
 [#installing-scarb-and-snfoundry]
-== Installing Scarb, Starknet Foundry, and Starknet Devnet
+== Installing Scarb and Starknet Foundry
 
 === MacOS and Linux
 
-It is highly recommended to install Scarb, Starknet Foundry, and Starknet Devnet on MacOS and Linux via the link:https://asdf-vm.com/[`asdf` version manager], as it allows to easily switch between their different versions, both globally and per project (see full details in the link:https://asdf-vm.com/manage/commands.html[`asdf` documentation] or by running `asdf --help`).
+On MacOS and Linux, Scarb and Starknet Foundry can be easily installed using the https://github.com/software-mansion/starkup[Starkup installer^] by running:
 
-.Procedure
+[source,terminal]
+----
+curl --proto '=https' --tlsv1.2 -sSf https://sh.starkup.sh | sh
+----
+
+and following the onscreen instructions. You can verify that Scarb and Starknet Foundry are installed correctly by running:
+
+[source,terminal]
+----
+scarb --version
+snforge --version && sncast --version
+----
+
+[NOTE]
+====
+The Starkup installer installs Starknet Devnet on MacOS and Linux via the https://asdf-vm.com/[`asdf` version manager^], which allows to easily switch between their different versions, both globally and per project (see full details in the https://asdf-vm.com/manage/commands.html[`asdf` documentation^] or by running `asdf --help`)
+
+If you encounter any issues while using it or have any requests, please help by https://github.com/software-mansion/starkup/issues/new[submitting an issue^].
+====
+
+=== Windows
+
+Both Scarb's and Starknet Foundry's installations on Windows requires manual setup. To do so, follow the instructions in the https://docs.swmansion.com/scarb/download.html#windows[Scarb documentation^] and https://foundry-rs.github.io/starknet-foundry/getting-started/installation.html#installation-on-windows[Starknet Foundry documentation^]. When complete, restart the terminal and verify that Scarb and Starknet Foundry are installed correctly by running:
+
+[source,terminal]
+----
+scarb --version
+snforge --version && sncast --version
+----
+
+[#installing-devnet]
+== Installing Starknet Devnet
+
+=== MacOS and Linux
+
+It is highly recommended to install Starknet Devnet on MacOS and Linux via the https://asdf-vm.com/[`asdf` version manager^], as it allows to easily switch between their different versions, both globally and per project (see full details in the https://asdf-vm.com/manage/commands.html[`asdf` documentation^] or by running `asdf --help`). Luckily, if you xref:#installing-scarb-and-snfoundry[installed Scarb and Starknet Foundry using the Starkup installer], `asdf` should already be installed in your machine. To install Starknet Devnet using `asdf`:
 
 . Verify that `asdf` is installed:
 +
@@ -48,56 +91,40 @@ asdf --version
 +
 or install it by following the instructions in the link:https://asdf-vm.com/guide/getting-started.html[`asdf` documentation].
 
-. Install the `asdf` Scarb, Starknet Foundry, and Starknet Devnet plugins:
+. Install the `asdf` Starknet Devnet plugin:
 +
 [source,terminal]
 ----
-asdf plugin add scarb
-asdf plugin add starknet-foundry
 asdf plugin add starknet-devnet
 ----
 
-. Install the latest versions of Scarb, Starknet Foundry, and Starknet Devnet:
+. Install the latest version of Starknet Devnet:
 +
 [source,terminal]
 ----
-asdf install scarb latest
-asdf install starknet-foundry latest
 asdf install starknet-devnet latest
 ----
 
-. Set global versions for Scarb, Starknet Foundry, and Starknet Devnet:
+. Set global version for Starknet Devnet:
 +
 [source,terminal]
 ----
-asdf global scarb latest
-asdf global starknet-foundry latest
 asdf global starknet-devnet latest
 ----
 
-. Restart the terminal and verify that Scarb, Starknet Foundry, and Starknet Devnet are installed correctly:
+. Restart the terminal and verify that Starknet Devnet is installed correctly:
 +
 [source,terminal]
 ----
-scarb --version
-snforge --version && sncast --version
 starknet-devnet --version
 ----
 
 === Windows
 
-Both Scarb's, Starknet Foundry's, and Starknet Devnet's installations on Windows requires manual setup.
+Starknet Devnet's installation on Windows requires manual setup. To do so, follow the instructions in the https://0xspaceshard.github.io/starknet-devnet/docs/intro/#windows-installation[Starknet Devnet documentation^]. When complete, restart the terminal and verify that Starknet Devnet is installed correctly by running:
 
-.Procedure
-
-. Follow the instructions in the link:https://docs.swmansion.com/scarb/download.html#windows[Scarb documentation^], https://foundry-rs.github.io/starknet-foundry/getting-started/installation.html#installation-on-windows[Starknet Foundry documentation^], and https://0xspaceshard.github.io/starknet-devnet/docs/intro/#windows-installation[Starknet Devnet documentation^].
-
-. Restart the terminal and verify that Scarb, Starknet Foundry, and Starknet Devnet are installed correctly:
-+
 [source,terminal]
 ----
-scarb --version
-snforge --version && sncast --version
 starknet-devnet --version
 ----
 
@@ -106,9 +133,7 @@ starknet-devnet --version
 
 === MacOS and Linux
 
-It is highly recommended to install Starkli on MacOS and Linux using the link:https://get.starkli.sh[`starkliup` portable script]. `starkliup` manages shell configuration for you, and using any other installation method requires to link:https://book.starkli.rs/shell-completions[manually set up shell completions].
-
-.Procedure
+It is highly recommended to install Starkli on MacOS and Linux using the https://get.starkli.sh[`starkliup` portable script^]. `starkliup` manages shell configuration for you, and using any other installation method requires to https://book.starkli.rs/shell-completions[manually set up shell completions^]. To install Starkli using `starkliup`:
 
 . Download `starkliup`:
 +
@@ -133,9 +158,7 @@ starkli --version
 
 === Windows
 
-Starknet Foundry's installation on Windows requires manually setting up shell completions.
-
-.Procedure
+Starknet Foundry's installation on Windows requires manually setting up shell completions. To do so:
 
 . Install Starkli:
 +
