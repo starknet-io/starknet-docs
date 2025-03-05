@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Fee mechanism :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/network-architecture/fee-mechanism/">
-    <link rel="prev" href="../block-structure/">
-    <link rel="next" href="../../cryptography/">
+    <link rel="prev" href="../../cryptography/">
+    <link rel="next" href="../messaging-mechanism/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -393,11 +393,6 @@
        class="nav-link"
      href="../block-structure/">Block structure</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="4">
-    <a 
-       class="nav-link"
-     href="./">Fee mechanism</a>
-  </li>
 </ul>
   </li>
 </ul>
@@ -410,6 +405,11 @@
     <a 
        class="nav-link"
      href="../../cryptography/">Cryptography</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="3">
+    <a 
+       class="nav-link"
+     href="./">Fee mechanism</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -597,40 +597,61 @@
 <h1 class="page">Fee mechanism</h1>
 <div id="preamble">
 <div class="sectionbody">
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>This section describes fees that are paid on L2 starting in Starknet 0.13.0. For information about messaging fees that are paid on L1, see <a href="../messaging-mechanism/#l1-l2-message-fees" class="xref page">L1 → L2 message fees</a>.</p>
+<p>This section describes fees that are paid on L2 starting in Starknet 0.13.0.</p>
+</div>
+<div class="paragraph">
+<p>For information about messaging fees that are paid on L1, see <a href="../messaging-mechanism/#l1-l2-message-fees" class="xref page">L1→L2 message fees</a>.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="what_do_we_pay_for"><a class="anchor" href="#what_do_we_pay_for"></a>What do we price?</h2>
+<h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>At the time of writing, the following components are contributing to the transaction fee:</p>
+<p>Every transaction on Starknet requires a small fee to process. The components contributing to this fee include <a href="#fee_components ">L2 computation, L2 data, and L1 data</a>, which are measured in <a href="#fee_units_and_limits">L2 gas, L1 gas, and L1 data gas</a>. A transaction&#8217;s fee is <a href="#charging_fees">charged atomically when it is executed</a> and can be <a href="#estimating_fees">estimated using the <code>starknet_estimateFee</code> call</a>, based on the <a href="#overall_fee">formula for determining a transaction&#8217;s fee</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="fee_components"><a class="anchor" href="#fee_components"></a>Fee components</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following components contribute to a transaction&#8217;s fee:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><a href="#computation">Computational complexity</a>: Computation costs on L2</p>
+<p><a href="#l2_computation">L2 computation</a></p>
 </li>
 <li>
-<p><a href="#onchain_data_components">Onchain data</a>: The cost of posting  the state diffs induced by the transaction to L1 (for more details, see <a href="../data-availability/" class="xref page">data availability</a>). This is measured in L1 gas or L1 data gas, depending on whether or not the L2 block in which the transaction was included uses calldata or blobs.</p>
+<p><a href="#l2_data">L2 data</a> (calldata, events and code)</p>
 </li>
 <li>
-<p>L2→L1 messages: Messages sent to L1 are eventually sent to the Starknet core contract as L1 calldata by the sequencer; therefore L2 transaction that send L2&#8594;L1 messages incur an additional L1 gas cost.</p>
+<p><a href="#l1_data">L1 data</a>, which includes:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The cost of posting the state diffs induced by the transaction to L1 (for more details, see <a href="../data-availability/" class="xref page">Data availability</a>)</p>
 </li>
 <li>
-<p>L2 calldata, events and code: From Starknet 0.13.1 onwards, there is a per-byte (or per felt) price for L2 payloads. For more details, see <a href="#l2_calldata">L2 payloads</a>.</p>
+<p>L2→L1 messages (which are eventually sent to the Starknet core contract as L1 calldata by the Starknet sequencer)</p>
 </li>
 </ul>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="when_is_the_fee_charged"><a class="anchor" href="#when_is_the_fee_charged"></a>When is the fee charged?</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The fee is charged atomically with the transaction execution on L2. The Starknet OS injects a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
@@ -638,27 +659,30 @@
 <h2 id="fee_units_and_limits"><a class="anchor" href="#fee_units_and_limits"></a>Fee units and limits</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Each transaction consumes the following resources:</p>
+<p>The three components contributing to a transaction&#8217;s fee are measured by the following three resources types:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>L2 gas</p>
+<p><em>L2 gas</em>, measuring L2 resources, including computation and data</p>
 </li>
 <li>
-<p>L1 gas</p>
+<p><em>L1 data gas</em>, measuring the L1 data required to post the state diff induced by the transaction to L1</p>
 </li>
 <li>
-<p>L1 data gas</p>
+<p><em>L1 gas fee</em>, measuring the L1 gas required for sending L2→L1 messages, as well as replacing:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>L1 data gas, in case the L2 block in which the transaction was included uses calldata instead of blobs for data availability (for more details, see <a href="../data-availability/" class="xref page">Data availability</a>)</p>
+</li>
+<li>
+<p>L2 gas, in the case the transaction did not specify L2 gas bounds</p>
 </li>
 </ul>
 </div>
-<div class="paragraph">
-<p>L2 gas pays for L2 resources. This includes computation, events, bytecode (for <code>DECLARE</code> transactions), calldata, etc.</p>
-</div>
-<div class="paragraph">
-<p>L1 gas plays the role of L2 gas in the case the transaction did not specify L2 gas bounds. As of Starknet v0.14.0, all transactions must
-specify bounds for all three resource types. When L2 gas bounds are specified, L1 gas only covers L2→L1 messages.</p>
+</li>
+</ul>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -670,116 +694,120 @@ specify bounds for all three resource types. When L2 gas bounds are specified, L
 <div class="paragraph">
 <p>There is a rather natural way to convert costs denominated in L1 gas to costs denominated in L2 gas and vice versa.
 One Cairo step costs 100 L2 gas, and we charge 0.0025 L1 gas per step
-when tracking VM resources (see the <a href="#computation">computation section</a> for more details), hence can decide that 1 L1 gas = 40,000 L2 gas.</p>
+when tracking VM resources (see <a href="#l2_computation">L2 computation</a> for more details), hence can decide that 1 L1 gas = 40,000 L2 gas.</p>
 </div>
 <div class="paragraph">
 <p>This is only a temporary measure to use existing prices (denominated in L1 gas) when the transaction consumes L2 gas, as L1 gas and L2 gas
 are completely independent units. Moreover, the step cost of 0.0025 L1 gas
-is mostly arbitrary at this point due to our use of dynamic layouts (for more information, see the <a href="#vm_resources">VM resources section</a>)</p>
+is mostly arbitrary at this point due to our use of dynamic layouts (see <a href="#vm_resources">VM resources</a> for more information)</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>L1 data gas pays for <a href="#onchain_data_components">onchain data</a>.</p>
+<p><code>v3</code> transactions already provide <code>max_amount</code> and <code>max_price_per_unit</code> for each of these resources (as part of the <code>resource_bounds</code> dictionary), denominated in STRK, while previous versions only provide an overall <code>max_fee</code>, denominated in WEI. However, starting in Starknet v0.14.0, <em>all</em> transactions must specify bounds for all three resource types.</p>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Starting in Starknet v0.14.0, all transactions must specify bounds for all three resource types.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>For transactions prior to v3, an overall <code>max_fee</code> was provided in WEI.
-For transactions v3 and later, a max price per unit for each of these resources is denominated in STRK.</p>
-</div>
-<div class="paragraph">
-<p>At the time of writing, the only limitation on the sequencer, which is enforced by the Starknet OS,
-is that the actual fee charged is bounded by the maximal fee specified in the transaction.
-While not enforced in the proof, the Starknet sequencer usually charges less than the maximal amount, as it charges in accordance with the above fee formula.</p>
+<p>The only limitation on the sequencer which is currently enforced by the Starknet OS (and as such, enforced by a proof), is that the actual fee charged is bounded by the max price specified in the transaction. However, the Starknet sequencer usually charges less, as charges in accordance with the <a href="#overall_fee">formula for determining a transaction&#8217;s fee</a>.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="v3-fee-estimation"><a class="anchor" href="#v3-fee-estimation"></a>Estimating fees</h2>
+<h2 id="charging_fees"><a class="anchor" href="#charging_fees"></a>Charging fees</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The fee of transactions can be estimated with using <code>starknet_estimateFee</code> JSON-RPC call.
-For more information, see the <a href="https://github.com/starkware-libs/starknet-specs/blob/v0.7.1/api/starknet_api_openrpc.json#L612">Starknet JSON RPC specification</a>.
-Various SDKs expose interfaces for fee estimations,
-you can find a list of available Starknet SDKs in the <a href="../../../tools/devtools/interacting-with-starknet/#sdks" class="xref page">Interacting with Starknet</a> page.</p>
-</div>
-<div class="sect2">
-<h3 id="latest_rpc"><a class="anchor" href="#latest_rpc"></a>Bounding all resources</h3>
-<div class="paragraph">
-<p>When signing resource bounds for all three resource types (the only supported option when sending the transaction via Starknet&#8217;s JSON-RPC v0.8.0 onwards, and the only supported option in Starknet v0.14.0)
-the fee estimation response is easily mapped to the transaction&#8217;s fields. That is, the response contains price and amounts for all three resources, and the transaction is expected to specify bounds
-and max prices for each of them.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="backward_compatibility_estimate"><a class="anchor" href="#backward_compatibility_estimate"></a>Backward compatibility</h3>
-<div class="paragraph">
-<p>When submitting transactions via Starknet&#8217;s JSON-RPC v0.7.1 or below, the only bounded resource is L1 gas, while the fee estimation contains both L1 gas and L1 data gas.
-In that case, we can use <code>overall_fee</code> to decide on the L1 gas bounds. You can find more details in the <a href="https://community.starknet.io/t/starknet-v0-13-1-pre-release-notes/113664#sdkswallets-how-to-use-the-new-fee-estimates-7">prerelease notes</a>
-of Starknet v0.13.1.</p>
-</div>
+<p>The fee for a transaction is charged atomically with the transaction execution on L2, by the Starknet OS injects a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="overall_fee"><a class="anchor" href="#overall_fee"></a>Fee formula</h2>
+<h2 id="estimating_fees"><a class="anchor" href="#estimating_fees"></a>Estimating fees</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This section shows the formula for determining a transaction&#8217;s fee. The following sections dive into the various components of the fee and describe how this formula was derived.</p>
+<p>The fee for a transaction can be estimated by using the <a href="https://github.com/starkware-libs/starknet-specs/blob/v0.7.1/api/starknet_api_openrpc.json#L612" target="_blank" rel="noopener"><code>starknet_estimateFee</code> call</a>, and interfaces for fee estimations are also exposed by the various <a href="../../../tools/devtools/interacting-with-starknet/#sdks" class="xref page">Starknet SDKs</a>.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>When signing resource bounds for all three resource types — the only supported option when sending the transaction via Starknet&#8217;s JSON-RPC v0.8.0 onwards, and the only supported option in Starknet v0.14.0 —
+the fee estimation response is easily mapped to the transaction&#8217;s fields (i.e., the response contains price and amounts for all three resources, and the transaction is expected to specify bounds
+and max prices for each of them).</p>
+</div>
+<div class="paragraph">
+<p>On the other hand, when submitting transactions via Starknet&#8217;s JSON-RPC v0.7.1 or below, the only bounded resource is L1 gas, while the fee estimation contains both L1 gas and L1 data gas.
+In that case, we can use the estimation&#8217;s <code>overall_fee</code> to decide on the L1 gas bounds.</p>
+</div>
+<div class="paragraph">
+<p>You can find more details in the <a href="https://community.starknet.io/t/starknet-v0-13-1-pre-release-notes/113664#sdkswallets-how-to-use-the-new-fee-estimates-7" target="_blank" rel="noopener">Starknet v0.13.1 prerelease notes</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="fee_formula"><a class="anchor" href="#fee_formula"></a>Fee formula</h2>
+<div class="sectionbody">
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The formula described in the following sections is highly non-trivial.</p>
+</div>
+<div class="paragraph">
+<p>To mitigate this, the first section details the formula for determining a transaction&#8217;s overall fee, while subsequent ones dive into the different fee components and explain how this formula was derived.</p>
+</div>
+<div class="paragraph">
+<p>Some parts may require reading more than once, but don&#8217;t hesitate to <a href="https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&amp;title=Feedback%20for%20%22The%20Starknet%20operating%20system%22" target="_blank" rel="noopener">reach out</a> if you feel further clarification is needed.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="sect2">
-<h3 id="blobs-vs-calldata"><a class="anchor" href="#blobs-vs-calldata"></a>Blobs vs. calldata</h3>
+<h3 id="overall_fee"><a class="anchor" href="#overall_fee"></a>Overall fee</h3>
 <div class="paragraph">
 <p>Starting with Starknet v0.13.1, Starknet distinguishes between blocks whose state diffs are sent to L1 as calldata and blocks whose state diffs are sent to L1 as blobs. The <code>l1_da_mode</code> property in the Starknet block header contains this information. The cost of computation remains the same on both options, but the cost related to data availability differs.</p>
 </div>
-</div>
-<div class="sect2">
-<h3 id="overall_fee_blob"><a class="anchor" href="#overall_fee_blob"></a>Overall fee with blobs</h3>
 <div class="paragraph">
-<p>The following formula describes the overall fee, \(F\), for a transaction in blocks whose state diffs are sent to L1 as blobs:</p>
+<p>The following formula describes the overall fee of a transaction:</p>
 </div>
 <div class="stemblock">
 <div class="content">
 \[\begin{align}
-F  &amp; = \text{l1_gas_price} \cdot\Bigg(\text{message_calldata_cost}\cdot 3t \; + \\
-&amp; \qquad + \; (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
-&amp; \qquad + \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t\Bigg) + \; \\
-&amp; + \; \text{l2_gas_price}\cdot(\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) + \; \\
-&amp; +  \; \text{l1_data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\bigg(2(n-1)+2(m-1) + \ell +2D \bigg)
+\qquad &amp; \text{l1_gas_price} \cdot\Bigg( \\
+&amp; \qquad \text{message_calldata_cost}\cdot 3t \; + \\
+&amp; \qquad \; (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
+&amp; \qquad \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t \\
+&amp; \Bigg) + \; \text{l2_gas_price} \cdot (\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) \\
+&amp; \quad + \; \begin{cases}\text{l1_data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\big(\ell + 2(n-1) + 2(m-1) + 2D \big) &amp; \text{if l1_da_mode is BLOB} \\ \\ \text{l1_gas_price} \cdot \Big( \\ \qquad \text{da_calldata_cost} \cdot \left(\ell + 2(n-1)+2(m-1) + 2D\right) \; - \\ \qquad \text{contract_update_discount}\cdot (n-1) \; - &amp; \text{if l1_da_mode is CALLDATA} \\ \qquad \text{sender_balance_update_discount} \\ \Big)\end{cases}
 \end{align}\]
 </div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>If the transaction does not sign over L2 gas bounds (this will not be possible in Starknet v0.14.0),
-then the role of \(\text{l2_gas_price}\) in the above formula is taken by \(\text{l1_gas_price}\).
-The units of \(w_k\) and \(\text{l2_payload_costs}\) should correspond to the resource used by the transaction (L2 gas if it was signed on, L1 gas otherwise).</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The same transaction can track both raw VM resources (reflected by \(v_k\)) and Sierra gas, depending on what classes it goes through.
-For more details see the <a href="#computation">computation section</a>.</p>
-</div>
-</td>
-</tr>
-</table>
 </div>
 <div class="paragraph">
 <p>where:</p>
@@ -787,82 +815,204 @@ For more details see the <a href="#computation">computation section</a>.</p>
 <div class="ulist">
 <ul>
 <li>
-<p>\(v\) is a vector that represents resource usage, where each of its entries, \(v_k\), corresponds to different resource types: Cairo steps and number of applications of each builtin.</p>
+<p>\(\text{l1_gas_price}\) is the averages of the last 60 L1 base gas prices sampled by the Starknet sequencer every 60 seconds, plus 1 Gwei</p>
+</li>
+<li>
+<p>\(\text{message_calldata_cost}\) is 1,124 gas</p>
+</li>
+<li>
+<p>\(t\) is the number of L2&#8594;L1 messages sent</p>
+</li>
+<li>
+<p>\(\text{l1_log_data_cost}\) is 256 gas</p>
+</li>
+<li>
+<p>\(t\) \(q_1,...,q_t\) are the payload sizes of the L2&#8594;L1 messages sent</p>
+</li>
+<li>
+<p>\(\text{l1_storage_write_cost}\) is 20,000 gas (the cost of writing to a new storage slot on Ethereum)</p>
+</li>
+<li>
+<p>\(\text{log_message_to_l1_cost}\) is 1,637 gas (see <a href="#l2l1_messages">L2&#8594;L1 messages</a> for more information)</p>
+</li>
+<li>
+<p>\(\text{l2_gas_price}\) is a fixed amount denominated in WEI (the price in FRI is only dependent on the WEI to FRI ratio). With introduction of EIP1559, this price will be determined by Starknet&#8217;s fee market.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>For more information see <a href="#computation">Computation</a>.</p>
+<p>If the transaction does not sign over L2 gas bounds (which will not be possible in Starknet v0.14.0), then \(\text{l2_gas_price}\) is replaced by \(\text{l1_gas_price}\)</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </li>
 <li>
-<p>\(w\) is the <a href="#calculation_of_computation_costs"><code>CairoResourceFeeWeights</code></a> vector.</p>
+<p>\(\text{sierra_gas_consumed}\) is the amount of <a href="#sierra_gas">Sierra gas</a> charged for computation</p>
 </li>
 <li>
-<p>\(\text{sierra_gas_consumed}\) is the amount of <a href="#sierra_gas">Sierra gas</a> charged for computation.</p>
+<p>\(v\) is a vector that represents resource usage (Cairo steps or number of applications of each builtin), where each of its entries, \(v_k\), corresponds to the usage of a different resource type (see <a href="#l2_computation">L2 computation</a> for more information)</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The same transaction can track both raw VM resources (reflected by \(v_k\)) and Sierra gas, depending on what classes it goes through (see <a href="#l2_computation">L2 computation</a> for more details).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </li>
 <li>
-<p>\(n\) is the number of unique contracts updated, which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, \(n\ge\ell\). Notice that \(n\ge 1\) always holds, because the fee token contract is always updated, which does not incur any fee.</p>
+<p>\(w\) is the <code>CairoResourceFeeWeights</code> vector (see <a href="#l2_computation">L2 computation</a> for more information)</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>\(w_k\) is measured in L2 gas if the transaction signs over L2 gas bounds, and in L1 gas otherwise (which will not be possible in Starknet v0.14.0).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </li>
 <li>
-<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Notice that \(m\ge 1\) always holds, because the sequencer&#8217;s balance is always updated, which does not incur any fee.</p>
+<p>\(\text{l2_payload_costs}\) is the gas cost of data sent over L2, which includes calldata, code, and event emission (see <a href="#l2_data">L2 data</a> for more details)</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>\(\text{l2_payload_costs}\) is measured in L2 gas if the transaction signs over L2 gas bounds, and in L1 gas otherwise (which will not be possible in Starknet v0.14.0).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </li>
 <li>
-<p>\(t\) is the number of L2&#8594;L1 messages sent, where the corresponding payload sizes are denoted by \(q_1,...,q_t\).</p>
+<p>\(\text{l1_data_gas_price}\) is the averages of the last 60 L1 base data gas prices sampled by the Starknet sequencer every 60 seconds, plus 1 Gwei</p>
 </li>
 <li>
-<p>\(\ell\) is the number of contracts whose class was changed, which happens on contract deployment and when applying the <code>replace_class</code> syscall.</p>
+<p>\(\text{felt_size_in_bytes}\) is 32 (the number of bytes required to encode a single STARK field element)</p>
 </li>
 <li>
-<p>\(D\) is 1 if the transaction is of type <code>DECLARE</code> and 0 otherwise. Declare transactions need to post on L1 the new class hash and compiled class hash which are added to the state.</p>
+<p>\(\ell\) is the number of contracts whose class was changed, which happens on contract deployment and when applying the <code>replace_class</code> syscall</p>
 </li>
 <li>
-<p>L2&#8594;L1 messaging constants:</p>
-<div class="openblock">
-<div class="content">
+<p>\(n\) is the number of unique contracts updated, which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched (in other words, \(n\ge\ell\))</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Notice that \(n\ge 1\) always holds, because the fee token contract is always updated, which does not incur any fee.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>\(m\) is the number of values updated, not counting multiple updates for the same key</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Notice that \(m\ge 1\) always holds, because the sequencer&#8217;s balance is always updated, which does not incur any fee.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>\(D\) is 1 if the transaction is of type <code>DECLARE</code> and 0 otherwise, as declare transactions need to post on L1 the new class hash and compiled class hash which are added to the state</p>
+</li>
+<li>
+<p>\(\text{da_calldata_cost}\) is 551 gas, derived as follows:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>\(\text{message_calldata_cost}\) is 1124 gas per 32-byte word.</p>
+<p>512 gas per 32-byte word for calldata</p>
 </li>
 <li>
-<p>\(\text{l1_log_data_cost}\) is 256 gas.</p>
+<p>~100 gas for onchain hashing that happens for every word sent</p>
 </li>
 <li>
-<p>\(\text{l1_storage_write_cost}\) is the cost of writing to a new storage slot on Ethereum, which is 20,000 gas.</p>
-</li>
-<li>
-<p>\(\text{log_message_to_l1_cost}\) is 1637 gas.</p>
+<p>a 10% discount for not incurring additional costs for repeated updates to the same storage slot within a single block</p>
 </li>
 </ul>
 </div>
-</div>
-</div>
-<div class="paragraph">
-<p>For more information, see <a href="#l_2-l_1_messages">L2&#8594;L1 messages</a>.</p>
-</div>
 </li>
 <li>
-<p>\(\text{l2_payload_costs}\) is the gas cost of data sent over L2. This includes calldata, code, and event emission. For more details see <a href="#l2_calldata">L2 payloads</a>.</p>
+<p>\(\text{contract_update_discount}\) is 312 gas (See <a href="#storage_updates">Storage updates</a> for more information)</p>
 </li>
 <li>
-<p>\(\text{felt_size_in_bytes}\) is 32, which is the number of bytes required to encode a single STARK field element.</p>
+<p>\(\text{sender_balance_update_discount}\) is \(240\) gas (see <a href="#storage_updates">Storage updates</a> for more information)</p>
 </li>
 </ul>
 </div>
 </div>
 <div class="sect2">
-<h3 id="overall_fee_calldata"><a class="anchor" href="#overall_fee_calldata"></a>Overall fee with calldata</h3>
+<h3 id="l2_computation"><a class="anchor" href="#l2_computation"></a>L2 computation</h3>
 <div class="paragraph">
-<p>The following formula describes the overall fee, \(F\), for a transaction in blocks whose state diffs are sent to L1 as calldata:</p>
+<p>Measuring the L2 computation component of a transaction differs depending on the contract class version of the caller:</p>
 </div>
-<div class="stemblock">
-<div class="content">
-\[\begin{align}
-F  &amp; = \text{l1_gas_price} \cdot\Bigg(\text{message_calldata_cost}\cdot 3t \; + \\
-&amp; \qquad + \; (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
-&amp; \qquad + \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t + \; \\
-&amp; \qquad + \; \text{da_calldata_cost}\left(2(n-1)+2(m-1) + \ell + 2D\right) - \text{contract_update_discount}\cdot (n-1) - 240 \Bigg) + \; \\
-&amp; + \; \text{l2_gas_price}\cdot(\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) \; \\
-\end{align}\]
+<div class="ulist">
+<ul>
+<li>
+<p>For CairoZero classes or Sierra ≤ 1.6.0, computation is measured in <a href="#vm_resources">VM resources</a> (steps and builtins)</p>
+</li>
+<li>
+<p>For Sierra ≥ 1.7.0, computation is measured in <a href="#sierra_gas">Sierra gas</a></p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In Starknet v0.13.4, Sierra gas is only tracked if the parent call was also tracking Sierra gas, which means that if the account contract is Sierra 1.6.0 or older, VM resources will be tracked <strong>throughout the entire transaction</strong>. This condition may be relaxed in the future.</p>
 </div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+<div class="sect3">
+<h4 id="vm_resources"><a class="anchor" href="#vm_resources"></a>VM resources</h4>
+<div class="paragraph">
+<p>A Cairo program execution yields an execution trace, and when proving a Starknet block, we aggregate all the transactions appearing in that block to the execution trace up to some maximal length \(L\), derived from the specs of the proving machine and the desired proof latency.</p>
+</div>
+<div class="paragraph">
+<p>Tracking the execution trace length associated with each transaction is simple, as Cairo step requires the same constant number of trace cells. Therefore, in a world without builtins, the fee associated with the L2 computation component of a transaction \(tx\) should be correlated with \(\text{TraceCells}[tx]/L\).</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -872,131 +1022,14 @@ F  &amp; = \text{l1_gas_price} \cdot\Bigg(\text{message_calldata_cost}\cdot 3t \
 </td>
 <td class="content">
 <div class="paragraph">
-<p>If the transaction does not sign over L2 gas bounds (this will not be possible in Starknet v0.14.0),
-then the role of \(\text{l2_gas_price}\) in the above formula is taken by \(\text{l1_gas_price}\).
-The units of \(w_k\) and \(\text{l2_payload_costs}\) should correspond to the resource used by the transaction (L2 gas if it was signed on, L1 gas otherwise).</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The same transaction can track both raw VM resources (reflected by \(v_k\)) and Sierra gas, depending on what classes it goes through.
-For more details see the <a href="#computation">computation section</a>.</p>
+<p>The aforementioned observation is no longer true for Starknet&#8217;s next-gent prover Stwo, which handles some opcodes more efficiently than others. However, we neglect this intricacy for the purposes of this discussion.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The following constants are defined in the same manner as in the blob-based formula:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>\(v, w, n, m, t, \ell, D\)</p>
-</li>
-<li>
-<p>\(\text{message_calldata_cost}, \; \text{l1_log_data_cost}, \; \text{log_message_to_l1_cost}, \; \text{l1_storage_write_cost}\)</p>
-</li>
-<li>
-<p>\(\text{l2_payload_costs}\)</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>\(\text{da_calldata_cost}\) is 551 gas per 32-byte word. This cost is derived as follows:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>512 gas per 32-byte word for calldata.</p>
-</li>
-<li>
-<p>~100 gas for onchain hashing that happens for every sent word.</p>
-</li>
-<li>
-<p>a 10% discount, because the sequencer does not incur additional costs for repeated updates to the same storage slot within a single block.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>\(240\) is the gas discount for updating the sender&#8217;s balance, for the derivation of this number see <a href="#storage_updates">Storage updates</a>.</p>
-</li>
-<li>
-<p>\(\text{contract_update_discount}\) is 312 gas, for the derivation of this discount see <a href="#storage_updates">Storage updates</a>.</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="calculation_of_gas_costs"><a class="anchor" href="#calculation_of_gas_costs"></a>Gas prices</h3>
-<div class="paragraph">
-<p>For L1 gas and L1 data gas (aka blob gas), the Starknet sequencer samples the base price on L1 every 60 seconds</p>
-</div>
-<div class="paragraph">
-<p>The price of L1 gas and L1 data gas on Starknet is set to the average of the last 60 gas price samples, plus 1 gwei.</p>
-</div>
-<div class="paragraph">
-<p>At the time of writing, the price of L2 gas is a fixed amount denominated in WEI (the price in FRI is only dependent on the WEI to FRI ratio).
-In the future, the price of L2 gas will be determined by Starknet&#8217;s fee market with the introduction of EIP1559.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="computation"><a class="anchor" href="#computation"></a>Computation</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The measure of computation is different, depending on the contract class version.
-For CairoZero classes or Sierra ≤ 1.6.0, it is measured in raw VM resources: steps and builtins.
-For Sierra ≥ 1.7.0, it is measured in <a href="#sierra_gas">Sierra gas</a>.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>In Starknet v0.13.4, Sierra gas is only tracked if the parent call was also tracking Sierra gas.
-This means that if the account contract is Sierra 1.6.0 or older, VM resources will be tracked throughout the entire transaction.
-This condition may be relaxed in the future.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="sect2">
-<h3 id="vm_resources"><a class="anchor" href="#vm_resources"></a>VM resources</h3>
-<div class="paragraph">
-<p>A Cairo program execution yields an execution trace. When proving a Starknet block, we aggregate all the transactions appearing in that block to the execution trace.</p>
-</div>
-<div class="paragraph">
-<p>Starknet&#8217;s prover generates proofs for execution traces, up to some maximal length \(L\), derived from the specs of the proving machine and the desired proof latency.</p>
-</div>
-<div class="paragraph">
-<p>Tracking the execution trace length associated with each transaction is simple.
-Each Cairo step, requires the same, constant number of trace cells
-(this is no longer true with Stwo, which handles some opcodes more efficiently than others, but we neglect such intricacies for the purposes of this discussion).
-Therefore, in a world without builtins, the fee of the transaction \(tx\) is correlated with \(\text{TraceCells}[tx]/L\).</p>
-</div>
-<div class="paragraph">
-<p>When we introduce builtins into the equation, we need to consider an a priori limit for each builtin in the proof. This set of limits is known as the proof&#8217;s layout
-(layouts determine the ratio between steps and each Cairo builtin).</p>
+<p>When we introduce builtins into the equation, we need to consider an a priori limit for each builtin in the proof. This set of limits is known as the proof&#8217;s <em>layout</em>, which determines the ratio between steps and each builtin.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -1025,21 +1058,15 @@ However, pricing for old classes still behaves as if we are using a fixed layout
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">up to 500,000,000 Cairo Steps</th>
-<th class="tableblock halign-left valign-top">up to 20,000,000 Pedersen hashes</th>
-<th class="tableblock halign-left valign-top">up to 4,000,000 signature verifications</th>
-<th class="tableblock halign-left valign-top">up to 10,000,000 range checks</th>
+<th class="tableblock halign-left valign-top">Up to 500M Cairo steps</th>
+<th class="tableblock halign-left valign-top">Up to 20M Pedersen hashes</th>
+<th class="tableblock halign-left valign-top">Up to 4M signature verifications</th>
+<th class="tableblock halign-left valign-top">Up to 10M range checks</th>
 </tr>
 </thead>
 </table>
 <div class="paragraph">
-<p>The proof is closed and sent to L1 when any of these slots is filled.</p>
-</div>
-<div class="paragraph">
-<p>Suppose that a transaction uses 10,000 Cairo steps and 500 Pedersen hashes. At most 40,000 such transactions can fit into the hypothetical trace (20,000,000/500). Therefore, its gas price correlates with 1/40,000 of the cost of submitting proof.</p>
-</div>
-<div class="paragraph">
-<p>Notice that this estimate ignores the number of Cairo steps, as it is not the limiting factor, since 500,000,000/10,000 &gt; 20,000,000/500.</p>
+<p>which means that a proof is closed and sent to L1 when any of these slots is filled. Now, suppose that a transaction uses 10K Cairo steps and 500 Pedersen hashes. At most 20M/500 = 40K such transactions can fit into the hypothetical trace, therefore its gas price should correlate with 1/40K of the cost of submitting proof (notice that this estimate ignores the number of Cairo steps as it is not the limiting factor, since 500M/10K &gt; 20M/500).</p>
 </div>
 <div class="paragraph">
 <p>With this example in mind, it is possible to formulate the exact fee associated with L2 computation. For each transaction,
@@ -1048,21 +1075,15 @@ the sequencer calculates a vector, <code>CairoResourceUsage</code>, that contain
 <div class="ulist">
 <ul>
 <li>
-<p>The number of Cairo steps.</p>
+<p>The number of Cairo steps</p>
 </li>
 <li>
-<p>The number of applications of each Cairo builtin. For example, five range checks and two Pedersen hashes.</p>
+<p>The number of applications of each Cairo builtin (e.g., 5 range checks and 2 Pedersen hashes)</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>The sequencer crosses this information with the <code>CairoResourceFeeWeights</code> vector. For each resource type, either a Cairo step or a specific builtin application, <code>CairoResourceFeeWeights</code> has an entry that specifies the relative gas cost of that component in the proof.</p>
-</div>
-<div class="paragraph">
-<p>Going back to the above example, if the cost of submitting a proof with 20,000,000 Pedersen hashes is roughly 5m gas, then the weight of the Pedersen builtin is 0.25 gas per application (5,000,000/20,000,000). The sequencer has a predefined weights vector, in accordance with the proof parameters.</p>
-</div>
-<div class="paragraph">
-<p>The sequencer charges only according to the limiting factor. Therefore the fee is correlated with:</p>
+<p>and crosses this information with a <code>CairoResourceFeeWeights</code> vector, a predefined weights vector in accordance with the proof parameters, in which each resource type has an entry that specifies the relative gas cost of that component in the proof. The sequencer then charges only according to the limiting factor, making the final fee defined by:</p>
 </div>
 <div class="stemblock">
 <div class="content">
@@ -1070,12 +1091,12 @@ the sequencer calculates a vector, <code>CairoResourceUsage</code>, that contain
 </div>
 </div>
 <div class="paragraph">
-<p>where \(k\) enumerates the Cairo resource components, that is the number of Cairo steps and builtins used.</p>
+<p>where \(k\) enumerates the Cairo resource components. Going back to the above example, if the cost of submitting a proof with 20M Pedersen hashes is roughly 5M gas, then the weight of the Pedersen builtin is 5,000,000/20,000,0000 = 25 gas per application.</p>
 </div>
 <div class="paragraph">
-<p>The weights are listed in the following table:</p>
+<p>The weights most commonly used in Starknet are the following table:</p>
 </div>
-<table id="gas_cost_per_cairo_step_or_builtin_step" class="tableblock frame-all grid-all fit-content stretch">
+<table class="tableblock frame-all grid-all fit-content stretch">
 <colgroup>
 <col>
 <col>
@@ -1122,57 +1143,46 @@ the sequencer calculates a vector, <code>CairoResourceUsage</code>, that contain
 </tbody>
 </table>
 </div>
-<div class="sect2">
-<h3 id="sierra_gas"><a class="anchor" href="#sierra_gas"></a>Sierra gas</h3>
+<div class="sect3">
+<h4 id="sierra_gas"><a class="anchor" href="#sierra_gas"></a>Sierra gas</h4>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Sierra has a built-in gas accounting mechanism. We proceed to give a very rough description of the mechanism.
-For a comprehensive treatment of Sierra’s gas accounting, see the <a href="https://github.com/starkware-libs/cairo/blob/main/docs/other/gas_blog_post.pdf">gas accounting post by CryptoExperts</a>.</p>
+<p>The following is a a very rough description of Sierra&#8217;s built-in gas accounting mechanism mechanism. For a comprehensive analysis, see <a href="https://github.com/starkware-libs/cairo/blob/main/docs/other/gas_blog_post.pdf" target="_blank" rel="noopener"><em>Analysis of the gas accounting algorithm of Cairo 1.0</em> by CryptoExperts</a>.</p>
 </div>
-<div class="paragraph">
-<p>A Sierra program has a simple structure: types and function declaration, and then a sequence of libfunc applications.
-Libfuncs are the basic logical units of Sierra (think opcodes, for example, <code>u8_add</code> is a libfunc).
-The Cairo compiler defines a libfunc costs table, where the cost of each libfunc is determined by its expanded CASM generated via the Sierra → CASM compiler.</p>
-</div>
-<div class="paragraph">
-<p><em>This cost is measured in “Sierra gas”, which has a 1-1 conversion with L2 gas (that is, a libfunc which costs 500 Sierra gas adds 500 to the overall tx’s L2 gas consumption).</em></p>
-</div>
-<div class="paragraph">
-<p>While L2 gas accounts for “everything L2”, Sierra gas strictly deals in computation, hence the distinction in terminology.
-100 Sierra gas is the equivalent of 1 Cairo step, i.e. if a libfunc’s assembly includes 10 Cairo steps, it will cost 1000 gas units.</p>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>Sierra has special libfuncs for gas-handling, for example the <code>withdraw_gas</code> libfunc.
-If a function has no recursion or branching, the Cairo→Sierra compiler adds a single <code>withdraw_gas&#169;</code> call in the beginning of the function, where <code>C</code> is the sum over the costs of the libfuncs included in the function.
-Whenever we have a branching instruction, before the actual branching, the compiler adds a call to <code>withdraw_gas&#169;</code> where <code>C</code> is the maximal branch cost (in the latest compiler version, we added a call to redeposit\_gas with the difference on the cheaper branches).</p>
+<p>A Sierra program has a simple structure: types and function declaration, followed by a sequence of applications of <em>libfuncs</em>, Sierra&#8217;s basic logical units (similar to opcodes, e.g. <code>u8_add</code> is a libfunc).</p>
 </div>
 <div class="paragraph">
-<p>Some costs, e.g. in the case of recursion, can only be known in runtime.
-This is where things get tricky. To handle such cases, the compiler constructs the call graph induced by the program, and asserts that every cycle includes a <code>withdraw_gas(X)</code> instruction, where <code>X</code> should cover the cost of a single run through the cycle.</p>
+<p>The Cairo compiler defines a libfunc costs table, which is measured in “Sierra gas” and has a 1-1 ratio with L2 gas (i.e., a libfunc which costs 500 Sierra gas adds 500 to a transaction&#8217;s overall L2 gas)</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Despite the 1-1 ratio between Sierra gas and L2 gas, L2 gas accounts for “everything L2”, while Sierra gas strictly deals with computation, hence the distinction in terminology.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>Note that the naive gas accounting mechanism would have been to have a <code>withdraw_gas</code> instruction post every libfunc, but since <code>withdraw_gas</code> itself has some cost (reducing from a counter and handling the insufficient gas case), this would incur a large burden on the program.
-The above solution greatly reduces the overhead compared to the naive mechanism.</p>
+<p>The cost of each libfunc is determined by its expanded CASM generated via the Sierra→CASM compiler based on a 100-1 ratio with Cairo steps (i.e., if a libfunc&#8217;s assembly includes 10 Cairo steps, it will cost 1000 Sierra gas), while the costs of the various builtins are defined as follows:</p>
 </div>
-<div class="paragraph">
-<p>The difference in the tracking Sierra gas vs tracking VM resources (as explained in the previous section) can be summed in:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>max → sum</p>
-</li>
-<li>
-<p>weights of builtins reflect trace cell consumption rather than an arbitrary layout</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>This means that for step-heavy transactions, the computation fee will most likely slightly increase, as you will also pay for the builtin consumption. On the other hand, builtin-heavy transactions will (depending on the builtin that maximized the old fee) become much cheaper (with the exception of Pedersen).</p>
-</div>
-<div class="paragraph">
-<p>The Sierra gas costs of various builtins is described in the following table:</p>
-</div>
-<table id="sierra_gas_per_builtin" class="tableblock frame-all grid-all fit-content stretch">
+<table class="tableblock frame-all grid-all fit-content stretch">
 <colgroup>
 <col>
 <col>
@@ -1181,7 +1191,7 @@ The above solution greatly reduces the overhead compared to the naive mechanism.
 <thead>
 <tr>
 <th class="tableblock halign-left valign-top">Builtin</th>
-<th class="tableblock halign-left valign-top">L2 gas cost</th>
+<th class="tableblock halign-left valign-top">Sierra gas cost</th>
 <th class="tableblock halign-left valign-top"></th>
 </tr>
 </thead>
@@ -1233,56 +1243,22 @@ The above solution greatly reduces the overhead compared to the naive mechanism.
 </tr>
 </tbody>
 </table>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Note that EC_OP and Keccak pricing is missing from the above table since they cannot be accessed directly from Cairo contracts
-(as opposed to CairoZero contracts, which are no longer declarable).
-These operations are called from syscalls, whose price is determined by the underlying trace cell consumption of the builtins involved.
-To see the pricing for various syscalls in different Starknet versions,
-see the <a href="https://github.com/starkware-libs/sequencer/tree/main/crates/blockifier/resources">versioned constants</a> in the sequencer repository.</p>
+<p>Pricings for the EC_OP and Keccak builtins are missing since they cannot be accessed directly from Cairo contracts (as opposed to CairoZero contracts, which are no longer declarable). These operations can be used via syscalls, whose price is determined by the underlying trace cell consumption of the builtins involved. To review pricing for various syscalls, see the <code>versioned constants.json</code> files in the <a href="https://github.com/starkware-libs/sequencer/tree/main/crates/blockifier/resources" target="_blank" rel="noopener">sequencer&#8217;s resources directory</a>.</p>
 </div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="onchain_data_components"><a class="anchor" href="#onchain_data_components"></a>Onchain data</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The onchain data associated with a transaction is composed of three parts</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Storage updates</p>
-</li>
-<li>
-<p>L2→L1 messages</p>
-</li>
-<li>
-<p>Deployed contracts</p>
-</li>
-<li>
-<p>Declared classes (only relevant for <code>DECLARE</code> transactions, and adds two additional words)</p>
-</li>
-</ul>
-</div>
-<div class="sect2">
-<h3 id="storage_updates"><a class="anchor" href="#storage_updates"></a>Storage updates</h3>
-<div class="paragraph">
-<p>Whenever a transaction updates some value in the storage of some contract, the following data is sent to L1:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>two 32-byte words per contract</p>
-</li>
-<li>
-<p>two 32-byte words for every updated storage value</p>
-</li>
-</ul>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>Deploying a contract adds another word, since we need to specify the deployed contract&#8217;s class hash.
-For information on the exact data and its construction, see <a href="../data-availability/#v0.11.0_format" class="xref page">Data availability</a>.</p>
+<p>To handle gas usage, Sierra has special libfuncs for gas-handling, such as the <code>withdraw_gas</code> libfunc. For functions with neither branching nor recursion, the Cairo→Sierra compiler adds a single <code>withdraw_gas(C)</code> call in the beginning of the function, where <code>C</code> is the sum over the costs of the libfuncs included in the function. For functions with branching, the compiler adds a call to <code>withdraw_gas(C)</code> before the actual branching, where <code>C</code> is the maximal branch cost.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -1292,20 +1268,96 @@ For information on the exact data and its construction, see <a href="../data-ava
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Only the most recent value reaches L1. So the transaction&#8217;s fee only depends on the number of <em>unique</em> storage updates. If the same storage cell is updated multiple times within the transaction, the fee remains that of a single update.</p>
+<p>In its latest version, the compiler also adds a call to <code>redeposit_gas(C)</code> on the cheaper branches, where <code>C</code> is unused gas on that branch.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>The following formula describes the storage update fee for a transaction
-(we only refer to the case of submitting data to L1 via blobs, for the calldata case, see the <a href="#overall_fee_calldata">calldata-based formula</a>):</p>
+<p>For functions with recursion (or other cases where costs can only be known in runtime), things get trickier.
+The naive way to handle such cases would be to add a <code>withdraw_gas</code> instruction after every libfunc, but since <code>withdraw_gas</code> itself has some cost (decreasing a counter and handling the insufficient gas case) this would incur a large burden on the program.
+Instead, the compiler constructs the call graph induced by the program, and asserts that every cycle includes a <code>withdraw_gas(X)</code> instruction, where <code>X</code> should cover the cost of a single run through the cycle, greatly reducing the overhead compared to the naive mechanism.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="vm_resources_vs_sierra_gas"><a class="anchor" href="#vm_resources_vs_sierra_gas"></a>VM resources vs. Sierra gas</h4>
+<div class="paragraph">
+<p>The difference in tracking Sierra gas vs. tracking VM resources can be summed up as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>For VM resources builtin weights reflect the proof layout, while for Sierra gas they reflect trace cell consumption</p>
+</li>
+<li>
+<p>For VM resources only the maximal resource (e.g., most used builtin) is considered, while for Sierra gas the sum of all resources (i.e., all libfuncs) is considered</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This means that when the tracking Sierra gas, step-heavy transactions will most likely be slightly more expensive, as builtins will be taken into account <em>in addition</em> to Cairo steps. On the other hand, builtin-heavy transactions will become much cheaper — depending on the builtin that maximized the old fee and with the exception of the Pedersen builtin.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="l1_data"><a class="anchor" href="#l1_data"></a>L1 data</h3>
+<div class="sect3">
+<h4 id="storage_updates"><a class="anchor" href="#storage_updates"></a>Storage updates</h4>
+<div class="paragraph">
+<p>Whenever a transaction updates some value in the storage of some contract, the following data is sent to L1:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>One 32-bye word if the transaction is a <code>DEPLOY</code> transaction (since we need to specify the deployed contract&#8217;s class hash)</p>
+</li>
+<li>
+<p>Two 32-byte words per contract</p>
+</li>
+<li>
+<p>Two 32-byte words for every updated storage value</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Only the most recent value reaches L1, making the transaction&#8217;s fee depend on the number of <em>unique</em> storage updates. If the same storage cell is updated multiple times within the transaction, the fee remains that of a single update.</p>
+</div>
+<div class="paragraph">
+<p>For information on the exact data and its construction, see <a href="../data-availability/#v0.11.0_format" class="xref page">Data availability</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Therefore, the storage update fee for a transaction is defined as follows:</p>
 </div>
 <div class="stemblock">
 <div class="content">
-\[\text{data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\bigg(2(n-1)+2(m-1) + \ell +2D \bigg)\]
+\[\text{data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\bigg(\ell + 2(n-1) + 2(m-1) + 2D \bigg)\]
 </div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This formula only refer to the case of submitting data to L1 via blobs, for the calldata case, see <a href="#overall_fee">Overall fee</a>).</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>where:</p>
@@ -1313,19 +1365,19 @@ For information on the exact data and its construction, see <a href="../data-ava
 <div class="ulist">
 <ul>
 <li>
+<p>\(\text{felt_size_in_bytes}\) is 32, which is the number of bytes required to encode a single STARK field element.</p>
+</li>
+<li>
+<p>\(\ell\) is the number of contracts whose class was changed, which happens on contract deployment and when applying the <code>replace_class</code> syscall.</p>
+</li>
+<li>
 <p>\(n\) is the number of unique contracts updated, which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, \(n\ge\ell\). Notice that \(n\ge 1\) always holds, because the fee token contract is always updated, which does not incur any fee.</p>
 </li>
 <li>
 <p>\(m\) is the number of values updated, not counting multiple updates for the same key. Notice that \(m\ge 1\) always holds, because the sequencer&#8217;s balance is always updated, which does not incur any fee.</p>
 </li>
 <li>
-<p>\(\ell\) is the number of contracts whose class was changed, which happens on contract deployment and when applying the <code>replace_class</code> syscall.</p>
-</li>
-<li>
 <p>\(D\) is 1 if the transaction is of type <code>DECLARE</code> and 0 otherwise. Declare transactions need to post on L1 the new class hash and compiled class hash which are added to the state.</p>
-</li>
-<li>
-<p>\(\text{felt_size_in_bytes}\) is 32, which is the number of bytes required to encode a single STARK field element.</p>
 </li>
 </ul>
 </div>
@@ -1347,8 +1399,8 @@ For information on the exact data and its construction, see <a href="../data-ava
 </table>
 </div>
 </div>
-<div class="sect2">
-<h3 id="l_2-l_1_messages"><a class="anchor" href="#l_2-l_1_messages"></a>L2&#8594;L1 messages</h3>
+<div class="sect3">
+<h4 id="l2l1_messages"><a class="anchor" href="#l2l1_messages"></a>L2&#8594;L1 messages</h4>
 <div class="paragraph">
 <p>When a transaction that raises the <code>send_message_to_l1</code> syscall is included in a state update, the following data reaches L1:</p>
 </div>
@@ -1369,16 +1421,11 @@ For information on the exact data and its construction, see <a href="../data-ava
 </ul>
 </div>
 <div class="paragraph">
-<p>Consequently, the gas cost associated with a single L2→L1 message is:</p>
+<p>Therefore, the gas cost associated with a single L2→L1 message is defined as follows:</p>
 </div>
 <div class="stemblock">
 <div class="content">
-\[\begin{align}
-\text{MESSAGE_COST} = &amp; \; \text{message_calldata_cost}\cdot\left(3+\text{payload_size}\right) \; + \\
-&amp; + \text{l1_log_data_cost}\cdot\text{payload_size} \; + \\
-&amp; + \text{log_message_to_l1_cost} \; + \\
-&amp; + \text{l1_storage_write_cost}
-\end{align}\]
+\[\qquad \text{message_calldata_cost} \cdot \left(3+\text{payload_size}\right) \; + \text{l1_log_data_cost}\cdot\text{payload_size} \; + \text{log_message_to_l1_cost} \; + \text{l1_storage_write_cost} \qquad\]
 </div>
 </div>
 <div class="paragraph">
@@ -1387,41 +1434,39 @@ For information on the exact data and its construction, see <a href="../data-ava
 <div class="ulist">
 <ul>
 <li>
-<p>\(\text{message_calldata_cost}\) is 1124 gas. This is the sum of the 512 gas paid to the core contract on submitting the state update, and 612 gas paid for the submitting of the same word to the verifier contract (which incurs ~100 additional gas for hashing). That is, messages are sent to Ethereum twice.</p>
+<p>\(\text{message_calldata_cost}\) is 1,124 gas, which is the sum of the 512 gas for submitting the state update to the core contract and 612 gas for the submitting the state update the verifier contract (which incurs ~100 additional gas for hashing)</p>
 </li>
 <li>
-<p>\(\text{log_message_to_l1_cost}\) is 1637 gas. This is the fixed cost involved in emitting a <code>LogMessageToL1</code> event. This event has two topics and a data array, which adds two data words to the event, resulting in a total of \(375+2\cdot 375+2\cdot 256\) gas (log opcode cost, topic cost, and two data words cost).</p>
+<p>\(\text{l1_log_data_cost}\) is 256 gas, paid for every payload element during the emission of the <code>LogMessageToL1</code> event</p>
 </li>
 <li>
-<p>\(\text{l1_log_data_cost}\) is 256 gas, which is paid for every payload element during the emission of the <code>LogMessageToL1</code> event.</p>
+<p>\(\text{log_message_to_l1_cost}\) is 1,637 gas, which is the fixed cost involved in emitting a <code>LogMessageToL1</code> event with two topics and a two words data array, resulting in a total of \(375+2\cdot 375+2\cdot 256\) gas (log opcode cost, topics cost, and data array cost)</p>
 </li>
 <li>
-<p>\(\text{l1_storage_write_cost}\) is 20,000 gas per message which is paid in order to store the message hash on the Starknet core contract. This recording of the message is what later enables the intended L1 contract to consume the message.</p>
+<p>\(\text{l1_storage_write_cost}\) is 20K gas per message, paid in order to store the message hash on the Starknet core contract and enable the target L1 contract to consume the message</p>
 </li>
 </ul>
 </div>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="l2_calldata"><a class="anchor" href="#l2_calldata"></a>L2 payloads</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="l2_data"><a class="anchor" href="#l2_data"></a>L2 data</h3>
 <div class="paragraph">
-<p>As of Starknet v0.13.1 onwards, L2 data is taken into account during pricing. This includes:</p>
+<p>As of Starknet v0.13.1 onwards, L2 data is also taken into account during pricing, including:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>calldata: this includes transaction calldata (in the case of <code>INVOKE</code> transactions or <code>L1_HANDLER</code>), constructor calldata (in the case of <code>DEPLOY_ACCOUNT</code> transactions), and signatures</p>
+<p>Calldata, including transaction calldata (in the case of <code>INVOKE</code> transactions or <code>L1_HANDLER</code>), constructor calldata (in the case of <code>DEPLOY_ACCOUNT</code> transactions), and signatures</p>
 </li>
 <li>
-<p>events: data and keys of emitted events</p>
+<p>Events, including data and keys of emitted events</p>
 </li>
 <li>
-<p>ABI: classes abi in <code>DECLARE</code> transactions (relevant only for <code>DECLARE</code> transactions of version ≥ 2)</p>
+<p>ABI, including classes ABI in <code>DECLARE</code> transactions (only relevant for <code>DECLARE</code> transactions of version ≥ 2)</p>
 </li>
 <li>
-<p>CASM bytecode (for all available <code>DECLARE</code> transactions, where in version ≥ 2 this refers to the compiled class)</p>
+<p>Casm bytecode (for all available <code>DECLARE</code> transactions, where in version &lt; 2 this refers to the compiled class)</p>
 </li>
 <li>
 <p>Sierra bytecode (relevant only for <code>DECLARE</code> transactions of version ≥ 2)</p>
@@ -1429,12 +1474,26 @@ For information on the exact data and its construction, see <a href="../data-ava
 </ul>
 </div>
 <div class="paragraph">
-<p>The pricing of the above components in terms of L2 gas is given by the following table:</p>
+<p>The L1 gas cost of each component in as follows:</p>
 </div>
-<table class="tableblock frame-all grid-all stretch">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>When a transaction&#8217;s L2 cost is paid for by L2 gas, the following numbers are translated via the standard conversion rate of 1 L1 gas = 40K L2 gas.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<table class="tableblock frame-all grid-all fit-content stretch">
 <colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
+<col>
+<col>
 </colgroup>
 <thead>
 <tr>
@@ -1469,25 +1528,12 @@ For information on the exact data and its construction, see <a href="../data-ava
 </tr>
 </tbody>
 </table>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>When the transaction&#8217;s L2 cost is paid for by L1 gas, the above numbers are translated via the standard conversion rate of: 1 L1 gas = 40,000 L2_gas</p>
-</div>
-</td>
-</tr>
-</table>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../block-structure/">Block structure</a></span>
-  <span class="next"><a href="../../cryptography/">Cryptography</a></span>
+  <span class="prev"><a href="../../cryptography/">Cryptography</a></span>
+  <span class="next"><a href="../messaging-mechanism/">L1-L2 messaging</a></span>
 </nav>
 </article>
   </div>
