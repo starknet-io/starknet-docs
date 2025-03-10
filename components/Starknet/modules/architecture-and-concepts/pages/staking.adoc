@@ -1,15 +1,147 @@
 [id="staking_architecture"]
-= Staking Architecture
+= Consensus mechanism
 
-include::partial$snippet-important-staking-v2.adoc[]
+[IMPORTANT]
+====
+This page is a deep-dive into Starknet's consensus mechanism. To learn how to stake on Starknet, go to _xref:guides:staking/overview.adoc[]_.
+====
+
+== Introduction
 
 Staking on Starknet is designed to enhance network security and decentralization by allowing users to stake their STRK tokens directly or delegate them to other validators. The architecture is modular, with different contracts handling specific responsibilities to ensure flexibility, security, and ease of upgrades. For more details on the staking architecture, visit the following link: https://github.com/starkware-libs/starknet-staking[Starknet Staking Repository].
 
-image::staking-architecture.png[]
+== Progress
 
-== Components of the Staking Architecture
+=== First stage
+
+In the future, validators will be responsible for maintaining and securing the network by producing, attesting, and proving blocks, as part of Starknet's consensus protocol. However, handing over these responsibilities all in one day is neither feasible nor desirable.  Instead, the first stage of staking on Starknet will only require validators to run full nodes and test the protocol's economic incentive structure and some of its key smart contract components.
+
+[IMPORTANT]
+====
+In the first phase of staking on Starknet, validators are required to run a full node in preparation for future staking phases
+====
+
+Over time, validators' responsibilities will gradually increase, with each phase bringing additional tasks until validators fully maintain and secure the network. This incremental approach is necessary, as it allows for the following:
+
+* Gradual implementation: introducing features in small and manageable milestones, ensuring each step is carefully implemented and easily integrated, and allowing to refine the process and address issues as they arise
+
+* Validators preparation: giving validators time to adapt to their new responsibilities and critical roles, maximizing the network's stability during the transition
+
+* Proven reliability: having a proven set of sequencers that reliably produce and attest to blocks by the time validators perform their full responsibilities, cementifying the network's decentralization
+
+=== Second phase
+
+== Protocol
+
+The staking protocol features two main options:
+
+* _Staking_: Users can stake any amount of STRK, with a minimum threshold set at 20,000 STRK. Validators are expected to run full nodes and eventually handle additional responsibilities as the protocol evolves. Validators can choose whether to allow delegation.
+* _Stake Delegation_: Users can delegate their STRK to validators without running their own nodes, if the validator allows delegation. Delegators share in the rewards earned by the validators they choose.
+
+Validators and delegators can both unstake their funds, subject to network-defined latencies for security.
+
+=== Minting curve
+
+The minting curve balances participation and inflation by adjusting rewards based on the total STRK locked in the protocol. It is defined by the formula:
+
+[stem]
+++++
+M = \frac{C}{10} \times \sqrt{S}
+++++
+
+where:
+
+* stem:[S] is the staking rate as a percentage of the total token supply
+* stem:[M] is the annual minting rate as a percentage of the total token supply
+* stem:[C] is the maximum theoretical inflation percentage
+
+For the first stage, stem:[C] is proposed to be 1.6%.
+
+=== Staking rewards
+
+Rewards are distributed based on the amount staked and the commission policy constant stem:[CP] set by the validator. The yearly reward percentages are calculated using the following formulas:
+
+[stem]
+++++
+\begin{align}
+\text{Validators: } & \; \left[\text{self_stake} + \text{total_stake_delegated} \times CP\right] \times \frac{M}{S} \\
+\text{Stake Delegators: } & \; \text{stake_delegated} \times (1 - CP) \times \frac{M}{S}
+\end{align}
+++++
+
+where stem:[M] and stem:[S] are the same as described in xref:#minting-curve[the minting curve section].
+
+=== Latencies
+
+* Current version: Immediate entry and exit from the staking protocol. However, funds are subject to a 21-day security lockup after signaling unstake intent.
+* Future versions: Introduction of epochs to determine entry/exit latencies and continued 21-day lockup after signaling unstake intent.
+
+[NOTE]
+====
+Stake delegators can switch between validators without waiting for the full lockup period, promoting a competitive delegation market.
+====
+
+// == Contract addresses
+
+// === L1 addresses
+// [horizontal, labelwidth="15"]
+
+// ==== Reward supplier contract
+
+// [horizontal, labelwidth="15"]
+// Mainnet:: 0xCa1406D57eD09947E68DE121316C87113fBE9ff5
+// Sepolia:: 0xE58d25681B9d290D60e4d7f379a05d5BFD973fFB
+
+// ==== Mint manager contract
+
+// [horizontal, labelwidth="15"]
+// Mainnet:: 0xCa14076A3cec95448BaD179cc19B351A4204B88B
+// Sepolia:: 0x648D1B35a932F5189e7ff97b2F795E03734DE4ce
+
+// === L2 addresses
+
+// ==== Reward supplier contract
+
+// [horizontal, labelwidth="15"]
+// Mainnet:: 0x009035556d1ee136e7722ae4e78f92828553a45eed3bc9b2aba90788ec2ca112
+// Sepolia:: 0x02ebbebb8ceb2e07f30a5088f5849afd4f908f04f3f9c97c694e5d83d2a7cc61
+
+// ==== Minting curve contract
+
+// [horizontal, labelwidth="15"]
+// Mainnet:: 0x00ca1705e74233131dbcdee7f1b8d2926bf262168c7df339004b3f46015b6984
+// Sepolia:: 0x0351c67dc2d4653cbe457be59a035f80ff1e6f6939118dad1b7a94317a51a454
+
+// ==== Staking contract
+
+// [horizontal, labelwidth="15"]
+// Mainnet:: 0x00ca1702e64c81d9a07b86bd2c540188d92a2c73cf5cc0e508d949015e7e84a7
+// Sepolia:: 0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1
+
+=== Economic parameters
+
+[%autowidth]
+|===
+| Parameter | Mainnet | Sepolia
+
+| Minimum stake for validators | 20K STRK | 1 STRK
+
+| Withdrawal security lockup | 21 days | 5 minutes
+
+| Minting curve yearly inflation cap (stem:[C]) | 1.6 | 1.6
+|===
+
+[NOTE]
+====
+For developers who wish to dive deep, the index update interval parameter is set to a minimum of 1 minute in Starknet Sepolia and 30 minutes in Starknet mainnet.
+====
+
+
+== Components
 
 Staking is divided into several key components, each responsible for different aspects of the staking process.
+
+image::staking-architecture.png[]
 
 .Contracts of the Staking Architecture
 [cols='1,8']
@@ -47,7 +179,7 @@ The following data structures are stored within the contracts and play a crucial
 
 For more technical details, you can refer to the full staking specification document available in: https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md[Staking Repository Spec].
 
-== Staking Contract
+=== Staking Contract
 
 The staking contract is the core of the staking system. It manages the entire lifecycle of staking, from initial staking to claiming rewards and unstaking.
 
@@ -58,7 +190,7 @@ The staking contract is the core of the staking system. It manages the entire li
 `unstake_action`: Finalizes the unstaking process after the waiting period, returning tokens to the validator address. +
 `claim_rewards`: Allows users to claim rewards.
 
-== Delegation Pooling Contract
+=== Delegation Pooling Contract
 
 The delegation pooling contract enables users to delegate their tokens. All interactions, such as entering or exiting the pool, are enabled through this contracts, which tracks each delegator's contribution, calculates their rewards, and manages the delegation lifecycle.
 
@@ -70,7 +202,7 @@ The delegation pooling contract enables users to delegate their tokens. All inte
 `switch_delegation_pool`: Allows a delegator to transfer their delegated stake from one validator's pool to another, facilitating dynamic delegation strategies. +
 `claim_rewards`: Transfers the delegator's earned rewards to their specified reward address.
 
-== Reward Supplier Contract
+=== Reward Supplier Contract
 
 The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve. It ensures that the rewards are distributed fairly and in accordance with the protocol's economic parameters.
 
@@ -78,7 +210,7 @@ The reward supplier contract is responsible for calculating and supplying the st
 `calculate_staking_rewards`: Computes the rewards based on the current staking rate and the minting curve, updating the staking contract with the amount to be distributed. +
 `claim_rewards`: Handles the transfer of rewards to the staking contract, ensuring that the correct amount is distributed to validators and delegators.
 
-== Minting Curve Contract
+=== Minting Curve Contract
 
 The minting curve contract defines the economic model that governs reward distribution. It ensures that the network's inflation is managed while incentivizing participation in staking.
 
@@ -86,6 +218,6 @@ The minting curve contract defines the economic model that governs reward distri
 `yearly_mint`: Returns the amount of STRK tokens to be minted annually based on the current staking rate. This function uses a square root formula to balance rewards and inflation. +
 `update_total_supply`: Updates the total supply of STRK tokens, ensuring that the minting calculations remain accurate.
 
-== Security and Upgradability
+=== Security and Upgradability
 
 The staking architecture on Starknet is designed with security and upgradability in mind. Each contract is modular, allowing for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process.
