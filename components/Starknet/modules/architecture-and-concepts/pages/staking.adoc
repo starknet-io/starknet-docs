@@ -1,0 +1,89 @@
+[id="staking_architecture"]
+= Staking Architecture
+
+Staking on Starknet is designed to enhance network security and decentralization by allowing users to stake their STRK tokens directly or delegate them to other validators. The architecture is modular, with different contracts handling specific responsibilities to ensure flexibility, security, and ease of upgrades. For more details on the staking architecture, visit the following link: https://github.com/starkware-libs/starknet-staking[Starknet Staking Repository].
+
+image::staking-architecture.png[]
+
+== Components of the Staking Architecture
+
+Staking is divided into several key components, each responsible for different aspects of the staking process.
+
+.Contracts of the Staking Architecture
+[cols='1,8']
+|===
+| Contract
+| Description
+
+| Staking Contract
+| The central contract that manages the staking process, which handles direct staking, rewards distribution, and interactions with delegation pools. Validators interact with this contract to stake their tokens, claim rewards, and initiate unstaking.
+
+| Delegation Pooling Contract
+| This contract manages the delegation process, allowing delegators to assign their tokens to a validator for staking. The contract is responsible for tracking each delegator's share, calculating their rewards, and managing the delegation and unstaking processes.
+
+| Reward Supplier Contract
+| A dedicated contract that calculates and supplies the rewards for validators and delegators. It interfaces with the staking contract to distribute rewards based on the defined minting curve.
+
+| Minting Curve Contract
+| A contract responsible for implementing the minting curve logic that governs the reward distribution mechanism. It adjusts rewards dynamically based on the total staked amount and the overall supply of STRK tokens.
+|===
+
+The following data structures are stored within the contracts and play a crucial role in managing validators' and delegators' information within the staking protocol:
+
+.Key Structures in the Staking Architecture
+[cols='1,8']
+|===
+| Structure
+| Description
+
+| StakerInfo Structure
+| A data structure stored within the staking contract that holds detailed information about each validator, including their staked amount, unclaimed rewards, delegation details, and operational parameters. This structure ensures that validators' information is accurately tracked and updated.
+
+| PoolMemberInfo Structure
+| A data structure stored within the delegation pooling contract that holds information about each delegator's contributions, rewards, and status within the pool. This structure helps manage and calculate the delegation and reward distribution processes for pool members.
+|===
+
+For more technical details, you can refer to the full staking specification document available in: https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md[Staking Repository Spec].
+
+== Staking Contract
+
+The staking contract is the core of the staking system. It manages the entire lifecycle of staking, from initial staking to claiming rewards and unstaking.
+
+*Key Functions and Responsibilities *: +
+`stake`: Allows users to stake their STRK tokens. +
+`increase_stake`: Lets existing validators increase their stake. +
+`unstake_intent`: Initiates the unstaking process, which can be finalized using `unstake_action` if sufficient time has passed. +
+`unstake_action`: Finalizes the unstaking process after the waiting period, returning tokens to the validator address. +
+`claim_rewards`: Allows users to claim rewards.
+
+== Delegation Pooling Contract
+
+The delegation pooling contract enables users to delegate their tokens. All interactions, such as entering or exiting the pool, are enabled through this contracts, which tracks each delegator's contribution, calculates their rewards, and manages the delegation lifecycle.
+
+*Key Functions and Responsibilities*: +
+`enter_delegation_pool`: Allows users to delegate their tokens to the pool associated with a validator. This function transfers the tokens, updates the delegator's record, and integrates them into the validator's pool. +
+`add_to_delegation_pool`: Enables existing delegators to increase their delegation amount. The contract updates the pool's total and recalculates the member's rewards. +
+`exit_delegation_pool_intent`: Initiates the process for a delegator to exit the pool. Similar to validators, the delegator's funds are locked for a period before they can be withdrawn. +
+`exit_delegation_pool_action`: Finalizes the exit process for a delegator, returning their tokens and any unclaimed rewards. +
+`switch_delegation_pool`: Allows a delegator to transfer their delegated stake from one validator's pool to another, facilitating dynamic delegation strategies. +
+`claim_rewards`: Transfers the delegator's earned rewards to their specified reward address.
+
+== Reward Supplier Contract
+
+The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve. It ensures that the rewards are distributed fairly and in accordance with the protocol's economic parameters.
+
+*Key Functions and Responsibilities*: +
+`calculate_staking_rewards`: Computes the rewards based on the current staking rate and the minting curve, updating the staking contract with the amount to be distributed. +
+`claim_rewards`: Handles the transfer of rewards to the staking contract, ensuring that the correct amount is distributed to validators and delegators.
+
+== Minting Curve Contract
+
+The minting curve contract defines the economic model that governs reward distribution. It ensures that the network's inflation is managed while incentivizing participation in staking.
+
+*Key Functions and Responsibilities*: +
+`yearly_mint`: Returns the amount of STRK tokens to be minted annually based on the current staking rate. This function uses a square root formula to balance rewards and inflation. +
+`update_total_supply`: Updates the total supply of STRK tokens, ensuring that the minting calculations remain accurate.
+
+== Security and Upgradability
+
+The staking architecture on Starknet is designed with security and upgradability in mind. Each contract is modular, allowing for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process.
