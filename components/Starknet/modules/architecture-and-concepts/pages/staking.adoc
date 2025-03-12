@@ -2,12 +2,12 @@
 
 [IMPORTANT]
 ====
-This page is a deep-dive into Starknet's staking protocol. To learn how to stake on Starknet, go to _xref:guides:staking/overview.adoc[]_.
+This page is a deep-dive into Starknet's staking protocol. To learn how to stake on Starknet, go to xref:staking:overview.adoc[Guides].
 ====
 
 == Introduction
 
-While Starknet is currently still centralized, it is moving towards employing a xref:#protocol[proof-of-stake (PoS) protocol], handing over the responsibilities of maintaining and securing Starknet by producing, attesting, and proving blocks to validators. Naturally, handing over these responsibilities in one day is neither feasible nor desirable. Instead, the PoS protocol is be implemented in four incremental phases, illustrated in following figure:
+While Starknet is currently still centralized, it is moving towards employing a xref:#protocol[staking protocol], handing over the responsibilities of maintaining and securing Starknet by producing, attesting, and proving blocks to validators. Naturally, handing over these responsibilities in one day is neither feasible nor desirable. Instead, the PoS protocol is be implemented in four incremental phases, illustrated in following figure:
 
 image::staking-roadmap.png[]
 
@@ -15,7 +15,7 @@ To facilitate this, the protocol's architecture is modular, with each xref:#comp
 
 == Protocol
 
-The following sections describe the details of Starknet's PoS protocol. The parameters used in the protocol are summarized in the following table:
+The following sections describe the details of Starknet's staking protocol. The parameters used in the protocol are summarized in the following table:
 
 [%autowidth]
 |===
@@ -42,7 +42,7 @@ The following sections describe the details of Starknet's PoS protocol. The para
 
 === Roles
 
-Starknet's PoS protocol features two options for participation:
+Starknet's staking protocol features two options for participation:
 
 * Staking directly as validators: Staking a minimum of 20,000 STRK and earning rewards by handling any responsibilities the protocol requires
 
@@ -55,16 +55,16 @@ Validators can choose whether to allow delegation or not.
 
 === Ephocs
 
-Naturally, the more stake a validator has, the more blocks they need to produce. However, changes in validators' stakes can be applied immediately in order to make things predictable. To resolve this, Starknet's PoS protocol introduces a notion of epochs (similarly to many other protocols).
+Naturally, the more stake a validator has, the more blocks they should produce. However, applying changes in validators' stakes immediately can #make things unpredictable#. To resolve this, the second phase of the staking protocol introduces the notion of epochs (similarly to many other protocols).
 
-Epochs represent checkpoints where validators' stakes are set, complemented by a new latency parameter stem:[k], such that changes made in epoch stem:[i] are applied in epoch stem:[i+k].
+Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch stem:[i] are applied in epoch stem:[i+k], where stem:[k] is a new latency parameter. 
 
 [NOTE]
 ====
-When validators also produce blocks, stem:[k] will be greater or equal to 2, as the producer of the first block of epoch stem:[j] must be known before the last block of epoch stem:[j-1]. As long as validators are not yet producing blocks, stem:[k] may be equal to one.
+As long as validators are not yet producing blocks, stem:[k] may be equal to 1. When validators also produce blocks, stem:[k] will have to be greater than 1, as the producer of the first block of epoch stem:[j] will have to be known before the last block of epoch stem:[j-1].
 ====
 
-The following figure illustrates a scenario where in epoch stem:[i] validator stem:[A] with has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch stem:[i+1] someone undelegates 30K STRK from stem:[A]:
+For example, the following figure illustrates a scenario where in epoch stem:[i] validator stem:[A] has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch stem:[i+1] someone undelegates 30K STRK from stem:[A]:
 
 image::epochs-example.png[]
 
@@ -74,23 +74,23 @@ image::epochs-example.png[]
 
 ==== Block attestation
 
-The primary proposed change in Staking v2 is the introduction of a block attestation mechanism for Validators. This section outlines the technical details of the attestation process. For now, epochs are treated as groups of E blocks (a detailed explanation will follow in a later section).
+The primary change in the second phase of the staking protocol, is the introduction of a block attestation mechanism for validators. In each epoch, each validator is assigned a single block whose relative number within the epoch is defined as follows:
 
-Each Validator is assigned a block per epoch based on the following formula:
-block_number=Hash(staked_amount,epoch_id,validator_address)%(E−W)
+[stem]
+++++
+h(\text{staked amount},\text{epoch id},\text{validator address}) \mod (E-W)
+++++
 
-When the block_number is the relative number within the epoch, and W represents the range of blocks applicable for attestation submittal.
-During each epoch, Validators have the opportunity to attest to their assigned block by submitting an attest transaction. This transaction includes the block hash of the attested block and must be included within a specific attestation window. If T represents the block number that meets the matching criteria, the attestation window spans from block T+11 to T+W (for instance, where W = 20). Each Validator is required to perform only one attestation per epoch.
+where:
 
-This mechanism ensures Validators actively use full nodes, as they need to track block hashes continuously. Additionally, the attestation reflects their activity and is publicly verifiable. This ensures Validators’ reliability is publicly tested, which is crucial before Starknet’s security and liveness depend on them.
+* stem:[E] is the number of blocks in an epoch, termed _epoch length_
+* stem:[W] is the number of blocks applicable for attestation submittal, termed _attestation window_
 
-Note that in this proposal, the work is the same for all Validators, and only the rewards are proportional to their stake. This is done to simplify the implementation, so time and effort may be saved for the later stages. This is essential as testing Validators’ reliability is crucial before handing them core responsibilities. Also, Running a full node is the main cost and effort, which is obligatory for all Validators.
+During each epoch, validators have the opportunity to attest to their assigned block by submitting an `attest` transaction, which must be included within the attestation window. For example, if stem:[W = 20] and stem:[N] is the relative block number assigned to validator stem:[A], then stem:[A] must submit an `attest` transaction between block stem:[N+1] to stem:[N+20]. Each Validator is required to perform only one attestation per epoch.
 
-Lastly, the exact parameters of epoch length (E) and attestation window (W) will be determined later and added to this proposal, but here are some thoughts about what is bounding them:
+The `attest` transaction includes the block hash of the attested block, ensuring validators actively use full nodes, as they need to continuously track block hashes. Additionally, the attestation is publicly verifiable, ensuring validators' reliability is publicly tested — a crucial prerequisite before handing them any core responsibilities.
 
-E should be large enough to keep the Operator’s cost sensible—even on a day with high gas fees, the yield for an Operator that has staked only 20K STRK over an epoch should be significantly more than the cost of the transaction it would have to submit. E should be small enough so latency on activities that depend on epoch (such as adding or removing stake) will not be too cumbersome.
-
-W should be small to ensure liveness. But also - not too small. We want to incentivize people to react in real-time but also to avoid scenarios where, due to sporadic spikes in the network, the validator failed to submit a transaction in time.
+// Note that each validator is required to perform only one attestation per epoch, and therefore the work is identical for all validators. This is done in the interest of simplifying the implementation of the protocol's second phase, saving time and effort for the later phases. In any case, the main cost and effort is running a full node, which is obligatory for all validators.
 
 === Rewards
 
@@ -111,6 +111,13 @@ Rewards are distributed based on the amount staked and the commission policy con
 ++++
 
 where stem:[M] and stem:[S] are defined by the xref:#minting_curve[].
+
+Starting from the second phase of the staking protocol, rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn't will get no rewards for the epoch's entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator's pool.
+
+[NOTE]
+====
+The global index of rewards was removed in the second phase of the staking protocol. Instead, when a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is stem:[O(\text{#delegator's balance changes since last claim})] — and not stem:[O(\text{#epochs since last claim})] — which is assumed to be small enough to fit in one transaction in any real-world-scenario.
+====
 
 ==== Minting curve
 
