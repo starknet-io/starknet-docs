@@ -629,7 +629,7 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>This page is a deep-dive into Starknet&#8217;s staking protocol. To learn how to stake on Starknet, go to <em><a href="#guides:staking/overview.adoc" class="xref unresolved">guides:staking/overview.adoc</a></em>.</p>
+<p>This page is a deep-dive into Starknet&#8217;s staking protocol. To learn how to stake on Starknet, go to <a href="../../staking/overview/" class="xref page">Guides</a>.</p>
 </div>
 </td>
 </tr>
@@ -641,7 +641,7 @@
 <h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>While Starknet is currently still centralized, it is moving towards employing a <a href="#protocol">proof-of-stake (PoS) protocol</a>, handing over the responsibilities of maintaining and securing Starknet by producing, attesting, and proving blocks to validators. Naturally, handing over these responsibilities in one day is neither feasible nor desirable. Instead, the PoS protocol is be implemented in four incremental phases, illustrated in following figure:</p>
+<p>While Starknet is currently still centralized, it is moving towards employing a <a href="#protocol">staking protocol</a>, handing over the responsibilities of maintaining and securing Starknet by producing, attesting, and proving blocks to validators. Naturally, handing over these responsibilities in one day is neither feasible nor desirable. Instead, the PoS protocol is be implemented in four incremental phases, illustrated in following figure:</p>
 </div>
 <div class="imageblock">
 <div class="content">
@@ -657,7 +657,7 @@
 <h2 id="protocol"><a class="anchor" href="#protocol"></a>Protocol</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following sections describe the details of Starknet&#8217;s PoS protocol. The parameters used in the protocol are summarized in the following table:</p>
+<p>The following sections describe the details of Starknet&#8217;s staking protocol. The parameters used in the protocol are summarized in the following table:</p>
 </div>
 <table class="tableblock frame-all grid-all fit-content">
 <colgroup>
@@ -700,7 +700,7 @@
 <div class="sect2">
 <h3 id="roles"><a class="anchor" href="#roles"></a>Roles</h3>
 <div class="paragraph">
-<p>Starknet&#8217;s PoS protocol features two options for participation:</p>
+<p>Starknet&#8217;s staking protocol features two options for participation:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -730,10 +730,10 @@
 <div class="sect2">
 <h3 id="ephocs"><a class="anchor" href="#ephocs"></a>Ephocs</h3>
 <div class="paragraph">
-<p>Naturally, the more stake a validator has, the more blocks they need to produce. However, changes in validators' stakes can be applied immediately in order to make things predictable. To resolve this, Starknet&#8217;s PoS protocol introduces a notion of epochs (similarly to many other protocols).</p>
+<p>Naturally, the more stake a validator has, the more blocks they should produce. However, applying changes in validators' stakes immediately can <mark>make things unpredictable</mark>. To resolve this, the second phase of the staking protocol introduces the notion of epochs (similarly to many other protocols).</p>
 </div>
 <div class="paragraph">
-<p>Epochs represent checkpoints where validators' stakes are set, complemented by a new latency parameter \(k\), such that changes made in epoch \(i\) are applied in epoch \(i+k\).</p>
+<p>Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch \(i\) are applied in epoch \(i+k\), where \(k\) is a new latency parameter.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -743,14 +743,14 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>When validators also produce blocks, \(k\) will be greater or equal to 2, as the producer of the first block of epoch \(j\) must be known before the last block of epoch \(j-1\). As long as validators are not yet producing blocks, \(k\) may be equal to one.</p>
+<p>As long as validators are not yet producing blocks, \(k\) may be equal to 1. When validators also produce blocks, \(k\) will have to be greater than 1, as the producer of the first block of epoch \(j\) will have to be known before the last block of epoch \(j-1\).</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>The following figure illustrates a scenario where in epoch \(i\) validator \(A\) with has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch \(i+1\) someone undelegates 30K STRK from \(A\):</p>
+<p>For example, the following figure illustrates a scenario where in epoch \(i\) validator \(A\) has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch \(i+1\) someone undelegates 30K STRK from \(A\):</p>
 </div>
 <div class="imageblock">
 <div class="content">
@@ -763,30 +763,31 @@
 <div class="sect3">
 <h4 id="block_attestation"><a class="anchor" href="#block_attestation"></a>Block attestation</h4>
 <div class="paragraph">
-<p>The primary proposed change in Staking v2 is the introduction of a block attestation mechanism for Validators. This section outlines the technical details of the attestation process. For now, epochs are treated as groups of E blocks (a detailed explanation will follow in a later section).</p>
+<p>The primary change in the second phase of the staking protocol, is the introduction of a block attestation mechanism for validators. In each epoch, each validator is assigned a single block whose relative number within the epoch is defined as follows:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[h(\text{staked amount},\text{epoch id},\text{validator address}) \mod (E-W)\]
+</div>
 </div>
 <div class="paragraph">
-<p>Each Validator is assigned a block per epoch based on the following formula:
-block_number=Hash(staked_amount,epoch_id,validator_address)%(E−W)</p>
+<p>where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(E\) is the number of blocks in an epoch, termed <em>epoch length</em></p>
+</li>
+<li>
+<p>\(W\) is the number of blocks applicable for attestation submittal, termed <em>attestation window</em></p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>When the block_number is the relative number within the epoch, and W represents the range of blocks applicable for attestation submittal.
-During each epoch, Validators have the opportunity to attest to their assigned block by submitting an attest transaction. This transaction includes the block hash of the attested block and must be included within a specific attestation window. If T represents the block number that meets the matching criteria, the attestation window spans from block T+11 to T+W (for instance, where W = 20). Each Validator is required to perform only one attestation per epoch.</p>
+<p>During each epoch, validators have the opportunity to attest to their assigned block by submitting an <code>attest</code> transaction, which must be included within the attestation window. For example, if \(W = 20\) and \(N\) is the relative block number assigned to validator \(A\), then \(A\) must submit an <code>attest</code> transaction between block \(N+1\) to \(N+20\). Each Validator is required to perform only one attestation per epoch.</p>
 </div>
 <div class="paragraph">
-<p>This mechanism ensures Validators actively use full nodes, as they need to track block hashes continuously. Additionally, the attestation reflects their activity and is publicly verifiable. This ensures Validators’ reliability is publicly tested, which is crucial before Starknet’s security and liveness depend on them.</p>
-</div>
-<div class="paragraph">
-<p>Note that in this proposal, the work is the same for all Validators, and only the rewards are proportional to their stake. This is done to simplify the implementation, so time and effort may be saved for the later stages. This is essential as testing Validators’ reliability is crucial before handing them core responsibilities. Also, Running a full node is the main cost and effort, which is obligatory for all Validators.</p>
-</div>
-<div class="paragraph">
-<p>Lastly, the exact parameters of epoch length (E) and attestation window (W) will be determined later and added to this proposal, but here are some thoughts about what is bounding them:</p>
-</div>
-<div class="paragraph">
-<p>E should be large enough to keep the Operator’s cost sensible—even on a day with high gas fees, the yield for an Operator that has staked only 20K STRK over an epoch should be significantly more than the cost of the transaction it would have to submit. E should be small enough so latency on activities that depend on epoch (such as adding or removing stake) will not be too cumbersome.</p>
-</div>
-<div class="paragraph">
-<p>W should be small to ensure liveness. But also - not too small. We want to incentivize people to react in real-time but also to avoid scenarios where, due to sporadic spikes in the network, the validator failed to submit a transaction in time.</p>
+<p>The <code>attest</code> transaction includes the block hash of the attested block, ensuring validators actively use full nodes, as they need to continuously track block hashes. Additionally, the attestation is publicly verifiable, ensuring validators' reliability is publicly tested — a crucial prerequisite before handing them any core responsibilities.</p>
 </div>
 </div>
 </div>
@@ -817,6 +818,23 @@ During each epoch, Validators have the opportunity to attest to their assigned b
 </div>
 <div class="paragraph">
 <p>where \(M\) and \(S\) are defined by the <a href="#minting_curve">Minting curve</a>.</p>
+</div>
+<div class="paragraph">
+<p>Starting from the second phase of the staking protocol, rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn&#8217;t will get no rewards for the epoch&#8217;s entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator&#8217;s pool.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The global index of rewards was removed in the second phase of the staking protocol. Instead, when a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is \(O(\text{#delegator's balance changes since last claim})\) — and not \(O(\text{#epochs since last claim})\) — which is assumed to be small enough to fit in one transaction in any real-world-scenario.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="sect3">
 <h4 id="minting_curve"><a class="anchor" href="#minting_curve"></a>Minting curve</h4>
