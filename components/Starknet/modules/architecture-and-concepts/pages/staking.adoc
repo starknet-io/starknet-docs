@@ -1,0 +1,252 @@
+= Staking protocol
+
+[IMPORTANT]
+====
+This page is a deep-dive into Starknet's staking protocol. To learn how to stake on Starknet, go to xref:staking:overview.adoc[Guides].
+====
+
+== Introduction
+
+While Starknet is currently still centralized, it is xref:#roadmap[gradually] moving towards employing a xref:#protocol[staking protocol], handing over the responsibilities of producing, attesting, and proving blocks to validators, and allowing anyone holding STRK in their wallets to stake their tokens either directly or by delegating them to others and earn rewards based on their level of participation. To facilitate this gradual implementation, the protocol's architecture is modular, with each xref:#components[component] handling specific responsibilities, ensuring maximum flexibility and ease of upgrades.
+
+.Additional resources
+
+* https://www.starknet.io/blog/staking-phase-1/[_Starknet launches phase 1 of its staking initiative on mainnet_^] on the Starknet blog
+* https://community.starknet.io/t/snip-28-staking-v2-proposal/115250[_SNIP 28: Staking V2 proposal_^] on the Starknet community forum
+
+
+== Roadmap
+
+Naturally, handing over the responsibility for maintaining and securing Starknet to validators in one day is neither feasible nor desirable. Instead, the staking protocol is implemented in incremental phases, with each phase bringing additional requirements from validators until they fully maintain and secure the network. The protocol is currently in the first of four phases, illustrated in following figure:
+
+[IMPORTANT]
+====
+The staking protocol is currently in its first phase.
+====
+
+image::staking-roadmap.png[]
+
+== Protocol
+
+The following sections describe the details of Starknet's staking protocol. The parameters used in the protocol are summarized in the following table:
+
+[%autowidth]
+|===
+| Parameter | Mainnet | Sepolia
+
+| Minimum stake for validators
+| 20K STRK
+| 1 STRK
+
+| Minting curve yearly inflation cap (stem:[C])
+| 1.6
+| 1.6
+
+| Withdrawal security lockup
+| 21 days
+| 5 minutes on Sepolia
+
+| Epoch size (stem:[E])
+| TBD
+| TBD
+
+| The block window range to submit an attestation (stem:[W])	
+| TBD
+| TBD
+
+| Number of epochs used for latency (stem:[k])
+| TBD
+| TBD
+|===
+
+=== Roles
+
+Starknet's staking protocol features two options for participation:
+
+* Staking directly as validators: Staking a minimum of 20,000 STRK and earning rewards by handling any responsibilities the protocol requires
+
+* Staking indirectly as delegators: Delegating STRKs to validators who alloe delegation and sharing in their rewards without handling any of their responsibilities
++
+[NOTE]
+====
+Validators can choose whether to allow delegation or not.
+====
+
+=== Addresses
+
+// The operational address serves as the Validator's identifier within the network and is used for essential tasks such as block attestations and sequencing. Validators can utilize three distinct addresses, each dedicated to a specific utility: the staking address for controlling the stake, the rewards address for receiving rewards, and the operational address for performing ongoing operational work. This structure allows for a clear separation of responsibilities, enhancing security and efficiency. Disclaimer: In the first stage of staking on Starknet, the operational address will not yet be actively used, as Validators will primarily run full nodes.
+
+To reduce exposure to threats and enhance security, multiple addresses for defined for both validators and delegators:
+
+* Validator addresses:
+
+** Staking address: Used for staking, adding stake, and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.
+
+** Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.
+
+** Operational Address: Used for operational purposes, such as block attestations (starting from the protocol's second phase), block proposing (starting from the protocol's third phase), etc. This address is used frequently and doesn't handle large amounts of funds, and therefore is best kept by a hot wallet. Starting from the protocol's second phase, however, hacking the operational address can lead to a lose of yield for the validator and its delegators.
+
+* Delegator addresses:
+
+** Staking address: Used for delegating stake, adding stake and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.
+
+** Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.
+
+The protocol uses a hierarchical approach between the staking and rewards addresses, and both validators and delegator can also use their staking address whenever their rewards address is required.
+
+=== Ephocs
+
+Starting from its second phase, the staking protocol introduces the notion of _epochs_ (similarly to many other protocols). Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch stem:[i] are applied in epoch stem:[i+k], where stem:[k] is a new latency parameter. For example, the following figure illustrates a scenario where in epoch stem:[i] validator stem:[A] has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch stem:[i+1] someone undelegates 30K STRK from stem:[A]: 
+
+// [NOTE]
+// ====
+// As long as validators are not yet producing blocks, stem:[k] may be equal to 1. When validators also produce blocks, stem:[k] will have to be greater than 1, as the producer of the first block of epoch stem:[j] will have to be known before the last block of epoch stem:[j-1].
+// ====
+
+image::epochs-example.png[]
+
+=== Responsibilities
+
+// ==== Running a full node
+
+==== Block attestation
+
+Starting from its second phase, the staking protocol introduces a block attestation mechanism for validators. In each epoch, each validator is assigned a single block whose relative number within the epoch is defined as follows:
+
+[stem]
+++++
+h(\text{staked amount},\text{epoch id},\text{validator address}) \mod (E-W)
+++++
+
+where:
+
+* stem:[E] is the number of blocks in an epoch, termed _epoch length_
+* stem:[W] is the number of blocks applicable for attestation submittal, termed _attestation window_
+
+During each epoch, validators have the opportunity to attest to their assigned block by submitting an `attest` transaction, which must be included within the attestation window. For example, if stem:[W = 20] and stem:[N] is the relative block number assigned to validator stem:[A], then stem:[A] must submit an `attest` transaction between the blocks whose relative number within the epoch are stem:[N+1] and stem:[N+20].
+
+[NOTE]
+====
+In the second phase of the protocol, each Validator is required to perform only one attestation per epoch.
+====
+
+The `attest` transaction includes the block hash of the attested block, ensuring validators actively use full nodes, as they need to continuously track block hashes. Additionally, the attestation is publicly verifiable, ensuring validators' reliability is publicly tested — a crucial prerequisite before handing them any core responsibilities.
+
+// Note that each validator is required to perform only one attestation per epoch, and therefore the work is identical for all validators. This is done in the interest of simplifying the implementation of the protocol's second phase, saving time and effort for the later phases. In any case, the main cost and effort is running a full node, which is obligatory for all validators.
+
+=== Rewards
+
+Rewards are distributed based on the amount staked and the commission policy constant stem:[CP] set by the validator, with yearly reward percentages calculated using the following formulas:
+
+* For delegators:
++
+[stem]
+++++
+\text{stake_delegated} \cdot (1 - CP) \cdot \frac{M}{S}
+++++
+
+* For validators:
++
+[stem]
+++++
+\left(\text{self_stake} + \text{total_stake_delegated} \cdot CP\right) \cdot \frac{M}{S}
+++++
+
+where stem:[M] and stem:[S] are defined by the xref:#minting_curve[].
+
+Starting from the second phase of the protocol, rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn't will get no rewards for the epoch's entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator's pool. Stakers that enter the protocol on epoch stem:[i] will start getting rewards only on epoch stem:[i+k], and stakers that signal an intent to exit the protocol on epoch stem:[i] will still get rewards until epoch stem:[i+k-1].
+
+
+
+[NOTE]
+====
+Starting from the second phase of the protocol, when a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is stem:[O(\text{#delegator's balance changes since last claim})] — and not stem:[O(\text{#epochs since last claim})] — which is assumed to be small enough to fit in one transaction in any real-world-scenario. This mechanism replaces the global reward index that was used prior to the protocol's second phase.
+====
+
+==== Minting curve
+
+The minting curve balances participation and inflation by adjusting rewards based on the total STRK locked in the protocol, and is defined by the following formula:
+
+[stem]
+++++
+M = \frac{C}{10} \times \sqrt{S}
+++++
+
+where:
+
+* stem:[S] is the staking rate as a percentage of the total token supply
+* stem:[M] is the annual minting rate as a percentage of the total token supply
+* stem:[C] is the maximum theoretical inflation percentage, set to 1.6%
+
+=== Latencies
+
+The following latencies are set in place:
+
+* To disincentivise sudden large withdrawals that could destabilize the network, funds are subject to a 21-day lockup after signaling an unstake intent, during which no rewards are earned and funds cannot be withdrawn. 
+
+* Starting from the second phase of the protocol, to prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch stem:[i] takes effect only on epoch stem:[i+1].
+
+== Components
+
+[TIP]
+====
+For more technical details, you can refer to the full staking specification document available in: https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md[Staking Repository Spec^].
+====
+
+The implementation of Starknet's staking protocol is divided into several contracts, summarized in the following figure:
+
+image::staking-architecture.png[]
+
+This modular architecture allows for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are also in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process.
+
+=== Staking contract
+
+The staking contract is the core of the staking system, managing the entire lifecycle of staking, from initial staking to claiming rewards and unstaking. Its key functions include:
+
+* `stake`: Allows stakers to stake their STRK tokens and become validators
+* `increase_stake`: Allows existing validators to increase their stake
+* `unstake_intent`: Initiates the unstaking process
+* `unstake_action`: Finalizes the unstaking process, returning tokens to the validator address
+* `claim_rewards`: Allows validators to claim rewards
+
+[NOTE]
+====
+The staking contract stores the `StakerInfo` data structure, which holds detailed information about each validator, including their staked amount, unclaimed rewards, delegation details, and operational parameters, and helps to ensure that validators' information is accurately tracked and updated.
+====
+
+=== Delegation pooling contract
+
+All delegation interactions, such as entering or exiting a pool, are enabled through the delegation pooling contract, which tracks each delegator's contribution, calculates their rewards, and manages the delegation lifecycle. Its key functions are:
+
+* `enter_delegation_pool`: Allows stakers to delegate their tokens to the pool associated with a validator and become delegators
+
+* `add_to_delegation_pool`: Enables existing delegators to increase their delegation amount
+
+* `exit_delegation_pool_intent`: Initiates the exit of a delegator from the pool
+
+* `exit_delegation_pool_action`: Finalizes the exit process for a delegator, returning their tokens and any unclaimed rewards.
+
+* `switch_delegation_pool`: Allows a delegator to transfer their delegated stake from one validator's pool to another
+
+* `claim_rewards`: Transfers the delegator's earned rewards to their specified reward address
+
+[NOTE]
+====
+The delegation pooling contract stores the `PoolMemberInfo` data structure, which holds information about each delegator's contributions, rewards, and status within the pool, and helps manage and calculate the delegation and reward distribution processes for pool members.
+====
+
+=== Reward Supplier Contract
+
+The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve, ensuring the rewards are distributed fairly and in accordance with the protocol's economic parameters. Its key Functions are:
+
+* `calculate_staking_rewards`: Updates the staking contract with the amount of rewards to be distributed based on the current staking rate and the minting curve
+
+* `claim_rewards`: Handles the transfer of rewards to the staking contract
+
+=== Minting Curve Contract
+
+The minting curve contract defines the economic model that governs reward distribution, ensuring that the network's inflation is managed while incentivizing participation of stakers. Its key functions are:
+
+* `yearly_mint`: Returns the amount of STRK tokens to be minted annually based on the current staking rate
+
+* `update_total_supply`: Updates the total supply of STRK tokens
