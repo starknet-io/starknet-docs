@@ -3,29 +3,103 @@
 
 :description: How to increase your stake on Starknet by interacting directly with the staking or delegation pooling contracts.
 
-include::partial$snippet-important-staking-v2.adoc[]
+include::partial$snippet-important-troubleshooting.adoc[]
+
+== Introduction
 
 The staking and pooling contracts allow validators and delegators to increase their existing stake. Validators use the `increase_stake` function, which is called from the Staking contract, while delegators use the `add_to_delegation_pool` function, which is called from the delegation pooling contract. These functions add the specified amount of STRK tokens to the current stake, recalculate rewards before the staked amount is updated, and update the total staked amount.
 
-.Prerequisites
+// .Prerequisites
 
-* Sufficient STRK token balance in your Starknet wallet.
-* The caller must be either the validator/delegator or their respective reward address.
+// * Sufficient STRK token balance in your Starknet wallet.
+// * The caller must be either the validator/delegator or their respective reward address.
 
-.Procedure
-. Pre-approve the STRK ERC20 contract for the transfer of tokens from your address to the relevant contract:
-+
-* Validators: Pre-approve the staking contract for the transfer of tokens from your address.
-* Delegators: Pre-approve the delegation pooling contract for the transfer of tokens from your address.
-. Using a Starknet block explorer, navigate to the relevant contract (Staking contract for validators, delegation pooling contract for delegators).
-. In the contract interface, locate and select the `increase_stake` function (for validators) or the `add_to_delegation_pool` function (for delegators).
-. Enter the following parameters:
-+
-* In *`address`*, enter the address of the validator (for `increase_stake`) or the delegator (for `add_to_delegation_pool`) whose stake you want to increase. This can be either the validator's/delegator's address or their respective reward address.
-* In *`amount`*, enter the number of STRK tokens you want to add to the existing stake.
-. Submit the transaction to execute the stake increase.
+== Procedure (for validators)
 
-[NOTE]
+[WARNING]
+====
+The caller must be the validator's operational or reward address.
+====
+
+First, pre-approve the STRK contract for the transfer of tokens from your address to the staking contract by invoking its `approve` function with the following parameters:
+
+. The xref:resources:chain-info.adoc#staking[staking contract's address]
+. The number of STRK tokens to stake (note the xref:overview.adoc#economic_parameters[minimum stake for validators] and that STRK has 18 decimals)
+
+For example, the following uses Starkli to approve the STRK contract to transfer 1 STRK to the staking contract on Sepolia: 
+
+[source,terminal]
+----
+starkli invoke \
+0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d \ <1>
+approve \
+0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <2>
+u256:1000000000000000000 \ <3>
+--network=sepolia
+----
+<1> The STRK contract's address on Sepolia
+<2> The staking contract's address on Sepolia
+<3> 1^18^ = 1 seriallized to `u256`
+
+Next, invoke the staking contract's `increase_stake` function with the following parameters:
+
+. The operational or rewards address of the validator whose stake you want to increase
+
+. The number of STRK tokens you want to add to the existing stake (note that STRK has 18 decimals)
+
+For example, the following uses Starkli to increase the STRK contract to transfer 1 STRK to the staking contract on Sepolia: 
+
+
+[source,terminal]
+----
+starkli invoke \
+0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
+increase_stake \
+<operational or reward address> \
+u256:1000000000000000000 \ <2>
+--network=sepolia
+----
+<1> The staking contract's address on Sepolia
+<2> 1^18^ = 1 STRK seriallized to `u256`
+
+[WARNING]
+====
+Ensure that the validator is not in an unstake process before attempting to increase the stake. If they are currently unstaking, this function will fail.
+====
+
+== Procedure (for delegators)
+
+[WARNING]
+====
+The caller must be delegator's operational or reward address.
+====
+
+First, pre-approve the STRK contract for the transfer of tokens from your address to the delegation pooling contract:
+
+. The xref:resources:chain-info.adoc#staking[delegation pooling contract's address]
+. The number of STRK tokens to stake (note that STRK has 18 decimals)
+
+For example, the following uses Starkli to approve the STRK contract to transfer 1 STRK to the delegation pooling contract on Sepolia: 
+
+[source,terminal]
+----
+starkli invoke \
+0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d \ <1>
+approve \
+0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <2>
+u256:1000000000000000000 \ <3>
+--network=sepolia
+----
+<1> The STRK contract's address on Sepolia
+<2> The delegation pooling contract's address on Sepolia
+<3> 1^18^ = 1 seriallized to `u256`
+
+Next, invoke the delegation pooling contract's `add_to_delegation_pool` function with the following parameters:
+
+. The operational or rewards address of the delegator whose stake is to be increased
+* The number of STRK tokens you want to add to the existing stake.
+
+[WARNING]
 ====
 Ensure that the validator is not in an unstake process before attempting to increase the stake. If they are currently unstaking, this function will fail.
 ====
