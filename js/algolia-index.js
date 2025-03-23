@@ -2,13 +2,13 @@ const algoliasearch = require("algoliasearch");
 const fs = require("fs");
 const path = require("path");
 const simpleGit = require("simple-git");
-const Asciidoctor = require('asciidoctor');
+const Asciidoctor = require("asciidoctor");
 const asciidoctor = Asciidoctor();
-const { convert } = require('html-to-text');
+const { convert } = require("html-to-text");
 const git = simpleGit(__dirname);
 
 function resolvePath(...args) {
-  return path.resolve(__dirname, ...args)
+  return path.resolve(__dirname, ...args);
 }
 
 if (process.argv.length < 5) {
@@ -26,11 +26,27 @@ const initBranch = async () => {
   const status = await git.status();
   let currentBranch = status.tracking;
   currentBranch = currentBranch.split("/")[1];
-  console.log(`Indexing articles on branch "${currentBranch}" ...`);
+  console.log(`Reindexing articles on branch "${currentBranch}" ...`);
+  await clearOldIndex(currentBranch);
   startIndexing(currentBranch);
 };
 
-initBranch();
+const clearOldIndex = async (currentBranch) => {
+  const client = algoliasearch(algoliaAppId, algoliaApiKey);
+  const algoliaIndex = client.initIndex(
+    `${algoliaIndexNamePrefix}-${currentBranch}`
+  );
+
+  try {
+    console.log(
+      `Deleting all old records from index: ${algoliaIndex.indexName}`
+    );
+    await algoliaIndex.clearObjects();
+    console.log("Old index cleared successfully.");
+  } catch (error) {
+    console.error("Error clearing old index:", error);
+  }
+};
 
 const startIndexing = (currentBranch) => {
   const client = algoliasearch(algoliaAppId, algoliaApiKey);
@@ -79,48 +95,59 @@ const startIndexing = (currentBranch) => {
         });
       });
     });
-
-    function beforeUpload(targetPath, target) {
-      const stat = fs.lstatSync(targetPath);
-      if (stat.isFile() && path.extname(target) === ".adoc") {
-        fs.readFile(targetPath, "utf-8", (err, data) => {
-          if (err) {
-            console.error(err, "beforeUpload");
-            return;
-          }
-          const titleFromAscii = data.split("\n").find(str => str.slice(0,2) === '= ')?.split("=")[1] ?? ""
-          const titleFromMK = data.split("\n").find(str => str.slice(0,2) === '# ')?.split("#")[1] ?? ""
-          const title = (titleFromAscii || titleFromMK).trim()
-
-          const html = asciidoctor.convertFile(targetPath, { to_file: false, standalone: true });
-          const text = convert(html, {
-            wordwrap: 130
-          });
-          const recode = {
-            objectID: targetPath.substring(targetPath.indexOf("modules") + 7),
-            title: title,
-            content: text,
-          };
-          uploadFile(recode, targetPath);
-        });
-      }
-    }
-
-    function uploadFile(file, targetPath) {
-      const url = targetPath
-        .split("modules")[1]
-        .replace("/pages", "")
-        .replace(".adoc", "")
-        .replace("ROOT/", "")
-        .replace("index", "")
-      const record = {
-        url: "https://docs.starknet.io" + url,
-        ...file,
-      };
-      algoliaIndex.saveObject(record).wait();
-      console.log("Done indexing ===>", url);
-      console.log("Saved record title ===>", record.title);
-      console.log("Saved record url ===>", record.url);
-    }
   });
 };
+
+function beforeUpload(targetPath, target) {
+  const stat = fs.lstatSync(targetPath);
+  if (stat.isFile() && path.extname(target) === ".adoc") {
+    fs.readFile(targetPath, "utf-8", (err, data) => {
+      if (err) {
+        console.error(err, "beforeUpload");
+        return;
+      }
+      const titleFromAscii =
+        data
+          .split("\n")
+          .find((str) => str.slice(0, 2) === "= ")
+          ?.split("=")[1] ?? "";
+      const titleFromMK =
+        data
+          .split("\n")
+          .find((str) => str.slice(0, 2) === "# ")
+          ?.split("#")[1] ?? "";
+      const title = (titleFromAscii || titleFromMK).trim();
+
+      const html = asciidoctor.convertFile(targetPath, {
+        to_file: false,
+        standalone: true,
+      });
+      const text = convert(html, { wordwrap: 130 });
+      const recode = {
+        objectID: targetPath.substring(targetPath.indexOf("modules") + 7),
+        title: title,
+        content: text,
+      };
+      uploadFile(recode, targetPath);
+    });
+  }
+}
+
+function uploadFile(file, targetPath) {
+  const url = targetPath
+    .split("modules")[1]
+    .replace("/pages", "")
+    .replace(".adoc", "")
+    .replace("ROOT/", "")
+    .replace("index", "");
+  const record = {
+    url: "https://docs.starknet.io" + url,
+    ...file,
+  };
+  algoliaIndex.saveObject(record).wait();
+  console.log("Done indexing ===>", url);
+  console.log("Saved record title ===>", record.title);
+  console.log("Saved record url ===>", record.url);
+}
+
+initBranch();
