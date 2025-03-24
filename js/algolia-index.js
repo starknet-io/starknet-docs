@@ -85,11 +85,11 @@ const startIndexing = (currentBranch) => {
                   }
                   fileData.forEach((targetFile) => {
                     const targetFilePath = path.join(targetPath, targetFile);
-                    beforeUpload(targetFilePath, targetFile);
+                    beforeUpload(targetFilePath, targetFile, algoliaIndex);
                   });
                 });
               }
-              beforeUpload(targetPath, target);
+              beforeUpload(targetPath, target, algoliaIndex);
             });
           });
         });
@@ -98,7 +98,7 @@ const startIndexing = (currentBranch) => {
   });
 };
 
-function beforeUpload(targetPath, target) {
+function beforeUpload(targetPath, target, algoliaIndex) {
   const stat = fs.lstatSync(targetPath);
   if (stat.isFile() && path.extname(target) === ".adoc") {
     fs.readFile(targetPath, "utf-8", (err, data) => {
@@ -128,12 +128,12 @@ function beforeUpload(targetPath, target) {
         title: title,
         content: text,
       };
-      uploadFile(recode, targetPath);
+      uploadFile(recode, targetPath, algoliaIndex);
     });
   }
 }
 
-function uploadFile(file, targetPath) {
+function uploadFile(file, targetPath, algoliaIndex) {
   const url = targetPath
     .split("modules")[1]
     .replace("/pages", "")
