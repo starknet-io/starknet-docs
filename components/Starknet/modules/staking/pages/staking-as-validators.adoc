@@ -4,46 +4,70 @@ include::partial$snippet-important-troubleshooting.adoc[]
 
 == Introduction
 
+Staking on Starknet as validators involves incrementally taking over the responsibilities of producing, attesting, and proving blocks, earning rewards based on the level of participation. On Sepolia, the protocol is currently in its second phase, requiring validators to run a full node and attest to the validity of blocks. On Mainnet, the protocol is currently in its first phase, requiring validators to only run a full node. 
+
 The following sections describe the procedures available for validators, summarized in the following table:
 
-[%autowidth]
+[cols="2,2,1,1"]
 |===
-| Procedure | Function | Contract | Invoker
+| Procedure | Invoker | Contract | Function
 
 .2+.^| Initializing stake
-| `approve`
-| STRK
 .2+.^| Address to be used as the validator's staking address
-| `stake`
+| STRK
+| `approve`
 | Staking
+| `stake`
 
 .2+.^| Increasing stake
-| `approve`
-| STRK
 .2+.^| The validator's rewards or staking address
-| `increase_stake`
+| STRK
+| `approve`
 | Staking
+| `increase_stake`
 
 .2+.^| Claiming rewards
-| `approve`
-| STRK
 .2+.^| The validator's rewards address or staking address
-| `claim_rewards` 
+| STRK
+| `approve`
 | Staking
+| `claim_rewards` 
 
 .2+.^| Exiting the protocol
-| `unstake_intent`
-| Staking
 | The validator's staking address
-| `unstake_action`
 | Staking
+| `unstake_intent`
 | Any address
+| Staking
+| `unstake_action`
+
+| Opening a delegation pool
+| The validator's operational address
+| Staking
+| `set_open_for_delegation`
+
+| Changing the rewards address
+| The validator's staking address
+| Staking
+| `change_rewards_address`
+
+.2+.^| Changing the operational address
+| The validator's new operational address
+| Staking
+| `declare_operational_address`
+| The validator's staking address
+| Staking
+| `change_operational_address`
 |===
 
 // [IMPORTANT]
 // ====
 // For validators who wish to use a secure hardware wallet for their operational and/or rewards address, the https://www.ledger.com/[Ledger hardware wallet] is supported by both https://www.argent.xyz/blog/ledger-argent-integration/[Argent] and https://braavos.app/wallet-features/ledger-on-braavos/[Braavos] wallets.
 // ====
+
+== Attesting to blocks
+
+#TBD#
 
 == Initializing stake
 
@@ -52,20 +76,15 @@ The following sections describe the procedures available for validators, summari
 The addressed used for this procedure is the address that will be set as the validator's xref:architecture-and-concepts:staking.adoc#addresses[staking address].
 ====
 
-[NOTE]
-====
-The initial stake must greater or equal to the xref:architecture-and-concepts:staking.adoc#protocol[minimum stake required for validators].
-====
-
-// [TIP]
-// ====
-// For validators who wish to use a secure hardware wallet for their staking and/or rewards addresses, the https://www.ledger.com/[Ledger hardware wallet] is supported by both https://www.argent.xyz/blog/ledger-argent-integration/[Argent] and https://braavos.app/wallet-features/ledger-on-braavos/[Braavos] wallets.
-// ====
-
 To initialize their stake, validators must first approve the transfer of STRK tokens to the staking contract by invoking the STRK contract's `approve` function with the following parameters:
 
 . The staking contract's address
 . The number of STRK tokens to be staked
++
+[NOTE]
+====
+The initial stake must greater or equal to the xref:architecture-and-concepts:staking.adoc#protocol[minimum stake required for validators].
+====
 
 For example, the following can be used to approve the transfer of 1 STRK to the staking contract on Sepolia: 
 
@@ -80,7 +99,7 @@ starkli invoke \
 ----
 <1> The STRK contract's address on Sepolia
 <2> The staking contract's address on Sepolia
-<3> 1^18^ = 1 STRK (STRK has 18 decimals) serialized to `u256`
+<3> 1*10^18^ = 1 STRK (STRK has 18 decimals) serialized to `u256`
 
 One the transfer is approved, validators can use the same address to invoke the staking contract's `stake` function with the following parameters:
 
@@ -98,14 +117,14 @@ starkli invoke \
     0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
     stake \
     <rewards address> \
-    <operation address> \
+    <operational address> \
     1000000000000000000 \ <2>
     1 \ <3>
     100 \ <4>
     --network=sepolia 
 ----
 <1> The staking contract's address on Sepolia
-<2> 1^18^ = 1 STRK (STRK has 18 decimals) seriallized to `u256`
+<2> 1*10^18^ = 1 STRK (STRK has 18 decimals) seriallized to `u256`
 <3> Enables delegation pooling
 <4> 100/10,000 = 1% commission
 
@@ -114,22 +133,23 @@ The `stake` function does the following:
 . Locks the specified amount of STRK tokens from the validator's account into the staking contract
 . Records the validator's details in the staking contract
 . Deploys a new delegation pool contract associated with the validator (if pooling is enabled)
-
-// [IMPORTANT]
-// ====
-// Don't forget to register your validator on the https://forms.gle/BUMEZx9dpd3DcdaT8[Karnot^], https://providers.stakingrewards.com/[Staking Rewards^], and https://forms.gle/WJqrRbUwxSyG7M9x7[Voyager^] dashboards.
-// ====
++
+[TIP]
+====
+If pooling is enabled, don't forget to register your validator on the staking dashboards by https://forms.gle/BUMEZx9dpd3DcdaT8[Karnot^], https://providers.stakingrewards.com/[Staking Rewards^], and https://forms.gle/WJqrRbUwxSyG7M9x7[Voyager^].
+====
+. Begins accumalating rewards for the validator
 
 == Increasing stake
 
-To increase their existing stake, validators must first approve the transfer of additional STRK tokens from their staking address to the staking contract by invoking the STRK contract's `approve` function with the following parameters:
+To increase their existing stake, validators must first approve the transfer of additional STRK tokens from their staking or rewards address to the staking contract by invoking the STRK contract's `approve` function with the following parameters:
 
 . The staking contract's address
 . The number of STRK tokens to be added
 
 For an example of approving the transfer of 1 STRK to the staking contract on Sepolia, see xref:#initializing_stake[]. Once the transfer is approved, validators can use the same address to invoke the staking contract's `increase_stake` function with the following parameters:
 
-. The validator's rewards or staking address
+. The validator's staking address
 . The number of STRK tokens to be added
 
 For example, the following can be used to increase an existing stake by 1 STRK:
@@ -139,13 +159,12 @@ For example, the following can be used to increase an existing stake by 1 STRK:
 starkli invoke \
     0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
     increase_stake \
-    <rewards or staking address> \ <2>
-    u256:1000000000000000000 \ <3>
+    <staking address> \
+    u256:1000000000000000000 \ <2>
     --network=sepolia
 ----
 <1> The staking contract's address on Sepolia
-<2> STAKING_ADDRESS can also be used
-<3> 1^18^ = 1 STRK (STRK has 18 decimals) seriallized to `u256`
+<2> 1*10^18^ = 1 STRK (STRK has 18 decimals) seriallized to `u256`
 
 The `increase_stake` function does the following:
 
@@ -155,7 +174,7 @@ The `increase_stake` function does the following:
 
 == Claiming rewards
 
-Validators can claim the xref:architecture-and-concepts:staking.adoc#rewards[rewards] they have accumulated by using their rewards or staking addresses to invoke the staking contract's `claim_rewards` with their staking address as parameter. For example, the following can be used to claim rewards on Sepolia:
+Validators can claim the rewards they have accumulated by using their rewards or staking addresses to invoke the staking contract's `claim_rewards` function with their staking address as parameter. For example, the following can be used to claim rewards on Sepolia:
 
 [source,terminal]
 ----
@@ -169,7 +188,7 @@ starkli invoke \
 
 == Exiting the protocol
 
-Validator can signal an unstake intent by invoking the staking contract's `unstake_intent`. For example, the following can be used to signal an unstake intent on Sepolia:
+Validators can signal an unstake intent by invoking the staking contract's `unstake_intent`. For example, the following can be used to signal an unstake intent on Sepolia:
 
 [source,terminal]
 ----
@@ -186,7 +205,7 @@ The `unstake_intent` function does the following:
 . Pauses rewards collection
 . Starts the xref:architecture-and-concepts:staking.adoc#latencies[waiting period]
 
-Once the waiting period has passed, anyone can finalize the unstaking intent by invoking the staking contract's `unstake_action` function with the validator's staking address as parameter. For example, the following can be used to finalize an unstake intent on Sepolia:
+Once the waiting period has passed, anyone can finalize the unstake intent by invoking the staking contract's `unstake_action` function with the validator's staking address as parameter. For example, the following can be used to finalize an unstake intent on Sepolia:
 
 [source,terminal]
 ----
@@ -198,43 +217,79 @@ starkli invoke \
 ----
 <1> The staking contract's address on Sepolia
 
-// == Managing participation 
+== Opening a delegation pool
 
-// === Opening a delegation pool
+Validators who did not enable delegation on intialization can open delegation by using their operational address to invoke the staking contract's `set_open_for_delegation` function with the the commission rate for the pool — expressed as a percentage with precision, where 10,000 represents 100% — as parameter. For example, the following can be used to open a delegation pool with 1% commission on Sepolia:
 
-// If a validator doesn't enable delegation when becoming a validator, they can open one by calling the staking contract's `set_open_for_delegation` function. Once created, the delegation pool will be associated with the validator's staking contract, allowing delegators to delegate their stake to the validator. To open a delegation pool with 1% commission, run:
+[source,terminal]
+----
+starkli invoke \
+    0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
+    set_open_for_delegation \
+    100 \ <2>
+    --network=sepolia
+----
+<1> The staking contract's address on Sepolia
+<2> 1*10^18^ = 1 STRK (STRK has 18 decimals) serialized to `uint256`
 
-// [source,terminal]
-// ----
-// starkli invoke \
-//     0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
-//     set_open_for_delegation \
-//     u256:1000000000000000000 \ <2>
-//     --network=sepolia
-// ----
-// <1> The staking contract's address on Sepolia
-// <2> 1^18^ = 1 STRK (STRK has 18 decimals) serialized to `uint256`
+The `set_open_for_delegation` function creates a delegation pool associated with the validator's staking contract, allowing delegators to delegate their stake to them.
 
-// === Updating commission rates
+== Updating the commission rate
 
-// Validators can update the commission rate of their delegation pool using the `update_commission` function. The commission is expressed as a percentage with precision, where 10000 represents 100%.
+[IMPORTANT]
+====
+Currently, commission rates can only be decreased.
+====
 
-// [IMPORTANT]
-// ====
-// The commission rate can only be decreased or kept the same; it cannot be increased.
-// ====
+Validators can update the commission rate of their delegation pool by using their operational address to invoke staking contract's `update_commission` function with the new comission — expressed as a percentage with precision, where 10,000 represents 100% — as parameter. For example, the following can be used to change the commission rate to 1% on Sepolia:
 
-// To update the commission of our delegation pool to 2%, run:
+[source,terminal]
+----
+starkli invoke \
+    0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
+    update_commission \
+    u256:1000000000000000000 \ <2>
+    --network=sepolia
+----
+<1> The staking contract's address on Sepolia
+<2> 1*10^18^ = 1 STRKS (STRK has 18 decimals) serialized as `u256`
 
-// [source,terminal]
-// ----
-// starkli invoke \
-//     0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
-//     update_commission \
-//     u256:2000000000000000000 \ <2>
-//     --network=sepolia
-// ----
-// <1> The staking contract's address on Sepolia
-// <2> 2*10^18^ = 2 STRKS (STRK has 18 decimals) serialized as `u256`
+== Changing the rewards address
 
-// === Changing operational and rewards addresses
+Validators can change their rewards address by using their staking address to invoke the staking contract's `change_rewards_address` function with the new reward address as parameter. For example, the following can be used to change rewards addresses on Sepolia:
+
+[source,terminal]
+----
+starkli invoke \
+    0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
+    change_rewards_address \
+    <new rewards address> \
+    --network=sepolia
+----
+<1> The staking contract's address on Sepolia
+
+== Changing the operational address
+
+To change their operational address, validators must first declare it by using their new operational address to invoke the staking contract's `declare_operational_address` function with their staking address as parameter. For example, the following can be used to declare a new operational address on Sepolia:
+
+[source,terminal]
+----
+starkli invoke \
+    0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
+    declare_operational_address \
+    <staking address> \
+    --network=sepolia
+----
+<1> The staking contract's address on Sepolia
+
+Once declared, validators can use their staking address to invoke the staking contract's `change_operational_address` function with the new operational address as parameter. For example, the following can be used to change operational addresses on Sepolia:
+
+[source,terminal]
+----
+starkli invoke \
+    0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
+    change_operational_address \
+    <new operational address> \
+    --network=sepolia
+----
+<1> The staking contract's address on Sepolia
