@@ -2,16 +2,24 @@
 
 == Introduction
 
-To stake as a delegator, you need to xref:registering_as_delegator[register to a validator's delegation pool] by adding stake to it. You can then xref:managing_participation[manage your participation] in the staking protocol, including claiming rewards, switching delegation pools, and more.
+To xref:becoming_a_delegator[become a delegator], you need to add stake to delegation pool of one or more validator. You can then xref:managing_participation[manage your participation] in the staking protocol, including claiming rewards, switching delegation pools, and more.
 
-== Registering as delegator
+[IMPORTANT]
+====
 
-To register to a validator's delegation pool, you must first approve the transfer of STRK tokens to the delegation pool by using the address you wish to set as your xref:architecture-and-concepts:staking.adoc#addresses[staking address] to invoke the STRK contract's `approve` function with the following parameters:
+To follow this guide you must be familiar with the different xref:architecture-and-concepts:staking.adoc#addresses[delegator addresses].
+
+The addresses of the staking and STRK contracts can be found under xref:resources:chain-info.adoc#staking[Resources].
+====
+
+== Becoming a delegator
+
+To add stake to a validator's delegation pool, you must first approve the transfer of STRK tokens to it from the address you wish to set as your staking address. To do so, use this address to invoke the STRK contract's `approve` function with the following parameters:
 
 . The delegation pool contract's address
-. The number of STRK tokens you wish to delegate
+. The number of STRK tokens to delegate
 
-For example, you can use the following to approve the transfer of 1 STRK to the staking contract on Sepolia: 
+For example, the following can be used to approve the transfer of 1 STRK to the staking contract on Sepolia: 
 
 [source,terminal]
 ----
@@ -23,20 +31,20 @@ starkli invoke \
 ----
 <1> 1*10^18^ = 1 STRK (STRK has 18 decimals) serialized to `u256`
 
-One the transfer is approved, you can use the same address to invoke the delegation pool contract's `enter_delegation_pool` function with the following parameters:
+One the transfer is approved, use the same address to invoke the delegation pool contract's `enter_delegation_pool` function with the following parameters:
 
 [WARNING]
 ====
 The addressed you use to invoke the `enter_delegation_pool` function is the address that will be set as your staking address, which cannot be changed.
 ====
 
-. The number of STRK tokens you wish to delegate
+. The number of STRK tokens to delegat
 +
 [NOTE]
 ====
 This number must match the number specified in the `approve` function.
 ====
-. The address you wish to be use as your xref:architecture-and-concepts:staking.adoc#addresses[rewards address]
+. The address be set as your rewards address
 
 The `enter_delegation_pool` adds the delegator's STRK tokens to the validator's delegation pool and begins accumalating your rewards.
 
@@ -83,7 +91,7 @@ After locking stake into a validator's delegation pool, you can manage various a
 
 === Claiming rewards
 
-You can claim the rewards you have accumulated by using your rewards or staking addresses to invoke a delegation pool contract's `claim_rewards` function with your staking address as parameter. For example, you can use the following to claim rewards on Sepolia:
+To claim the rewards you have accumulated by using your rewards or staking addresses to invoke a delegation pool contract's `claim_rewards` function with your staking address as parameter. For example, the following can be used to claim rewards on Sepolia:
 
 [source,terminal]
 ----
@@ -96,17 +104,17 @@ starkli invoke \
 
 === Increasing stake
 
-To increase your existing stake in a delegation pool, you must first approve the transfer of additional STRK tokens from your staking or rewards address to the delegation pool contract by invoking the STRK contract's `approve` function with the following parameters:
+To increase your existing stake in a delegation pool, you must first approve the transfer of additional STRK tokens from your staking or rewards address to the delegation pool contract. To do so, use the respective address to invoke the STRK contract's `approve` function with the following parameters:
 
 . The delegation pool contract's address
 . The number of additional STRK tokens you wish to delegate
 
-For an example of approving the transfer of 1 STRK to the staking contract on Sepolia, see xref:#registering_as_delegator[]. Once the transfer is approved, you can use the same address to invoke the staking contract's `add_to_delegation_pool` function with the following parameters:
+For an example of approving the transfer of 1 STRK to the staking contract on Sepolia, see xref:#becoming_a_delegator[]. Once the transfer is approved, you can use the same address to invoke the staking contract's `add_to_delegation_pool` function with the following parameters:
 
 . Your staking address
 . The number of STRK tokens to be added
 
-For example, you can use the following to increase an existing stake by 1 STRK:
+For example, the following can be used to increase an existing stake by 1 STRK:
 
 [source,terminal]
 ----
@@ -128,20 +136,20 @@ The `increase_stake` function does the following:
 
 === Switching delegation pools
 
-You can switch from one validator's delegation pool to another by using your staking address to invoke the source delegation pool contract's `switch_delegation_pool` function with the following parameters:
+To switch from one validator's delegation pool to another, use your staking address to invoke a current delegation pool contract's `switch_delegation_pool` function with the following parameters:
 
-. The staking address of the target delegation pool's validator
-. The target delegation pooling contract's address
-. The number of STRK tokens to be transferred from the source delegation pool to the target delegation pool
+. The staking address of the new delegation pool's validator
+. The new delegation pooling contract's address
+. The number of STRK tokens to be transfer from the current delegation pool to the new delegation pool
 
-For example, you can use the following to transfer 1 STRK from one validator's delegation pool to another on Sepolia:
+For example, the following can be used to transfer 1 STRK from one validator's delegation pool to another on Sepolia:
 
 [source,terminal]
 ----
 starkli invoke \
-    <source delegation pool contract's address> \
+    <current delegation pool contract's address> \
     switch_delegation_pool \
-    <target delegation pool contract's address> \
+    <new delegation pool contract's address> \
     u256:1000000000000000000 \ <1>
     --network=sepolia
 ----
@@ -149,7 +157,7 @@ starkli invoke \
 
 === Changing rewards address
 
-You can change your rewards address by using your staking address to invoke a delegation pool contract's `change_rewards_address` function with the new reward address as parameter. For example, you can use the following to change your rewards addresses:
+To change your rewards address, use your staking address to invoke a delegation pool contract's `change_rewards_address` function with the new reward address as parameter. For example, the following can be used to change your rewards addresses:
 
 [source,terminal]
 ----
@@ -162,7 +170,7 @@ starkli invoke \
 
 === Undelegating stakes
 
-You can signal an undelegate intent by invoking a delegation pool contract's `exit_delegation_pool_intent` with the number of STRK tokens to be undelegated as parameter. For example, you can use the following to signal an undelegate intent on Sepolia:
+You can signal an undelegate intent by invoking a delegation pool contract's `exit_delegation_pool_intent` with the number of STRK tokens to be undelegated as parameter. For example, the following can be used to signal an undelegate intent on Sepolia:
 
 [source,terminal]
 ----
@@ -180,7 +188,7 @@ The `exit_delegation_pool_intent` function does the following:
 . Pauses your rewards collection
 . Starts your xref:architecture-and-concepts:staking.adoc#latencies[waiting period]
 
-Once the waiting period has passed, anyone can finalize the undelegate intent by invoking the same delegation pool contract's `exit_delegation_pool_action` function with the delegator's staking address as parameter. For example, you can use the following to finalize an undelegate intent on Sepolia:
+Once the waiting period has passed, anyone can finalize the undelegate intent by invoking the same delegation pool contract's `exit_delegation_pool_action` function with the delegator's staking address as parameter. For example, the following can be used to finalize an undelegate intent on Sepolia:
 
 [source,terminal]
 ----
