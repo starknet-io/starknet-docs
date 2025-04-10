@@ -4,6 +4,11 @@
 
 While Starknet is currently still centralized, it is xref:roadmap[gradually] moving towards employing a xref:protocol[staking protocol], handing over the responsibilities of producing, attesting, and proving blocks to validators. To facilitate this gradual implementation, the protocol's xref:architecture[architecture] is modular, ensuring maximum flexibility and ease of upgrades. However, anyone holding STRK in their wallets can already stake their tokens and earn rewards based on their level of participation by following xref:procedures[a few simple steps]. 
 
+[TIP]
+====
+If you are interested in becoming a validator without necessarily understanding the underlying protocol, feel free to skip straight to xref:procedures[].
+====
+
 .Additional resources
 
 * Staking dashboards by https://dashboard.endur.fi/[Ednur^], https://www.stakingrewards.com/stake-app?input=starknet[Staking Rewards^], and https://voyager.online/staking-dashboard[Voyager^]
@@ -18,7 +23,7 @@ Naturally, handing over the responsibility for maintaining and securing Starknet
 
 [IMPORTANT]
 ====
-The staking protocol is currently in its first phase on Mainnet and on its second phase on Sepolia.
+The staking protocol is currently in its first phase on Mainnet and in its second phase on Sepolia.
 ====
 
 image::staking-roadmap.png[]
@@ -202,33 +207,38 @@ The following latencies are set in place:
 
 * Starting from the second phase of the protocol, to prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch stem:[i] takes effect only on epoch stem:[i+1].
 
+=== Comissions
+
+Starting from its second phase, the staking protocol allows validators to increase their commission. To avoid an unexpected increase in commissions, validators must commit to a certain maximum commission stem:[M] and the last date (in epochs) that this commitment is relevant for. Until this date arrives, validators cannot increase their commission beyond stem:[M], but can freely change their commission in the range stem:[[0,M\]].
+
 == Architecture
 
 The implementation of Starknet's staking protocol is divided into several contracts, summarized in the following figure:
 
 image::staking-architecture.png[]
 
-This modular architecture allows for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are also in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process.
+This modular architecture allows for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are also in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process. The following table details the key components of the architecture:
 
-=== Staking contract
+[cols="1,8"]
+|===
+| Contract | Description
 
-The staking contract is the core of the staking system, managing the entire lifecycle of staking, from initial staking to claiming rewards and unstaking. 
+| Staking
+| The staking contract is the core of the staking system, managing the entire lifecycle of staking, from initial staking to claiming rewards and unstaking. 
 
 The staking contract also stores the `StakerInfo` data structure, which holds detailed information about each validator, including their staked amount, unclaimed rewards, delegation details, and operational parameters, and helps to ensure that validators' information is accurately tracked and updated.
 
-=== Delegation pooling contract
-
-All delegation interactions, such as entering or exiting a pool, are enabled through the delegation pooling contract, which tracks each delegator's contribution, calculates their rewards, and manages the delegation lifecycle.
+| Delegation pooling
+| All delegation interactions, such as entering or exiting a pool, are enabled through the delegation pooling contract, which tracks each delegator's contribution, calculates their rewards, and manages the delegation lifecycle.
 
 The delegation pooling contract also stores the `PoolMemberInfo` data structure, which holds information about each delegator's contributions, rewards, and status within the pool, and helps manage and calculate the delegation and reward distribution processes for pool members.
 
-=== Reward Supplier Contract
+| Reward Supplier
+| The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve, ensuring the rewards are distributed fairly and in accordance with the protocol's economic parameters.
 
-The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve, ensuring the rewards are distributed fairly and in accordance with the protocol's economic parameters.
-
-=== Minting Curve Contract
-
-The minting curve contract defines the economic model that governs reward distribution, ensuring that the network's inflation is managed while incentivizing participation of stakers.
+| Minting Curve
+| The minting curve contract defines the economic model that governs reward distribution, ensuring that the network's inflation is managed while incentivizing participation of stakers.
+|===
 
 == Procedures
 
@@ -256,13 +266,14 @@ a| * You should make sure you are xref:responsibilities[running a full node (on 
 
 | Increasing stake
 | Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#increase_stake[`increase_stake`^] function
-a| * STRK has 18 decimals (i.e., 1*10^18^ = 1 STRK)
+a| * `amount` should be denominated in FRI (i.e., 1*10^18 = 1 STRK)
 * You must first approve the transfer of STRK tokens to the staking contract by invoking the STRK contract's `approve` function
 
 | Updating commission
 | Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#update_commission[`update_commission`^] function
-a| * In the first phase of the staking protocol (currently on Mainnet), commissions can only be decreased
-* `commission` should be entered as a percentage with precision, where 10000 represents 100% (e.g., to set a 5% commission, you enter 500)
+a| * `commission` should be entered as a percentage with precision, where 10000 represents 100% (e.g., to set a 5% commission, you enter 500)
+* In the first phase of the staking protocol (currently on Mainnet), commissions can only be decreased
+* In the second phase of the staking protocol (currently on Sepolia), comissions can be increased only after xref:comissions[committing to a maximum commission] using https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission_commitment[`set_commission_commitment`^]
 
 | Changing reward address
 | Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address[`change_reward_address`^] function
@@ -293,7 +304,7 @@ a| * Once an unstake intent is signaled:
 
 | Entering a delegation pool
 | Invoke the delegation pool contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#enter_delegation_pool[`enter_delegation_pool`^] function
-a| * STRK has 18 decimals (i.e., 1*10^18^ = 1 STRK)
+a| * `amount` should be denominated in FRI (i.e., 1*10^18 = 1 STRK)
 * You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract's `approve` function
 
 | Claiming rewards
@@ -302,7 +313,7 @@ a| * STRK has 18 decimals (i.e., 1*10^18^ = 1 STRK)
 
 | Adding to a delegation pool
 | Invoke the delegation pool contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#add_to_delegation_pool[`add_to_delegation_pool`^] function
-a| * STRK has 18 decimals (i.e., 1*10^18^ = 1 STRK)
+a| * `amount` should be denominated in FRI (i.e., 1*10^18 = 1 STRK)
 * You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract's `approve` function
 
 | Switching delegation pools
