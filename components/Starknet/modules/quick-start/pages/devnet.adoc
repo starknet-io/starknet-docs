@@ -64,52 +64,55 @@ To interact with your local Starknet instance, you first need an account. Luckil
 ...
 ----
 
-This allows to avoid creating and deploying new accounts, and instead simply fetching them into Starkli. To fetch your local node's first predeployed account, run:
+This allows to avoid creating and deploying new accounts, and instead simply importing them to Starknet Foundry. To import your local node's first predeployed account, navigate into the `hello_starknet` directory created in xref:hellostarknet.adoc#generating_hellostarknet[Generating `HelloStarknet`] and run:
 
 [source,terminal]
 ----
-starkli account fetch \
-    0x064b48806902a367c8598f4f95c305e8c1a1acba5f082d294a43793113115691 \
-    --output=account.json \
-    --rpc=http://127.0.0.1:5050
+sncast account import \
+    --address=0x064b48806902a367c8598f4f95c305e8c1a1acba5f082d294a43793113115691 \
+    --type=oz \
+    --url=http://127.0.0.1:5050 \
+    --private-key=0x0000000000000000000000000000000071d7bb07b9a64f6f78ac4c816aff4da9 \
+    --add-profile=devnet \
+    --silent
 ----
 
-[NOTE]
+[TIP]
 ====
-`http://127.0.0.1:5050` are the local node's default host and port (which can be configured on initialization using the `--host` and `--port` options).
+To learn more about `sncast account import`, see the https://foundry-rs.github.io/starknet-foundry/appendix/sncast/account/import.html[Starknet Foundry documentation^].
 ====
 
 If successful, the result should resemble the following:
 
 [source,terminal]
 ----
-Account contract type identified as: OpenZeppelin
-Description: OpenZeppelin account contract v0.8.1 compiled with cairo v2.4.1
-Downloaded new account config file: account.json
+command: account import
+account_name: account-1
+add_profile: Profile devnet successfully added to snfoundry.toml
 ----
 
-To finish setting up the account, a corresponding Starkli signer, used by Starkli to sign transactions, is also required.  In this tutorial, we will use an encrypted keystores signer. Encrypted keystores are JSON files that follow the https://ethereum.org/en/developers/docs/data-structures-and-encoding/web3-secret-storage/[Web3 secret storage definition] and require a password when created and used, preventing  your private key from being stored as plain text on your computer. To create an encrypted keystore signer for your fetched account, run:
+// To finish setting up the account, a corresponding Starkli signer, used by Starkli to sign transactions, is also required.  In this tutorial, we will use an encrypted keystores signer. Encrypted keystores are JSON files that follow the https://ethereum.org/en/developers/docs/data-structures-and-encoding/web3-secret-storage/[Web3 secret storage definition] and require a password when created and used, preventing  your private key from being stored as plain text on your computer. To create an encrypted keystore signer for your fetched account, run:
 
-[source,terminal]
-----
-starkli signer keystore from-key keystore.json
-----
+// [source,terminal]
+// ----
+// starkli signer keystore from-key keystore.json
+// ----
 
-and enter `0x0000000000000000000000000000000071d7bb07b9a64f6f78ac4c816aff4da9` as its private key, along with a password of your choosing that will be used to encrypt it. If successful, the result should resemble the following:
+// and enter `0x0000000000000000000000000000000071d7bb07b9a64f6f78ac4c816aff4da9` as its private key, along with a password of your choosing that will be used to encrypt it. If successful, the result should resemble the following:
 
-[source,terminal]
-----
-Created new encrypted keystore file: keystore.json
-Public key: 0x039d9e6ce352ad4530a0ef5d5a18fd3303c3606a7fa6ac5b620020ad681cc33b
-----
+// [source,terminal]
+// ----
+// Created new encrypted keystore file: keystore.json
+// Public key: 0x039d9e6ce352ad4530a0ef5d5a18fd3303c3606a7fa6ac5b620020ad681cc33b
+// ----
 
-To avoid specifying the account and keystore files in every subsequent Starkli command, export their paths by running:
+// To avoid specifying the account and keystore files in every subsequent Starkli command, export their paths by running:
 
-[source,terminal]
-----
-export STARKNET_ACCOUNT=$(pwd)/account.json
-export STARKNET_KEYSTORE=$(pwd)/keystore.json
-----
+// [source,terminal]
+// ----
+// export STARKNET_ACCOUNT=$(pwd)/account.json
+// export STARKNET_KEYSTORE=$(pwd)/keystore.json
+// ----
 
 == Declaring `HelloStarknet` locally
 
@@ -120,46 +123,38 @@ Before a contract can be deployed on Starknet, its compiled code needs to be sub
 To learn more about distinction between deploying a contract and declaring it, see xref:architecture-and-concepts:smart-contracts/contract-classes.adoc[].
 ====
 
-To compile the `HelloStarknet` contract, navigate into the `hello_starknet` directory created in xref:hellostarknet.adoc#generating_hellostarknet[Generating `HelloStarknet`] and run:
+// To compile the `HelloStarknet` contract, navigate into the `hello_starknet` directory created in xref:hellostarknet.adoc#generating_hellostarknet[Generating `HelloStarknet`] and run:
+
+// [source,terminal]
+// ----
+// scarb build
+// ----
+
+// The compiled contract should now be saved inside the `hello_starknet/target/dev/` directory as `hello_starknet_HelloStarknet.contract_class.json`. Finally, to declare the `HelloStarknet` contract, run:
+
+To declare the `HelloStarknet` contract, run:
 
 [source,terminal]
 ----
-scarb build
+sncast --profile=devnet declare \
+    --contract-name=HelloStarknet
 ----
 
-[NOTE]
-====
-The first time a project is built, some components of Scarb are compiled locally with the Rust toolchain. This process may take a few minutes, but will not happen in subsequent builds.
-====
-
-The compiled contract should now be saved inside the `hello_starknet/target/dev/` directory as `hello_starknet_HelloStarknet.contract_class.json`. Finally, to declare the `HelloStarknet` contract, run:
-
-[source,terminal]
-----
-starkli declare \
-    target/dev/hello_starknet_HelloStarknet.contract_class.json \
-    --rpc=http://127.0.0.1:5050
-----
-
-and enter your password. If successful, the output of the declaration should resemble the following:
+If successful, the output of the declaration should resemble the following:
 
 [source,console]
 ----
+command: declare
+class_hash: 0x044701b93b7d2c072d37ebed1f2955f77472146fb0fbac158bd860426f72a9d6
+transaction_hash: 0x0687bfb07896505bf44ea65c71d11a847ab33a52cb3abf3322b5107a2f256111
 ...
-
-Declaring Cairo 1 class: 0x044701b93b7d2c072d37ebed1f2955f77472146fb0fbac158bd860426f72a9d6
-Compiling Sierra class to CASM with compiler version 2.11.2...
-CASM class hash: 0x02126f92790d87ab59df720300b8668cdfc00537e8792d87e9f341f5b499d7e4
-Contract declaration transaction: 0x0687bfb07896505bf44ea65c71d11a847ab33a52cb3abf3322b5107a2f256111
-Class hash declared:
-0x044701b93b7d2c072d37ebed1f2955f77472146fb0fbac158bd860426f72a9d6
 ----
 
-where `Class hash declared` is the contract's class hash, which can then be used to deploy an instance of it.
+where `class_hash` is the contract's class hash, which can then be used to deploy an instance of it.
 
-[NOTE]
+[TIP]
 ====
-Class hashes are unique per contract and compiler, and may change if either one changes. To learn more about the class hashes, check out xref:architecture-and-concepts:smart-contracts/compiled-class-hash.adoc[Compiled class hash].
+To learn more about the class hashes, check out xref:architecture-and-concepts:smart-contracts/compiled-class-hash.adoc[Compiled class hash].
 ====
 
 == Deploying `HelloStarknet` locally
@@ -168,9 +163,8 @@ With `HelloStarknet` declared, you can now deploy an instance of it by running:
 
 [source,terminal]
 ----
-starkli deploy \
-    0x044701b93b7d2c072d37ebed1f2955f77472146fb0fbac158bd860426f72a9d6 \
-    --rpc=http://127.0.0.1:5050 \
+sncast --profile=devnet deploy \
+    --class-hash=0x044701b93b7d2c072d37ebed1f2955f77472146fb0fbac158bd860426f72a9d6 \
     --salt=0
 ----
 
@@ -179,72 +173,59 @@ starkli deploy \
 The `--salt` option is used to force a consistent address for the deployed contract.
 ====
 
-and entering your password. If successful, the result should resemble the following:
+If successful, the result should resemble the following:
 
 [source,terminal]
 ----
-Deploying class 0x044701b93b7d2c072d37ebed1f2955f77472146fb0fbac158bd860426f72a9d6 with salt 0x0000000000000000000000000000000000000000000000000000000000000000...
-The contract will be deployed at address 0x0632bf255053f4831b16f0c54f56755e7dd6f8cbcb254d1140d8195f469feaee
-Contract deployment transaction: 0x06ad8764864cade8d01471c6d83a5c256dac86c9c497642c308d72dffbbce4f2
-Contract deployed:
-0x0632bf255053f4831b16f0c54f56755e7dd6f8cbcb254d1140d8195f469feaee
+command: deploy
+contract_address: 0x071865534dda7487b6c7b73d435e1f41d3fd41f6d3c4fcf4448f9770677f820d
+transaction_hash: 0x00eb383d6cd4b760369198a3025321084249c4fbdfe1038f774062d4b1d47fed
+...
 ----
 
 == Interacting with `HelloStarknet` locally
 
-Now that your instance of `HelloStarknet` is deployed, you can interact with via its functions. Starkli enables interaction with smart contracts via two primary commands, `invoke` and `call`.
+Now that your instance of `HelloStarknet` is deployed, you can interact with via its functions by either calling or invoking them.
 
-The `call` command is used for read functions that don't modify their contract's storage, and allows querying a smart contract function without sending a transaction. For example, you can call ``HelloStarknet``'s `get_balance` function by running:
+Calling is used for read functions that don't modify their contract's storage, and allows querying a smart contract function without sending a transaction. For example, you can call ``HelloStarknet``'s `get_balance` function by running:
 
 [source,terminal]
 ----
-starkli call \
-    0x0632bf255053f4831b16f0c54f56755e7dd6f8cbcb254d1140d8195f469feaee \
-    get_balance \
-    --rpc=http://127.0.0.1:5050
+sncast --profile=devnet call \
+    --contract-address=0x071865534dda7487b6c7b73d435e1f41d3fd41f6d3c4fcf4448f9770677f820d \
+    --function=get_balance
 ----
 
 If successful, the result should resemble the following:
 
 [source,console]
 ----
-[
-    "0x0000000000000000000000000000000000000000000000000000000000000000"
-]
+command: call
+response: [0x0]
 ----
 
-The `invoke` command is used for write functions that modify their contract's storage, and submits a transaction to the network that changes its state. For example, you can invoke ``HelloStarknet``'s `increase_balance` function by running:
-
-[source,terminal]
-----
-starkli invoke \
-    0x0632bf255053f4831b16f0c54f56755e7dd6f8cbcb254d1140d8195f469feaee \
-    increase_balance 42 \
-    --rpc=http://127.0.0.1:5050
-----
-
-and entering your password. If successful, the result should resemble the following:
+Invoking is used for write functions that modify their contract's storage, and submits a transaction to the network that changes its state. For example, you can invoke ``HelloStarknet``'s `increase_balance` function by running:
 
 [source,terminal]
 ----
-Invoke transaction: 0x05c6fcdb126c6f7d54ff5e2743c4b4b95d581723d548ae58b789cc64e648d4a3
+sncast --profile=devnet invoke \
+    --contract-address=0x071865534dda7487b6c7b73d435e1f41d3fd41f6d3c4fcf4448f9770677f820d \
+    --function=increase_balance \
+    --arguments=42
 ----
 
-You can verify that the state of your local Starknet instance has indeed changed by calling `get_balance` again:
+If successful, the result should resemble the following:
 
 [source,terminal]
 ----
-starkli call \
-    0x0632bf255053f4831b16f0c54f56755e7dd6f8cbcb254d1140d8195f469feaee \
-    get_balance \
-    --rpc=http://127.0.0.1:5050
+command: invoke
+transaction_hash: 0x069679d0cf21851b299ef24fcdae7478cea6e730432365b6eef1f4f280ba68da
 ----
 
-If all goes well, the result should resemble the following (`42~10~ = 2a~16~`):
+You can verify that the state of your local Starknet instance has indeed changed by calling `get_balance` again. If all goes well, the result should resemble the following (`42~10~ = 2a~16~`):
 
 [source,console]
 ----
-[
-    "0x000000000000000000000000000000000000000000000000000000000000002a"
-]
+command: call
+response: [0x2a]
 ----
