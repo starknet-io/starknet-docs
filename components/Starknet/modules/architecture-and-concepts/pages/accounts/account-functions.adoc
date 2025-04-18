@@ -53,12 +53,22 @@ Separating the validation and execution stages guarantees payment to sequencers 
 
 The following validation functions:
 
-* `+__validate__+`, `+__validate_deploy__+`, and `+__validate_declare__+`.
+* `+__validate__+`, `+__validate_deploy__+`, and `+__validate_declare__+`
 * A constructor, when run in a `DEPLOY_ACCOUNT` transaction (in particular, *not* when an account is deployed from an existing class via the `deploy` syscall)
++
+[NOTE]
+====
+Stating from Starknet version 0.14.0, the `deploy` syscall will be blocked.
+====
 
 are subject to the following limitations:
 
-* You cannot call functions in external contracts, only in your account contract.
+* You cannot use more than 1,000,000 Cairo steps
+* You cannot use more than 100,000,000 gas
+* You cannot call the following syscalls:
+** `get_class_hash_at`
+** `get_sequencer_address` (this syscall is only supported for Cairo 0 contracts)
+* You cannot call functions in external contracts
 +
 [NOTE]
 ====
@@ -66,14 +76,11 @@ This restriction enforces a single storage update being able to invalidate only 
 
 This limitation implies that the fees you need to pay to invalidate transactions in the mempool are directly proportional to the number of unique accounts whose transactions you want to invalidate.
 ====
-* The maximum number of Cairo steps in each of the three validation functions is 1,000,000.
-* The `get_execution_info` syscall behaves differently When raised from one of the `validate` functions:
+* When calling the `get_execution_info` syscall:
 ** `sequencer_address` is set to zero
-** `block_timestamp` returns the time (in UTC), rounded to the most recent hour.
-** `block_number` returns the block number, rounded down to the nearest multiple of 100.
-* The following syscalls cannot be called:
-** `get_block_hash`
-** `get_sequencer_address` (this syscall is only supported for Cairo 0 contracts).
+** `block_timestamp` returns the time (in UTC), rounded to the most recent hour
+** `block_number` returns the block number, rounded down to the nearest multiple of 100
+
 
 These limitations are designed to prevent the following DoS attacks on the sequencer:
 
