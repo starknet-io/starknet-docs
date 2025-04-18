@@ -178,57 +178,6 @@
   </li>
   <li class="nav-item parent" data-depth="2">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">Staking on Starknet</span>
-<ul class="nav-list">
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../staking/overview/">Overview</a>
-  </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../staking/entering-staking/">Becoming a validator</a>
-  </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../staking/increasing-staking/">Increasing stake</a>
-  </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../staking/claiming-rewards/">Claiming rewards</a>
-  </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../staking/delegating-stake/">Delegating stake</a>
-  </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../staking/switching-delegation-pools/">Switching delegation pools</a>
-  </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../staking/exiting-staking/">Exiting the staking protocol</a>
-  </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../staking/managing-staking-and-delegation-operations/">Managing staking and delegation operations</a>
-  </li>
-  <li class="nav-item" data-depth="3">
-    <a 
-       class="nav-link"
-     href="../../../staking/staking-events-and-read-functions/">Using staking events and read functions</a>
-  </li>
-</ul>
-  </li>
-  <li class="nav-item parent" data-depth="2">
-    <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">The StarkGate bridge</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="3">
@@ -294,7 +243,7 @@
   <li class="nav-item" data-depth="3">
     <a 
        class="nav-link"
-     href="../../provers-overview/">SHARP</a>
+     href="../../sharp/">SHARP</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -303,7 +252,7 @@
   </li>
   <li class="nav-item parent" data-depth="3">
     <button class="nav-item-toggle mask-svg-center"></button>
-    <span class="nav-text">Smart contracts</span>
+    <span class="nav-text">Contracts</span>
 <ul class="nav-list">
   <li class="nav-item" data-depth="4">
     <a 
@@ -780,10 +729,24 @@ That is, this function runs at most once throughout the lifecycle of the account
 <div class="ulist">
 <ul>
 <li>
-<p><code>__validate__</code>, <code>__validate_deploy__</code>, and <code>__validate_declare__</code>.</p>
+<p><code>__validate__</code>, <code>__validate_deploy__</code>, and <code>__validate_declare__</code></p>
 </li>
 <li>
 <p>A constructor, when run in a <code>DEPLOY_ACCOUNT</code> transaction (in particular, <strong>not</strong> when an account is deployed from an existing class via the <code>deploy</code> syscall)</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Stating from Starknet version 0.14.0, the <code>deploy</code> syscall will be blocked.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </li>
 </ul>
 </div>
@@ -793,7 +756,26 @@ That is, this function runs at most once throughout the lifecycle of the account
 <div class="ulist">
 <ul>
 <li>
-<p>You cannot call functions in external contracts, only in your account contract.</p>
+<p>You cannot use more than 1,000,000 Cairo steps</p>
+</li>
+<li>
+<p>You cannot use more than 100,000,000 gas</p>
+</li>
+<li>
+<p>You cannot call the following syscalls:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>get_class_hash_at</code></p>
+</li>
+<li>
+<p><code>get_sequencer_address</code> (this syscall is only supported for Cairo 0 contracts)</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>You cannot call functions in external contracts</p>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -813,33 +795,17 @@ That is, this function runs at most once throughout the lifecycle of the account
 </div>
 </li>
 <li>
-<p>The maximum number of Cairo steps in each of the three validation functions is 1,000,000.</p>
-</li>
-<li>
-<p>The <code>get_execution_info</code> syscall behaves differently When raised from one of the <code>validate</code> functions:</p>
+<p>When calling the <code>get_execution_info</code> syscall:</p>
 <div class="ulist">
 <ul>
 <li>
 <p><code>sequencer_address</code> is set to zero</p>
 </li>
 <li>
-<p><code>block_timestamp</code> returns the time (in UTC), rounded to the most recent hour.</p>
+<p><code>block_timestamp</code> returns the time (in UTC), rounded to the most recent hour</p>
 </li>
 <li>
-<p><code>block_number</code> returns the block number, rounded down to the nearest multiple of 100.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>The following syscalls cannot be called:</p>
-<div class="ulist">
-<ul>
-<li>
-<p><code>get_block_hash</code></p>
-</li>
-<li>
-<p><code>get_sequencer_address</code> (this syscall is only supported for Cairo 0 contracts).</p>
+<p><code>block_number</code> returns the block number, rounded down to the nearest multiple of 100</p>
 </li>
 </ul>
 </div>
@@ -927,6 +893,55 @@ This implementation adheres to <a href="https://github.com/starknet-io/SNIPs/blo
 <script src="../../../_/js/vendor/custom.js?new"></script>
 <script async src="../../../_/js/vendor/tabs.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- Define configuration BEFORE loading chat.js to apply custom settings -->
+  <script>
+    window.chatExternalConfig = {
+      CHAT_TITLE: 'Starknet Assistant',
+      CHAT_PLACEHOLDER: 'Ask me anything about Starknet...'
+    };
+  </script>
+
+  <!-- Load the chat script & styling from the Cairo Book -->
+  <script src="https://book.cairo-lang.org/theme/chat.js" async></script>
+  <link rel="stylesheet" href="https://book.cairo-lang.org/theme/css/chat.css">
+
+  <!-- Initialize styling with proper variables -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const chatStyles = {
+        '--bg': 'white',
+        '--links': 'hsl(240, 100.00%, 63.50%)',
+        '--sidebar-bg': 'whitesmoke',
+        '--fg': '#2a2e30'
+      };
+
+      const applyChatStyles = (element) => {
+        if (element) {
+          for (const property in chatStyles) {
+            element.style.setProperty(property, chatStyles[property]);
+          }
+        }
+      };
+
+      const initializeChatStyling = () => {
+        // Check if chatManager has created the elements
+        const chatWindow = document.getElementById('chat-window');
+        const chatButton = document.getElementById('chat-button');
+
+        if (chatWindow && chatButton) {
+          // Apply the custom properties directly to the elements
+          applyChatStyles(chatWindow);
+          applyChatStyles(chatButton);
+        } else {
+          // If elements aren't ready yet, wait and try again
+          // This might happen if chat.js loads *after* DOMContentLoaded due to 'async'
+          setTimeout(initializeChatStyling, 100);
+        }
+      };
+
+      initializeChatStyling();
+    });
+  </script>
 <script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js"></script>
 <script
     src="https://cdn.jsdelivr.net/npm/algoliasearch@4.14.3/dist/algoliasearch-lite.umd.js"
@@ -1195,7 +1210,7 @@ This implementation adheres to <a href="https://github.com/starknet-io/SNIPs/blo
       limit: 5
     });
 
-    const mostPopulerSearches = createMostPopularSearchesPlugin()
+    const mostPopularSearches = createMostPopularSearchesPlugin()
 
     autocomplete({
       container: "#autocomplete",
@@ -1203,7 +1218,7 @@ This implementation adheres to <a href="https://github.com/starknet-io/SNIPs/blo
       openOnFocus: true,
       detachedMediaQuery: "",
       getSources,
-      plugins: [recentlyViewedItems, mostPopulerSearches],
+      plugins: [recentlyViewedItems, mostPopularSearches],
     });
 </script>
 
