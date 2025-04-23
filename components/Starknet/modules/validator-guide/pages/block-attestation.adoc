@@ -1,2 +1,53 @@
 [id="validator_guide_block_attestation"]
-= Running your block attestation service
+= Running your block attestation service for Pathfinder
+
+== Introduction
+You are at the final chapter on the Starknet staking guide! The block attestor service allows validators to fulfill a new requirement with the Staking V2 phase that Starknet introduced in https://community.starknet.io/t/snip-28-staking-v2-proposal/115250[SNIP-28^]. The new change enforces existing and new validators to attest to a block within an epoch to be eligible for staking rewards. The idea behind it is that it is a way for validators to show that they are actively preserving the history of the network while proving it by submitting attestations to randomly assigned blocks in each epoch. You can think of an epoch as a way to group number of blocks (currently 40 blocks per epoch) and each epoch acts as a checkpoint for finalizing every validator’s stakes. 
+
+The attestor service will communicate directly with our Pathfinder node therefore, make sure that your Pathfinder node is already running and it’s synced to the latest block. 
+
+== Running the block attestor service
+You can run the block attestor service by running the following docker command
+
+[source,terminal]
+----
+docker run -it --rm --network host \
+  -e VALIDATOR_ATTESTATION_OPERATIONAL_PRIVATE_KEY="0xdeadbeef" \
+  ghcr.io/eqlabs/starknet-validator-attestation \
+  --staking-contract-address 0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \
+  --attestation-contract-address 0x03f32e152b9637c31bfcf73e434f78591067a01ba070505ff6ee195642c9acfb \
+  --staker-operational-address 0x02e216b191ac966ba1d35cb6cfddfaf9c12aec4dfe869d9fa6233611bb334ee9 \
+  --node-url http://localhost:9545/rpc/v0_8 \
+  --local-signer
+----
+
+[NOTE]
+====
+The `VALIDATOR_ATTESTATION_OPERATIONAL_PRIVATE_KEY` must be changed to your private key for your operation address and `staker-operational-address` should be your operation wallet address. The source of other addresses comes from the https://docs.starknet.io/resources/chain-info/#staking[important address page^]. 
+====
+
+== Checking the status of your block attestor service
+
+If the service is running successfully, it should have the following output where you can see informations like your `staker_address`, `operational_address`, `stake`, `epoch_id`, `epoch_start`, `epoch_length`, `attestation_window`:
+
+[source,terminal]
+----
+Current attestation info staker_address=0x48f8ddc0bc864f33d4c47b79a1f0e1460e0777d0b0224d8c291f1039523306e operational_address=0x48f8ddc0bc864f33d4c47b79a1f0e1460e0777d0b0224d8c291f1039523306e stake=100000000000000000000 epoch_id=1201 epoch_start=712773 epoch_length=40 attestation_window=16
+----
+
+And on the next upcoming epochs, your block attestor service should start submitting attestations. 
+
+[source,terminal]
+----
+2025-04-22T11:04:22.716449Z  INFO starknet_validator_attestation::state: New epoch started staker_address=0x48f8ddc0bc864f33d4c47b79a1f0e1460e0777d0b0224d8c291f1039523306e operational_address=0x48f8ddc0bc864f33d4c47b79a1f0e1460e0777d0b0224d8c291f1039523306e stake=100000000000000000000 epoch_id=1205 epoch_start=712933 epoch_length=40 attestation_window=16
+2025-04-22T11:11:00.263344Z  INFO starknet_validator_attestation::state: Attestation transaction sent transaction_hash=0x79f9f5ec8dbfca48a132e8d23caad15455c6e0dc98ec517a7013c374d7d5501
+2025-04-22T11:11:03.017827Z  INFO starknet_validator_attestation::state: Attestation confirmed staker_address=0x48f8ddc0bc864f33d4c47b79a1f0e1460e0777d0b0224d8c291f1039523306e epoch_id=1205
+----
+
+== Claiming your staking rewards
+After submitting few attestations, you can check to see if you have accumulated any rewards by calling `claim_reward` from your staking contract by passing your staker address! 
+
+You can view this https://sepolia.voyager.online/tx/0x25002ba1dc0ddf8bdb79f62eb5fe07eb24befb392da54b04c4983ed4ee2a463[example transaction^] that has successfully claimed 0.33 STRK to their reward wallet address. 
+
+
+Now, you are successfully running your own validator and block attestor service on Sepolia testnet! This means that you will start earning rewards for every successful attestation while preserving the state of Starknet blockchain. 

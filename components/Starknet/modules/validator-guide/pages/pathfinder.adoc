@@ -1,2 +1,128 @@
 [id="validator_guide_pathfinder"]
 = Spinning up your validator with Pathfinder
+
+== Introduction
+In this chapter, we will be guiding you on how to run your own node on sepolia testnet using Pathfinder. Pathfinder is a Rust implementation of the Starknet client created by Equilibrium Labs.
+
+== Installing Pathfinder
+To run Pathfinder, we run the following command 
+
+[source,terminal]
+----
+mkdir -p $HOME/pathfinder
+docker run \
+  --name pathfinder \
+  --restart unless-stopped \
+  --detach \
+  -p 9545:9545 \
+  --user "$(id -u):$(id -g)" \
+  -e RUST_LOG=info \
+  -e PATHFINDER_ETHEREUM_API_URL="wss://sepolia.infura.io/ws/v3/<project-id>" \
+  -v $HOME/pathfinder:/usr/share/pathfinder/data \
+  eqlabs/pathfinder
+----
+
+[NOTE]
+====
+Replace `PATHFINDER_ETHEREUM_API_URL` with your personal Ethereum Sepolia WebSocket URL before running.
+====
+
+[NOTE] 
+====
+The line `mkdir -p $HOME/pathfinder` is creating a specific directory to store our blockchain data. You can also change the `RUST_LOG` value to `DEBUG` to inspect any issues. 
+====
+
+Once the docker container is up and running, you can check the logs of the docker image. 
+
+[source,terminal]
+---- 
+docker logs -f pathfinder
+---- 
+
+We can stop the node by: 
+
+[source,terminal]
+---- 
+docker stop pathfinder
+---- 
+
+You will see that the Pathfinder client will start syncing from the genesis block but if we are syncing from block 0 to the latest block, the syncing time will be astronomical. 
+
+Therefore, we will be utilizing database snapshots to speed up our syncing process. Pathfinder team has provided us with a snapshot that contains blockchain history synced up to a recent time period allowing us to carry over the history and continue syncing from an earlier checkpoint rather than starting from the genesis block. 
+
+== Downloading the database snapshot
+
+To download our snapshot, we first need to download a file manager called *Rclone* which is where the snapshot resides. 
+
+Head over to the official https://rclone.org/install/[installation guide^] to get started.
+
+Then, open or create your configuration file on this path (`$HOME/.config/rclone/rclone.conf`) and add the following content:
+
+[source,terminal]
+----
+[pathfinder-snapshots]
+type = s3
+provider = Cloudflare
+env_auth = false
+access_key_id = 7635ce5752c94f802d97a28186e0c96d
+secret_access_key = 529f8db483aae4df4e2a781b9db0c8a3a7c75c82ff70787ba2620310791c7821
+endpoint = https://cbf011119e7864a873158d83f3304e27.r2.cloudflarestorage.com
+acl = private
+----
+
+Then, we will use `rClone` to copy the database snapshot to our local directory. The exact database file name for sepolia testnet can be found https://rpc.pathfinder.equilibrium.co/snapshots/latest[here^]. Then run the following command:
+
+[source,terminal]
+----
+rclone copy -P pathfinder-snapshots:pathfinder-snapshots/EXACT_FILE_NAME . 
+----
+
+[NOTE]
+====
+The line `-v $HOME/pathfinder:/usr/share/pathfinder/data` sets the database path for your node. To properly apply the snapshot database, run the `rclone copy` command with the same directory as `$HOME/pathfinder`. Or you can customize the path by changing the path directory of `$HOME/pathfinder` to the path of your choice. 
+====
+
+Once the database snapshot is downloaded, compare the file’s checksum value with the published value from the previous https://rpc.pathfinder.equilibrium.co/snapshots/latest[link^].
+
+[source,terminal]
+----
+sha256sum EXACT_FILE_NAME 
+----
+
+If it matches, we extract the file by running:
+
+[source,terminal]
+----
+zstd -T0 -d EXACT_FILE_NAME -o testnet-sepolia.sqlite
+----
+
+[NOTE]
+====
+It is important that your extracted file name is same as `testnet-sepolia.sqlite` to avoid any errors.
+====
+
+Once the database snapshot is extracted, we can start our node again and it will start syncing from the checkpoint. 
+
+If you have an existing database already, stop your pathfinder node, and replace your existing data with the new database snapshot. 
+
+
+
+== Checking the status of your node
+
+
+
+If blocks are properly syncing, the log should have the following output: 
+
+[source,terminal]
+----
+2025-04-22 17:39:55
+2025-04-23T00:39:55 INFO Updated Starknet state with block 714608
+2025-04-22 17:40:25
+2025-04-23T00:40:25 INFO Updated Starknet state with block 714609
+2025-04-22 17:40:55
+2025-04-23T00:40:55 INFO Updated Starknet state with block 714610
+----
+
+Awesome! You are now running your own node on sepolia testnet that is constantly receiving new blocks! But your node is not a validator yet. We will get there eventually. 
+
+Next, we will be interacting with the staking contract to stake our STRK tokens and assigning our operation and reward addresses. Let’s jump in! 
