@@ -1,0 +1,89 @@
+[id="validator_guide_juno"]
+= Spinning up your validator with Juno
+
+== Introduction
+In this chapter, we will guide you on how to run your own node on Sepolia testnet using Juno, a Starknet full node implementation by Nethermind.
+
+== Prerequisites
+
+Before installing Juno, ensure your system meets these requirements:
+
+* Hardware: 2+ CPU cores, 4GB+ RAM, 64GB+ free SSD space
+* Git
+* Updated version of Rust
+* Golang
+* GCC (C compiler) - included by default in most Mac and Linux distributions
+
+== Installing dependencies
+
+=== macOS
+
+[source,terminal]
+----
+brew install jemalloc
+brew install pkg-config
+make install-deps
+----
+
+=== Ubuntu
+
+[source,terminal]
+----
+sudo apt-get install -y libjemalloc-dev libjemalloc2 pkg-config libbz2-dev
+make install-deps
+----
+
+== Building Juno
+
+Clone the repository and build the application:
+
+[source,terminal]
+----
+git clone https://github.com/NethermindEth/juno.git
+cd ./juno
+git checkout v0.14.3
+make juno
+----
+
+== Using a Snapshot to Speed Up Syncing
+
+To accelerate the syncing process, we'll download an updated snapshot of Sepolia:
+
+[source,terminal]
+----
+wget -O juno_sepolia.tar https://juno-snapshots.nethermind.io/files/sepolia/latest
+mkdir snap
+tar -xvf juno_sepolia.tar -C ./snap
+----
+
+== Running the Node
+
+After extraction completes, you'll need an L1 Ethereum RPC to sync your node. As Starknet is an L2 solution, the node needs to read from the Ethereum state. You can run your own Ethereum node or use a third-party RPC provider such as Quicknode, Infura, or Alchemy.
+
+[NOTE]
+====
+You'll need a WSS (WebSocket Secure) Sepolia testnet RPC endpoint.
+====
+
+Replace `WSS_HOST` with your RPC endpoint in the following command:
+
+[source,terminal]
+----
+./build/juno \
+  --http \
+  --http-host 0.0.0.0 \
+  --http-port 6060 \
+  --ws  \
+  --ws-port 6061 \
+  --db-path snap/juno_sepolia_v0.12.5_484680 \
+  --eth-node WSS_HOST \
+  --network sepolia
+----
+
+[NOTE]
+====
+Your snapshot version might be different, so adjust the `--db-path` parameter as needed. You can skip downloading the snapshot, but initial syncing will take significantly longer.
+====
+
+While your node is catching up with the network, you can continue with the staking setup process.
+

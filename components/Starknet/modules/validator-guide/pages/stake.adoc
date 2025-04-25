@@ -1,0 +1,72 @@
+[id="validator_guide_stake"]
+= Staking your STRK tokens
+
+== Introduction
+
+In this chapter, we will provide a step by step guide on how to stake your STRK tokens using Starknet blockchain explorer (https://voyager.online/[Voyager^] or https://starkscan.co/[Starkscan^]). We will also utilize the two address from the xref:prerequisite.adoc[prerequisite] section to assign reward and operation addresses. 
+
+== Staking contract
+
+The Proof of Stake (PoS) consensus mechanism significantly differs from the classic Proof of Work (PoW) model. In PoW, miners compete using computational resources to discover a nonce that yields a block hash below a certain difficulty threshold—a highly resource-intensive process.
+
+In Proof of Stake chains, validators participate by locking up a certain number of tokens, representing a financial stake in the network. They collectively reach consensus on the validity and inclusion of blocks into the blockchain. Validators who adhere to protocol guidelines and fulfill their roles responsibly earn rewards, while those who violate protocol rules risk losing some or all of their staked assets.
+
+In Starknet's initial staking implementation, validators do not have block-building responsibilities; their sole requirement was to deposit a minimum of 20,000 STRK tokens (1 STRK in Sepolia) into the staking contract. During the 1st phase of v2, the initial responsibilities will be block attestation and there won't be slashing.
+
+== How attestation works
+
+During each epoch, validators are given a specific block to attest to. They need to submit an attestation—a kind of confirmation—within a certain window of time. This window is a set range of blocks within the epoch. If they don't submit their attestation within that range, the validator won't receive the corresponding rewards for that epoch.
+
+For a complete technical explanation, you can find more details at https://docs.starknet.io/architecture-and-concepts/staking/#responsibilities[Starknet Staking Documentation^].
+
+== Role of reward and operation addresses
+
+*Reward address* = The address that receives rewards from staking.
+
+[NOTE]
+====
+You can only receive rewards if you are running the block attestation service. 
+====
+
+*Operation address* = The address that is used to pay transactions for submitting attestation and any future operation needs such as block proposing which will be rolled out in later phases. 
+
+[NOTE]
+====
+While the staking function provides two separate address parameters to enhance security, you have the option of using two separate addresses or a single address.  
+====
+
+== Staking process
+
+To be eligible for rewards from block attestation, we first need to stake (minimum 1 STRK) on the staking contract.
+
+=== Step 1: Approve STRK tokens
+
+The Staking contract needs an approval of STRK equal to your staking size:
+
+1. Go to the STRK ERC20 contract on Sepolia: https://sepolia.voyager.online/token/0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d#writeFunctions[Sepolia Voyager^]
+2. Connect your wallet, and click on the approve function
+3. Set Spender to https://docs.starknet.io/resources/chain-info/#staking[staking contract^]: `0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1` 
+4. Set `amount` to: `1000000000000000000` (1 STRK)
+5. Click on transact and approve on your wallet
+
+A warning message may appear as you are approving funds expenditures, but it's a safe transaction.
+
+=== Step 2: Stake your tokens
+
+Once the transaction is included, move on to the staking contract:
+
+1. Go to: https://sepolia.voyager.online/contract/0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1#writeContract[Staking Contract^]
+2. Call the Stake function with these parameters:
+   * `reward_address`: The address where you want to receive your rewards
+   * `operational_address`: The address you will use for attestation and other operations
+   * `amount`: The STRK token amount is required to be written in 18 decimal places. Therefore, it would be your `amount * 10^18`. (e.g., 1 STRK = `1000000000000000000`) 
+   * `pool_enabled`: `1` if you want to accept delegations, `0` if not
+   * `commission`: Your desired commission as multiple of 100 (e.g., 3% = 300)
+
+[NOTE]
+====
+The minimum required amount to stake on Sepolia is 1 STRK. 
+====
+
+Once the transaction is executed and the amount in STRK is withdrawn, you have now successfully staked your STRK and your reward/operation addresses are now discoverable by the block attestor service. 
+
