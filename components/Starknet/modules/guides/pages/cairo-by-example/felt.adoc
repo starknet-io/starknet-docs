@@ -1,0 +1,25 @@
+= Felts
+
+The basic data type in Cairo is `felt252`, which stands for field element of a 252-bit field. These are integers in the range `0 ≤ x < P`, where `P` is a large prime number equal to:
+
+stem:[2^{251} + 17\cdot2^{192} + 1 =]
+stem:[3618502788666131213697322783095070105623107215331596699973092056135872020481]
+
+Field elements have the property of intentionally wrapping around when their value falls outside `P` (i.e., they use modular arithmetic).
+
+Division of field elements has to be done explicitly via the external `felt252_div`, which is *not* floor division. Instead, `felt252_div(a,b)` returns `c` such that `a = c * b (mod P)`.
+
+`felt252` is the default data type for numerical literals, so in many cases there is no real need to specify a numerical variable's type.
+
+*Example (click https://cairovm.codes/?codeType=Cairo&debugMode=Debug%20Sierra&code=EQAhDMDsQWwQwJaQBQEoQG8A60wgDYCmALiAAoD6MSArgM4UCMIAvCAMwBsjAHAKwAGAEwB2Hj06TG7RkOmcAnCPZDRPdgIWCRAxgL6chMgSLl92MvgskLbyzUP3d2fHqeECALDwEBuHHgEJOQUAA749EwUABZw+ABuhAAmrCC8DnzSCp4WGpwGApw83lLsCox8niLmgnxCPIwV5pwmknwiCuqethKVLfWFHVy6wp6M-rhgcHR0hABOxACEyJTUkJHMANRprGwCqL4gAPRH5KkCIMgwAPYpZKgBeNOzC8vghPjEQnUUSQjxyCEABo0ugWGwhAdjqchKlYQAqHZXW7kB6TEDPeZLZDvT7fIS-f7IRggyG7ELhDYxOKJJJQk47NgrTaMVBHBEgWHIu5ogC+wCAA[here^] to experiment with this code in the Cairo playground):*
+
+[source,cairo]
+----
+fn main() {
+    let P_minus_1 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
+    let P_plus_1_halved = 1809251394333065606848661391547535052811553607665798349986546028067936010241;
+    assert!(P_minus_1 + 1 == 0); // P = 0 (mod P)
+    assert!(felt252_div(2, 1) == 2); // 2 = 2 * 1 (mod P)
+    assert!(felt252_div(1, 2) == P_plus_1_halved); // 1 = (P+1)/2 * 2 (mod P)
+}
+----
