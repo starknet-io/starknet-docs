@@ -1,0 +1,47 @@
+= Upgradable Contract
+
+You can upgrade a deployed contract to a newer version by calling the `replace_class_syscall` function. By using this function, you can update the class hash associated with a deployed contract, effectively upgrading its implementation. However, this will not modify the contract's storage, so all the data stored in the contract will remain the same.
+
+[source,cairo]
+----
+use starknet::class_hash::ClassHash;
+
+#[starknet::interface]
+pub trait IUpgradeableContract<TContractState> {
+    fn upgrade(ref self: TContractState, impl_hash: ClassHash);
+    fn version(self: @TContractState) -> u8;
+}
+
+#[starknet::contract]
+pub mod UpgradeableContract_V0 {
+    use starknet::class_hash::ClassHash;
+    use core::num::traits::Zero;
+
+    #[storage]
+    struct Storage {}
+
+    #[event]
+    #[derive(Copy, Drop, Debug, PartialEq, starknet::Event)]
+    pub enum Event {
+        Upgraded: Upgraded,
+    }
+
+    #[derive(Copy, Drop, Debug, PartialEq, starknet::Event)]
+    pub struct Upgraded {
+        pub implementation: ClassHash,
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableContract of super::IUpgradeableContract<ContractState> {
+        fn upgrade(ref self: ContractState, impl_hash: ClassHash) {
+            assert(impl_hash.is_non_zero(), 'Class hash cannot be zero');
+            starknet::syscalls::replace_class_syscall(impl_hash).unwrap();
+            self.emit(Event::Upgraded(Upgraded { implementation: impl_hash }))
+        }
+
+        fn version(self: @ContractState) -> u8 {
+            0
+        }
+    }
+}
+----
