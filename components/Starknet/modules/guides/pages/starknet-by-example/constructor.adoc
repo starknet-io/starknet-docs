@@ -1,0 +1,54 @@
+# Constructor
+
+A constructor is a special function that initializes a contract's state during deployment. It has several key characteristics:
+
+- Runs exactly once when the contract is deployed
+- Must be annotated with `#[constructor]`
+- Up to one constructor per contract
+- Function is conventionally named `constructor`
+
+Here's an example that shows how to initialize storage variables during contract deployment:
+
+```cairo
+#[starknet::contract]
+mod ConstructorContract {
+    // This trait is necessary to be able to write to a specific storage variable
+    use starknet::storage::StoragePointerWriteAccess;
+
+    #[storage]
+    struct Storage {
+        a: u128,
+        b: u8,
+        c: u256,
+    }
+
+    // The constructor is decorated with a `#[constructor]` attribute.
+    // It is not inside an `impl` block.
+    #[constructor]
+    fn constructor(ref self: ContractState, a: u128, b: u8, c: u256) {
+        self.a.write(a);
+        self.b.write(b);
+        self.c.write(c);
+    }
+}
+```
+
+In this example:
+
+- The constructor takes three parameters: `a`, `b`, and `c`
+- Each parameter corresponds to a storage variable of the same name, but you can specify any argument variable name
+- The values are written to storage using the `write()` method. You need to import the `StoragePointerWriteAccess` trait to be able to write to a specific storage pointer
+
+[TIP]
+====
+Constructors are ideal for:
+
+- Setting initial contract state
+- Storing deployment-time parameters
+- Initializing access control (e.g., setting an owner)
+====
+
+[WARNING]
+====
+Constructor values cannot be changed after deployment unless you specifically implement functions to modify them.
+====

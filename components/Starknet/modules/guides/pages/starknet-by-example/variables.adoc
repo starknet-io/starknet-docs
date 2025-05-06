@@ -1,0 +1,132 @@
+# Variables
+
+Cairo contracts support three types of variables, each serving a different purpose:
+
+1. **Local Variables**
+   - Temporary variables within functions
+   - Exist only during function execution
+   - Not stored on the blockchain
+
+2. **Storage Variables**
+   - Defined in the contract's xref:starknet-by-example/storage.adoc[Storage]
+   - Persist between contract executions
+   - Stored on the blockchain
+
+3. **Global Variables**
+   - Provide blockchain context and information
+   - Accessible anywhere in the contract
+   - Read-only system variables
+
+## Local Variables
+
+Local variables are temporary variables that exist only within their defined scope (a function or code block). Key characteristics:
+
+- Stored in memory, not on the blockchain
+- Used for intermediate calculations and temporary data
+- Available only during function execution
+- Help improve code readability by naming values
+
+Here's an example demonstrating local variable scope:
+
+```cairo
+#[starknet::contract]
+mod LocalVariablesContract {
+    #[storage]
+    struct Storage {}
+
+    pub fn do_something(value: u32) -> u32 {
+        // This variable is local to the current block.
+        // It can't be accessed once it goes out of scope.
+        let increment = 10;
+
+        {
+            // The scope of a code block allows for local variable declaration
+            // We can access variables defined in higher scopes.
+            let sum = value + increment;
+            sum
+        }
+        // We can't access the variable `sum` here, as it's out of scope.
+    }
+}}
+```
+
+## Storage Variables
+
+Storage variables provide persistent state for your contract on the blockchain. They have these properties:
+
+- Persist between contract executions
+- Can be read for free (no transaction needed)
+- Require a transaction to write to them
+- Must be defined in the contract's Storage struct
+
+Here's an example showing storage variable usage:
+
+```cairo
+#[starknet::interface]
+trait IStorageVariable<TContractState> {
+    fn set(ref self: TContractState, value: u32);
+    fn get(self: @TContractState) -> u32;
+}
+
+#[starknet::contract]
+mod StorageVariablesContract {
+    // You need to import these storage functions to read and write to storage variables
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use super::IStorageVariable;
+
+    // All storage variables are contained in a struct called Storage
+    // annotated with the `#[storage]` attribute
+    #[storage]
+    struct Storage {
+        // Storage variable holding a number
+        value: u32,
+    }
+
+    #[abi(embed_v0)]
+    impl StorageVariables of IStorageVariable<ContractState> {
+        // Write to storage variables by sending a transaction
+        // that calls an external function
+        fn set(ref self: ContractState, value: u32) {
+            self.value.write(value);
+        }
+
+        // Read from storage variables without sending transactions
+        fn get(self: @ContractState) -> u32 {
+            self.value.read()
+        }
+    }
+}
+```
+
+[NOTE]
+====
+Reading is a free operation, with no transaction needed.
+
+Writing requires a transaction and costs gas.
+====
+## Global Variables
+
+Global variables provide access to blockchain context and system information. In Starknet:
+
+- Accessed through core library functions
+- Available anywhere in the contract
+- Provide critical blockchain context (e.g., caller address, block info)
+
+Example using global variables:
+
+```cairo
+#[starknet::contract]
+pub mod GlobalVariablesContract {
+    // import the required functions from the starknet core library
+    use starknet::get_caller_address;
+
+    #[storage]
+    struct Storage {}
+
+    pub fn foo(ref self: ContractState) {
+        // Call the get_caller_address function to get the sender address
+        let _caller = get_caller_address();
+        // ...
+    }
+}
+```

@@ -1,0 +1,137 @@
+# Visibility and Mutability
+
+## Function Visibility
+
+In Starknet contracts, functions can have two types of visibility:
+
+- **External Functions**: Can be called by anyone, including other contracts and users
+- **Internal Functions**: Can only be called by other functions within the same contract
+
+## State Mutability
+
+Every function in a contract can either modify or just read the contract's state. This behavior is determined by how we pass the `ContractState` parameter:
+
+- **State-Modifying Functions**: Use `ref self: ContractState`
+  - Can read and write to storage
+  - Require a transaction to execute
+  - Cost gas to run
+
+- **View Functions**: Use `self: @ContractState`
+  - Can only read from storage
+  - Can be called directly through an RPC node
+  - Free to call (no transaction needed)
+
+[NOTE]
+====
+Internal functions follow the same state mutability rules as external functions. The only difference is who can call them.
+====
+
+## Implementation
+
+### External Functions
+
+For external functions (both state-modifying and view), you need:
+
+1. **Interface Definition**
+   - Defined with `#[starknet::interface]` attribute
+   - Lists all functions that can be called externally
+   - Functions can be called as transactions or view calls
+   - Part of the contract's public API
+
+2. **Interface Implementation**
+   - Uses `#[abi(embed_v0)]` attribute
+   - Becomes part of the contract's ABI (Application Binary Interface)
+   - ABI defines how to interact with the contract from outside
+   - Must implement all functions defined in the interface
+
+### Internal Functions
+
+For internal functions, there are two options:
+
+1. **Implementation Block**
+    - Can use `#[generate_trait]` attribute
+    - Recommended for functions that need `ContractState` access
+    - Sometimes prefixed with `_` to indicate internal use
+
+2. **Direct Contract Body**
+    - Functions defined directly in the contract
+    - Recommended for pure functions
+        - Useful for helper functions and calculations
+
+## Example
+
+Here's a complete example demonstrating these concepts:
+
+```cairo
+// This trait defines the public interface of our contract
+// All functions declared here will be accessible externally
+#[starknet::interface]
+trait ContractInterface<TContractState> {
+    fn set(ref self: TContractState, value: u32);
+    fn get(self: @TContractState) -> u32;
+}
+
+#[starknet::contract]
+mod Contract {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use super::ContractInterface;
+
+    #[storage]
+    pub struct Storage {
+        pub value: u32,
+    }
+
+    // External Functions Implementation
+    // The `#[abi(embed_v0)]` attribute makes these functions callable from outside the contract
+    // This is where we implement our public interface defined in ContractInterface
+    #[abi(embed_v0)]
+    pub impl ContractImpl of ContractInterface<ContractState> {
+        // External function that can modify state
+        // - Takes `ref self` to allow state modifications
+        // - Calls internal `increment` function to demonstrate internal function usage
+        fn set(ref self: ContractState, value: u32) {
+            self.value.write(increment(value));
+        }
+
+        // External view function (cannot modify state)
+        // - Takes `@self` (snapshot) to prevent state modifications
+        // - Demonstrates calling an internal function (_read_value)
+        fn get(self: @ContractState) -> u32 {
+            self._read_value()
+        }
+    }
+
+    // Internal Functions Implementation
+    // These functions can only be called from within the contract
+    // The #[generate_trait] attribute creates a trait for these internal functions
+    #[generate_trait]
+    pub impl Internal of InternalTrait {
+        // Internal view function
+        // - Takes `@self` as it only needs to read state
+        // - Can only be called by other functions within the contract
+        fn _read_value(self: @ContractState) -> u32 {
+            self.value.read()
+        }
+    }
+
+    // Pure Internal Function
+    // - Doesn't access contract state
+    // - Defined directly in the contract body
+    // - Considered good practice to keep pure functions outside impl blocks
+    // It's also possible to use ContractState here, but it's not recommended
+    // as it'll require to pass the state as a parameter
+    pub fn increment(value: u32) -> u32 {
+        value + 1
+    }
+}
+```
+
+[NOTE]
+====
+Cairo contracts can implement multiple interfaces and have multiple internal implementation blocks. This is not only possible but recommended because it:
+
+- Keeps each implementation block focused on a single responsibility
+- Makes the code more maintainable and easier to test
+- Simplifies the implementation of standard interfaces
+- Allows for better organization of related functionality
+====
