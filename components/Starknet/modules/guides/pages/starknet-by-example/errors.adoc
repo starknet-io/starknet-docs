@@ -1,0 +1,171 @@
+# Error Handling
+
+Cairo provides robust error handling mechanisms for smart contracts. When an error occurs during contract execution, the transaction is immediately reverted and all state changes are undone.
+
+## Basic Error Functions
+
+Cairo offers two main functions for error handling:
+
+### 1. `assert`
+
+- Used for condition validation (similar to Solidity's `require`)
+- Stops execution if the condition is false
+- Supports two formats:
++
+```cairo
+assert(condition, 'error message');           // Basic assertion
+assert!(condition, "formatted error: {}", x); // Formatted string error
+```
+
+### 2. `panic`
+
+- Used for immediate execution halt (similar to Solidity's `revert`)
+- Best for complex conditions or internal errors
+- Supports multiple formats:
++
+```cairo
+panic_with_felt252('error message');           // Basic panic
+panic!("formatted error: value={}", value);    // Formatted string error
+```
+
+[WARNING]
+====
+While Cairo provides assertion macros like `assert_eq!` and `assert_ne!`, these are **only for testing**. In contract code, always use the standard `assert` function.
+====
+
+## Simple Example
+
+Here's a basic example demonstrating both error handling approaches:
+
+```cairo
+#[starknet::interface]
+trait IErrors<TContractState> {
+    fn test_assert(self: @TContractState, i: u256);
+    fn test_panic(self: @TContractState, i: u256);
+}
+
+#[starknet::contract]
+mod ErrorsContract {
+    use super::IErrors;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl ErrorsContract of IErrors<ContractState> {
+        // Assert used to validate a condition
+        // and abort execution if the condition is not met
+        fn test_assert(self: @ContractState, i: u256) {
+            assert(i > 0, 'i must be greater than 0');
+            let x = 10;
+            assert!(i > x, "i must be greater than {}", x);
+        }
+
+        // Panic used to abort execution directly
+        fn test_panic(self: @ContractState, i: u256) {
+            if (i == 0) {
+                core::panic_with_felt252('i must not be 0');
+            }
+            if (i < 10) {
+                panic!("i: {} must be greater than 10", i);
+            }
+        }
+    }
+}
+```
+
+## Custom Error Codes
+
+For better organization and consistency, you can define error messages in a dedicated module:
+
+```cairo
+#[starknet::interface]
+trait ICustomErrors<TContractState> {
+    fn test_assert(self: @TContractState, i: u256);
+    fn test_panic(self: @TContractState, i: u256);
+}
+
+mod Errors {
+    pub const NOT_POSITIVE: felt252 = 'must be greater than 0';
+    pub const NOT_NULL: felt252 = 'must not be null';
+}
+
+#[starknet::contract]
+mod CustomErrorsContract {
+    use super::{Errors, ICustomErrors};
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl CustomErrorsContract of ICustomErrors<ContractState> {
+        fn test_assert(self: @ContractState, i: u256) {
+            assert(i > 0, Errors::NOT_POSITIVE);
+        }
+
+        fn test_panic(self: @ContractState, i: u256) {
+            if (i == 0) {
+                core::panic_with_felt252(Errors::NOT_NULL);
+            }
+        }
+    }
+}
+```
+
+## Real-World Example: Vault Contract
+
+Here's a practical example showing error handling in a vault contract that manages deposits and withdrawals:
+
+```cairo
+#[starknet::interface]
+trait IVaultErrors<TContractState> {
+    fn deposit(ref self: TContractState, amount: u256);
+    fn withdraw(ref self: TContractState, amount: u256);
+}
+
+mod VaultErrors {
+    pub const INSUFFICIENT_BALANCE: felt252 = 'insufficient_balance';
+    // you can define more errors here
+}
+
+#[starknet::contract]
+mod VaultErrorsContract {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use super::{VaultErrors, IVaultErrors};
+
+    #[storage]
+    struct Storage {
+        balance: u256,
+    }
+
+    #[abi(embed_v0)]
+    impl VaultErrorsContract of IVaultErrors<ContractState> {
+        fn deposit(ref self: ContractState, amount: u256) {
+            let mut balance = self.balance.read();
+            balance = balance + amount;
+            self.balance.write(balance);
+        }
+
+        fn withdraw(ref self: ContractState, amount: u256) {
+            let mut balance = self.balance.read();
+
+            assert(balance >= amount, VaultErrors::INSUFFICIENT_BALANCE);
+
+            // Or using panic:
+            if (balance < amount) {
+                core::panic_with_felt252(VaultErrors::INSUFFICIENT_BALANCE);
+            }
+
+            let balance = balance - amount;
+
+            self.balance.write(balance);
+        }
+    }
+}
+```
+
+In this example:
+
+1. Custom errors are defined in a separate module
+2. The `withdraw` function demonstrates both `assert` and `panic` approaches
+3. Balance checks protect against underflow conditions

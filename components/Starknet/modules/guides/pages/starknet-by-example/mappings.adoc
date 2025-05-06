@@ -1,0 +1,66 @@
+# Mappings
+
+Maps are a fundamental key-value data structure in Cairo smart contracts that allow you to store and retrieve values using unique keys. The `Map` type in `starknet::storage` is specifically designed for contract storage for this purpose.
+
+Here's a simple example that demonstrates how to use a `Map`:
+
+```cairo
+use starknet::ContractAddress;
+
+#[starknet::interface]
+trait IMapContract<TContractState> {
+    fn set(ref self: TContractState, key: ContractAddress, value: felt252);
+    fn get(self: @TContractState, key: ContractAddress) -> felt252;
+}
+
+#[starknet::contract]
+mod MapContract {
+    use super::IMapContract;
+    use starknet::ContractAddress;
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
+
+    #[storage]
+    struct Storage {
+        map: Map<ContractAddress, felt252>,
+    }
+
+    #[abi(embed_v0)]
+    impl MapContractImpl of IMapContract<ContractState> {
+        fn set(ref self: ContractState, key: ContractAddress, value: felt252) {
+            self.map.write(key, value);
+        }
+
+        fn get(self: @ContractState, key: ContractAddress) -> felt252 {
+            self.map.read(key)
+        }
+    }
+}
+```
+
+Let's break down the key components:
+
+* Declaration: Maps are declared using `Map<KeyType, ValueType>` syntax
+* Storage: Maps must be declared inside the contract's `Storage` struct
+  ** You need to import the `StorageMapReadAccess` and `StorageMapWriteAccess` traits from `starknet::storage`
+* Operations:
+  ** `write(key, value)`: Stores a value for a given key
+  ** `read(key)`: Retrieves the value associated with a key
+* Maps automatically initialize all values to zero
+* Keys and values must be of valid storage types, see xref:starknet-by-example/storing_custom_types[Storing Custom Types]
+
+## Composite Keys
+
+For more complex scenarios, you can use composite keys by combining multiple values:
+
+```cairo
+// Example: ERC20 allowance mapping
+Map<(ContractAddress, ContractAddress), felt252>  // (owner, spender) -> amount
+```
+
+## Storage Layout (advanced)
+
+Under the hood, Cairo maps use a deterministic storage layout:
+
+- Each key-value pair is stored at a unique address calculated using Pedersen hashes
+- The address formula is: stem:[\text{h}(\ldots\text{h}(\text{h}(\text{sn_keccak}(name),k_1),k_2),\ldots,k_n) \mod 2^{251} - 256]
+- Learn more in https://book.cairo-lang.org/ch101-01-00-contract-storage.html[the Cairo Book^]

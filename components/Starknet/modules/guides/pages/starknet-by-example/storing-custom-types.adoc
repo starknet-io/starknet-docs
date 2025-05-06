@@ -1,0 +1,65 @@
+# Storing Custom Types
+
+In Starknet contracts, storing custom types in contract storage requires implementing the `Store` trait. While native types (like `felt252`, `u128`, etc.) can be stored directly, custom types need this additional step to generate the necessary implementation on how to handle their storage.
+
+To make a custom type storable:
+
+1. Derive the `starknet::Store` trait for your struct
+2. Add any other necessary traits like `Drop`, `Serde`, and `Copy`
+3. Define your storage variables using the custom type
+
+Here's an example showing how to store a custom `Person` struct:
+
+```cairo
+#[starknet::interface]
+trait IStoringCustomType<TContractState> {
+    fn set_person(ref self: TContractState, person: Person);
+    fn set_name(ref self: TContractState, name: felt252);
+}
+
+// Deriving the starknet::Store trait
+// allows us to store the `Person` struct in the contract's storage.
+#[derive(Drop, Serde, Copy, starknet::Store)]
+struct Person {
+    age: u8,
+    name: felt252,
+}
+
+#[starknet::contract]
+mod StoringCustomType {
+    use starknet::storage::StoragePointerWriteAccess;
+    use super::Person;
+    use super::IStoringCustomType;
+
+    #[storage]
+    struct Storage {
+        person: Person,
+    }
+
+    #[abi(embed_v0)]
+    impl StoringCustomType of IStoringCustomType<ContractState> {
+        fn set_person(ref self: ContractState, person: Person) {
+            self.person.write(person);
+        }
+
+        fn set_name(ref self: ContractState, name: felt252) {
+            self.person.name.write(name);
+        }
+    }
+}
+```
+
+[NOTE]
+====
+For more complex types, you might need to implement the `Store` trait manually instead of deriving it.
+====
+
+## Accessing Struct Members
+
+When you derive the `Store` trait, Cairo automatically generates the necessary storage pointers for each struct member. This allows you to access and modify individual fields of your stored struct directly:
+
+```cairo
+fn set_name(ref self: ContractState, name: felt252) {
+    self.person.name.write(name);
+}
+```
