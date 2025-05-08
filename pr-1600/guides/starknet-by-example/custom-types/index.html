@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Storing Custom Types :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/guides/starknet-by-example/storing-custom-types/">
+    <title>Custom Types :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/guides/starknet-by-example/custom-types/">
     <link rel="prev" href="../events/">
-    <link rel="next" href="../custom-types-in-entrypoints/">
+    <link rel="next" href="../mappings/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -273,12 +273,7 @@
   <li class="nav-item is-current-page" data-depth="4">
     <a 
        class="nav-link"
-     href="./">Storing Custom Types</a>
-  </li>
-  <li class="nav-item" data-depth="4">
-    <a 
-       class="nav-link"
-     href="../custom-types-in-entrypoints/">Custom Types in Entrypoints</a>
+     href="./">Custom Types</a>
   </li>
   <li class="nav-item" data-depth="4">
     <a 
@@ -693,17 +688,18 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/guides/pages/starknet-by-example/storing-custom-types.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/guides/pages/starknet-by-example/custom-types.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Storing Custom Types"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Custom Types"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Storing Custom Types</h1>
-<div id="preamble">
+<h1 class="page">Custom Types</h1>
+<div class="sect1">
+<h2 id="storing_custom_types"><a class="anchor" href="#storing_custom_types"></a>Storing Custom Types</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>In Starknet contracts, storing custom types in contract storage requires implementing the <code>Store</code> trait. While native types (like <code>felt252</code>, <code>u128</code>, etc.) can be stored directly, custom types need this additional step to generate the necessary implementation on how to handle their storage.</p>
@@ -781,11 +777,8 @@ mod StoringCustomType {
 </tr>
 </table>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="accessing_struct_members"><a class="anchor" href="#accessing_struct_members"></a>Accessing Struct Members</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="accessing_struct_members"><a class="anchor" href="#accessing_struct_members"></a>Accessing Struct Members</h3>
 <div class="paragraph">
 <p>When you derive the <code>Store</code> trait, Cairo automatically generates the necessary storage pointers for each struct member. This allows you to access and modify individual fields of your stored struct directly:</p>
 </div>
@@ -798,9 +791,89 @@ mod StoringCustomType {
 </div>
 </div>
 </div>
+</div>
+<div class="sect1">
+<h2 id="custom_types_in_entrypoints"><a class="anchor" href="#custom_types_in_entrypoints"></a>Custom Types in Entrypoints</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>When using custom types in Starknet contract entrypoints, you need to handle serialization and deserialization of data. This is because:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Input parameters are sent to entrypoints as arrays of <code>felt252</code></p>
+</li>
+<li>
+<p>Return values must be converted back to arrays of <code>felt252</code></p>
+</li>
+<li>
+<p>Custom types need to be converted between these formats automatically</p>
+</li>
+</ol>
+</div>
+<div class="sect2">
+<h3 id="using_the_serde_trait"><a class="anchor" href="#using_the_serde_trait"></a>Using the Serde Trait</h3>
+<div class="paragraph">
+<p>The <code>Serde</code> trait provides the necessary serialization and deserialization capabilities for your custom types. For most simple types, you can derive this trait automatically:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">#[starknet::interface]
+trait ISerdeCustomType&lt;TContractState&gt; {
+    fn person_input(ref self: TContractState, person: Person);
+    fn person_output(self: @TContractState) -&gt; Person;
+}
+
+// Deriving the `Serde` trait allows us to use
+// the `Person` type as an entrypoint parameter and as a return value
+#[derive(Drop, Serde)]
+struct Person {
+    age: u8,
+    name: felt252,
+}
+
+#[starknet::contract]
+mod SerdeCustomType {
+    use super::Person;
+    use super::ISerdeCustomType;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl SerdeCustomType of ISerdeCustomType&lt;ContractState&gt; {
+        fn person_input(ref self: ContractState, person: Person) {}
+
+        fn person_output(self: @ContractState) -&gt; Person {
+            Person { age: 10, name: 'Joe' }
+        }
+    }
+}</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>For some complex types, you might need to implement the <code>Serde</code> trait manually. This gives you control over how your type is serialized and deserialized.</p>
+</div>
+<div class="paragraph">
+<p>The <code>Serde</code> trait is distinct from the <code>Store</code> trait - <code>Serde</code> is for passing data in and out of entrypoints, while <code>Store</code> is for persisting data in contract storage.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
 <nav class="pagination">
   <span class="prev"><a href="../events/">Events</a></span>
-  <span class="next"><a href="../custom-types-in-entrypoints/">Custom Types in Entrypoints</a></span>
+  <span class="next"><a href="../mappings/">Mappings</a></span>
 </nav>
 </article>
   </div>
