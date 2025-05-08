@@ -1,0 +1,71 @@
+= Writing to any storage slot
+
+On Starknet, a contract’s storage is a map with latexmath:[( 2^{251} )]
+slots, where each slot is a `felt252` which is initialized to 0. The
+address of storage variables is computed at compile time using the
+formula:
+
+[latexmath]
+++++
+
+storage\_variable\_address~\text{:=}~\text{pedersen}(\text{keccak}(variable\_name),~keys)
+++++
+
+Interactions with storage variables are commonly performed using the
+`self.var.read()` and `self.var.write()` functions.
+
+Nevertheless, we can use the `storage++_++write++_++syscall` and
+`storage++_++read++_++syscall` syscalls, to write to and read from any
+storage slot. This is useful when writing to storage variables that are
+not known at compile time, or to ensure that even if the contract is
+upgraded and the computation method of storage variable addresses
+changes, they remain accessible.
+
+In the following example, we use the Poseidon hash function to compute
+the address of a storage variable. Poseidon is a ZK-friendly hash
+function that is cheaper and faster than Pedersen, making it an
+excellent choice for onchain computations. Once the address is computed,
+we use the storage syscalls to interact with it.
+
+[source,cairo]
+----
+#[starknet::interface]
+pub trait IWriteToAnySlots<TContractState> {
+    fn write_slot(ref self: TContractState, value: u32);
+    fn read_slot(self: @TContractState) -> u32;
+}
+
+#[starknet::contract]
+pub mod WriteToAnySlot {
+    use starknet::syscalls::{storage_read_syscall, storage_write_syscall};
+    use core::poseidon::poseidon_hash_span;
+    use starknet::StorageAddress;
+
+    #[storage]
+    struct Storage {}
+
+    const SLOT_NAME: felt252 = 'test_slot';
+
+    #[abi(embed_v0)]
+    impl WriteToAnySlot of super::IWriteToAnySlots<ContractState> {
+        fn write_slot(ref self: ContractState, value: u32) {
+            storage_write_syscall(0, get_address_from_name(SLOT_NAME), value.into()).unwrap();
+        }
+
+        fn read_slot(self: @ContractState) -> u32 {
+            storage_read_syscall(0, get_address_from_name(SLOT_NAME)).unwrap().try_into().unwrap()
+        }
+    }
+    pub fn get_address_from_name(variable_name: felt252) -> StorageAddress {
+        let mut data: Array<felt252> = array![];
+        data.append(variable_name);
+        let hashed_name: felt252 = poseidon_hash_span(data.span());
+        let MASK_250: u256 = 0x03ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+        // By taking the 250 least significant bits of the hash output, we get a valid 250bits
+        // storage address.
+        let result: felt252 = (hashed_name.into() & MASK_250).try_into().unwrap();
+        let result: StorageAddress = result.try_into().unwrap();
+        result
+    }
+}
+----

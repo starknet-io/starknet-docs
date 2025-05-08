@@ -1,0 +1,66 @@
+# Hashing
+
+Hashing is a cryptographic technique that allows you to transform a variable length input into a fixed length output.
+The resulting output is called a hash and it's completely different from the input.
+Hash functions are deterministic, meaning that the same input will always produce the same output.
+
+The two hash functions provided by the Cairo library are `Poseidon` and `Pedersen`.
+Pedersen hashes were used in the past (but are still used in some scenarios for backward compatibility), while Poseidon hashes are the standard nowadays since they were designed to be very efficient for Zero Knowledge proof systems.
+
+In Cairo, it's possible to hash all types that can be converted to `felt252` since they natively implement the `Hash` trait. It's also possible to hash more complex types, like structs, by deriving the Hash trait with the `#[derive(Hash)]` attribute, but only if all the struct's fields are themselves hashable.
+
+To hash a value, you first need to initialize a hash state with the `new` method of the `HashStateTrait`. Then, you can update the hash state with the `update` method. You can accumulate multiple updates if necessary. Finally, the `finalize` method returns the final hash value as a `felt252`.
+
+```cairo
+#[starknet::contract]
+mod HashTraits {
+    use starknet::storage::StoragePointerWriteAccess;
+    use core::hash::{HashStateTrait, HashStateExTrait};
+    use core::{pedersen::PedersenTrait, poseidon::PoseidonTrait};
+
+    #[storage]
+    struct Storage {
+        user_hash_poseidon: felt252,
+        user_hash_pedersen: felt252,
+    }
+
+    #[derive(Drop, Hash)]
+    struct LoginDetails {
+        username: felt252,
+        password: felt252,
+    }
+
+    #[derive(Drop, Hash)]
+    struct UserDetails {
+        id: felt252,
+        login: LoginDetails,
+    }
+
+    #[abi(embed_v0)]
+    impl HashTrait of super::IHashTrait<ContractState> {
+        fn save_user_with_poseidon(
+            ref self: ContractState, id: felt252, username: felt252, password: felt252,
+        ) -> felt252 {
+            let login = LoginDetails { username, password };
+            let user = UserDetails { id, login };
+
+            let poseidon_hash = PoseidonTrait::new().update_with(user).finalize();
+
+            self.user_hash_poseidon.write(poseidon_hash);
+            poseidon_hash
+        }
+
+        fn save_user_with_pedersen(
+            ref self: ContractState, id: felt252, username: felt252, password: felt252,
+        ) -> felt252 {
+            let login = LoginDetails { username, password };
+            let user = UserDetails { id, login };
+
+            let pedersen_hash = PedersenTrait::new(0).update_with(user).finalize();
+
+            self.user_hash_pedersen.write(pedersen_hash);
+            pedersen_hash
+        }
+    }
+}
+```

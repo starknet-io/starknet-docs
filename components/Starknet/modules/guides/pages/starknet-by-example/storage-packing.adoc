@@ -1,0 +1,79 @@
+# Storage packing
+
+A smart contract has a limited amount of **storage slots**. Each slot can store a single `felt252` value.
+Writing to a storage slot has a cost, so we want to use as few storage slots as possible.
+
+In Cairo, every type is derived from the `felt252` type, which uses 252 bits to store a value.
+This design is quite simple, but it does have a drawback: it is not storage efficient. For example, if we want to store a `u8` value, we need to use an entire slot, even though we only need 8 bits.
+
+When storing multiple values, we can use a technique called **packing**. Packing is a technique that allows us to store multiple values in a single `felt252` value. This is done by using the bits of the `felt252` value to store multiple values.
+
+For example, if we want to store two `u8` values, we can use the first 8 bits of the `felt252` value to store the first `u8` value, and the last 8 bits to store the second `u8` value. This way, we can store two `u8` values in a single `felt252` value.
+
+Cairo provides a built-in store using packing that you can use with the `StorePacking` trait.
+
+```cairo
+trait StorePacking<T, PackedT> {
+    fn pack(value: T) -> PackedT;
+    fn unpack(value: PackedT) -> T;
+}
+```
+
+This allows us to store the type `T` by first packing it into the type `PackedT` with the `pack` function, and then storing the `PackedT` value with it's `Store` implementation. When reading the value, we first retrieve the `PackedT` value, and then unpack it into the type `T` using the `unpack` function.
+
+Here's an example of storing a `Time` struct with two `u8` values using the `StorePacking` trait:
+
+```cairo
+#[derive(Copy, Serde, Drop)]
+pub struct Time {
+    pub hour: u8,
+    pub minute: u8,
+}
+
+#[starknet::interface]
+pub trait ITime<TContractState> {
+    fn set(ref self: TContractState, value: Time);
+    fn get(self: @TContractState) -> Time;
+}
+
+#[starknet::contract]
+mod TimeContract {
+    use starknet::storage::{StoragePointerWriteAccess, StoragePointerReadAccess};
+    use super::Time;
+    use starknet::storage_access::StorePacking;
+
+    #[storage]
+    struct Storage {
+        time: Time,
+    }
+
+    impl TimePackable of StorePacking<Time, felt252> {
+        fn pack(value: Time) -> felt252 {
+            let msb: felt252 = 256 * value.hour.into();
+            let lsb: felt252 = value.minute.into();
+            msb + lsb
+        }
+        fn unpack(value: felt252) -> Time {
+            let value: u16 = value.try_into().unwrap();
+            let (q, r) = DivRem::div_rem(value, 256_u16.try_into().unwrap());
+            let hour: u8 = Into::<u16, felt252>::into(q).try_into().unwrap();
+            let minute: u8 = Into::<u16, felt252>::into(r).try_into().unwrap();
+            Time { hour, minute }
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl TimeContract of super::ITime<ContractState> {
+        fn set(ref self: ContractState, value: Time) {
+            // This will call the pack method of the TimePackable trait
+            // and store the resulting felt252
+            self.time.write(value);
+        }
+        fn get(self: @ContractState) -> Time {
+            // This will read the felt252 value from storage
+            // and return the result of the unpack method of the TimePackable trait
+            return self.time.read();
+        }
+    }
+}
+```

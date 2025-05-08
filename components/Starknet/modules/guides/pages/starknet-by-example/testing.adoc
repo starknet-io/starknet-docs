@@ -1,0 +1,334 @@
+= Testing
+
+== Overview
+
+Starknet Foundry provides a robust testing framework specifically
+designed for Starknet smart contracts. Tests can be executed using the
+`snforge test` command.
+
+To use snforge as your default test runner, add this to your
+`scarb.toml++{++:md}`:
+
+[source,toml]
+----
+[scripts]
+test = "snforge test"
+----
+
+This will make `scarb test` use snforge under the hood.
+
+Let’s examine a sample contract that we’ll use throughout this section:
+
+[source,cairo]
+----
+#[starknet::interface]
+pub trait IInventoryContract<TContractState> {
+    fn get_inventory_count(self: @TContractState) -> u32;
+    fn get_max_capacity(self: @TContractState) -> u32;
+    fn update_inventory(ref self: TContractState, new_count: u32);
+}
+
+/// An external function that encodes constraints for update inventory
+fn check_update_inventory(new_count: u32, max_capacity: u32) -> Result<u32, felt252> {
+    if new_count == 0 {
+        return Result::Err('OutOfStock');
+    }
+    if new_count > max_capacity {
+        return Result::Err('ExceedsCapacity');
+    }
+
+    Result::Ok(new_count)
+}
+
+#[starknet::contract]
+pub mod InventoryContract {
+    use super::check_update_inventory;
+    use starknet::{get_caller_address, ContractAddress};
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+    #[storage]
+    pub struct Storage {
+        pub inventory_count: u32,
+        pub max_capacity: u32,
+        pub owner: ContractAddress,
+    }
+
+    #[event]
+    #[derive(Copy, Drop, Debug, PartialEq, starknet::Event)]
+    pub enum Event {
+        InventoryUpdated: InventoryUpdated,
+    }
+
+    #[derive(Copy, Drop, Debug, PartialEq, starknet::Event)]
+    pub struct InventoryUpdated {
+        pub new_count: u32,
+    }
+
+    #[constructor]
+    pub fn constructor(ref self: ContractState, max_capacity: u32) {
+        self.inventory_count.write(0);
+        self.max_capacity.write(max_capacity);
+        self.owner.write(get_caller_address());
+    }
+
+    #[abi(embed_v0)]
+    pub impl InventoryContractImpl of super::IInventoryContract<ContractState> {
+        fn get_inventory_count(self: @ContractState) -> u32 {
+            self.inventory_count.read()
+        }
+
+        fn get_max_capacity(self: @ContractState) -> u32 {
+            self.max_capacity.read()
+        }
+
+        fn update_inventory(ref self: ContractState, new_count: u32) {
+            assert(self.owner.read() == get_caller_address(), 'Not owner');
+
+            match check_update_inventory(new_count, self.max_capacity.read()) {
+                Result::Ok(new_count) => self.inventory_count.write(new_count),
+                Result::Err(error) => { panic!("{}", error); },
+            }
+
+            self.emit(Event::InventoryUpdated(InventoryUpdated { new_count }));
+        }
+    }
+}
+----
+
+== Test Structure and Organization
+
+=== Test Location
+
+There are two common approaches to organizing tests: 1. *Integration
+Tests*: Place in the `tests/++{++:md}` directory, following your
+`src/++{++:md}` structure 2. *Unit Tests*: Place directly in
+`src/++{++:md}` files within a test module
+
+For unit tests in source files, always guard the test module with
+`#++[++cfg(test)++]++` to ensure tests are only compiled during testing:
+
+[source,cairo]
+----
+#[cfg(test)]
+mod tests {
+    use super::check_update_inventory;
+
+    #[test]
+    fn test_check_update_inventory() {
+        let result = check_update_inventory(10, 100);
+        assert_eq!(result, Result::Ok(10));
+    }
+
+    #[test]
+    fn test_check_update_inventory_out_of_stock() {
+        let result = check_update_inventory(0, 100);
+        assert_eq!(result, Result::Err('OutOfStock'));
+    }
+
+    #[test]
+    fn test_check_update_inventory_exceeds_capacity() {
+        let result = check_update_inventory(101, 100);
+        assert_eq!(result, Result::Err('ExceedsCapacity'));
+    }
+}
+----
+
+=== Basic Test Structure
+
+Each test function requires the `[test]` attribute. For tests
+that should verify error conditions, add the
+`#++[++should++_++panic++]++` attribute.
+
+Here’s a comprehensive test example:
+
+[source,cairo]
+----
+// Import the interface and dispatcher to be able to interact with the contract.
+use testing_how_to::{IInventoryContractDispatcher, IInventoryContractDispatcherTrait};
+
+// Import the required traits and functions from Snforge
+use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
+// And additionally the testing utilities
+use snforge_std::{start_cheat_caller_address_global, stop_cheat_caller_address_global, load};
+
+// Declare and deploy the contract and return its dispatcher.
+fn deploy(max_capacity: u32) -> IInventoryContractDispatcher {
+    let contract = declare("InventoryContract").unwrap().contract_class();
+    let (contract_address, _) = contract.deploy(@array![max_capacity.into()]).unwrap();
+
+    // Return the dispatcher.
+    // It allows to interact with the contract based on its interface.
+    IInventoryContractDispatcher { contract_address }
+}
+
+#[test]
+fn test_deploy() {
+    let max_capacity: u32 = 100;
+    let contract = deploy(max_capacity);
+
+    assert_eq!(contract.get_max_capacity(), max_capacity);
+    assert_eq!(contract.get_inventory_count(), 0);
+}
+
+#[test]
+fn test_as_owner() {
+    let owner = starknet::contract_address_const::<'owner'>();
+    start_cheat_caller_address_global(owner);
+
+    // When deploying the contract, the caller is owner.
+    let contract = deploy(100);
+
+    // Owner can call update inventory successfully
+    contract.update_inventory(10);
+    assert_eq!(contract.get_inventory_count(), 10);
+
+    // additionally, you can directly test the storage
+    let loaded = load(
+        contract.contract_address, // the contract address
+        selector!("owner"), // field marking the start of the memory chunk being read from
+        1 // length of the memory chunk (seen as an array of felts) to read. Here, `u32` fits in 1 felt.
+    );
+    assert_eq!(loaded, array!['owner']);
+}
+
+#[test]
+#[should_panic]
+fn test_as_not_owner() {
+    let owner = starknet::contract_address_const::<'owner'>();
+    start_cheat_caller_address_global(owner);
+    let contract = deploy(100);
+
+    // Change the caller address to a not owner
+    stop_cheat_caller_address_global();
+
+    // As the current caller is not the owner, the value cannot be set.
+    contract.update_inventory(20);
+    // Panic expected
+}
+----
+
+== Testing Techniques
+
+=== Direct Storage Access
+
+For testing specific storage scenarios, snforge provides `load` and
+`store` functions:
+
+[source,cairo]
+----
+#[test]
+fn test_as_owner_with_direct_storage_access() {
+    let owner = starknet::contract_address_const::<'owner'>();
+    start_cheat_caller_address_global(owner);
+    let contract = deploy(100);
+    let update_inventory = 10;
+    contract.update_inventory(update_inventory);
+
+    // You can directly test the storage
+    let owner_storage = load(
+        contract.contract_address, // the contract address
+        selector!("owner"), // field marking the start of the memory chunk being read from
+        1 // length of the memory chunk (seen as an array of felts) to read. Here, `u32` fits in 1 felt.
+    );
+    assert_eq!(owner_storage, array!['owner']);
+
+    // Same for the inventory count:
+    // Here we showcase how to deserialize the value from it's raw felts representation to it's
+    // original type.
+    let mut inventory_count = load(contract.contract_address, selector!("inventory_count"), 1)
+        .span();
+    let inventory_count: u32 = Serde::deserialize(ref inventory_count).unwrap();
+    assert_eq!(inventory_count, update_inventory);
+}
+----
+
+=== Contract State Testing
+
+Use `Contract::contract++_++state++_++for++_++testing` to access
+internal contract state:
+
+[source,cairo]
+----
+use core::starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+use testing_how_to::InventoryContract;
+// To be able to call the contract methods on the state
+use InventoryContract::InventoryContractImpl;
+#[test]
+fn test_with_contract_state() {
+    let owner = starknet::contract_address_const::<'owner'>();
+    start_cheat_caller_address_global(owner);
+
+    // Initialize the contract state and call the constructor
+    let mut state = InventoryContract::contract_state_for_testing();
+    InventoryContract::constructor(ref state, 10);
+
+    // Read storage values
+    assert_eq!(state.max_capacity.read(), 10);
+    assert_eq!(state.inventory_count.read(), 0);
+    assert_eq!(state.owner.read(), owner);
+
+    // Update the inventory count by calling the contract method
+    let update_inventory = 10;
+    state.update_inventory(update_inventory);
+    assert_eq!(state.inventory_count.read(), update_inventory);
+
+    // Or directly write to the storage
+    let user = starknet::contract_address_const::<'user'>();
+    state.owner.write(user);
+    assert_eq!(state.owner.read(), user);
+}
+----
+
+=== Event Testing
+
+To verify event emissions:
+
+[source,cairo]
+----
+use snforge_std::{spy_events, EventSpyAssertionsTrait};
+#[test]
+fn test_events() {
+    let contract = deploy(100);
+
+    let mut spy = spy_events();
+
+    // This emits an event
+    contract.update_inventory(10);
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract.contract_address,
+                    InventoryContract::Event::InventoryUpdated(
+                        InventoryContract::InventoryUpdated { new_count: 10 },
+                    ),
+                ),
+            ],
+        )
+}
+----
+
+For more details about events, visit the
+link:/getting-started/basics/events[Events] section.
+
+== Testing Best Practices
+
+[arabic]
+. *Test Environment*: snforge bootstraps a minimal blockchain
+environment for predictable test execution
+. *Assertions*: Use built-in assertion macros for clear test conditions:
+* `assert++_++eq!`: Equal comparison
+* `assert++_++ne!`: Not equal comparison
+* `assert++_++gt!`: Greater than comparison
+* `assert++_++ge!`: Greater than or equal comparison
+* `assert++_++lt!`: Less than comparison
+* `assert++_++le!`: Less than or equal comparison
+. *Test Organization*: Group related tests in modules and use
+descriptive test names
+
+== Next Steps
+
+For more advanced testing techniques and features, consult the
+https://foundry-rs.github.io/starknet-foundry/testing/contracts.html[Starknet
+Foundry Book - Testing Contracts].

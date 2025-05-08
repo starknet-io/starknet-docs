@@ -1,0 +1,95 @@
+# Factory pattern
+
+The factory pattern is a well known pattern in object oriented programming. It provides an abstraction on how to instantiate a class.
+
+In the case of smart contracts, we can use this pattern by defining a factory contract that has the sole responsibility of creating and managing other contracts.
+
+## Class hash and contract instance
+
+In Starknet, there's a separation between contract's classes and instances. A contract class serves as a blueprint, defined by the underlying Cairo bytecode, contract's entrypoints, ABI and Sierra program hash. The contract class is identified by a class hash. When you want to add a new class to the network, you first need to declare it.
+
+When deploying a contract, you need to specify the class hash of the contract you want to deploy. Each instance of a contract has their own storage regardless of the class hash.
+
+Using the factory pattern, we can deploy multiple instances of the same contract class and handle upgrades easily.
+
+## Minimal example
+
+Here's a minimal example of a factory contract that deploys the `SimpleCounter` contract:
+
+```cairo
+pub use starknet::{ContractAddress, ClassHash};
+
+#[starknet::interface]
+pub trait ICounterFactory<TContractState> {
+    /// Create a new counter contract from stored arguments
+    fn create_counter(ref self: TContractState) -> ContractAddress;
+
+    /// Create a new counter contract from the given arguments
+    fn create_counter_at(ref self: TContractState, init_value: u128) -> ContractAddress;
+
+    /// Update the argument
+    fn update_init_value(ref self: TContractState, init_value: u128);
+
+    /// Update the class hash of the Counter contract to deploy when creating a new counter
+    fn update_counter_class_hash(ref self: TContractState, counter_class_hash: ClassHash);
+}
+
+#[starknet::contract]
+pub mod CounterFactory {
+    use starknet::{ContractAddress, ClassHash, syscalls::deploy_syscall};
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+    #[storage]
+    struct Storage {
+        /// Store the constructor arguments of the contract to deploy
+        init_value: u128,
+        /// Store the class hash of the contract to deploy
+        counter_class_hash: ClassHash,
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, init_value: u128, class_hash: ClassHash) {
+        self.init_value.write(init_value);
+        self.counter_class_hash.write(class_hash);
+    }
+
+    #[abi(embed_v0)]
+    impl Factory of super::ICounterFactory<ContractState> {
+        // [!region deploy]
+        fn create_counter_at(ref self: ContractState, init_value: u128) -> ContractAddress {
+            // Constructor arguments
+            let mut constructor_calldata: Array::<felt252> = array![init_value.into()];
+
+            // Contract deployment
+            let (deployed_address, _) = deploy_syscall(
+                self.counter_class_hash.read(), 0, constructor_calldata.span(), false,
+            )
+                .unwrap();
+
+            deployed_address
+        }
+        // [!endregion deploy]
+
+        fn create_counter(ref self: ContractState) -> ContractAddress {
+            self.create_counter_at(self.init_value.read())
+        }
+
+        fn update_init_value(ref self: ContractState, init_value: u128) {
+            self.init_value.write(init_value);
+        }
+
+        fn update_counter_class_hash(ref self: ContractState, counter_class_hash: ClassHash) {
+            self.counter_class_hash.write(counter_class_hash);
+        }
+    }
+}
+```
+
+This factory can be used to deploy multiple instances of the `SimpleCounter` contract by calling the `create_counter` and `create_counter_at` functions.
+
+The `SimpleCounter` class hash is stored inside the factory, and can be upgraded with the `update_counter_class_hash` function which allows to reuse the same factory contract when the `SimpleCounter` contract is upgraded.
+
+[NOTE]
+====
+This minimal example lacks several useful features such as access control, tracking of deployed contracts, events etc.
+====

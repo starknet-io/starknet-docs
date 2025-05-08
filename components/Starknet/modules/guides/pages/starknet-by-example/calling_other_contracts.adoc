@@ -1,0 +1,56 @@
+== Calling Other Contracts
+
+In Starknet, contracts can interact with each other through contract
+calls. The recommended way to make these calls is using the dispatcher
+pattern, which provides type safety and better error handling.
+
+=== Understanding Dispatchers
+
+A dispatcher is an automatically generated struct that handles the
+serialization and deserialization of contract calls. To use dispatchers:
+
+[arabic]
+. Define the target contract’s interface as a trait with
+`#++[++starknet::interface++]++` (`IContract`)
+. Import the generated dispatcher types (`IContractDispatcher` and
+`IContractDispatcherTrait`)
+. Create a dispatcher instance with the target contract’s address
+
+Let’s look at a practical example where one contract (`Caller`)
+interacts with another (`Callee`). The `Callee` contract stores a value
+that can be set and retrieved:
+
+[source,cairo]
+----
+// [!include ~/listings/getting-started/calling_other_contracts/src/caller.cairo:callee_contract]
+----
+
+The `Caller` contract demonstrates how to use the dispatcher to interact
+with `Callee`:
+
+[source,cairo]
+----
+// [!include ~/listings/getting-started/calling_other_contracts/src/caller.cairo:caller_contract]
+----
+
+==== Key Points:
+
+* The `#++[++starknet::interface++]++` attribute automatically generates
+the dispatcher types
+* Dispatchers handle all the low-level details of contract interaction
+* Contract calls are type-safe and checked at compile time
+* Each contract maintains its own storage and state
+
+For more details about dispatchers, check out the
+https://book.cairo-lang.org/ch102-02-interacting-with-another-contract.html[Cairo
+Book].
+
+[NOTE]
+====
+While you can use the low-level `call++_++contract++_++syscall`
+directly, it’s not recommended as it:
+
+* Requires manual serialization/deserialization
+* Lacks compile-time type checking
+* Is more easy to make mistakes
+====

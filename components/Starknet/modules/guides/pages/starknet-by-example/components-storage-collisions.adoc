@@ -1,0 +1,70 @@
+= Components storage collisions
+
+Components can declare their own storage variables.
+
+When a contract uses a component, the component storage is merged with
+the contract storage. The storage layout is only determined by the
+variables names, so variables with the same name will collide.
+
+[NOTE]
+====
+In a future release, the `#++[++substorage(v1)++]++` will determine the
+storage layout based on the component as well, so collisions will be
+avoided.
+====
+
+A good practice is to prefix the component storage variables with the
+component name, as shown in the link:/components/how_to[Switchable
+component example].
+
+== Example
+
+Here’s an example of a collision on the `switchable++_++value` storage
+variable of the `Switchable` component.
+
+Interface:
+
+[source,cairo]
+----
+#[starknet::interface]
+pub trait ISwitchCollision<TContractState> {
+    fn set(ref self: TContractState, value: bool);
+    fn get(ref self: TContractState) -> bool;
+}
+----
+
+Here’s the storage of the contract:
+
+[source,cairo]
+----
+#[storage]
+#[allow(starknet::colliding_storage_paths)]
+struct Storage {
+    switchable_value: bool,
+    #[substorage(v0)]
+    switch: switchable_component::Storage,
+}
+----
+
+Both the contract and the component have a `switchable++_++value`
+storage variable, so they collide:
+
+[source,cairo]
+----
+fn test_collision() {
+    let (mut contract, mut contract_iswitch) = deploy();
+
+    assert_eq!(contract.get(), false);
+    assert_eq!(contract_iswitch.is_on(), false);
+
+    contract_iswitch.switch();
+    assert_eq!(contract_iswitch.is_on(), true);
+    assert_eq!(contract.get(), true);
+
+    // `collision` between component storage 'value' and contract storage 'value'
+    assert_eq!(contract.get(), contract_iswitch.is_on());
+
+    contract.set(false);
+    assert_eq!(contract.get(), contract_iswitch.is_on());
+}
+----

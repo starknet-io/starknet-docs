@@ -1,0 +1,266 @@
+= Components dependencies
+
+A component with a dependency on a trait `T` can be used in a contract
+as long as the contract implements the trait `T`.
+
+We will use a new `Countable` component as an example:
+
+[source,cairo]
+----
+#[starknet::interface]
+pub trait ICountable<TContractState> {
+    fn get(self: @TContractState) -> u32;
+    fn increment(ref self: TContractState);
+}
+
+#[starknet::component]
+pub mod countable_component {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+    #[storage]
+    pub struct Storage {
+        countable_value: u32,
+    }
+
+    #[embeddable_as(Countable)]
+    impl CountableImpl<
+        TContractState, +HasComponent<TContractState>,
+    > of super::ICountable<ComponentState<TContractState>> {
+        fn get(self: @ComponentState<TContractState>) -> u32 {
+            self.countable_value.read()
+        }
+
+        fn increment(ref self: ComponentState<TContractState>) {
+            self.countable_value.write(self.countable_value.read() + 1);
+        }
+    }
+}
+----
+
+We want to add a way to enable or disable the counter, in a way that
+calling `increment` on a disabled counter will not increment it. But we
+don’t want to add this switch logic to the `Countable` component itself.
+Instead, we add the trait `Switchable` as a dependency to the
+`Countable` component.
+
+== Implementation of the trait in the contract
+
+First, we import the `ISwitchable` trait defined in chapter
+link:/components/how_to["`Components How-To`"]:
+
+[source,cairo]
+----
+pub trait ISwitchable<TContractState> {
+    fn is_on(self: @TContractState) -> bool;
+    fn switch(ref self: TContractState);
+}
+----
+
+Then we can modify the implementation of the `Countable` component to
+depend on the `ISwitchable` trait:
+
+[source,cairo]
+----
+#[embeddable_as(Countable)]
+impl CountableImpl<
+    TContractState, +HasComponent<TContractState>, +ISwitchable<TContractState>,
+> of ICountable<ComponentState<TContractState>> {
+    fn get(self: @ComponentState<TContractState>) -> u32 {
+        self.countable_value.read()
+    }
+
+    fn increment(ref self: ComponentState<TContractState>) {
+        if (self.get_contract().is_on()) {
+            self.countable_value.write(self.countable_value.read() + 1);
+        }
+    }
+}
+----
+
+A contract that uses the `Countable` component must implement the
+`ISwitchable` trait:
+
+[source,cairo]
+----
+#[starknet::contract]
+mod CountableContract {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use components_dependencies::countable_dep_switch::countable_component;
+    use components::switchable::ISwitchable;
+
+    component!(path: countable_component, storage: counter, event: CountableEvent);
+
+    #[abi(embed_v0)]
+    impl CountableImpl = countable_component::Countable<ContractState>;
+
+    #[storage]
+    struct Storage {
+        #[substorage(v0)]
+        counter: countable_component::Storage,
+        switch: bool,
+    }
+
+    // Implementation of the dependency:
+    #[abi(embed_v0)]
+    impl Switchable of ISwitchable<ContractState> {
+        fn switch(ref self: ContractState) {
+            self.switch.write(!self.switch.read());
+        }
+
+        fn is_on(self: @ContractState) -> bool {
+            self.switch.read()
+        }
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState) {
+        self.switch.write(false);
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        CountableEvent: countable_component::Event,
+    }
+}
+----
+
+== Implementation of the trait in another component
+
+In the previous example, we implemented the `ISwitchable` trait in the
+contract.
+
+We already implemented a link:/components/how_to[`Switchable`] component
+that provides an implementation of the `ISwitchable` trait. By using the
+`Switchable` component in a contract, we can embed the implementation of
+the `ISwitchable` trait in the contract and resolve the dependency on
+the `ISwitchable` trait.
+
+[source,cairo]
+----
+#[starknet::contract]
+mod CountableContract {
+    use components_dependencies::countable_dep_switch::countable_component;
+    use components::switchable::switchable_component;
+
+    component!(path: countable_component, storage: counter, event: CountableEvent);
+    component!(path: switchable_component, storage: switch, event: SwitchableEvent);
+
+    #[abi(embed_v0)]
+    impl CountableImpl = countable_component::Countable<ContractState>;
+    #[abi(embed_v0)]
+    impl SwitchableImpl = switchable_component::Switchable<ContractState>;
+    impl SwitchableInternalImpl = switchable_component::SwitchableInternalImpl<ContractState>;
+
+    #[storage]
+    struct Storage {
+        #[substorage(v0)]
+        counter: countable_component::Storage,
+        #[substorage(v0)]
+        switch: switchable_component::Storage,
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState) {
+        self.switch._off();
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        CountableEvent: countable_component::Event,
+        SwitchableEvent: switchable_component::Event,
+    }
+}
+----
+
+== Dependency on other component’s internal functions
+
+The previous example shows how to use the `ISwitchable` trait
+implementation from the `Switchable` component inside the `Countable`
+component by embedding the implementation in the contract. However,
+suppose we would like to turn off the switch after each increment.
+There’s no `set` function in the `ISwitchable` trait, so we can’t do it
+directly.
+
+But the `Switchable` component implements the internal function
+`++_++off` from the `SwitchableInternalTrait` that set the switch to
+`false`. We can’t embed `SwitchableInternalImpl`, but we can add
+`switchable::HasComponent++<++TContractState++>++` as a dependency
+inside `CountableImpl`.
+
+We make the `Countable` component depend on the `Switchable` component.
+This will allow to do
+`switchable::ComponentState++<++TContractState++>++` -++>++
+`TContractState` -++>++
+`countable::ComponentState++<++TcontractState++>++` and access the
+internal functions of the `Switchable` component inside the `Countable`
+component:
+
+[source,cairo]
+----
+#[starknet::component]
+pub mod countable_component {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use components::countable::ICountable;
+    use components::switchable::ISwitchable;
+
+    // Explicitly depends on a component and not a trait
+    use components::switchable::switchable_component;
+    use switchable_component::{SwitchableInternalImpl, SwitchableInternalTrait};
+
+    #[storage]
+    pub struct Storage {
+        countable_value: u32,
+    }
+
+    #[generate_trait]
+    impl GetSwitchable<
+        TContractState,
+        +HasComponent<TContractState>,
+        +switchable_component::HasComponent<TContractState>,
+        +Drop<TContractState>,
+    > of GetSwitchableTrait<TContractState> {
+        fn get_switchable(
+            self: @ComponentState<TContractState>,
+        ) -> @switchable_component::ComponentState<TContractState> {
+            let contract = self.get_contract();
+            switchable_component::HasComponent::<TContractState>::get_component(contract)
+        }
+
+        fn get_switchable_mut(
+            ref self: ComponentState<TContractState>,
+        ) -> switchable_component::ComponentState<TContractState> {
+            let mut contract = self.get_contract_mut();
+            switchable_component::HasComponent::<TContractState>::get_component_mut(ref contract)
+        }
+    }
+
+    #[embeddable_as(Countable)]
+    impl CountableImpl<
+        TContractState,
+        +HasComponent<TContractState>,
+        +ISwitchable<TContractState>,
+        +switchable_component::HasComponent<TContractState>,
+        +Drop<TContractState>,
+    > of ICountable<ComponentState<TContractState>> {
+        fn get(self: @ComponentState<TContractState>) -> u32 {
+            self.countable_value.read()
+        }
+
+        fn increment(ref self: ComponentState<TContractState>) {
+            if (self.get_contract().is_on()) {
+                self.countable_value.write(self.countable_value.read() + 1);
+
+                // use the switchable component internal function
+                let mut switch = self.get_switchable_mut();
+                switch._off();
+            }
+        }
+    }
+}
+----
+
+The `CountableContract` contract remains the same as in the previous
+example, only the implementation of the `Countable` component is
+different.
