@@ -1,0 +1,43 @@
+# Structs as mapping keys
+
+In order to use structs as mapping keys, you can use `#[derive(Hash)]` on the struct definition. This will automatically generate a hash function for the struct that can be used to represent the struct as a key in a `Map`.
+
+Consider the following example in which we would like to use an object of
+type `Pet` as a key in a `Map`. The `Pet` struct has three fields: `name`, `age` and `owner`. We consider that the combination of these three fields uniquely identifies a pet.
+
+```cairo
+#[derive(Copy, Drop, Serde, Hash)]
+pub struct Pet {
+    pub name: felt252,
+    pub age: u8,
+    pub owner: felt252,
+}
+
+#[starknet::interface]
+pub trait IPetRegistry<TContractState> {
+    fn register_pet(ref self: TContractState, key: Pet, timestamp: u64);
+    fn get_registration_date(self: @TContractState, key: Pet) -> u64;
+}
+
+#[starknet::contract]
+pub mod PetRegistry {
+    use super::Pet;
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
+
+    #[storage]
+    struct Storage {
+        registration_time: Map::<Pet, u64>,
+    }
+
+    #[abi(embed_v0)]
+    impl PetRegistry of super::IPetRegistry<ContractState> {
+        fn register_pet(ref self: ContractState, key: Pet, timestamp: u64) {
+            self.registration_time.write(key, timestamp);
+        }
+
+        fn get_registration_date(self: @ContractState, key: Pet) -> u64 {
+            self.registration_time.read(key)
+        }
+    }
+}
+```

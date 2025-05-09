@@ -1,0 +1,59 @@
+# Library calls
+
+External calls can be made on Starknet by two means: Contract dispatchers or Library dispatchers. Dispatchers are automatically created and exported by the compiler when a contract interface is defined.
+
+With Contract dispatcher we are calling an already deployed contract (with associated state), therefore contract address is passed to the dispatcher to make the call. However, with library dispatcher we are simply making function calls to declared contract **classes** (stateless).
+
+Contract dispatcher call is synonymous to external calls in Solidity, while library dispatcher call is synonymous to delegate call.
+
+For further reading: https://book.cairo-lang.org/ch15-03-executing-code-from-another-class.html#library-calls[Cairo book^].
+
+```cairo
+#[starknet::interface]
+pub trait IMathUtils<T> {
+    fn add(ref self: T, x: u32, y: u32) -> u32;
+    fn set_class_hash(ref self: T, class_hash: starknet::ClassHash);
+}
+
+// contract A
+#[starknet::contract]
+pub mod MathUtils {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl ImathUtilsImpl of super::IMathUtils<ContractState> {
+        fn add(ref self: ContractState, x: u32, y: u32) -> u32 {
+            x + y
+        }
+
+        fn set_class_hash(ref self: ContractState, class_hash: starknet::ClassHash) {}
+    }
+}
+
+
+// contract B to make library call to the class of contract A
+#[starknet::contract]
+pub mod MathUtilsLibraryCall {
+    use super::{IMathUtilsDispatcherTrait, IMathUtilsLibraryDispatcher};
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+    #[storage]
+    struct Storage {
+        value: u32,
+        lib_class_hash: starknet::ClassHash,
+    }
+
+    #[abi(embed_v0)]
+    impl MathUtils of super::IMathUtils<ContractState> {
+        fn add(ref self: ContractState, x: u32, y: u32) -> u32 {
+            IMathUtilsLibraryDispatcher { class_hash: self.lib_class_hash.read() }.add(x, y)
+        }
+
+        #[abi(embed_v0)]
+        fn set_class_hash(ref self: ContractState, class_hash: starknet::ClassHash) {
+            self.lib_class_hash.write(class_hash);
+        }
+    }
+}
+```
