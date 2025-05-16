@@ -1,9 +1,10 @@
-[id="block_structure"]
-= Block structure
+= Blocks
 
 == Introduction
-
-A Starknet block is a list of transactions and a block header that contains the following fields:
+Starknet blocks are the core units of execution and state progression on the Starknet network, with each block comprised of a list of transactions and a block header. The block header contains xref:whats_in_a_block[a lot of information] about the block, including a hash of its parent and a commitment to their state diff, as well as commitments the transactions, transactions receipts, and events included in the block.
+ 
+== Block header structure
+A Starknet block header contains the following fields:
 
 [%autowidth]
 |===
@@ -45,9 +46,7 @@ A Starknet block is a list of transactions and a block header that contains the 
 
 |===
 
-[#block_hash]
-== Block hash
-
+=== Block hash
 A block hash is defined by:
 
 [,,subs="quotes"]
@@ -95,10 +94,8 @@ where `h` is the xref:../../cryptography.adoc#poseidon-hash[Poseidon hash functi
 For a reference implementation, see link:https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L68[ `block_hash_calculator.rs`] in the Starknet sequencer's GitHub repository
 ====
 
-[#state_diff_hash]
-== State diff commitment
-
-The state diff commitment is defined by:
+=== State diff commitment
+A state diff commitment is defined by:
 
 [,,subs="quotes"]
 ----
@@ -124,35 +121,15 @@ Where:
 - `1` and `0` are placeholders that may be used in the future
 - `c~i~,k~i,1~, v~i,1~, ... , k~i,m^i^~,v~i,m^i^~` are `m^i^` updates `(k~i,1~, v~i,1~), ... ,(k~i,m^i^~, v~i,m^i^~)` to contract addresses `c~i~`
 
-[#transactions_events_receipts_commitments]
-== Transactions, events, and receipts commitments
-The commitment to transactions, the commitment to events and the commitment to receipts are all roots of height-64 binary Merkle Patricia tries where the leaf at index `i` corresponds to:
+=== Transactions, events, and receipts commitments
+Commitments to transactions, transactions receipts, and events are all roots of height-64 binary Merkle Patricia tries where the leaf at index `i` corresponds to:
 
 * For transactions: `h(transaction_hash, signature)` for the ``i``'th transaction included in the block, where `h` is the xref:../../cryptography.adoc#poseidon-hash[Poseidon hash function].
 Note that the signature is itself a (possibly empty) array of field elements.
-* For events: The xref:#event_hash[event hash] of the ``i``'th emitted event included in the block
-* For receipts: The xref:#receipt_hash[receipt hash] of the ``i``'th transaction receipt included in the block
+* For transaction receipts: The xref:#receipt_hash[hash] of the ``i``'th transaction receipt included in the block
+* For events: The xref:#event_hash[hash] of the ``i``'th emitted event included in the block
 
-[discrete]
-=== Event hash
-
-The hash of an xref:../smart-contracts/starknet-events.adoc[event] emitted by a contract whose address is `emitter_address` and a transaction whose hash is `tx_hash` is defined by:
-
-[,,subs="quotes"]
-----
-h(
-    emitter_address,
-    tx_hash,
-    h(keys),
-    h(data)
-)
-----
-
-Where `h` is the xref:../../cryptography.adoc#poseidon-hash[Poseidon hash function].
-
-[discrete]
-=== Receipt hash
-
+==== Transaction receipt hash
 The hash of a xref:./transaction-life-cycle.adoc#transaction-receipt[transaction receipt] is defined by:
 
 [,,subs="quotes"]
@@ -178,3 +155,18 @@ h(
     from~1~, to~1~, h(len(payload~1~) || payload~1~), ... , from~n~, to~n~, h(len(payload~n~) || payload~n~)
 )
 ----
+
+==== Event hash
+The hash of an xref:../smart-contracts/starknet-events.adoc[event] emitted by a contract whose address is `emitter_address` and a transaction whose hash is `tx_hash` is defined by:
+
+[,,subs="quotes"]
+----
+h(
+    emitter_address,
+    tx_hash,
+    h(keys),
+    h(data)
+)
+----
+
+Where `h` is the xref:../../cryptography.adoc#poseidon-hash[Poseidon hash function].
