@@ -1,0 +1,262 @@
+= Accounts
+
+== Introduction
+
+Accounts represent users onchain, and enable them to interact with the blockchain. xref:ethereums_account_structure[Unlike Ethereum], Starknet facilitates account abstraction natively, via its unique account xref:starknets_account_structure[structure] and xref:account_nonces[nonce managment]. Accounts can be xref:deploying_a_starknet_account[easily deployed on Starknet], both with or without having a preexisting account.
+
+// == What is an account?
+
+// An account represents a user onchain, and enables that user to interact with the blockchain.
+
+// Through an account, you can send transactions and interact with other contracts. In order for you to own an onchain asset, such as an ERC-20 token or an NFT, that asset must be associated with your account address.
+
+== Ethereum's account structure
+
+Within Ethereum individual user accounts are known as Externally Owned Accounts (EOAs). EOAs differ from smart contracts in that EOAs are not controlled by code, but rather by a pair of private and public keys. The account's address is derived from those keys, and only by possessing the private key can you initiate transactions from an account.
+// While Ethereum contracts are _passive_, that is, they can only change if they were called inside a transaction, EOAs can initiate transactions.
+While simple, because the signature scheme is fixed, EOAs have some drawbacks, including the following:
+
+* Control over the private key gives complete control over
+the account, so you must keep your seed phrase secure yet accessible.
+* Wallet functionality has limited flexibility 
+
+https://eips.ethereum.org/EIPS/eip-4337[ERC-4337] is a design proposal for Ethereum that outlines __account abstraction_, whereby all accounts are managed via a dedicated smart contract on the Ethereum network, as a way to increase flexibility and usability.
+// You can add custom logic on top of the basic EOA functionality, thereby bringing account abstraction into Ethereum.
+// === What is Account Abstraction?
+// Account abstraction enables more flexible account management. Rather than the protocol determining an account's behavior, an _account contract_, which is a smart contract with programmable logic, defines a user's account.
+Using account abstraction you can program how your account functions, including:
+
+* Determine what it means for a signature to be valid, or what contracts your account is allowed to interact with, also known as _signature abstraction_
+
+* Pay transaction fees in different tokens, also known as _fee abstraction_
+
+* Design your own replay protection mechanism and allow sending multiple uncoupled transactions in parallel, also known as _nonce abstraction_
++
+[NOTE]
+====
+Without account abstractions, EOAs cannot send two transactions in parallel, but rather must wait for confirmation of the first before sending the second, as otherwise the second transaction can be rejected due to an invalid nonce. With account abstraction, sequential nonces is not required.
+====
+
+// Today, Starknet offers signature abstraction. In the future, we will enrich the current account abstraction design. For example, see the https://community.starknet.io/t/starknet-account-abstraction-model-part-1/781[paymaster proposal^] for fee abstraction in the Starknet Community Forum.
+
+Two prominent examples of how account abstraction might be used to program account functionality include:
+
+* *Social recovery:* retrieving your wallet if in case its lost via a selected social network, vastly improving the typical experience of wallet recovery
+
+* *Operating your account via facial recognition:* Using your phone's native hardware to sign transactions, making it practically impossible to take control of another user's account, even if your phone is stolen
+
+== Starknet's account structure
+
+Starknet's account structure is inspired by Ethereum's EIP-4337 where 
+smart contract accounts with arbitrary verification logic are used instead of EOAs.
+// === Account functions
+
+A valid account contract in Starknet is simply a contract that includes the following functions:
+
+// For more information, see xref:architecture-and-concepts:accounts/account-functions.adoc[].
+
+
+// == Account interface function reference
+
+// === Overview
+
+// The functions in the table xref:#starknet_account_interface_functions[] are part of account contracts. Where required, you must include these functions within your account contract. The logic of these functions can be mostly arbitrary, with a few limitations. For information on these limitations, see xref:#limitations_of_validation[].
+
+// [#starknet_account_interface_functions]
+// .Starknet account interface functions
+[cols="1,3a"]
+|===
+| Function name | When required
+
+| `+__validate__+` | Always required
+| `+__execute__+` | Always required. The signatures of `+__validate__+` and `+__execute__+` must be identical.
+
+[WARNING]
+====
+Two critical validations must happen in `+__execute__+`, and their absence can lead to draining of the account's funds:
+
+(1) `assert!(get_caller_address().is_zero())`
+
+This asserts that the account's `+__execute__+` is not called from another contract, thus skipping validations (in later versions we may disallow calling `__execute__` from another contract at the protocol level)
+
+(2) `assert!(get_tx_info().unbox().version.into() >= 1_u32)`
+
+This asserts that the transaction's version is at least 1, preventing the account from accepting `INVOKE` v0 transactions. It is critical to explicitly disallow the deprecated v0 transaction type, as v0 transactions assume that the signature verification happens in `+__execute__+`, and are thus skipping `+__validate__+` entirely.
+====
+| `+__validate_declare__+` | Required for the account to be able to send a `DECLARE` transaction. This function must receive exactly one argument, which is the class hash of the declared class.
+| `+__validate_deploy__+` a| Required to allow deploying an instance of the account contract with a `DEPLOY_ACCOUNT` transaction. The arguments of `+__validate_deploy__+` must be the class hash of the account to be deployed, the salt used for computing the account's contract address, followed by the constructor arguments.
+
+[NOTE]
+====
+You can only use the `+__validate_deploy__+` function in an account contract to validate the `DEPLOY_ACCOUNT` transaction for that same contract.
+That is, this function runs at most once throughout the lifecycle of the account.
+====
+| `constructor` | All contracts have a `constructor` function. It can be explicitly defined in the contract, or if not explicitly defined, the sequencer uses a default `constructor` function, which is empty.
+|===
+
+=== Flow
+
+When the sequencer receives a transaction, it calls the corresponding function with the appropriate input from the transaction's data, as follows:
+
+* For a `DECLARE` transaction, the sequencer validates the transaction by calling the `+__validate_declare__+` function.
+
+* For an `INVOKE` transaction, the sequencer calls the `+__validate__+` function with the transaction's calldata as input, after being deserialized to the arguments in the `+__validate__+` function's signature. After successfully completing validation, the sequencer calls the `+__execute__+` function with the same arguments.
+
+* For a `DEPLOY_ACCOUNT` transaction, the sequencer calls the `constructor` function with the transaction's `constructor_calldata` as input, after being deserialized to the arguments in the constructor signature. After the successful execution of the constructor, the sequencer validates the transaction by calling the `+__validate_deploy__+` function.
+
+[IMPORTANT]
+====
+For an `INVOKE` and `DEPLOY_ACCOUNT` transactions, it is up to the sender to make sure that the calldata is serializied correctly according to either the `+__validate__+` or `constructor` function's signature.
+====
+
+[NOTE]
+====
+Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from DoS attacks.
+====
+
+[TIP]
+====
+For more information on transaction types and lifecycle, see xref:architecture-and-concepts:transactions.adoc[].
+
+For more information on the each transaction's fields, see xref:resources:transactions-reference.adoc[].
+====
+
+=== Limitations
+
+The logic of the `+__validate__+`, `+__validate_deploy__+`, `+__validate_declare__+`, and `constructor` functions can be mostly arbitrary, except for the following limitations:
+
+[NOTE]
+====
+For the `constructor` function, limitations applies only when run in a `DEPLOY_ACCOUNT` transaction (in particular, *not* when an account is deployed from an existing class via the `deploy` syscall)
+====
+
+* You cannot use more than 1,000,000 Cairo steps
+* You cannot use more than 100,000,000 gas
+* You cannot call the following syscalls:
+** `get_class_hash_at`
+** `get_sequencer_address` (this syscall is only supported for Cairo 0 contracts)
++
+[IMPORTANT]
+====
+Starting from Starknet version 0.14.0, calling the `deploy` syscall will also not be possible.
+====
+* You cannot call functions in external contracts
++
+[NOTE]
+====
+This restriction enforces a single storage update being able to invalidate only transactions from a single account. However, be aware that an account can always invalidate its own past transactions by e.g. changing its public key.
+
+This limitation implies that the fees you need to pay to invalidate transactions in the mempool are directly proportional to the number of unique accounts whose transactions you want to invalidate.
+====
+* When calling the `get_execution_info` syscall:
+** `sequencer_address` is set to zero
+** `block_timestamp` returns the time (in UTC), rounded to the most recent hour
+** `block_number` returns the block number, rounded down to the nearest multiple of 100
+
+
+These limitations are designed to prevent the following DoS attacks on the sequencer:
+
+* An attacker could cause the sequencer to perform a large amount of work before a transaction fails validation. Two examples of such attacks are:
+** Spamming `INVOKE` transactions whose `+__validate__+` requires many steps, but eventually fails
+** Spamming `DEPLOY_ACCOUNT` transactions that are invalid as a result of the constructor or `+__validate_deploy__+` failing.
+* The above attacks are solved by making sure that the validation step is not resource-intensive, e.g. by keeping the maximal number of steps low. However, even if the validation is simple, the following "mempool pollution" attack could still be possible:
+. An attacker fills the mempool with transactions that are valid at the time they are sent.
+. The sequencer is ready to execute them, thinking that by the time it includes them in a block, they will still be valid.
+. Shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it's included in a block, e.g. by offering higher fees for this one transaction.
+An example of such an attack is having the implementation of `+__validate__+` checks that the value of a storage slot is `1`, and the attacker's transaction later sets it to `0`. Restricting validation functions from calling external contracts prevents this attack.
+
+=== Failures
+
+When the `+__validate__+`, `+__validate_deploy__+`, or `+__validate_declare__+` functions fail, the account in question does not pay any fee, and the transaction's status is `REJECTED`.
+
+When the `+__execute__+` function fails, the transaction's status is `REVERTED`. Similar to Ethereum, a reverted transaction is included in a block, and the sequencer is eligible to charge a fee for the work done up to the point of failure.
+
+[TIP]
+====
+To learn more about transaction statuses, see xref:transactions.adoc#transaction_statuses[Transactions].
+====
+
+=== SNIP-6
+
+While not mandatory at the protocol level, you can use a richer standard interface for accounts, defined in https://github.com/starknet-io/SNIPs/blob/main/SNIPS/snip-6.md[Starknet Improvement Proposal 6 (SNIP-6)^]. SNIP-6 was developed by community members at https://www.openzeppelin.com/[OpenZeppelin^], in close collaboration with wallet teams and other core Starknet developers.
+
+=== Example
+
+Thanks to account abstraction, the logic of `+__execute__+` and the different validation functions is up to the party implementing the account. To review a concrete implementation, you can check out OpenZeppelin's https://github.com/OpenZeppelin/cairo-contracts/blob/v0.14.0/src/account/account.cairo#L72[account component^], which also adheres to xref:snip-6[SNIP6].
+
+== Account nonces
+
+Similar to Ethereum, every contract in Starknet, including account contracts, has a nonce. The nonce of a transaction sent from an account must match the nonce of that account, which changes after the transaction is executed — even if it was reverted. Nonces serves two important roles:
+
+* They guarantee transaction hash uniqueness, which is important for a good user experience
+* They provide replay protection to the account, by binding the signature to a particular nonce and preventing a malicious party from replaying the transaction
+
+Also similarly to Ethereum, Starknet currently determines the nonce structure at the protocol level to be sequential (i.e., the nonce of a transaction sent from an account is incremented by one after the transaction is executed). In the future, Starknet will consider a more flexible design, extending account abstraction to nonce abstraction.
+
+However, unlike Ethereum, only the nonce of account contracts — that is, those adhering to xref:starknets_account_structure[Starknet's account structure] — can be non-zero in Starknet. In contrast, in Ethereum, regular smart contracts can also increment their nonce by deploying smart contracts (i.e., executing the `CREATE` and `CREATE2` opcodes). For more information on accounts in Ethereum, see https://ethereum.org/en/developers/docs/accounts/[Ethereum Accounts^] in the Ethereum documentation.
+
+== Deploying a new account
+
+You can deploy a new account in the following ways:
+
+* Sending a `DEPLOY_ACCOUNT` transaction, which does not require a preexisting account.
+* Using the xref:accounts/universal-deployer.adoc[Universal Deployer Contract (UDC)], which requires an existing account to send the `INVOKE` transaction
+
+Upon receiving one of these transactions, the sequencer performs the following steps:
+
+. Runs the respective validation function in the contract, as follows:
+** When deploying with the `DEPLOY_ACCOUNT` transaction type, the sequencer executes the `+__validate_deploy__+` function in the deployed contract.
+** When deploying using the UDC, the sequencer executes the `+__validate__+` function in the contract of the sender's address.
+. Executes the constructor with the given arguments.
+. Charges fees from the new account address.
++
+[NOTE]
+====
+If you use a `DEPLOY_ACCOUNT` transaction, the fees are paid from the address of the deployed account. If you use the UDC, which requires an `INVOKE` transaction, the fees are paid from the sender's account. For information on the differences between V1 and V3 `INVOKE` transactions, see xref:network-architecture/transactions.adoc#invoke_transaction[`INVOKE` transaction] in _Transaction types_.
+====
+. Sets the account's nonce as follows:
+** `1`, when deployed with a `DEPLOY_ACCOUNT` transaction
+** `0`, when deployed with the UDC
+
+// === Deploying a new account with Starkli
+
+// Starkli simplifies account creation, whether you create an account as a Starknet wallet account, or using the UDC.
+
+// To create and deploy a new account, use Starkli's `starkli account` command.
+
+// For more information on creating a new account as a Starknet wallet account with a `DEPLOY_ACCOUNT` transaction, or by using the UDC with an `INVOKE` transaction, see link:https://book.starkli.rs/accounts[Accounts] in the Starkli Book.
+
+// === `DEPLOY_ACCOUNT` constructor restrictions
+
+// The constructor of the `DEPLOY_ACCOUNT` transaction has the following limitations:
+
+// * Restricted access to `sequencer_address` in the `get_execution_info` syscall. The syscall returns zero values for `sequencer_address`
+// * Restricted access to the following syscalls:
+// ** `get_block_hash` for Cairo contracts
+// ** `get_sequencer_address` for Cairo 0 contracts
+
+// === Additional resources
+
+// * https://book.starkli.rs/accounts[Accounts^] in the Starkli Book
+// * xref:accounts/universal-deployer.adoc[]
+// * xref:network-architecture/transactions.adoc[]
+
+// == Simplified transaction flow
+
+// The key stages of transaction lifetime are:
+
+// . The sequencer selects a transaction from the mempool and calls the `+__validate__+` function.
+// . If the transaction is valid, the sequencer calls the `+__execute__+` function.
+// . If `+__execute__+` runs successfully, the sequencer includes the transaction in the block, charges the fee, and proceeds to work on the next transaction.
+// . After completing the block, the sequencer sends the block to the prover.
+
+
+// // Why is this section relevant to this topic?
+
+// === The payment mechanism
+
+// The sequencer receives fees in ETH in return for including transactions in a block.
+
+// For more details on how the transaction fee is computed, see xref:../network-architecture/fee-mechanism.adoc[Gas and transaction fees].
+
+
