@@ -1,0 +1,251 @@
+= Transactions
+
+== Introduction
+Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only xref:transaction_types[three types] of transactions, with each type going through the same xref:transaction_lifecycle[lifecycle] to receive its xref:transaction_statuses[execution and finality statuses]. Each transaction is issued a xref:transaction_receipt[receipt], which includes its statuses and other information about it.
+
+.Additional information
+
+* xref:resources:transactions-reference.adoc[] in _Resources_
+* https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json[`starknet_api_openrpc.json`^] in the `starknet-specs` GitHub repository
+
+== Transaction types
+Starknet supports the following types of transactions:
+
+[horizontal,labelwidth="20"]
+`DECLARE`:: Declares new contract classes, enabling new contract instances.
+`INVOKE`:: Invokes an existing function in a contract.
+`DEPLOY_ACCOUNT`:: Deploys new account contracts in smart wallets.
+
+[NOTE]
+====
+The xref:network-architecture/messaging-mechanism.adoc#l1_handler_transaction[`L1HandlerTransaction` type] is also a valid transaction type within Starknet, be it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations (particularly, handling messages from L1 to L2).
+
+The `DEPLOY` transaction type existed in Starknet for deploying account before being replaced by `DEPLOY_ACCOUNT`. `DEPLOY` only had one version (v0) and is now unsupported by Starknet. 
+====
+
+// === `INVOKE`
+
+// The `INVOKE` transaction type invokes a function in an existing contract instance. The contract code of the account that sends the `INVOKE` transaction determines how to process the transaction.
+
+// [NOTE]
+// ====
+// Because an account's `+__validate__+` and `+__execute__+` functions can contain any logic, the account ultimately determines how to handle the `INVOKE` transaction.
+// ====
+
+// Every `INVOKE`  transaction in Starknet undergoes the validation and execution stages, initiated by the `+__validate__+` and `+__execute__+` functions. The validation stage verifies that the account that sent the transaction approves it.
+
+// === `DECLARE`
+
+// The `DECLARE` transaction introduces new contract classes into the state of Starknet, enabling other contracts to deploy instances of those classes or use them in a library call. For more information, see xref:architecture-and-concepts:smart-contracts/contract-classes.adoc[contract classes].
+
+// === `DEPLOY_ACCOUNT`
+
+// Since StarkNet v0.10.1 the `DEPLOY_ACCOUNT` transaction replaces the `DEPLOY` transaction for deploying account contracts.
+
+// To use it, you should first pre-fund your new account address so that you can pay the
+// transaction fee. You can then send the `DEPLOY_ACCOUNT` transaction.
+
+// For more information, see xref:accounts/deploying-new-accounts.adoc[].
+
+Each transaction type is versioned, with versions increasing when the fields that comprise the transaction change, either with the addition of a new field or the removal of an existing field. The following table summarizes the current, deprecated, and unsupported versions of each transaction type:
+
+[cols=",,,"]
+|===
+| Type | Current version | Deprecated versions | Unsupported versions
+
+|`INVOKE`
+| v3
+| v1, v0
+| None
+
+|`DECLARE`
+| v3
+| v2, v1
+| v0
+
+|`DEPLOY_ACCOUNT`
+| v3
+| v1
+| None
+|===
+
+[IMPORTANT]
+====
+Do not submit a transaction that uses an unsupported transaction type, as it cannot be included in a proof, and therefore cannot become part of a Starknet block.
+
+Sending transaction that use deprecated versions is still supported, but support will be removed in an upcoming Starknet release.
+====
+
+== Transaction lifecycle
+The high-level steps in the Starknet transaction lifecycle are as follows:
+
+. *Transaction submission:* A transaction is submitted to one of the gateways, which functions as the mempool, and marks it as received.
+
+. *Mempool validation:*
+The mempool performs preliminary validation of the transaction, such as ensuring that its invoker's balance exceeds the transaction's `max_fee` value, assuring the transaction's calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.
++
+[NOTE]
+====
+Mempool validation in this context is analogous to Ethereum's signature checking, and includes running the account's `+__validate__+` function for an `INVOKE` transaction, `+__validate_declare__+` for a `DECLARE` transaction, or `+__validate_deploy__+` for a `DEPLOY_ACCOUNT` transaction.
+====
+. *Sequencer validation:* The sequencer performs preliminary validation of the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.
++
+[NOTE]
+====
+The sequencer repeats the same validation performed by the mempool.
+====
+
+. *Execution:* The sequencer batches all transactions that passed the preliminary validation into a block, and applies them to the state sequentially. If a transaction fails during execution, it is included in the block with as reverted.
+
+. *Proof generation and verification:* The prover uses the xref:network-architecture/os.adoc[Starknet operating system] to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.
+
+== Transaction statuses
+
+The following are the possible statuses of a transaction from the moment a user sends it until the moment it passes the L1 verifier:
+
+[cols="1,2,4"]
+|===
+| Type | Status | Description
+
+.5+.^| *Finality*
+
+| `NOT_RECEIVED`
+| The transaction is not yet known to the sequencer.
+
+| `RECEIVED`
+a|The transaction was received by the mempool. The transaction is now either executed successfully, rejected, or reverted.
+
+| `REJECTED`
+a| The transaction was received by the mempool but failed the validation by the sequencer. Such transactions are not included in a block.
+[NOTE]
+====
+A rejected transaction is stored in the mempool. You cannot send another transaction with the same transaction hash.
+====
+
+| `ACCEPTED_ON_L2`
+| The transaction was executed and included in a block.
+
+| `ACCEPTED_ON_L1`
+| The transaction was accepted on Ethereum.
+
+.2+.^| *Execution*
+
+| `REVERTED`
+a| The transaction passed validation but failed during the execution by the sequencer, and is included in a block as reverted.
+[NOTE]
+====
+Since the `DEPLOY_ACCOUNT` and `DECLARE` transactions don't have an execution phase, they cannot be reverted.
+====
+
+| `SUCCEEDED`
+| The transaction was successfully executed by the sequencer and is included in a block.
+|===
+
+The diagram below illustrates how each transaction status fits into the overall transaction flow:
+
+image::txn-flow.png[]
+
+=== State implications of reverted transactions
+
+When a transaction is marked as `REVERTED`, the following state implications occur:
+
+[horizontal,labelwidth="20"]
+Nonce increases:: The nonce value for the account of the failed transaction iterates despite the failure.
+
+Fee charge:: The sequencer charges a fee for the execution of the transaction up to the point of failure, and a respective `Transfer` event is emitted.
+
+Partial reversion:: All changes that occurred during the validation stage are not reverted. However, all changes that occurred during the execution stage are reverted, including all messages to L1 or any events that were emitted during this stage. Events might still be emitted from the validation stage or the fee charge stage.
+
+Fee calculation:: The fee charged for `REVERTED` transactions is the smaller of the following two values:
+
+* The maximum fee that the user is willing to pay, either `max_fee` (pre-v3 transactions) or stem:[\text{max_amount} \cdot \text{max_price_per_unit}] (v3 transactions).
+* The total consumed resources. 
++
+[NOTE]
+====
+Consumed resources are resources used for the execution of the transaction up to the point of failure, including Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the validation and execution stages.
+====
+
+== Transaction receipt
+A transaction receipt can be obtained by using the Starknet API's `starknet_getTransactionReceipt` endpoint and contains the following fields:
+
+[horizontal,labelwidth="25"]
+`transaction_hash`:: The hash of the transaction.
+`actual_fee`:: The actual fee paid for the transaction.
+`finality_status`:: The finality status of the transaction.
+`execution_status`:: The execution status of the transaction.
+`block_hash`:: The hash of the block that includes the transaction
+`block_number`:: The sequential number of the block that includes the transaction
+`messages_sent`:: A list of messages sent to L1.
+`events`:: The events emitted.
+`execution_resource`:: A summary of the execution resources used by the transaction.
+`type`:: The type of the transaction.
+
+The following is an example of a transaction receipt:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "actual_fee": "0x221db5dbf6db",
+    "block_hash": "0x301fc0d09c5810600af7bb9610be10596ad6f4e6d28a60d397dd148f0962a88",
+    "block_number": 906096,
+    "events": [
+      {
+        "data": [
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
+          "0x0",
+          "0x9184e72a000",
+          "0x0"
+        ],
+        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "keys": [
+          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+        ]
+      },
+      {
+        "data": [
+          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
+          "0x9184e72a000",
+          "0x0",
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7"
+        ],
+        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
+        "keys": [
+          "0x194fc63c49b0f07c8e7a78476844837255213824bd6cb81e0ccfb949921aad1"
+        ]
+      },
+      {
+        "data": [
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
+          "0x1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
+          "0x221db5dbf6db",
+          "0x0"
+        ],
+        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "keys": [
+          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+        ]
+      }
+    ],
+    "execution_status": "SUCCEEDED",
+    "finality_status": "ACCEPTED_ON_L2",
+    "messages_sent": [
+      {
+        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
+        "payload": [
+          "0x0",
+          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
+          "0x9184e72a000",
+          "0x0"
+        ],
+        "to_address": "0xc3511006c04ef1d78af4c8e0e74ec18a6e64ff9e"
+      }
+    ],
+    "transaction_hash": "0xdeadbeef",
+    "type": "INVOKE"
+  },
+  "id": 1
+}
+----
