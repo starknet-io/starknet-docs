@@ -3,9 +3,11 @@
 
 == Introduction
 
-The field element (`felt252`), which contains 252 bits, is the only actual type in the Cairo VM. So xref:data_types_of_252_bits_or_less[all data types that fit in 252 bits] are represented by a single felt, and xref:data_types_greater_than_252_bits[all data types that are larger than 252 bits], such as `u256` or arrays, are ultimately represented by a list of felts. In order to interact with a contract, you need to know how to encode its arguments as a list of felts so you can correctly formulate the calldata in the transaction.
+The field element (`felt252`), which contains 252 bits, is the only actual type in the Cairo VM. So, xref:data_types_using_at_most_252_bits[all data types that fit in 252 bits] are represented by a single felt, and xref:data_types_using_more_than_252_bits[all data types that are larger than 252 bits], such as `u256` or arrays, are represented by a list of felts]. Therefore, in order to interact with a contract, you must know how to xref:serialization_of_data_types_using_more_than_252_bits[serialize any arguments that are larger than 252 bits to a list of felts] so you can correctly formulate the calldata in the transaction.
 
-Using the https://foundry-rs.github.io/starknet-foundry/starknet/calldata-transformation.html#using---arguments[`--argument` flag^] of xref:tools:core-tools.adoc#starknet-foundry[Starknet Foundry's `sncast`] is highly recommend to simply serialization, especially for working with complicated data structures. From `sncast` v0.43.0, the results of `call` are also parsed into readable information, demonstrated in the following example:
+[IMPORTANT]
+====
+For any developers that are not developing a Starknet library or SDK developer, using either one of the existing xref:tools:interacting-with-starknet.adoc#sdks[Starknet SDKs] or the https://foundry-rs.github.io/starknet-foundry/starknet/calldata-transformation.html#using---arguments[`--argument` flag^] of xref:tools:core-tools.adoc#starknet-foundry[Starknet Foundry's `sncast`] is highly recommend to greatly simply the serialization process. From `sncast` v0.43.0, results of `sncast call` are also parsed into readable information, demonstrated in the following example:
 [source,terminal]
 ----
 sncast call \
@@ -25,27 +27,21 @@ response: Order {
   name: "This is my order"
 }
 ----
-
-[TIP]
 ====
-``sncast``'s `--arguments` flag is highly recommend to anyone who is struggling with calldata serialization.
-====
-
-xref:tools:interacting-with-starknet.adoc#sdks[Starknet SDKs], such as starknet.js, also encode the calldata for you, allowing you to simply specify any type while the SDK takes care of the serialization and encoding.
 
 .Additional resources
 
 * https://book.cairo-lang.org/ch02-02-data-types.html#integer-types[Integer types^] in _The Cairo Programming Language_
 
-== Serialization of data types using 252 bits or less
+== Data types using at most 252 bits
 
-For each of the following types, the value is serialized as a single-member list that contains one `felt252` value:
+The following Cairo data types are using at most 252 bits:
 
 * `ContractAddress`
 * `EthAddress`
 * `StorageAddress`
 * `ClassHash`
-* Unsigned integers smaller than 252 bits: `u8`, `u16`, `u32`, `u64`, `u128`, and `usize`
+* Unsigned integers using at most 252 bits: `u8`, `u16`, `u32`, `u64`, `u128`, and `usize`
 * `bytes31`
 * `felt252`
 * Signed integers: `i8`, `i16`, `i32`, `i64`, and `i128`
@@ -62,15 +58,19 @@ P = 2^{251} + 17*2^{192} + 1
 For example, `-5` is serialized as stem:[P-5]. For more information on the value of stem:[P], see xref:architecture-and-concepts:cryptography.adoc[].
 ====
 
+For these types, each value is serialized as a single-member list that contains one `felt252` value.
+
+== Data types using more than 252 bits
+
+The following Cairo data types use more than 252 bits and therefore have non-trivial serialization:
+
+* Unsigned integers larger than 252 bits: `u256`and `u512`
+* Arrays and spans
+* Enums
+* Structs and tuples
+* `ByteArray` (which represents strings)
+
 == Serialization of data types using more than 252 bits
-
-The following Cairo data types have non-trivial serialization:
-
-* Unsigned integers larger than 252 bits: xref:serialization_of_u256[`u256`] and xref:serialization_of_u512[`u512`]
-* xref:serialization_of_arrays_and_spans[arrays and spans]
-* xref:serialization_of_enums[enums]
-* xref:serialization_of_structs_and_tuples[structs and tuples]
-* xref:serialization_of_byte_arrays[`ByteArray`] (which represents strings)
 
 === Serialization of `u256`
 
