@@ -743,10 +743,17 @@
 <h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So <a href="#data_types_of_252_bits_or_less">all data types that fit in 252 bits</a> are represented by a single felt, and <a href="#data_types_greater_than_252_bits">all data types that are larger than 252 bits</a>, such as <code>u256</code> or arrays, are ultimately represented by a list of felts. In order to interact with a contract, you need to know how to encode its arguments as a list of felts so you can correctly formulate the calldata in the transaction.</p>
+<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So, <a href="#data_types_using_at_most_252_bits">all data types that fit in 252 bits</a> are represented by a single felt, and <a href="#data_types_using_more_than_252_bits">all data types that are larger than 252 bits</a>, such as <code>u256</code> or arrays, are represented by a list of felts]. Therefore, in order to interact with a contract, you must know how to <a href="#serialization_of_data_types_using_more_than_252_bits">serialize any arguments that are larger than 252 bits to a list of felts</a> so you can correctly formulate the calldata in the transaction.</p>
 </div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Using the <a href="https://foundry-rs.github.io/starknet-foundry/starknet/calldata-transformation.html#using---arguments" target="_blank" rel="noopener"><code>--argument</code> flag</a> of <a href="../../../tools/core-tools/#starknet-foundry" class="xref page">Starknet Foundry&#8217;s <code>sncast</code></a> is highly recommend to simply serialization, especially for working with complicated data structures. From <code>sncast</code> v0.43.0, the results of <code>call</code> are also parsed into readable information, demonstrated in the following example:</p>
+<p>For any developers that are not developing a Starknet library or SDK developer, using either one of the existing <a href="../../../tools/interacting-with-starknet/#sdks" class="xref page">Starknet SDKs</a> or the <a href="https://foundry-rs.github.io/starknet-foundry/starknet/calldata-transformation.html#using---arguments" target="_blank" rel="noopener"><code>--argument</code> flag</a> of <a href="../../../tools/core-tools/#starknet-foundry" class="xref page">Starknet Foundry&#8217;s <code>sncast</code></a> is highly recommend to greatly simply the serialization process. From <code>sncast</code> v0.43.0, results of <code>sncast call</code> are also parsed into readable information, demonstrated in the following example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -768,22 +775,9 @@ response: Order {
 }</code></pre>
 </div>
 </div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-tip" title="Tip"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p><code>sncast</code>'s <code>--arguments</code> flag is highly recommend to anyone who is struggling with calldata serialization.</p>
-</div>
 </td>
 </tr>
 </table>
-</div>
-<div class="paragraph">
-<p><a href="../../../tools/interacting-with-starknet/#sdks" class="xref page">Starknet SDKs</a>, such as starknet.js, also encode the calldata for you, allowing you to simply specify any type while the SDK takes care of the serialization and encoding.</p>
 </div>
 <div class="ulist">
 <div class="title">Additional resources</div>
@@ -796,10 +790,10 @@ response: Order {
 </div>
 </div>
 <div class="sect1">
-<h2 id="serialization_of_data_types_using_252_bits_or_less"><a class="anchor" href="#serialization_of_data_types_using_252_bits_or_less"></a>Serialization of data types using 252 bits or less</h2>
+<h2 id="data_types_using_at_most_252_bits"><a class="anchor" href="#data_types_using_at_most_252_bits"></a>Data types using at most 252 bits</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>For each of the following types, the value is serialized as a single-member list that contains one <code>felt252</code> value:</p>
+<p>The following Cairo data types are using at most 252 bits:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -816,7 +810,7 @@ response: Order {
 <p><code>ClassHash</code></p>
 </li>
 <li>
-<p>Unsigned integers smaller than 252 bits: <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, and <code>usize</code></p>
+<p>Unsigned integers using at most 252 bits: <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, and <code>usize</code></p>
 </li>
 <li>
 <p><code>bytes31</code></p>
@@ -851,33 +845,41 @@ response: Order {
 </li>
 </ul>
 </div>
+<div class="paragraph">
+<p>For these types, each value is serialized as a single-member list that contains one <code>felt252</code> value.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="data_types_using_more_than_252_bits"><a class="anchor" href="#data_types_using_more_than_252_bits"></a>Data types using more than 252 bits</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following Cairo data types use more than 252 bits and therefore have non-trivial serialization:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Unsigned integers larger than 252 bits: <code>u256`and `u512</code></p>
+</li>
+<li>
+<p>Arrays and spans</p>
+</li>
+<li>
+<p>Enums</p>
+</li>
+<li>
+<p>Structs and tuples</p>
+</li>
+<li>
+<p><code>ByteArray</code> (which represents strings)</p>
+</li>
+</ul>
+</div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="serialization_of_data_types_using_more_than_252_bits"><a class="anchor" href="#serialization_of_data_types_using_more_than_252_bits"></a>Serialization of data types using more than 252 bits</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>The following Cairo data types have non-trivial serialization:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Unsigned integers larger than 252 bits: <a href="#serialization_of_u256"><code>u256</code></a> and <a href="#serialization_of_u512"><code>u512</code></a></p>
-</li>
-<li>
-<p><a href="#serialization_of_arrays_and_spans">arrays and spans</a></p>
-</li>
-<li>
-<p><a href="#serialization_of_enums">enums</a></p>
-</li>
-<li>
-<p><a href="#serialization_of_structs_and_tuples">structs and tuples</a></p>
-</li>
-<li>
-<p><a href="#serialization_of_byte_arrays"><code>ByteArray</code></a> (which represents strings)</p>
-</li>
-</ul>
-</div>
 <div class="sect2">
 <h3 id="serialization_of_u256"><a class="anchor" href="#serialization_of_u256"></a>Serialization of <code>u256</code></h3>
 <div class="paragraph">
