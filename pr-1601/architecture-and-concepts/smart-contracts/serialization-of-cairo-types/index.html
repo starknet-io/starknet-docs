@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Serialization of Cairo types :: Starknet documentation</title>
     <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/smart-contracts/serialization-of-cairo-types/">
-    <link rel="prev" href="../cairo-builtins/">
-    <link rel="next" href="../system-calls-cairo1/">
+    <link rel="prev" href="../../network-architecture/data-availability/">
+    <link rel="next" href="../../staking/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -488,6 +488,11 @@
        class="nav-link"
      href="../../network-architecture/data-availability/">Data availability</a>
   </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a 
+       class="nav-link"
+     href="./">Serialization</a>
+  </li>
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
@@ -562,11 +567,6 @@
     <a 
        class="nav-link"
      href="../cairo-builtins/">Cairo builtins</a>
-  </li>
-  <li class="nav-item is-current-page" data-depth="3">
-    <a 
-       class="nav-link"
-     href="./">Serialization of Cairo types</a>
   </li>
   <li class="nav-item" data-depth="3">
     <a 
@@ -729,22 +729,53 @@
 </aside>
 <article class="doc">
 <h1 class="page">Serialization of Cairo types</h1>
-<div id="preamble">
+<div class="sect1">
+<h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>When you interact with contracts, especially if you are a library or SDK developer that wants to construct transactions, you need to understand how Cairo handles types that are larger than 252 bits so you can correctly formulate the calldata in a transaction.</p>
+<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM, so <a href="#data_types_using_at_most_252_bits">all data types that fit in 252 bits</a> are represented by a single felt and <a href="#data_types_using_more_than_252_bits">all data types that are larger than 252 bits</a> are represented by a list of felts. Therefore, in order to interact with a contract, you must know how to <a href="#serialization_of_data_types_using_more_than_252_bits">serialize any arguments that are larger than 252 bits to lists of felts</a> so you can correctly formulate the calldata in the transaction.</p>
 </div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>The field element (<code>felt252</code>), which contains 252 bits, is the only actual type in the Cairo VM. So all high-level Cairo types that are larger than 252 bits, such as <code>u256</code> or arrays, are ultimately represented by a list of felts. In order to interact with a contract, you need to know how to encode its arguments as a list of felts so you can correctly formulate the calldata in the transaction.
-SDKs, such as starknet.js, encode the calldata for you, so you can simply specify any type and the SDK properly formulates the calldata. For example, you don’t need to know that a <code>u256</code> value is represented by two <code>felt252</code> values. You can simply specify a single integer in your code, and the SDK takes care of the serialization and encoding.</p>
+<p>For any developers that are not developing a Starknet library or SDK developer, using either one of the existing <a href="../../../tools/interacting-with-starknet/#sdks" class="xref page">Starknet SDKs</a> or the <a href="https://foundry-rs.github.io/starknet-foundry/starknet/calldata-transformation.html#using---arguments" target="_blank" rel="noopener"><code>--argument</code> flag</a> of <a href="../../../tools/core-tools/#starknet-foundry" class="xref page">Starknet Foundry&#8217;s <code>sncast</code></a> is highly recommend to greatly simply the serialization process. From <code>sncast</code> v0.43.0, results of <code>sncast call</code> are also parsed into readable information, demonstrated in the following example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-terminal hljs" data-lang="terminal">sncast call \
+    --contract-address=0x00e270c8396d333f88556edf143ac751240f050d907e5190525accbe275f2348 \
+    --function=get_order \
+    --network=sepolia
+
+response: Order {
+  position_id: PositionId { value: 1_u32 },
+  base_asset_id: AssetId { value: 0x3 },
+  base_amount: -10_i64,
+  quote_asset_id: AssetId { value: 0x2d },
+  fee_asset_id: AssetId { value: 0x4d2 },
+  fee_amount: 0_u64,
+  expiration: Timestamp { seconds: 12341432_u64 },
+  salt: 0x0,
+  name: "This is my order"
+}</code></pre>
+</div>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="data_types_of_252_bits_or_less"><a class="anchor" href="#data_types_of_252_bits_or_less"></a>Data types of 252 bits or less</h2>
+<h2 id="data_types_using_at_most_252_bits"><a class="anchor" href="#data_types_using_at_most_252_bits"></a>Data types using at most 252 bits</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following types are smaller than 252 bits. For these types, each value is serialized as a single-member list that contains one <code>felt252</code> value.</p>
+<p>The following Cairo data types are using at most 252 bits:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -761,7 +792,7 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 <p><code>ClassHash</code></p>
 </li>
 <li>
-<p>Unsigned integers smaller than 252 bits: <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, and <code>usize</code></p>
+<p>Unsigned integers using at most 252 bits: <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, and <code>usize</code></p>
 </li>
 <li>
 <p><code>bytes31</code></p>
@@ -770,7 +801,14 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 <p><code>felt252</code></p>
 </li>
 <li>
-<p>Signed integers smaller than 252 bits: <code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code>, and <code>i128</code>.</p>
+<p>Signed integers: <code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code>, and <code>i128</code></p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
 <p>A negative value, \(-x\), is serialized as \(P-x\), where:</p>
 </div>
@@ -780,48 +818,52 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 </div>
 </div>
 <div class="paragraph">
-<p>For example, <code>-5</code> is serialized as \(P-5\). For more information on the value of \(P\), see <a href="../../cryptography/#stark-field" class="xref page">architecture-and-concepts:cryptography.adoc#stark-field</a>.</p>
+<p>For example, <code>-5</code> is serialized as \(P-5\). For more information on the value of \(P\), see <a href="../../cryptography/" class="xref page">Cryptography</a>.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </li>
 </ul>
 </div>
+<div class="paragraph">
+<p>For these types, each value is serialized as a single-member list that contains one <code>felt252</code> value.</p>
+</div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="data_types_greater_than_252_bits"><a class="anchor" href="#data_types_greater_than_252_bits"></a>Data types greater than 252 bits</h2>
+<h2 id="data_types_using_more_than_252_bits"><a class="anchor" href="#data_types_using_more_than_252_bits"></a>Data types using more than 252 bits</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following Cairo data types have non-trivial serialization:</p>
+<p>The following Cairo data types use more than 252 bits and therefore have non-trivial serialization:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><code>u256</code> and <code>u512</code></p>
+<p>Unsigned integers larger than 252 bits: <code>u256</code> and <code>u512</code></p>
 </li>
 <li>
-<p>arrays and spans</p>
+<p>Arrays and spans</p>
 </li>
 <li>
-<p>enums</p>
+<p>Enums</p>
 </li>
 <li>
-<p>structs and tuples</p>
+<p>Structs and tuples</p>
 </li>
 <li>
-<p><code>ByteArray</code>, which represents strings</p>
+<p>Byte arrays (which represent strings)</p>
 </li>
 </ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="serialization_of_unsigned_integers"><a class="anchor" href="#serialization_of_unsigned_integers"></a>Serialization of unsigned integers</h2>
+<h2 id="serialization_of_data_types_using_more_than_252_bits"><a class="anchor" href="#serialization_of_data_types_using_more_than_252_bits"></a>Serialization of data types using more than 252 bits</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Among unsigned integers, only <code>u256</code> and <code>u512</code> have non-trivial serialization.</p>
-</div>
 <div class="sect2">
-<h3 id="serialization_in_u256_values"><a class="anchor" href="#serialization_in_u256_values"></a>Serialization of <code>u256</code> values</h3>
+<h3 id="serialization_of_u256"><a class="anchor" href="#serialization_of_u256"></a>Serialization of <code>u256</code></h3>
 <div class="paragraph">
 <p>A <code>u256</code> value in Cairo is represented by two <code>felt252</code> values, as follows:</p>
 </div>
@@ -871,16 +913,13 @@ SDKs, such as starknet.js, encode the calldata for you, so you can simply specif
 </div>
 </div>
 <div class="sect2">
-<h3 id="serialization_in_u512_values"><a class="anchor" href="#serialization_in_u512_values"></a>Serialization of <code>u512</code> values</h3>
+<h3 id="serialization_of_u512"><a class="anchor" href="#serialization_of_u512"></a>Serialization of <code>u512</code></h3>
 <div class="paragraph">
 <p>The <code>u512</code> type in Cairo is a struct containing four <code>felt252</code> members, each representing a 128-bit limb of the original integer, similar to the <code>u256</code> type.</p>
 </div>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="serialization_of_arrays_and_spans"><a class="anchor" href="#serialization_of_arrays_and_spans"></a>Serialization of arrays and spans</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="serialization_of_arrays_and_spans"><a class="anchor" href="#serialization_of_arrays_and_spans"></a>Serialization of arrays and spans</h3>
 <div class="paragraph">
 <p>Arrays and spans are serialized as follows:</p>
 </div>
@@ -911,10 +950,8 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <p>Combining the above, the array is serialized as follows: <code>[3,10,0,20,0,0,1]</code></p>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="serialization_of_enums"><a class="anchor" href="#serialization_of_enums"></a>Serialization of enums</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="serialization_of_enums"><a class="anchor" href="#serialization_of_enums"></a>Serialization of enums</h3>
 <div class="paragraph">
 <p>An enum is serialized as follows:</p>
 </div>
@@ -962,7 +999,7 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>Week::Monday(5)</code></p></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>Index=<code>1</code>. The variant&#8217;s type is <code>u256</code>, hence serialized to <code>[5,0]</code>, as shown in <a href="#serialization_in_u256_values">Serialization of <code>u256</code> values</a> .</p>
+<p>Index=<code>1</code>. The variant&#8217;s type is <code>u256</code>, hence serialized to <code>[5,0]</code>, as shown in <a href="#serialization_in_u256_values">[serialization_in_u256_values]</a> .</p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>[1,5,0]</code></p></td>
 </tr>
@@ -1024,10 +1061,8 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <code>B</code> will be stored as <code>0</code>.</p>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="serialization_of_structs_and_tuples"><a class="anchor" href="#serialization_of_structs_and_tuples"></a>Serialization of structs and tuples</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="serialization_of_structs_and_tuples"><a class="anchor" href="#serialization_of_structs_and_tuples"></a>Serialization of structs and tuples</h3>
 <div class="paragraph">
 <p>Structs and tuples are serialized by serializing their members one at a time.</p>
 </div>
@@ -1093,7 +1128,7 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>a: 2</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">For information on serializing <code>u256</code> values, see <a href="#serialization_in_u256_values">Serialization of <code>u256</code> values</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">For information on serializing <code>u256</code> values, see <a href="#serialization_in_u256_values">[serialization_in_u256_values]</a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">[<code>2,0</code>]</p></td>
 </tr>
 <tr>
@@ -1112,10 +1147,8 @@ let array: Array&lt;u256&gt; = array![10, 20, POW_2_128]</code></pre>
 <p>Combining the above, the struct is serialized as follows: <code>[2,0,5,3,1,2,3]</code></p>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="serialization_of_byte_arrays"><a class="anchor" href="#serialization_of_byte_arrays"></a>Serialization of byte arrays</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="serialization_of_byte_arrays"><a class="anchor" href="#serialization_of_byte_arrays"></a>Serialization of byte arrays</h3>
 <div class="paragraph">
 <p>A string is represented in Cairo as a <code>ByteArray</code> type. A byte array is actually a struct with the following members:</p>
 </div>
@@ -1173,21 +1206,10 @@ The number of bytes in <code>pending_word</code>.</p>
 </div>
 </div>
 </div>
-<div class="sect1">
-<h2 id="additional_resources"><a class="anchor" href="#additional_resources"></a>Additional resources</h2>
-<div class="sectionbody">
-<div class="ulist">
-<ul>
-<li>
-<p><a href="https://book.cairo-lang.org/ch02-02-data-types.html#integer-types">Integer types</a> in <em>The Cairo Programming Language</em>.</p>
-</li>
-</ul>
-</div>
-</div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../cairo-builtins/">Cairo builtins</a></span>
-  <span class="next"><a href="../system-calls-cairo1/">System calls</a></span>
+  <span class="prev"><a href="../../network-architecture/data-availability/">Data availability</a></span>
+  <span class="next"><a href="../../staking/">Staking</a></span>
 </nav>
 </article>
   </div>
