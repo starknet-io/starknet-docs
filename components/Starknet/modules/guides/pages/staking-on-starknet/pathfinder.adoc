@@ -1,0 +1,121 @@
+= Running a full node
+
+== Introduction
+
+Welcome to the third installment of the _Becoming a Starknet validator_ guide! ✅
+
+To claim your staking rewards, you must run one of the various xref:ecosystem:fullnodes-rpc-providers.adoc#full_nodes[Starknet full node implementations]. This installment of the series will therefore walk you though running a Pathfinder full node.
+
+== Downloading a database snapshot
+
+Running a full node involves using your local machine's storage to maintain a full database of the blockchain, all the way from the genesis block.
+
+Database snapshots let you quickly start your node without having to download all blocks from the very beginning, and instead use a pre-made version of the database that's already in sync up to a certain block.
+
+To download Pathfinder's snapshot, you first need to download the https://rclone.org/[rclone^] file manager by running:
+
+[source,terminal]
+----
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+----
+
+[NOTE]
+====
+This installation script can be used to install rclone on Linux/macOS/BSD systems. For other installation methods, see https://rclone.org/install/[rclone.org/install^].
+====
+
+Once rclone is downloaded, create a new rclone configuration file: 
+
+[source,terminal]
+----
+touch $HOME/.config/rclone/rclone.conf
+----
+
+and add the following content:
+
+[source,terminal]
+----
+[pathfinder-snapshots]
+type = s3
+provider = Cloudflare
+env_auth = false
+access_key_id = 7635ce5752c94f802d97a28186e0c96d
+secret_access_key = 529f8db483aae4df4e2a781b9db0c8a3a7c75c82ff70787ba2620310791c7821
+endpoint = https://cbf011119e7864a873158d83f3304e27.r2.cloudflarestorage.com
+acl = private
+----
+
+Next, create a new `$HOME/pathfinder` directory, navigate into it, and use rclone to copy https://rpc.pathfinder.equilibrium.co/snapshots/latest[Pathfinder's latest database snapshot^] to your local directory by running:
+
+[source,terminal]
+----
+mkdir $HOME/pathfinder
+cd $HOME/pathfinder
+rclone copy -P pathfinder-snapshots:pathfinder-snapshots/<FILENAME> . 
+----
+
+Once the database snapshot is downloaded, compare the file's checksum value with the one shown at https://rpc.pathfinder.equilibrium.co/snapshots/latest[rpc.pathfinder.equilibrium.co/snapshots/latest^] by running:
+
+[source,terminal]
+----
+sha256sum <FILENAME> 
+----
+
+If the checksum values match, extract the downloaded database snapshot by running:
+
+[source,terminal]
+----
+zstd -T0 -d EXACT_FILE_NAME -o testnet-sepolia.sqlite
+----
+
+== Running the node
+
+Now that the database snapshot is extracted, you can start your node by running:
+
+[source,terminal]
+----
+docker run \
+  --name pathfinder \
+  --restart unless-stopped \
+  --detach \
+  -p 9545:9545 \
+  --user "$(id -u):$(id -g)" \
+  -e RUST_LOG=info \
+  -e <ETHEREUM_ENDPOINT> \
+  -v $HOME/pathfinder:/usr/share/pathfinder/data \
+  eqlabs/pathfinder
+----
+
+Once the docker container is up and running, you can check the docker image's logs by running: 
+
+[source,terminal]
+---- 
+docker logs -f pathfinder
+---- 
+
+If successful, the result should resemble the following:
+
+[source,terminal]
+---- 
+...
+2025-05-12T18:30:36  INFO Updated Starknet state with block 766534
+2025-05-12T18:31:07  INFO Updated Starknet state with block 766535
+2025-05-12T18:31:35  INFO Updated Starknet state with block 766536
+...
+---- 
+
+[NOTE]
+====
+To stop the node's execution, run:
+
+[source,terminal]
+----
+docker stop pathfinder
+----
+====
+
+// == Next step
+
+// Congratulations, you are now running your own Starknet Sepolia node! However, your node is not a validator yet. We will get there eventually. 
+
+// Next, we will be interacting with the staking contract to stake our STRK tokens and assigning our operation and reward addresses. Let's jump in! 
