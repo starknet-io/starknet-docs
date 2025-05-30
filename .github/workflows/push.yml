@@ -37,5 +37,8 @@ jobs:
       - name: Zip artifacts
         run: zip -r ${{ steps.get-release-data.outputs.file }}.zip package.json CHANGELOG.md
 
-      - name: scp upload to production site
-        run: sshpass -p ${{ secrets.PROD_PASS }} scp -o 'StrictHostKeyChecking no' -r public_html/ ${{ secrets.PROD_USER }}@${{ secrets.PROD_IP }}:~/
+      - name: install rsync
+        run: sudo apt install rsync -y
+
+      - name: rsync upload to production site
+        run: sshpass -p ${{ secrets.PROD_PASS }} rsync -av --delete -e "ssh -o StrictHostKeyChecking=no" public_html/ ${{ secrets.PROD_USER }}@${{ secrets.PROD_IP }}:~/
