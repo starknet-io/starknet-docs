@@ -1,69 +1,39 @@
-[id="validator_guide_pathfinder"]
-= Spinning up your validator with Pathfinder
+= Running your Starknet full node
 
-== Introduction
-In this chapter, we will be guiding you on how to run your own node on sepolia testnet using Pathfinder, a Rust implementation of the Starknet client created by Equilibrium Labs.
+== Overview
 
-== Installing Pathfinder
+Welcome to the third installment of the _Becoming a Starknet validator_ guide! ✅
 
-First, we need to create a directory to store our blockchain data.
+To claim your staking rewards, you must run one of the various xref:ecosystem:fullnodes-rpc-providers.adoc#full_nodes[Starknet full node implementations]. Starting from its second phase, the staking protocol also requires validators to prove they are actively preserving the history of the network by submitting attestations to randomly assigned blocks in each epoch. This installment of the series will therefore walk you though xref:running_a_pathfinder_node[running a Pathfinder node] and xref:running_pathfinders_attestation_service[its attestation service].
+
+== Running a Pathfinder node
+
+=== Downloading a snapshot
+
+Running a full node involves using your local machine's storage to maintain a full database of the blockchain, all the way from the genesis block.
+
+Database snapshots let you quickly start your node without having to download all blocks from the very beginning, and instead use a pre-made version of the database that's already in sync up to a certain block.
+
+To download Pathfinder's snapshot, you first need to download the https://rclone.org/[rclone^] file manager by running:
 
 [source,terminal]
 ----
-mkdir -p $HOME/pathfinder
-----
-
-Then to run Pathfinder, we run the following command 
-
-[source,terminal]
-----
-docker run \
-  --name pathfinder \
-  --restart unless-stopped \
-  --detach \
-  -p 9545:9545 \
-  --user "$(id -u):$(id -g)" \
-  -e RUST_LOG=info \
-  -e PATHFINDER_ETHEREUM_API_URL="wss://sepolia.infura.io/ws/v3/<project-id>" \
-  -v $HOME/pathfinder:/usr/share/pathfinder/data \
-  eqlabs/pathfinder
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
 ----
 
 [NOTE]
 ====
-Replace `PATHFINDER_ETHEREUM_API_URL` with your personal Ethereum Sepolia WebSocket URL before running.
+This installation script can be used to install rclone on Linux/macOS/BSD systems. For other installation methods, see https://rclone.org/install/[rclone.org/install^].
 ====
 
-[NOTE] 
-====
-You can also change the `RUST_LOG` value to `DEBUG` to inspect any issues. 
-====
-
-Once the docker container is up and running, you can check the logs of the docker image. 
+Once rclone is downloaded, create a new rclone configuration file: 
 
 [source,terminal]
----- 
-docker logs -f pathfinder
----- 
+----
+touch $HOME/.config/rclone/rclone.conf
+----
 
-We can stop the node by: 
-
-[source,terminal]
----- 
-docker stop pathfinder
----- 
-
-You will see that the Pathfinder client will start syncing from the genesis block but if we are syncing from block 0 to the latest block, the syncing time will be astronomical. 
-
-Therefore, we will be utilizing database snapshots to speed up our syncing process. Pathfinder team has provided us with a snapshot that contains blockchain history synced up to a recent time period allowing us to carry over the history and continue syncing from an earlier checkpoint rather than starting from the genesis block. 
-
-== Downloading the database snapshot
-
-To download our snapshot, we first need to download a file manager called *Rclone* which is where the snapshot resides. 
-
-Head over to the official https://rclone.org/install/[installation guide^] to get started.
-
-Then, create a new file on this path (`$HOME/.config/rclone/rclone.conf`) and add the following content:
+and add the following content:
 
 [source,terminal]
 ----
@@ -77,61 +47,102 @@ endpoint = https://cbf011119e7864a873158d83f3304e27.r2.cloudflarestorage.com
 acl = private
 ----
 
-Then, we will use `rClone` to copy the database snapshot to our local directory. The exact database file name for sepolia testnet can be found https://rpc.pathfinder.equilibrium.co/snapshots/latest[here^]. Then run the following command:
+Next, create a new `$HOME/pathfinder` directory, navigate into it, and use rclone to copy https://rpc.pathfinder.equilibrium.co/snapshots/latest[Pathfinder's latest database snapshot^] to your local directory by running:
 
 [source,terminal]
 ----
-rclone copy -P pathfinder-snapshots:pathfinder-snapshots/EXACT_FILE_NAME . 
+mkdir $HOME/pathfinder
+cd $HOME/pathfinder
+rclone copy -P pathfinder-snapshots:pathfinder-snapshots/<FILENAME> . 
 ----
 
-[NOTE]
-====
-The line `-v $HOME/pathfinder:/usr/share/pathfinder/data` sets the database path for your node. To properly apply the snapshot database, run the `rclone copy` command while on the same directory a `$HOME/pathfinder`. Or you can customize the path by changing the path directory of `$HOME/pathfinder` to the path of your choice. 
-====
-
-Once the database snapshot is downloaded, compare the file’s checksum value with the published value from the previous https://rpc.pathfinder.equilibrium.co/snapshots/latest[link^].
+Once the database snapshot is downloaded, compare the file's checksum value with the one shown at https://rpc.pathfinder.equilibrium.co/snapshots/latest[rpc.pathfinder.equilibrium.co/snapshots/latest^] by running:
 
 [source,terminal]
 ----
-sha256sum EXACT_FILE_NAME 
+sha256sum <FILENAME> 
 ----
 
-If it matches, we extract the file by running:
+If the checksum values match, extract the downloaded database snapshot by running:
 
 [source,terminal]
 ----
 zstd -T0 -d EXACT_FILE_NAME -o testnet-sepolia.sqlite
 ----
 
-[NOTE]
-====
-It is important that your extracted file name is same as `testnet-sepolia.sqlite` to avoid any errors.
-====
+=== Running the node
 
-Once the database snapshot is extracted, we can start our node again and it will start syncing from the checkpoint. 
-
-If you have an existing database already, stop your pathfinder node, and replace your existing data with the new database snapshot. 
-
-
-
-== Checking the status of your node
-
-
-
-If blocks are properly syncing, the log should have the following output: 
+Now that the database snapshot is extracted, you can start your node by running:
 
 [source,terminal]
 ----
-2025-04-22 17:39:55
-2025-04-23T00:39:55 INFO Updated Starknet state with block 714608
-2025-04-22 17:40:25
-2025-04-23T00:40:25 INFO Updated Starknet state with block 714609
-2025-04-22 17:40:55
-2025-04-23T00:40:55 INFO Updated Starknet state with block 714610
+docker run \
+  --name pathfinder \
+  --restart unless-stopped \
+  --detach \
+  -p 9545:9545 \
+  --user "$(id -u):$(id -g)" \
+  -e RUST_LOG=info \
+  -e PATHFINDER_ETHEREUM_API_URL=$ETHEREUM_URL \
+  -v $HOME/pathfinder:/usr/share/pathfinder/data \
+  eqlabs/pathfinder
 ----
 
-Awesome! You are now running your own node on sepolia testnet that is constantly receiving new blocks! But your node is not a validator yet. We will get there eventually. 
+Once the docker container is up and running, you can check the docker image's logs by running: 
 
-Next, we will be interacting with the staking contract to stake our STRK tokens and assigning our operation and reward addresses. Let’s jump in! 
+[source,terminal]
+---- 
+docker logs -f pathfinder
+---- 
 
+If successful, the result should resemble the following:
 
+[source,terminal]
+---- 
+...
+2025-05-12T18:30:36  INFO Updated Starknet state with block 766534
+2025-05-12T18:31:07  INFO Updated Starknet state with block 766535
+2025-05-12T18:31:35  INFO Updated Starknet state with block 766536
+...
+---- 
+
+[NOTE]
+====
+To stop the node's execution, run:
+
+[source,terminal]
+----
+docker stop pathfinder
+----
+====
+
+// == Next step
+
+// Congratulations, you are now running your own Starknet Sepolia node! However, your node is not a validator yet. We will get there eventually. 
+
+== Running Pathfinder's attestation service
+
+Luckily, running https://github.com/eqlabs/starknet-validator-attestation/tree/main[Pathfinder's attestation service^] is as simple as running:
+
+[source,terminal]
+----
+docker run -it --rm --network host \
+  -e VALIDATOR_ATTESTATION_OPERATIONAL_PRIVATE_KEY=$OPERATIONAL_PRIVATE_KEY \
+  ghcr.io/eqlabs/starknet-validator-attestation \
+  --staking-contract-address 0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \
+  --attestation-contract-address 0x03f32e152b9637c31bfcf73e434f78591067a01ba070505ff6ee195642c9acfb \
+  --staker-operational-address $OPERATIONAL_ADDRESS \
+  --node-url http://localhost:9545/rpc/v0_8 \
+  --local-signer
+----
+
+If successful, the result should look similar to the following:
+
+[source,terminal]
+----
+Current attestation info staker_address=0x48f8ddc0bc864f33d4c47b79a1f0e1460e0777d0b0224d8c291f1039523306e operational_address=0x48f8ddc0bc864f33d4c47b79a1f0e1460e0777d0b0224d8c291f1039523306e stake=100000000000000000000 epoch_id=1201 epoch_start=712773 epoch_length=40 attestation_window=16
+
+2025-04-22T11:04:22.716449Z  INFO starknet_validator_attestation::state: New epoch started staker_address=0x48f8ddc0bc864f33d4c47b79a1f0e1460e0777d0b0224d8c291f1039523306e operational_address=0x48f8ddc0bc864f33d4c47b79a1f0e1460e0777d0b0224d8c291f1039523306e stake=100000000000000000000 epoch_id=1205 epoch_start=712933 epoch_length=40 attestation_window=16
+2025-04-22T11:11:00.263344Z  INFO starknet_validator_attestation::state: Attestation transaction sent transaction_hash=0x79f9f5ec8dbfca48a132e8d23caad15455c6e0dc98ec517a7013c374d7d5501
+2025-04-22T11:11:03.017827Z  INFO starknet_validator_attestation::state: Attestation confirmed staker_address=0x48f8ddc0bc864f33d4c47b79a1f0e1460e0777d0b0224d8c291f1039523306e epoch_id=1205
+----
