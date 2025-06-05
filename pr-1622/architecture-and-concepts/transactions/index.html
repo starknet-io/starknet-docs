@@ -634,7 +634,7 @@
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p><strong>Transaction submission:</strong> A transaction is submitted to one of the gateways, which functions as the mempool, and marks it as received.</p>
+<p><strong>Transaction submission:</strong> A transaction is submitted to a sequencer by a full node.</p>
 </li>
 <li>
 <p><strong>Mempool validation:</strong>
@@ -685,7 +685,7 @@ The mempool performs preliminary validation of the transaction, such as ensuring
 <h2 id="transaction_statuses"><a class="anchor" href="#transaction_statuses"></a>Transaction statuses</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following are the possible statuses of a transaction from the moment a user sends it until the moment it passes the L1 verifier:</p>
+<p>The following are the possible statuses of a transaction on Starknet:</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -702,20 +702,14 @@ The mempool performs preliminary validation of the transaction, such as ensuring
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-middle" rowspan="5"><p class="tableblock"><strong>Finality</strong></p></td>
+<td class="tableblock halign-left valign-middle" rowspan="6"><p class="tableblock"><strong>Finality</strong></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>NOT_RECEIVED</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction is not yet known to the sequencer.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction is not yet known to any sequencer.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>RECEIVED</code></p></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>The transaction was received by the mempool. The transaction is now either executed successfully, rejected, or reverted.</p>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REJECTED</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>The transaction was received by the mempool but failed the validation by the sequencer. Such transactions are not included in a block.</p>
+<p>A full node has successfully submitted the transaction to a sequencer.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -725,7 +719,10 @@ The mempool performs preliminary validation of the transaction, such as ensuring
 </td>
 <td class="content">
 <div class="paragraph">
-<p>A rejected transaction is stored in the mempool. You cannot send another transaction with the same transaction hash.</p>
+<p>As there is currently no P2P protocol between full nodes for updating on each other about received transactions, querying a different node than the one that submitted the transaction for its status will result in a <code>Transaction hash not found</code> error.</p>
+</div>
+<div class="paragraph">
+<p>Therefore, relying on <code>RECEIVED</code> statuses requires initiating sticky HTTP sessions with your full node provider.</p>
 </div>
 </td>
 </tr>
@@ -733,18 +730,42 @@ The mempool performs preliminary validation of the transaction, such as ensuring
 </div></div></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>PRE-CONFIRMED</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>The transaction was written to the feeder gateway&#8217;s storage by a sequencer.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>As the transaction hasn&#8217;t been executed yet, no execution information is available and only the transaction hash is written to the feeder gateway&#8217;s storage.</p>
+</div>
+</td>
+</tr>
+</table>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>EXECUTED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by a sequencer and its receipt was written to the feeder gateway&#8217;s storage.</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L2</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was executed and included in a block.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was included in a block finalized by the consensus protocol.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L1</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was accepted on Ethereum.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Starknet state on L1 moved to a block height which is greater than or equal to the height of the block containing the transaction.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-middle" rowspan="2"><p class="tableblock"><strong>Execution</strong></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>REVERTED</code></p></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>The transaction passed validation but failed during the execution by the sequencer, and is included in a block as reverted.</p>
+<p>The transaction failed during the execution by a sequencer, and was included in a block as reverted.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -767,14 +788,6 @@ The mempool performs preliminary validation of the transaction, such as ensuring
 </tr>
 </tbody>
 </table>
-<div class="paragraph">
-<p>The diagram below illustrates how each transaction status fits into the overall transaction flow:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/txn-flow.png" alt="txn flow">
-</div>
-</div>
 <div class="sect2">
 <h3 id="state_implications_of_reverted_transactions"><a class="anchor" href="#state_implications_of_reverted_transactions"></a>State implications of reverted transactions</h3>
 <div class="paragraph">
