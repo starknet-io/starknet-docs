@@ -183,13 +183,63 @@ Notice that stem:[$m\ge 1$] always holds, because the sequencer's balance is alw
 
 Measuring the L2 computation component of a transaction differs depending on the contract class version of the caller:
 
-* For CairoZero classes or Sierra ≤ 1.6.0, computation is measured in xref:#vm_resources[] (steps and builtins)
 * For Sierra ≥ 1.7.0, computation is measured in xref:#sierra_gas[]
+
+* For CairoZero classes or Sierra ≤ 1.6.0, computation is measured in xref:#vm_resources[]
+
 +
 [NOTE]
 ====
-In Starknet v0.13.4, Sierra gas is only tracked if the parent call was also tracking Sierra gas, which means that if the account contract is Sierra 1.6.0 or older, VM resources will be tracked *throughout the entire transaction*. This condition may be relaxed in the future.
+Sierra gas is only tracked if the parent call was also tracking Sierra gas, which means that if the account contract is Sierra 1.6.0 or older, VM resources will be tracked *throughout the entire transaction*. This condition may be relaxed in the future.
 ====
+
+==== Sierra gas
+
+[TIP]
+====
+The following is a very rough description of Sierra's built-in gas accounting mechanism. For a comprehensive analysis, see https://github.com/starkware-libs/cairo/blob/main/docs/other/gas_blog_post.pdf[_Analysis of the gas accounting algorithm of Cairo 1.0_ by CryptoExperts^].
+====
+
+A Sierra program has a simple structure: types and function declaration, followed by a sequence of applications of _libfuncs_, Sierra's basic logical units (similar to opcodes, e.g. `u8_add` is a libfunc).
+
+The Cairo compiler defines a libfunc costs table, which is measured in “Sierra gas” and has a 1-1 ratio with L2 gas (i.e., a libfunc which costs 500 Sierra gas adds 500 to a transaction's overall L2 gas)
+
+[NOTE]
+====
+Despite the 1-1 ratio between Sierra gas and L2 gas, L2 gas accounts for “everything L2”, while Sierra gas strictly deals with computation, hence the distinction in terminology. 
+====
+
+The cost of each libfunc is determined by its expanded CASM generated via the Sierra→CASM compiler based on a 100-1 ratio with Cairo steps (i.e., if a libfunc's assembly includes 10 Cairo steps, it will cost 1000 Sierra gas), while the costs of the various builtins are defined as follows:
+
+[%autowidth.stretch,options="header"]
+|===
+| Builtin | Sierra gas cost |
+| Range check | 70 |
+| Pedersen | 4,050 |
+| Poseidon | 491 |
+| Bitwise | 583 |
+| ECDSA | 10,561 |
+| EC_OP | 4,085 |
+| Keccak | 136,189 |
+| ADD_MOD | 230 |
+| MUL_MOD | 604 |
+|===
+
+[TIP]
+====
+To review pricing for various syscalls, see the `versioned constants.json` files in the https://github.com/starkware-libs/sequencer/tree/main/crates/blockifier/resources[sequencer's resources directory^].
+====
+
+To handle gas usage, Sierra has special libfuncs for gas-handling, such as the `withdraw_gas` libfunc. For functions with neither branching nor recursion, the Cairo→Sierra compiler adds a single `withdraw_gas\(C)` call in the beginning of the function, where `C` is the sum over the costs of the libfuncs included in the function. For functions with branching, the compiler adds a call to `withdraw_gas\(C)` before the actual branching, where `C` is the maximal branch cost.
+
+[NOTE]
+====
+In its latest version, the compiler also adds a call to `redeposit_gas\(C)` on the cheaper branches, where `C` is unused gas on that branch.
+====
+
+For functions with recursion (or other cases where costs can only be known in runtime), things get trickier.
+The naive way to handle such cases would be to add a `withdraw_gas` instruction after every libfunc, but since `withdraw_gas` itself has some cost (decreasing a counter and handling the insufficient gas case) this would incur a large burden on the program. 
+Instead, the compiler constructs the call graph induced by the program, and asserts that every cycle includes a `withdraw_gas(X)` instruction, where `X` should cover the cost of a single run through the cycle, greatly reducing the overhead compared to the naive mechanism.
 
 ==== VM resources
 
@@ -234,70 +284,6 @@ and crosses this information with a `CairoResourceFeeWeights` vector, a predefin
 ++++
 
 where stem:[$k$] enumerates the Cairo resource components. Going back to the above example, if the cost of submitting a proof with 20M Pedersen hashes is roughly 5M gas, then the weight of the Pedersen builtin is 5,000,000/20,000,0000 = 25 gas per application.
-
-The weights most commonly used in Starknet are the following table:
-
-[%autowidth.stretch,options="header"]
-|===
-| Resource | L1 Gas cost
-
-| Cairo step | 0.0025 gas/step
-| Pedersen | 0.08 gas/application
-| Poseidon | 0.08 gas/application
-| Range check | 0.04 gas/application
-| ECDSA | 5.12 gas/application
-| Keccak | 5.12 gas/application
-| Bitwise | 0.16 gas/application
-| EC_OP | 2.56 gas/application
-|===
-
-==== Sierra gas
-
-[TIP]
-====
-The following is a very rough description of Sierra's built-in gas accounting mechanism. For a comprehensive analysis, see https://github.com/starkware-libs/cairo/blob/main/docs/other/gas_blog_post.pdf[_Analysis of the gas accounting algorithm of Cairo 1.0_ by CryptoExperts^].
-====
-
-A Sierra program has a simple structure: types and function declaration, followed by a sequence of applications of _libfuncs_, Sierra's basic logical units (similar to opcodes, e.g. `u8_add` is a libfunc).
-
-The Cairo compiler defines a libfunc costs table, which is measured in “Sierra gas” and has a 1-1 ratio with L2 gas (i.e., a libfunc which costs 500 Sierra gas adds 500 to a transaction's overall L2 gas)
-
-[NOTE]
-====
-Despite the 1-1 ratio between Sierra gas and L2 gas, L2 gas accounts for “everything L2”, while Sierra gas strictly deals with computation, hence the distinction in terminology. 
-====
-
-The cost of each libfunc is determined by its expanded CASM generated via the Sierra→CASM compiler based on a 100-1 ratio with Cairo steps (i.e., if a libfunc's assembly includes 10 Cairo steps, it will cost 1000 Sierra gas), while the costs of the various builtins are defined as follows:
-
-[%autowidth.stretch,options="header"]
-|===
-| Builtin | Sierra gas cost |
-| Range check | 70 |
-| Pedersen | 4050 |
-| Poseidon | 491 |
-| Bitwise | 583 |
-| ECDSA | - |
-| EC_OP | 4085 |
-| Keccak | - |
-| ADD_MOD | 230 |
-| MUL_MOD | 604 |
-|===
-
-[NOTE]
-====
-Pricings for the EC_OP and Keccak builtins are missing since they cannot be accessed directly from Cairo contracts (as opposed to CairoZero contracts, which are no longer declarable). These operations can be used via syscalls, whose price is determined by the underlying trace cell consumption of the builtins involved. To review pricing for various syscalls, see the `versioned constants.json` files in the https://github.com/starkware-libs/sequencer/tree/main/crates/blockifier/resources[sequencer's resources directory^].
-====
-
-To handle gas usage, Sierra has special libfuncs for gas-handling, such as the `withdraw_gas` libfunc. For functions with neither branching nor recursion, the Cairo→Sierra compiler adds a single `withdraw_gas\(C)` call in the beginning of the function, where `C` is the sum over the costs of the libfuncs included in the function. For functions with branching, the compiler adds a call to `withdraw_gas\(C)` before the actual branching, where `C` is the maximal branch cost.
-
-[NOTE]
-====
-In its latest version, the compiler also adds a call to `redeposit_gas\(C)` on the cheaper branches, where `C` is unused gas on that branch.
-====
-
-For functions with recursion (or other cases where costs can only be known in runtime), things get trickier.
-The naive way to handle such cases would be to add a `withdraw_gas` instruction after every libfunc, but since `withdraw_gas` itself has some cost (decreasing a counter and handling the insufficient gas case) this would incur a large burden on the program. 
-Instead, the compiler constructs the call graph induced by the program, and asserts that every cycle includes a `withdraw_gas(X)` instruction, where `X` should cover the cost of a single run through the cycle, greatly reducing the overhead compared to the naive mechanism.
 
 ==== VM resources vs. Sierra gas
 
