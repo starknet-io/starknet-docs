@@ -19,11 +19,11 @@ If you are only interested in learning how to stake on Starknet, feel free to sk
 
 == Roadmap
 
-Naturally, handing over the responsibility for maintaining and securing Starknet to validators in one day is neither feasible nor desirable. Instead, the staking protocol is implemented in incremental phases, with each phase bringing additional requirements from validators until they fully maintain and secure the network. The protocol is currently in the first (on Mainnet) and second (on Sepolia) of four phases, illustrated in following figure:
+Naturally, handing over the responsibility for maintaining and securing Starknet to validators in one day is neither feasible nor desirable. Instead, the staking protocol is implemented in incremental phases, with each phase bringing additional requirements from validators until they fully maintain and secure the network. The protocol is currently in the second of four phases, illustrated in following figure:
 
 [IMPORTANT]
 ====
-The staking protocol is currently in its first phase on Mainnet and in its second phase on Sepolia.
+The staking protocol is currently in its second phase on both Sepolia and Mainnet.
 ====
 
 image::staking-roadmap.png[]
@@ -98,11 +98,6 @@ The protocol uses a hierarchical approach between the staking and rewards addres
 
 Starting from its second phase, the staking protocol introduces the notion of _epochs_ (similarly to many other protocols). Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch stem:[i] are applied in epoch stem:[i+k], where stem:[k] is a new latency parameter. For example, the following figure illustrates a scenario where in epoch stem:[i] validator stem:[A] has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch stem:[i+1] someone undelegates 30K STRK from stem:[A]: 
 
-// [NOTE]
-// ====
-// As long as validators are not yet producing blocks, stem:[k] may be equal to 1. When validators also produce blocks, stem:[k] will have to be greater than 1, as the producer of the first block of epoch stem:[j] will have to be known before the last block of epoch stem:[j-1].
-// ====
-
 image::epochs-example.png[]
 
 === Responsibilities
@@ -157,8 +152,6 @@ In the second phase of the protocol, each Validator is required to perform only 
 ====
 
 The `attest` transaction includes the block hash of the attested block, ensuring validators actively use full nodes, as they need to continuously track block hashes. Additionally, the attestation is publicly verifiable, ensuring validators' reliability is publicly tested — a crucial prerequisite before handing them any core responsibilities.
-
-// Note that each validator is required to perform only one attestation per epoch, and therefore the work is identical for all validators. This is done in the interest of simplifying the implementation of the protocol's second phase, saving time and effort for the later phases. In any case, the main cost and effort is running a full node, which is obligatory for all validators.
 
 === Rewards
 
@@ -280,8 +273,7 @@ a| * `amount` should be denominated in FRI (i.e., 1*10^18^ = 1 STRK)
 | Updating commission
 | Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#update_commission[`update_commission`^] function
 a| * `commission` should be entered as a percentage with precision, where 10000 represents 100% (e.g., to set a 5% commission, you enter 500)
-* In the first phase of the staking protocol (currently on Mainnet), commissions can only be decreased
-* In the second phase of the staking protocol (currently on Sepolia), commissions can be increased only after xref:commissions[committing to a maximum commission] using https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission_commitment[`set_commission_commitment`^]
+* Commissions can be increased only after xref:commissions[committing to a maximum commission] using https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission_commitment[`set_commission_commitment`^]
 
 | Changing reward address
 | Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address[`change_reward_address`^] function
