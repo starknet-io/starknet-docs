@@ -1,7 +1,7 @@
 = Transactions
 
 == Introduction
-Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only xref:transaction_types[three types] of transactions, with each type going through the same xref:transaction_lifecycle[lifecycle] to receive its xref:transaction_statuses[execution and finality statuses]. Each transaction is issued a xref:transaction_receipt[receipt], which includes its statuses and other information about it.
+Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only xref:transaction_types[three types] of transactions, with each type going through the same xref:transaction_lifecycle[lifecycle] to receive its xref:transaction_statuses[execution and finality statuses]. Every transaction that executed successfully is issued a xref:transaction_receipt[receipt], which includes its statuses, as well as other information about it.
 
 .Additional information
 
@@ -12,40 +12,33 @@ Transactions are cryptographically signed instructions from accounts that update
 Starknet supports the following types of transactions:
 
 [horizontal,labelwidth="20"]
-`DECLARE`:: Declares new contract classes, enabling new contract instances.
-`INVOKE`:: Invokes an existing function in a contract.
-`DEPLOY_ACCOUNT`:: Deploys new account contracts in smart wallets.
+`DECLARE`:: Introduces a new contract class to Starknet, enabling other contracts to either deploy instances of it or use it via a library call
++
+[TIP]
+====
+For more information about contract classes and instances, see https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html[the Cairo Book].
+====
+
+`INVOKE`:: Invokes a function in an existing contract instance, undergoing validation and execution initiated by xref:accounts.adoc#starknets_account_structure[the caller account's `+__validate__+` and `+__execute__+` functions] (respectively).
++
+[NOTE]
+====
+The validation stage verifies that the caller account approves the transaction. Because an account's `+__validate__+` and `+__execute__+` functions can contain any logic, the caller account ultimately determines how to handle the `INVOKE` transaction.
+====
+
+`DEPLOY_ACCOUNT`:: Deploys a new account contract to Starknet.
++
+[TIP]
+====
+For more information about deploying a new account, see xref:accounts.adoc#deploying_a_new_account[Accounts].
+====
 
 [NOTE]
 ====
-The xref:network-architecture/messaging-mechanism.adoc#l1_handler_transaction[`L1HandlerTransaction` type] is also a valid transaction type within Starknet, be it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations (particularly, handling messages from L1 to L2).
+The xref:messaging.adoc#l1_handler_transaction[`L1HandlerTransaction` type] is also a valid transaction type within Starknet, be it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations (particularly, handling messages from L1 to L2).
 
 The `DEPLOY` transaction type existed in Starknet for deploying account before being replaced by `DEPLOY_ACCOUNT`. `DEPLOY` only had one version (v0) and is now unsupported by Starknet. 
 ====
-
-// === `INVOKE`
-
-// The `INVOKE` transaction type invokes a function in an existing contract instance. The contract code of the account that sends the `INVOKE` transaction determines how to process the transaction.
-
-// [NOTE]
-// ====
-// Because an account's `+__validate__+` and `+__execute__+` functions can contain any logic, the account ultimately determines how to handle the `INVOKE` transaction.
-// ====
-
-// Every `INVOKE`  transaction in Starknet undergoes the validation and execution stages, initiated by the `+__validate__+` and `+__execute__+` functions. The validation stage verifies that the account that sent the transaction approves it.
-
-// === `DECLARE`
-
-// The `DECLARE` transaction introduces new contract classes into the state of Starknet, enabling other contracts to deploy instances of those classes or use them in a library call. For more information, see xref:architecture-and-concepts:smart-contracts/contract-classes.adoc[contract classes].
-
-// === `DEPLOY_ACCOUNT`
-
-// Since StarkNet v0.10.1 the `DEPLOY_ACCOUNT` transaction replaces the `DEPLOY` transaction for deploying account contracts.
-
-// To use it, you should first pre-fund your new account address so that you can pay the
-// transaction fee. You can then send the `DEPLOY_ACCOUNT` transaction.
-
-// For more information, see xref:accounts/deploying-new-accounts.adoc[].
 
 Each transaction type is versioned, with versions increasing when the fields that comprise the transaction change, either with the addition of a new field or the removal of an existing field. The following table summarizes the current, deprecated, and unsupported versions of each transaction type:
 
@@ -82,7 +75,7 @@ The high-level steps in the Starknet transaction lifecycle are as follows:
 . *Transaction submission:* A transaction is submitted to a sequencer by a full node.
 
 . *Mempool validation:*
-The mempool performs preliminary validation of the transaction, such as ensuring that its invoker's balance exceeds the transaction's `max_fee` value, assuring the transaction's calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.
+The sequencer's xref:transaction_mempool[mempool] performs preliminary validation of the transaction, such as ensuring that its invoker's balance exceeds the transaction's `max_fee` value, assuring the transaction's calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.
 +
 [NOTE]
 ====
@@ -97,11 +90,29 @@ The sequencer repeats the same validation performed by the mempool.
 
 . *Execution:* The sequencer batches all transactions that passed the preliminary validation into a block, and applies them to the state sequentially. If a transaction fails during execution, it is included in the block with as reverted.
 
-. *Proof generation and verification:* The prover uses the xref:network-architecture/os.adoc[Starknet operating system] to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.
+. *Proof generation and verification:* The prover uses the xref:os.adoc[Starknet operating system] to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.
+
+=== Transaction mempool
+
+Up to (and including) v0.13.5 of Starknet, transactions were received and ordered by the sequencer in a FIFO fashion. In v0.14.0, sequencers instead maintain a mempool: this decouples the order of arrival from the transaction ordering in the blocks. The block ordering is decided by each block proposer according to their local policy. A transaction with a higher tip will likely be placed earlier in the block. The mempool architecture has some implications on how transactions are accepted and processed, which we describe below.
+
+==== Nonces
+Transactions with a nonce greater than current sender nonce + X will be rejected from the mempool (the “current sender nonce” refers to the sender nonce in the latest finalized state at the time of receival of the tx). The final config is still in discussion, but it should be 50 <= X <= 100.
+Declare transactions whose nonce is invalid against the current state will be rejected (i.e. no declares with future nonces).
+
+==== Fee escalation
+A transaction (say from account A and with nonce n) is replaced if a more profitable transaction, i.e. with a higher tip, from the same account A and nonce n is received. To successfully replace a transaction, `tip` and `max_l2_gas_price` need to be bumped by at least 10%. Note that there are unlikely edge cases in which the transaction is not replaced, e.g. the lower paying transaction enters a block while the higher paying transaction is processed in the gateway.
+
+==== Eviction policy
+The mempool keeps track of the time in which a tx enters and it does a periodical clean-up of transactions that cannot be included in a block and which have been in the mempool for too long, i.e. have exceeded their time-to-live (TTL). The TTL is configured to be 5 mins.
+
+==== Declare transaction behavior
+When `DECLARE` transactions are sent to the mempool, they first go through the usual validations (including nonce validation and fee escalation) and then are inserted into a "waiting room" before they are inserted into the pool. In particular, maturing transactions cannot enter a block.
+While in the waiting room, no escalation is possible: i.e. a transaction with the same nonce from the same account will be rejected. This impedes a DoS where a `DECLARE` transaction is sent, compiled and then removed by sending a transaction with the same nonce while it matures. After the transaction has matured and entered the mempool, escalation is possible again (maturation time << time to live).
 
 == Transaction statuses
 
-The following are the possible statuses of a transaction on Starknet:
+A transaction's current state is represented by the following _finality_ and _execution_ statuses:
 
 [cols="1,2,4"]
 |===
@@ -140,19 +151,15 @@ As the transaction hasn't been executed yet, no execution information is availab
 .2+.^| *Execution*
 
 | `REVERTED`
-a| The transaction failed during the execution by a sequencer, and was included in a block as reverted.
+a| The transaction failed during execution by a sequencer, and was included in a block as reverted.
 [NOTE]
 ====
 Since the `DEPLOY_ACCOUNT` and `DECLARE` transactions don't have an execution phase, they cannot be reverted.
 ====
 
 | `SUCCEEDED`
-| The transaction was successfully executed by the sequencer and is included in a block.
+| The transaction was successfully executed by a sequencer and is included in a block.
 |===
-
-// The diagram below illustrates how each transaction status fits into the overall transaction flow:
-
-// image::txn-flow.png[]
 
 === State implications of reverted transactions
 
