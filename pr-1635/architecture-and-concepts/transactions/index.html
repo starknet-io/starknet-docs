@@ -538,7 +538,7 @@
 <h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only <a href="#transaction_types">three types</a> of transactions, with each type going through the same <a href="#transaction_lifecycle">lifecycle</a> to receive its <a href="#transaction_statuses">execution and finality statuses</a>. Each transaction is issued a <a href="#transaction_receipt">receipt</a>, which includes its statuses and other information about it.</p>
+<p>Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only <a href="#transaction_types">three types</a> of transactions, with each type going through the same <a href="#transaction_lifecycle">lifecycle</a> to receive its <a href="#transaction_statuses">execution and finality statuses</a>. Every transaction that executed successfully is issued a <a href="#transaction_receipt">receipt</a>, which includes its statuses, as well as other information about it.</p>
 </div>
 <div class="ulist">
 <div class="title">Additional information</div>
@@ -570,7 +570,21 @@
 <code>DECLARE</code>
 </td>
 <td class="hdlist2">
-<p>Declares new contract classes, enabling new contract instances.</p>
+<p>Introduces a new contract class to Starknet, enabling other contracts to either deploy instances of it or use it via a library call</p>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>For more information about contract classes and instances, see <a href="https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html">the Cairo Book</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </td>
 </tr>
 <tr>
@@ -578,7 +592,21 @@
 <code>INVOKE</code>
 </td>
 <td class="hdlist2">
-<p>Invokes an existing function in a contract.</p>
+<p>Invokes a function in an existing contract instance, undergoing validation and execution initiated by <a href="../accounts/#starknets_account_structure" class="xref page">the caller account&#8217;s <code>__validate__</code> and <code>__execute__</code> functions</a> (respectively).</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The validation stage verifies that the caller account approves the transaction. Because an account&#8217;s <code>__validate__</code> and <code>__execute__</code> functions can contain any logic, the caller account ultimately determines how to handle the <code>INVOKE</code> transaction.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </td>
 </tr>
 <tr>
@@ -586,7 +614,21 @@
 <code>DEPLOY_ACCOUNT</code>
 </td>
 <td class="hdlist2">
-<p>Deploys new account contracts in smart wallets.</p>
+<p>Deploys a new account contract to Starknet.</p>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>For more information about deploying a new account, see <a href="../accounts/#deploying_a_new_account" class="xref page">Accounts</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </td>
 </tr>
 </table>
@@ -599,7 +641,7 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The <a href="#network-architecture/messaging-mechanism.adoc#l1_handler_transaction" class="xref unresolved"><code>L1HandlerTransaction</code> type</a> is also a valid transaction type within Starknet, be it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations (particularly, handling messages from L1 to L2).</p>
+<p>The <a href="../messaging/#l1_handler_transaction" class="xref page"><code>L1HandlerTransaction</code> type</a> is also a valid transaction type within Starknet, be it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations (particularly, handling messages from L1 to L2).</p>
 </div>
 <div class="paragraph">
 <p>The <code>DEPLOY</code> transaction type existed in Starknet for deploying account before being replaced by <code>DEPLOY_ACCOUNT</code>. <code>DEPLOY</code> only had one version (v0) and is now unsupported by Starknet.</p>
@@ -679,7 +721,7 @@
 </li>
 <li>
 <p><strong>Mempool validation:</strong>
-The mempool performs preliminary validation of the transaction, such as ensuring that its invoker&#8217;s balance exceeds the transaction&#8217;s <code>max_fee</code> value, assuring the transaction&#8217;s calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.</p>
+The sequencer&#8217;s <a href="#transaction_mempool">mempool</a> performs preliminary validation of the transaction, such as ensuring that its invoker&#8217;s balance exceeds the transaction&#8217;s <code>max_fee</code> value, assuring the transaction&#8217;s calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.</p>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -716,9 +758,41 @@ The mempool performs preliminary validation of the transaction, such as ensuring
 <p><strong>Execution:</strong> The sequencer batches all transactions that passed the preliminary validation into a block, and applies them to the state sequentially. If a transaction fails during execution, it is included in the block with as reverted.</p>
 </li>
 <li>
-<p><strong>Proof generation and verification:</strong> The prover uses the <a href="#network-architecture/os.adoc" class="xref unresolved">Starknet operating system</a> to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.</p>
+<p><strong>Proof generation and verification:</strong> The prover uses the <a href="../os/" class="xref page">Starknet operating system</a> to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.</p>
 </li>
 </ol>
+</div>
+<div class="sect2">
+<h3 id="transaction_mempool"><a class="anchor" href="#transaction_mempool"></a>Transaction mempool</h3>
+<div class="paragraph">
+<p>Up to (and including) v0.13.5 of Starknet, transactions were received and ordered by the sequencer in a FIFO fashion. In v0.14.0, sequencers instead maintain a mempool: this decouples the order of arrival from the transaction ordering in the blocks. The block ordering is decided by each block proposer according to their local policy. A transaction with a higher tip will likely be placed earlier in the block. The mempool architecture has some implications on how transactions are accepted and processed, which we describe below.</p>
+</div>
+<div class="sect3">
+<h4 id="nonces"><a class="anchor" href="#nonces"></a>Nonces</h4>
+<div class="paragraph">
+<p>Transactions with a nonce greater than current sender nonce + X will be rejected from the mempool (the “current sender nonce” refers to the sender nonce in the latest finalized state at the time of receival of the tx). The final config is still in discussion, but it should be 50 &#8656; X &#8656; 100.
+Declare transactions whose nonce is invalid against the current state will be rejected (i.e. no declares with future nonces).</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="fee_escalation"><a class="anchor" href="#fee_escalation"></a>Fee escalation</h4>
+<div class="paragraph">
+<p>A transaction (say from account A and with nonce n) is replaced if a more profitable transaction, i.e. with a higher tip, from the same account A and nonce n is received. To successfully replace a transaction, <code>tip</code> and <code>max_l2_gas_price</code> need to be bumped by at least 10%. Note that there are unlikely edge cases in which the transaction is not replaced, e.g. the lower paying transaction enters a block while the higher paying transaction is processed in the gateway.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="eviction_policy"><a class="anchor" href="#eviction_policy"></a>Eviction policy</h4>
+<div class="paragraph">
+<p>The mempool keeps track of the time in which a tx enters and it does a periodical clean-up of transactions that cannot be included in a block and which have been in the mempool for too long, i.e. have exceeded their time-to-live (TTL). The TTL is configured to be 5 mins.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="declare_transaction_behavior"><a class="anchor" href="#declare_transaction_behavior"></a>Declare transaction behavior</h4>
+<div class="paragraph">
+<p>When <code>DECLARE</code> transactions are sent to the mempool, they first go through the usual validations (including nonce validation and fee escalation) and then are inserted into a "waiting room" before they are inserted into the pool. In particular, maturing transactions cannot enter a block.
+While in the waiting room, no escalation is possible: i.e. a transaction with the same nonce from the same account will be rejected. This impedes a DoS where a <code>DECLARE</code> transaction is sent, compiled and then removed by sending a transaction with the same nonce while it matures. After the transaction has matured and entered the mempool, escalation is possible again (maturation time &lt;&lt; time to live).</p>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -726,7 +800,7 @@ The mempool performs preliminary validation of the transaction, such as ensuring
 <h2 id="transaction_statuses"><a class="anchor" href="#transaction_statuses"></a>Transaction statuses</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following are the possible statuses of a transaction on Starknet:</p>
+<p>A transaction&#8217;s current state is represented by the following <em>finality</em> and <em>execution</em> statuses:</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -806,7 +880,7 @@ The mempool performs preliminary validation of the transaction, such as ensuring
 <td class="tableblock halign-left valign-middle" rowspan="2"><p class="tableblock"><strong>Execution</strong></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>REVERTED</code></p></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>The transaction failed during the execution by a sequencer, and was included in a block as reverted.</p>
+<p>The transaction failed during execution by a sequencer, and was included in a block as reverted.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -825,7 +899,7 @@ The mempool performs preliminary validation of the transaction, such as ensuring
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>SUCCEEDED</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by the sequencer and is included in a block.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by a sequencer and is included in a block.</p></td>
 </tr>
 </tbody>
 </table>
