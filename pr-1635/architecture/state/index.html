@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>L1-L2 messaging mechanism :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/messaging/">
-    <link rel="prev" href="../fees/">
-    <link rel="next" href="../staking/">
+    <title>State :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/state/">
+    <link rel="prev" href="../staking/">
+    <link rel="next" href="../economics-of-starknet/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -329,20 +329,20 @@
        class="nav-link"
      href="../fees/">Fees</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">L1-L2 messaging</a>
+     href="../messaging/">L1-L2 messaging</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
      href="../staking/">Staking</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../state/">State</a>
+     href="./">State</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,435 +515,233 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/messaging.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/state.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "L1-L2 messaging mechanism"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "State"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">L1-L2 messaging mechanism</h1>
-<div id="preamble">
+<h1 class="page">State</h1>
+<div class="sect1">
+<h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Starknet&#8217;s ability to interact with L1 is crucial. <em>Messaging</em> is the mechanism that enables this interaction.</p>
+<p>Starknet&#8217;s state <a href="#state_structure">is composed of contract classes and instances</a> and <a href="#state_transition">tracks any changes to them</a>. Its <a href="#state_commitment">commitment</a> uses a cryptographic structure optimized for zero-knowledge proofs, enabling efficient proof generation of state updates and forming the backbone of Starknet&#8217;s scalability and security.</p>
 </div>
-<div class="paragraph">
-<p>For example, you can perform computations on L2 and use the result on L1.</p>
 </div>
-<div class="paragraph">
-<p>Bridges on Starknet use the L1-L2  messaging mechanism. Consider that you want to bridge tokens from Ethereum to Starknet. You deposit your tokens in the L1 bridge contract, which automatically triggers the minting of the same token on L2. Another good use case for L1-L2 messaging is Defi pooling. For more information, see <a href="https://starkware.co/resource/defi-pooling/">DeFi pooling</a> on StarkWare&#8217;s site and <a href="https://www.starknet.io/en/ecosystem/dapps">dApps</a> on <a href="https://www.starknet.io" class="bare">https://www.starknet.io</a>.</p>
 </div>
+<div class="sect1">
+<h2 id="state_structure"><a class="anchor" href="#state_structure"></a>State structure</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>Be aware that the messaging mechanism is <em>asynchronous</em> and <em>asymmetric</em>.</p>
+<p>Starknet&#8217;s state consists of:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><em>Asynchronous</em>: Your contract code, whether Cairo or Solidity, cannot await the result of the message being sent on the other layer within your contract code&#8217;s execution.</p>
+<p>A mapping between the hashes of contract classes and their definitions</p>
 </li>
 <li>
-<p><em>Asymmetric</em>: Sending a message from Ethereum to Starknet, L1&#8594;L2, is fully automated by the Starknet sequencer, so the message is automatically delivered to the target contract on L2. However, when sending a message from Starknet to Ethereum, L2&#8594;L1, the sequencer only sends the hash of the message. You must then consume the message manually using a transaction on L1.</p>
+<p>A mapping between the addresses of contract instances and their <a href="#contract_instance_state">states</a></p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="contract_instance_state"><a class="anchor" href="#contract_instance_state"></a>Contract instance state</h3>
+<div class="paragraph">
+<p>A contract instance state consists of:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A class hash, which defines the functionality of the contract</p>
+</li>
+<li>
+<p>A key-value mapping (where the key and values are field elements), which comprises the contract&#8217;s storage</p>
+</li>
+<li>
+<p>A nonce, which tracks the number of transactions sent from this contract</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="special_addresses"><a class="anchor" href="#special_addresses"></a>Special addresses</h3>
+<div class="paragraph">
+<p>Starknet uses special contract addresses to provide distinct capabilities beyond regular contract deployment.</p>
+</div>
+<div class="paragraph">
+<p>Two such addresses are <code>0x0</code> and <code>0x1</code>. These addresses are reserved for specific purposes and are
+characterized by their unique behavior in comparison to traditional contract addresses.</p>
+</div>
+<div class="sect3">
+<h4 id="address_0x0"><a class="anchor" href="#address_0x0"></a>Address <code>0x0</code></h4>
+<div class="paragraph">
+<p>Address <code>0x0</code> functions as the default <code>caller_address</code> for external calls, including interactions with the L1 handler or deprecated Deploy transactions. Unlike regular contracts, address <code>0x0</code> does not possess a storage structure and does not accommodate storage mapping.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="address_0x1"><a class="anchor" href="#address_0x1"></a>Address <code>0x1</code></h4>
+<div class="paragraph">
+<p>Address <code>0x1</code> is another special contract address within Starknet&#8217;s architecture. It functions as a storage space for mapping block numbers to their corresponding block hashes. The storage structure at this address is organized as follows:</p>
+</div>
+<div class="hdlist">
+<table>
+<colgroup>
+<col style="width: 20%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+Keys
+</td>
+<td class="hdlist2">
+<p>Block numbers between \(\text{first_v0_12_0_block}\) and \(\text{current_block - 10}\).</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Values
+</td>
+<td class="hdlist2">
+<p>Corresponding block hashes for the specified blocks.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Default Values
+</td>
+<td class="hdlist2">
+<p>For all other block numbers, the values are set to <code>0</code>.</p>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>The storage organization of address <code>0x1</code> supports the efficient retrieval of block hashes based on block numbers within a defined range and is also used by the <a href="https://book.cairo-lang.org/appendix-08-system-calls.html#get_block_hash" target="_blank" rel="noopener"><code>get_block_hash</code></a> system call.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="state_transition"><a class="anchor" href="#state_transition"></a>State transition</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A transaction \(tx\) transitions the system from state \(S\) to state \(S'\) if:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(tx\) is an <code>INVOKE</code> transaction, and the storage of \(S'\) is the result of executing the target contract code with respect to the previous state \(S\). The arguments,
+contract instance&#8217;s address, and the specific function entry point are part of the transaction.</p>
+</li>
+<li>
+<p>\(tx\) is a <code>DEPLOY_ACCOUNT</code> transaction, and \(S'\) contains the new contract instance&#8217;s state at the contract instance&#8217;s address. Additionally, the storage of \(S\) is updated
+according to the execution of the contract instance&#8217;s constructor.</p>
+</li>
+<li>
+<p>\(tx\) is a <code>DECLARE</code> transaction, and \(S'\) contains the class hash and definition in the contract class&#8217;s mapping</p>
 </li>
 </ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="l2-l1_messages"><a class="anchor" href="#l2-l1_messages"></a>L2 &#8594; L1 messages</h2>
+<h2 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State commitment</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Contracts on L2 can interact asynchronously with contracts on L1 using the L2&#8594;L1 messaging protocol.</p>
+<p>The state commitment is a digest that represents the state.</p>
 </div>
 <div class="paragraph">
-<p>The protocol consists of the following stages:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>During the execution of a transaction, a contract on Starknet sends a message from L2 to L1 by calling the <code>send_message_to_L1</code> syscall.</p>
-</li>
-<li>
-<p>The sequencer attaches the message parameters to the block that includes the syscall invocation. The message parameters include the address of the sender on L2, the address of the recipient contract on L1, and the message data.</p>
-<div class="paragraph">
-<p>For example:</p>
+<p>In Starknet, the state commitment combines the roots of two binary <a href="#merkle_patricia_trie">Merkle-Patricia tries</a> of height 251 in the following manner:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let mut payload: Array&lt;felt252&gt; = ArrayTrait::new();
-let to_address: EthAddress = 1_felt252.try_into().unwrap();
-payload.append(1);
-// potentially add more elements to payload (payload[1], payload[2],  etc.)
-
-send_message_to_l1_syscall(to_address: to_address.into(), payload: payload.span());</code></pre>
+<pre>state_commitment = <em>h</em><sub>Pos</sub>(
+    "STARKNET_STATE_V0",
+    contract_trie_root,
+    class_trie_root
+)</pre>
 </div>
-</div>
-</li>
-<li>
-<p>The prover proves the state update that includes this transaction.</p>
-</li>
-<li>
-<p>The sequencer updates the L1 state.</p>
-</li>
-<li>
-<p>The message is stored on L1 in the Starknet Core Contract and a counter on the Core Contract increases by one.<br></p>
-</li>
-<li>
-<p>The <code>processMessage</code> function, which is part of the Starknet Core Contract, emits the <code>LogMessageToL1</code> event, which contains the message parameters.</p>
-</li>
-<li>
-<p>The message recipient on L1 can access and consume the message by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119"><code>consumeMessageFromL2</code></a> function, which includes the message parameters within the transaction.
-This function, which is part of the Starknet Core Contract, verifies the following:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>The hashes of the L2 sent message parameters, now stored on the Core Contract, and the L1 received message parameters, are the same.</p>
-</li>
-<li>
-<p>The entity calling the function is indeed the recipient on L1.</p>
-<div class="paragraph">
-<p>In such a case, the counter corresponding to the message hash in the Starknet Core Contract decreases by one. For more information, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L130C7-L130C7#"><code>consumeMessageFromL2</code></a> function in <code>StarknetMessaging.sol</code>.</p>
-</div>
-</li>
-</ul>
-</div>
-</li>
-</ol>
 </div>
 <div class="paragraph">
-<p><a href="#diagram_l2-l1_messaging_mechanism">L2&#8594;L1 Messaging mechanism</a> illustrates this flow:</p>
-</div>
-<div id="diagram_l2-l1_messaging_mechanism" class="imageblock">
-<div class="content">
-<img src="../_images/l2l1.png" alt="L2&#8594;L1 message mechanism">
-</div>
-<div class="title">Figure 1. L2&#8594;L1 Messaging mechanism</div>
-</div>
-<div class="sect2">
-<h3 id="l2_l1_message_structure"><a class="anchor" href="#l2_l1_message_structure"></a>L2 &#8594; L1 message structure</h3>
-<div class="paragraph">
-<p>The structure of an L2 &#8594; L1 message is described as follows under <code>MSG_TO_L1</code> in the <a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json">Starknet API JSON RPC</a> specification:</p>
-</div>
-<div class="hdlist stripes-odd">
-<table>
-<colgroup>
-<col style="width: 30%;">
-<col>
-</colgroup>
-<tr>
-<td class="hdlist1">
-<code>from_address</code> (<code>felt252</code>)
-</td>
-<td class="hdlist2">
-<p>The address of the L2 contract sending the message.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>to_address</code> (<code>EthAddress</code>)
-</td>
-<td class="hdlist2">
-<p>The target L1 address the message is sent to.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>payload</code> (<code>Array&lt;felt252&gt;</code>) 
-</td>
-<td class="hdlist2">
-<p>The payload of the message.</p>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect2">
-<h3 id="hashing_l2-l1"><a class="anchor" href="#hashing_l2-l1"></a>L2 &#8594; L1 message hashing</h3>
-<div class="paragraph">
-<p>The hash of an L2 &#8594; L1 message is computed on L1 as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">keccak256(
-    abi.encodePacked(
-        FromAddress,
-        uint256(ToAddress),
-        Payload.length,
-        Payload
-    )
-);</code></pre>
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Sending an L2 to L1 message always incurs a fixed cost of 20,000 L1 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core Contract.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="l1-l2-messages"><a class="anchor" href="#l1-l2-messages"></a>L1 &#8594; L2 messages</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Contracts on L1 can interact asynchronously with contracts on L2 using the <em>L1&#8594;L2</em> messaging protocol.</p>
-</div>
-<div class="paragraph">
-<p>The protocol consists of the following stages:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>An L1 contract induces a message to an L2 contract on Starknet by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract with the message parameters.</p>
-<div class="paragraph">
-<p>The Starknet Core Contract hashes the message parameters and updates the L1&#8594;L2 message mapping to indicate that a message with this hash was indeed sent. The L1 contract records the fee that the sender paid. For more information, see <a href="#l1-l2-message-fees">L1 &#8594; L2 message fees</a>.</p>
-</div>
-</li>
-<li>
-<p>The message is then decoded into a Starknet transaction that invokes a function annotated with the <code>l1_handler</code> decorator on the target contract. Transactions like this on L2 are called <a href="#l1_handler_transaction">L1 handler transactions</a>.</p>
-<div class="olist loweralpha">
-<ol class="loweralpha" type="a">
-<li>
-<p>The Starknet sequencer, upon receiving enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction.</p>
-</li>
-<li>
-<p>The L2 transaction invokes the relevant <code>l1_handler</code> function.</p>
-</li>
-</ol>
-</div>
-</li>
-<li>
-<p>The L1 Handler transaction that was created in the previous step is added to a proof.</p>
-</li>
-<li>
-<p>The Core Contract receives the state update.</p>
-</li>
-<li>
-<p>The message is cleared from the Core Contract&#8217;s storage to consume the message. Clearing the Core Contract&#8217;s storage does the following:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>incurs a fixed cost of 5,000 L1 gas</p>
-</li>
-<li>
-<p>emits an L1 event logging the message consumption</p>
-</li>
-</ul>
-</div>
-</li>
-</ol>
-</div>
-<div class="paragraph">
-<p>At this point, the message is handled.</p>
-</div>
-<div class="paragraph">
-<p>An L1&#8594;L2 message consists of the following:</p>
+<p>Where:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>L1 sender&#8217;s address</p>
+<p><code><em>h</em><sub>Pos</sub></code> is the <a href="../cryptography/#poseidon_hash" class="xref page">Poseidon</a> hash
+function.</p>
 </li>
 <li>
-<p>L2 recipient&#8217;s contract address</p>
+<p><code>STARKNET_STATE_V0</code> is a constant prefix string encoded in ASCII (and represented as a field element).</p>
 </li>
 <li>
-<p>Function selector</p>
+<p><code>contract_trie_root</code> is the root of the <a href="#contracts_trie"><em>contract trie</em></a>, a Merkle-Patricia trie whose leaves are the contracts' states.</p>
 </li>
 <li>
-<p>Calldata array</p>
-</li>
-<li>
-<p>Message nonce</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The message nonce is maintained on the Starknet Core Contract on L1, and is incremented whenever a message is sent to L2. The nonce is used to avoid a hash collision between different L1 handler transactions that is caused by the same message being sent on L1 multiple times.</p>
-</div>
-<div class="paragraph">
-<p>For more information, see <a href="#l1_l2_message_structure">L1&#8594;L2 structure</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
+<p><code>class_trie_root</code> is the root of the <a href="#classes_trie"><em>class trie</em></a>, a Merkle-Patricia trie whose leaves are the compiled class hashes.</p>
 </li>
 </ul>
 </div>
 <div class="sect2">
-<h3 id="l2-l1_message_cancellation"><a class="anchor" href="#l2-l1_message_cancellation"></a>L1 &#8594; L2 message cancellation</h3>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
+<h3 id="contracts_trie"><a class="anchor" href="#contracts_trie"></a>The contract trie</h3>
 <div class="paragraph">
-<p>The flow described here should only be used in edge cases such as bugs on the Layer 2 contract preventing message consumption.</p>
-</div>
-</td>
-</tr>
-</table>
+<p>As with Ethereum, this trie is a two-level structure, whose leaves correspond to distinct contracts. The address of each contract determines the path from the trie&#8217;s root to its corresponding leaf, whose content encodes the contract&#8217;s state.</p>
 </div>
 <div class="paragraph">
-<p>Consider that Alice sends an L1 asset to a Starknet bridge to transfer it to L2, which generates the corresponding L1&#8594;L2 message. Now, consider that the L2 message consumption doesn&#8217;t function, which might happen due to a bug in the dApp&#8217;s Cairo contract. This bug could result in Alice losing custody of their asset forever.</p>
-</div>
-<div class="paragraph">
-<p>To mitigate this risk, the contract that initiated the L1&#8594;L2 message can cancel it by declaring the intent to cancel, waiting five days, and then completing the cancellation. This delay protects the sequencer from a DoS attack in the form of repeatedly sending and canceling a message before it is included in L1, rendering the L2 block which contains the activation of the corresponding L1 handler invalid.</p>
-</div>
-<div class="paragraph">
-<p>The steps in this flow are as follows:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>The user that initiated the L1&#8594;L2 message calls the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L134"><code>startL1ToL2MessageCancellation</code></a> function in the Starknet Core Contract.</p>
-</li>
-<li>
-<p>The user waits five days until she can finalize the cancellation.</p>
-</li>
-<li>
-<p>The user calls the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L147"><code>cancelL1ToL2Message</code></a> function.</p>
-</li>
-</ol>
-</div>
-</div>
-<div class="sect2">
-<h3 id="l1-l2-message-fees"><a class="anchor" href="#l1-l2-message-fees"></a>L1 &#8594; L2 message fees</h3>
-<div class="paragraph">
-<p>An L1 &#8594; L2 message induces a transaction on L2, which, unlike regular transactions, is not sent by an account. This calls for a different mechanism for paying the transaction&#8217;s fee, for otherwise the sequencer has no incentive of including L1 handler transactions inside a block.</p>
-</div>
-<div class="paragraph">
-<p>To avoid having to interact with both L1 and L2 when sending a message, L1 &#8594; L2 messages are payable on L1, by sending ETH with the call to the payable function <code>sendMessageToL2</code> on the Starknet Core Contract.</p>
-</div>
-<div class="paragraph">
-<p>The sequencer takes this fee in exchange for handling the message. The sequencer charges the fee in full upon updating the L1 state with the consumption of this message.</p>
-</div>
-<div class="paragraph">
-<p>The fee itself is calculated in the <a href="../fees/#overall_fee" class="xref page">same manner</a> as
-"regular" L2 transactions.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="l1_l2_message_structure"><a class="anchor" href="#l1_l2_message_structure"></a>L1 &#8594; L2 structure</h3>
-<div class="paragraph">
-<p>For completeness, <a href="#l1_l2_message_structure">L1 &#8594; L2 structure</a> describes the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.</p>
-</div>
-<table id="L1-L2_message_structure" class="tableblock frame-all grid-all fit-content stretch">
-<caption class="title">Table 1. L1 &#8594; L2 message structure</caption>
-<colgroup>
-<col>
-<col>
-<col>
-<col>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">FromAddress</th>
-<th class="tableblock halign-left valign-top">ToAddress</th>
-<th class="tableblock halign-left valign-top">Selector</th>
-<th class="tableblock halign-left valign-top">Payload</th>
-<th class="tableblock halign-left valign-top">Nonce</th>
-<th class="tableblock halign-left valign-top"></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>EthereumAddress</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>List<FieldElement></code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="sect2">
-<h3 id="hashing_l1-l2"><a class="anchor" href="#hashing_l1-l2"></a>L1 &#8594; L2 hashing</h3>
-<div class="paragraph">
-<p>The hash of the message is computed on L1 as follows:</p>
+<p>The information stored in the leaf is as follows:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">keccak256(
-    abi.encodePacked(
-        uint256(FromAddress),
-        ToAddress,
-        Nonce,
-        Selector,
-        Payload.length,
-        Payload
-    )
-);</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="l1_handler_transaction"><a class="anchor" href="#l1_handler_transaction"></a>L1 handler transaction</h3>
-<table class="tableblock frame-all grid-all fit-content stretch">
-<colgroup>
-<col>
-<col>
-<col>
-<col>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Version</th>
-<th class="tableblock halign-left valign-top">ContractAddress</th>
-<th class="tableblock halign-left valign-top">Selector</th>
-<th class="tableblock halign-left valign-top">Calldata</th>
-<th class="tableblock halign-left valign-top">Nonce</th>
-<th class="tableblock halign-left valign-top"></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>List<FieldElement></code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-</tbody>
-</table>
-<div class="paragraph">
-<p>The hash of the corresponding L1 handler transaction on L2 is computed as follows:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">l1_handler_tx_hash = _h_(
-    "l1_handler",
-    version,
-    contract_address,
-    entry_point_selector,
-    _h_(calldata),
-    0,
-    chain_id,
+<pre><em>h</em><sub>Ped</sub>(
+  <em>h</em><sub>Ped</sub>(
+    <em>h</em><sub>Ped</sub>(
+      class_hash,
+      storage_root
+    ),
     nonce
+  ),
+  0
+)</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code><em>h</em><sub>Ped</sub></code> is the <a href="../cryptography/#hash-functions#pedersen_hash" class="xref page">Pedersen</a> hash function.</p>
+</li>
+<li>
+<p><code>class_hash</code> is the hash of <a href="https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html" target="_blank" rel="noopener">the contract&#8217;s definition</a>.</p>
+</li>
+<li>
+<p><code>storage_root</code> is the root of another Merkle-Patricia trie of height 251 that is constructed from the contract&#8217;s storage.</p>
+</li>
+<li>
+<p><code>nonce</code> is the current nonce of the contract.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="classes_trie"><a class="anchor" href="#classes_trie"></a>The class trie</h3>
+<div class="paragraph">
+<p>The class trie encodes the information about all existing
+<a href="https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html" target="_blank" rel="noopener">classes</a> in Starknet&#8217;s state. This trie maps <a href="https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html" target="_blank" rel="noopener">class hashes</a> to their
+compiled class hashes. The information stored in a leaf at a path corresponding to some class hash is as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs"><em>h</em><sub>Pos</sub>(
+    CONTRACT_CLASS_LEAF_V0,
+    compiled_class_hash
 )</code></pre>
 </div>
 </div>
@@ -953,23 +751,17 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 <div class="ulist">
 <ul>
 <li>
-<p><code>l1_handler</code> is a constant prefix, encoded in bytes (ASCII), as big-endian.</p>
+<p><code><em>h</em><sub>Pos</sub></code> is the <a href="../cryptography/#poseidon_hash" class="xref page">Poseidon</a> hash function</p>
 </li>
 <li>
-<p><code>version</code> is the transaction version. Only version 0 is currently supported.</p>
+<p><code>CONTRACT_CLASS_LEAF_V0</code> is a constant prefix string encoded in ASCII (and represented as a field element).</p>
 </li>
 <li>
-<p><code>chain_id</code> is a constant value that specifies the network to which this transaction is sent.</p>
-</li>
-<li>
-<p><em>h</em> is the <a href="../cryptography/#hash-functions#pedersen_hash" class="xref page">Pedersen</a> hash (note that since we&#8217;re hashing an array, the # of inputs needs to be appended to the hash).</p>
-</li>
-<li>
-<p><code>0</code> indicates that L1 to L2 message fees are charged on L1.</p>
+<p><code>compiled_class_hash</code> is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler.</p>
 </li>
 </ul>
 </div>
-<div class="admonitionblock note">
+<div id="note_compiled_class_hash" class="admonitionblock note">
 <table>
 <tr>
 <td class="icon">
@@ -977,72 +769,180 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 </td>
 <td class="content">
 <div class="paragraph">
-<p>In an L1 handler transaction, the first element of the calldata is always the sender&#8217;s Ethereum address.</p>
+<div class="title">Compiled class hash</div>
+<p>The compiled class hash identifies the output of a specific Casm compilation as unique.</p>
 </div>
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
 <div class="paragraph">
-<p>Since L1 handler transactions are not initiated by an account, invoking <a href="https://github.com/starkware-libs/cairo/blob/2203a47f8a098cd4718d03bd109ca014049419e7/corelib/src/starknet/info.cairo#L49"><code>get_caller_address()</code></a> or similar account-related functions returns the address <code>0x0</code>.</p>
+<p>Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly (Casm). However, the prover only works with Casm.</p>
+</div>
+<div class="paragraph">
+<p>So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly. The compiled class hash provides this information.</p>
+</div>
+<div class="paragraph">
+<p>For more information, see <a href="https://book.cairo-lang.org/appendix-09-sierra.html" target="_blank" rel="noopener">the Cairo Book</a>.</p>
+</div>
+<div class="paragraph">
+<p>The party that declares the contract signs the compiled class hash, which they obtain using an SDK, as part of the <a href="../transactions/#transaction_types" class="xref page"><code>DECLARE</code></a> transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.</p>
+</div>
+<div class="paragraph">
+<p>In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-<table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 2. Supported versions of the <code>L1HandlerTransaction</code> transaction type</caption>
+</div>
+<div class="sect2">
+<h3 id="merkle_patricia_trie"><a class="anchor" href="#merkle_patricia_trie"></a>Merkle-Patricia trie</h3>
+<div class="paragraph">
+<p>The state commitment scheme uses a binary Merkle-Patricia trie with the Pedersen hash function.</p>
+</div>
+<div class="sect3">
+<h4 id="about_nodes"><a class="anchor" href="#about_nodes"></a>About nodes</h4>
+<div class="paragraph">
+<p>Each node in the trie is represented by a triplet \((length, path, value)\), where:</p>
+</div>
+<div class="hdlist">
+<table>
 <colgroup>
-<col style="width: 33.3333%;">
-<col style="width: 33.3333%;">
-<col style="width: 33.3334%;">
+<col style="width: 10%;">
+<col>
 </colgroup>
-<thead>
 <tr>
-<th class="tableblock halign-left valign-top">Current version</th>
-<th class="tableblock halign-left valign-top">Deprecated versions</th>
-<th class="tableblock halign-left valign-top">Unsupported versions</th>
+<td class="hdlist1">
+\(length\)
+</td>
+<td class="hdlist2">
+<p>is the length of the path, measured in nodes.</p>
+</td>
 </tr>
-</thead>
-<tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v0</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
+<td class="hdlist1">
+\(path\)
+</td>
+<td class="hdlist2">
+<p>is the path from the current node to its unique non-empty subtrie.</p>
+<div class="paragraph">
+<p>\(path\) is an integer in the set \(\{0,\ldots,2^{length}-1\}\), and the binary expansion of \(path\) indicates how to proceed along the trie, as follows:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Expand \(path\) to its binary representation.</p>
+</li>
+<li>
+<p>Starting with the most significant bit, representing the root of the trie, traverse the tree node by node, where the bit values \(0\) and \(1\) indicate left and right, respectively.</p>
+</li>
+</ol>
+</div>
+</td>
 </tr>
-</tbody>
+<tr>
+<td class="hdlist1">
+\(value\)
+</td>
+<td class="hdlist2">
+<p>is the value of the node, which can be either data, or the hash of two non-empty child nodes.</p>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>An empty node is one whose triplet values are \((0,0,0)\). Leaf nodes and internal nodes can be empty. A subtrie rooted at a node \((length, path, value)\) has a single non-empty subtrie, rooted at the node obtained by following the path specified by \(path\).</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Length is specified, and cannot be deduced from \(path\), because the numbers in the triplet \((length, path, value)\) are field elements of fixed size, 251 bits each.</p>
+</div>
+<div class="paragraph">
+<p>For a node where \(length&gt;0\), \(path\) leads to the highest node whose left and right children are not empty.</p>
+</div>
+</td>
+</tr>
 </table>
 </div>
 </div>
+<div class="sect3">
+<h4 id="trie_construction"><a class="anchor" href="#trie_construction"></a>Trie construction</h4>
+<div class="paragraph">
+<p>The following rules specify how the trie is constructed from a given set of leaves:</p>
 </div>
-<div class="sect1">
-<h2 id="additional_resources"><a class="anchor" href="#additional_resources"></a>Additional resources</h2>
-<div class="sectionbody">
-<div class="ulist">
-<ul>
-<li>
-<p><a href="https://book.cairo-lang.org/appendix-08-system-calls.html#send_message_to_l1" target="_blank" rel="noopener"><code>send_message_to_L1</code></a> syscall</p>
-</li>
-<li>
-<p><a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract</p>
-</li>
-<li>
-<p>For more information on how messaging works within the Starknet Core Contract, including details on coding, see <a href="https://book.cairo-lang.org/ch16-04-L1-L2-messaging.html">L1-L2 Messaging</a> in <em>The Cairo Book: The Cairo Programming Language</em></p>
-</li>
-</ul>
+<div class="paragraph">
+<p>The hash of a node \(N =(length, path, value)\), denoted by \(H(N)\), is:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[H(N)=\begin{cases}
+value, &amp; \text{if } length = 0 \\
+h_{Ped}(value, path) + length, &amp; \text{otherwise}
+\end{cases}\]
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>All arithmetic operations in the above description of \(H\) are done in the STARK field, as described in <a href="../cryptography/#stark-field" class="xref page">The STARK field</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="mathematical_definition_of_the_nodes_in_the_trie"><a class="anchor" href="#mathematical_definition_of_the_nodes_in_the_trie"></a>Mathematical definition of the nodes in the trie</h4>
+<div class="paragraph">
+<p>The triplet representing the parent of the nodes \(left=(\ell_L, p_L, v_L)\), \(right=(\ell_R, p_R, v_R)\) is defined as follows:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[parent=
+\begin{cases}
+(0,0,0), &amp; \text{if } left=right=(0,0,0)\\
+(\ell_L + 1, p_L, v_L), &amp; \text{if } right=(0,0,0) \text{ and } left \neq (0,0,0)\\
+(\ell_R + 1, p_R + 2^{\ell_R}, v_R), &amp; \text{if } right\neq (0,0,0) \text{ and } left = (0,0,0)\\
+(0, 0, h_{Ped}(H(left), H(right))), &amp; \text{otherwise}
+\end{cases}\]
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="example_trie"><a class="anchor" href="#example_trie"></a>Example trie</h4>
+<div class="paragraph">
+<p>The diagram <a href="#3-level_trie">A three-level Merkle-Patricia trie</a> illustrates  the construction of a three-level-high Merkle-Patricia trie from the leaves whose values are \((0,0,1,0,0,1,0,0)\):</p>
+</div>
+<div id="3-level_trie" class="imageblock">
+<div class="content">
+<img src="../_images/trie.png" alt="3-level-high Merkle-Patricia trie">
+</div>
+<div class="title">Figure 1. A three-level Merkle-Patricia trie</div>
+</div>
+<div class="paragraph">
+<p>Where \(r=h_{Ped}(H(2,2,1),H((2,1,1))\). Notice that the example does not skip from the root, whose length is zero, so the final state commitment to the trie is \(H((0,0,r))=r\).</p>
+</div>
+<div class="paragraph">
+<p>Suppose that you want to prove, with respect to the state commitment just computed, that the value of the leaf whose path is given by \(101\) is \(1\). In a standard Merkle trie, the proof would consist of data from three nodes, which are siblings along the path to the root.</p>
+</div>
+<div class="paragraph">
+<p>In a Merkle-Patricia trie, because the trie is sparse, you only need to send the two children of the root, which are \((2,2,1)\) and \((2,1,1)\). These two children are enough to reproduce the state commitment \(r\), and because you know that the height of the trie is three, and that it is fixed, you know that the path \(01\) of length \(2\) specified by the right-hand child, \((2,1,1)\), leads to the desired leaf.</p>
+</div>
+</div>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../fees/">Fees</a></span>
-  <span class="next"><a href="../staking/">Staking</a></span>
+  <span class="prev"><a href="../staking/">Staking</a></span>
+  <span class="next"><a href="../economics-of-starknet/">Tokenomics</a></span>
 </nav>
 </article>
   </div>

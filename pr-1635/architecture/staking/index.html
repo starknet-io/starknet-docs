@@ -3,12 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>The token economics of Starknet :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/economics-of-starknet/">
-    <link rel="prev" href="../state/">
-    <link rel="next" href="../transactions/">
-    <meta name="description" content="How token economics work in a block chain in general, and specifically in Starknet. The purpose of the Starknet token, its supply, and distribution.">
-    <meta name="keywords" content="tokenomics, STRK, token economics, economic mechanisms of Starknet">
+    <title>Staking protocol :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/staking/">
+    <link rel="prev" href="../messaging/">
+    <link rel="next" href="../state/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -336,20 +334,20 @@
        class="nav-link"
      href="../messaging/">L1-L2 messaging</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../staking/">Staking</a>
+     href="./">Staking</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
      href="../state/">State</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Tokenomics</a>
+     href="../economics-of-starknet/">Tokenomics</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -517,56 +515,63 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/economics-of-starknet.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/staking.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "The token economics of Starknet"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Staking protocol"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">The token economics of Starknet</h1>
-<div id="preamble">
-<div class="sectionbody">
-<div class="paragraph">
-<p>Starknet is a developing decentralized protocol and the economic mechanisms described here, also known as tokenomics, are subject to change based on governance decisions made by the larger community of Starknet. For more details on Starknet’s governance processes see the <a href="https://governance.starknet.io/">Starknet Governance Hub</a>. This document describes certain economic fundamentals of the Starknet token. This document is intended for informational purposes only and is meant to outline the usage and functionalities of the asset within Starknet. It is important to understand that the primary purpose of the Starknet token, STRK, is to facilitate operations and activities on Starknet and it is not intended to serve as an investment.</p>
-</div>
-</div>
-</div>
+<h1 class="page">Staking protocol</h1>
 <div class="sect1">
-<h2 id="why_are_economics_relevant"><a class="anchor" href="#why_are_economics_relevant"></a>Why are economics relevant?</h2>
+<h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Blockchains work through a combination of cryptography and economic incentives. Cryptography limits what actors in the system can do, for example, transactions must be validly signed to be included in the chain.  Economic incentives encourage actors to voluntarily perform actions that maintain the network’s capabilities when spending their own resources, for example, miners or stakers actively publish new blocks to the chain because they can receive fees and new tokens as a reward. Blockchains are valuable because they are data structures maintained by diverse and, ideally, large groups of otherwise unaffiliated persons. This gives them resilience: Any one participant can disappear, but the data structure is preserved. This also gives them censorship resistance: No single person can unilaterally decide to forbid certain persons from using the network.</p>
+<p>While Starknet is currently still centralized, it is <a href="#roadmap">gradually</a> moving towards employing a <a href="#protocol">staking protocol</a>, handing over the responsibilities of producing, attesting, and proving blocks to validators. To facilitate this gradual implementation, the protocol&#8217;s <a href="#architecture">architecture</a> is modular, ensuring maximum flexibility and ease of upgrades. However, anyone holding STRK in their wallets can already stake their tokens and earn rewards based on their level of participation by following <a href="#procedures">a few simple steps</a>.</p>
 </div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Starknet operates as a Layer 2 (L2) network on top of Ethereum. Today, Starknet achieves secure low-cost transactions by using the STARK cryptographic proof system to reduce the size of transaction data while preserving and verifying the integrity of that data. Still under development, Starknet will achieve resilience and censorship resistance by using a token, the Starknet token (STRK), to incentivize network participants to sequence transactions for users of the network and to ensure that there is a provably fair mechanism, a proof-of-stake mechanism, to determine who should sequence and submit a proof for the network blocks. A proof-of-stake mechanism might also be used to facilitate data availability solutions and other significant services required for network operations.</p>
+<p>If you are only interested in learning how to stake on Starknet, feel free to skip straight to <a href="#procedures">Procedures</a>.</p>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="purpose_of_the_token"><a class="anchor" href="#purpose_of_the_token"></a>The purpose of the STRK token</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>STRK is the mechanism for paying fees to enable operation of the network, maintaining and securing the network by enabling staking for consensus, and deciding on Starknet’s values and technology goals by voting for governance proposals.</p>
+</td>
+</tr>
+</table>
 </div>
 <div class="ulist">
+<div class="title">Additional resources</div>
 <ul>
 <li>
-<p><strong>Transaction fees:</strong> Originally, fees in Starknet were paid only in Ether (ETH). As of v.0.13.0, fees for transactions on the network can be paid using STRK, as well as ETH.</p>
-<div class="paragraph">
-<p>A portion of the fees paid in STRK are converted to ETH by the receiving sequencer, in order to cover Ethereum L1 gas costs, which, due to the specifications of the Ethereum protocol, must be paid in ETH.</p>
-</div>
+<p>Staking dashboards by <a href="https://www.aligned-stake.com/" target="_blank" rel="noopener">AlignedStake</a>, <a href="https://dashboard.endur.fi/" target="_blank" rel="noopener">Ednur</a>, <a href="https://www.stakingrewards.com/stake-app?input=starknet" target="_blank" rel="noopener">Staking Rewards</a>, <a href="https://starkscan.co/staking" target="_blank" rel="noopener">Starkscan</a>, and <a href="https://voyager.online/staking-dashboard" target="_blank" rel="noopener">Voyager</a></p>
 </li>
 <li>
-<p><strong>Staking:</strong> Certain services that are critical to the liveness and security of Starknet may require the staking of Starknet tokens. These services might be offered by multiple providers, and could include sequencing, reaching temporary L2 consensus before L1 finality is reached, STARK-proving services, and data availability provisioning, to name a few examples. These <a href="https://starkware.co/resource/starknet-decentralization-a-roadmap-in-broad-strokes/">protocol changes</a> are still under discussion within the larger governance community and are targeted for <a href="https://starkware.co/resource/starknet-decentralization-a-roadmap-in-broad-strokes/">2024 -2025</a>.</p>
+<p><a href="https://www.starknet.io/staking" target="_blank" rel="noopener">Staking</a> on starknet.io</p>
 </li>
 <li>
-<p><strong>Governance:</strong> Proposals for improving Starknet might require a minimal token support threshold. Voting, either directly or via delegation, will be required for changes to the protocol that are essential to Starknet’s liveness, security, and maintenance. Today, for example, major updates to the Starknet Operating System require the approval of token holders.
-For more information about Governance see the <a href="https://governance.starknet.io/">Starknet Governance Hub</a></p>
+<p><a href="https://github.com/starkware-libs/starknet-staking/tree/%40staking/contracts-v1.0.1-dev.510" target="_blank" rel="noopener"><code>starknet-staking</code></a> on GitHub (deployed tag)</p>
+</li>
+<li>
+<p><a href="https://www.starknet.io/blog/staking-phase-1/" target="_blank" rel="noopener">Starknet launches phase 1 of its staking initiative on mainnet</a> on the Starknet blog</p>
+</li>
+<li>
+<p><a href="https://community.starknet.io/t/snip-28-staking-v2-proposal/115250" target="_blank" rel="noopener">SNIP 28: Staking V2 proposal</a> on the Starknet community forum</p>
 </li>
 </ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="roadmap"><a class="anchor" href="#roadmap"></a>Roadmap</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Naturally, handing over the responsibility for maintaining and securing Starknet to validators in one day is neither feasible nor desirable. Instead, the staking protocol is implemented in incremental phases, with each phase bringing additional requirements from validators until they fully maintain and secure the network. The protocol is currently in the second of four phases, illustrated in following figure:</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -576,145 +581,610 @@ For more information about Governance see the <a href="https://governance.starkn
 </td>
 <td class="content">
 <div class="paragraph">
-<p>As discussed above, the Starknet tokens are digital assets intended to support the operation and usage of Starknet and are not offered as an investment. As such, the Starknet tokens do not represent any equity in StarkWare or the Starknet Foundation, nor do they provide any participation right in StarkWare or grant any right of claim from StarkWare or the Starknet Foundation.</p>
+<p>The staking protocol is currently in its second phase on both Sepolia and Mainnet.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/staking-roadmap.png" alt="staking roadmap">
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="supply_and_distribution"><a class="anchor" href="#supply_and_distribution"></a>Supply and distribution</h2>
+<h2 id="protocol"><a class="anchor" href="#protocol"></a>Protocol</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Ten billion Starknet tokens were initially created by StarkWare in May 2022 and minted onchain on November 30, 2022.</p>
+<p>The following sections describe the details of Starknet&#8217;s staking protocol. The parameters used in the protocol are summarized in the following table:</p>
 </div>
-<div class="paragraph">
-<p>The existing ten billion tokens have been or are planned to be distributed according to the following:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
+<table class="tableblock frame-all grid-all fit-content">
 <colgroup>
-<col style="width: 33.3333%;">
-<col style="width: 66.6667%;">
+<col>
+<col>
+<col>
 </colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Parameter</th>
+<th class="tableblock halign-left valign-top">Mainnet</th>
+<th class="tableblock halign-left valign-top">Sepolia</th>
+</tr>
+</thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>20.04%: Early Contributors</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for StarkWare’s team members and early contributors. These tokens are subject to a lock-up schedule, as further detailed below.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum stake for validators</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">20K STRK</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1 STRK</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>18.17%: Investors</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for StarkWare’s investors. These tokens are subject to a lock-up schedule, as further detailed below.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minting curve yearly inflation cap (\(C\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.6</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>10.76%: StarkWare</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for StarkWare for operation services such as to pay fees, provide other services on Starknet, and engage other service providers.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Withdrawal security lockup</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">21 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5 minutes</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>12.93%: Grants including Development Partners (aka DPs)</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for grants for research or work done to develop, test, deploy and maintain the Starknet protocol. The process for applications and allocations related to Starknet Foundation Grants will be outlined in a post at a later date.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Epoch length (\(E\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">40</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>9.00%: Community Provisions</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens distributed to those who contributed to Starknet and powered or developed its underlying technology.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Attestation window (\(W\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>9.00%: Community Rebates</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for rebates in Starknet tokens to partially cover the costs of onboarding to Starknet from Ethereum. Community rebates are not yet available and will be announced in 2024 in a subsequent post.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>10.00%: Foundation Strategic Reserves</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for the Starknet Foundation to fund ecosystem activities that are aligned with the <a href="https://www.starknet.io/en/content/introducing-the-starknet-foundation">Foundation’s mission</a>.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>8.10%: Foundation Treasury</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Token allocated for the Starknet Foundation’s treasury available for operations and other future initiatives by the Starknet Foundation.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>2.00%: Donations</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens reserved for donations to institutions and organizations, such as universities, NGOs, etc, as decided by the Starknet Foundation.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of epochs used for latency (\(k\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3600</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1200</p></td>
 </tr>
 </tbody>
 </table>
+<div class="sect2">
+<h3 id="roles"><a class="anchor" href="#roles"></a>Roles</h3>
 <div class="paragraph">
-<p><span class="image"><img src="../_images/planned_distribution_STRK.jpg" alt="Planned distribution of STRK"></span></p>
-</div>
-<div class="paragraph">
-<p>To align long-term incentives of the Investors and Early Contributors with the interests of the Starknet community, and following common practice in decentralized ecosystems, all tokens allocated to Investors and Early Contributors is subject to the following lock-up schedule, where percentages are based on the total token supply:</p>
+<p>Starknet&#8217;s staking protocol features two options for participation:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Up to 0.64% (64 million tokens) will be unlocked on the 15th of each month, starting April 15, 2024, and going through March 15, 2025, for a total of 7.68% (768 million tokens) unlocked by March 15, 2025.<br></p>
+<p>Staking directly as validators: Staking a minimum of 20,000 STRK and earning rewards by handling any responsibilities the protocol requires</p>
 </li>
 <li>
-<p>Up to 1.27% (127 million tokens) will be unlocked on the 15th of each month, starting April 15, 2025, and going through March 15, 2027, for a total of 30.48% (3.048 billion tokens) unlocked by March 15, 2027.</p>
+<p>Staking indirectly as delegators: Delegating STRKs to validators who allow delegation and sharing in their rewards without handling any of their responsibilities</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Validators can choose whether to allow delegation or not.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </li>
 </ul>
 </div>
-<div id="estimated_supply" class="imageblock">
+</div>
+<div class="sect2">
+<h3 id="addresses"><a class="anchor" href="#addresses"></a>Addresses</h3>
+<div class="paragraph">
+<p>To reduce exposure to threats and enhance security, multiple addresses for defined for both validators and delegators:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Validator addresses:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Staking address: Used for staking, adding stake, and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.</p>
+</li>
+<li>
+<p>Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.</p>
+</li>
+<li>
+<p>Operational Address: Used for operational purposes, such as block attestations (starting from the protocol&#8217;s second phase), block proposing (starting from the protocol&#8217;s third phase), etc. This address is used frequently and doesn&#8217;t handle large amounts of funds, and therefore is best kept by a hot wallet. Starting from the protocol&#8217;s second phase, however, hacking the operational address can lead to a lose of yield for the validator and its delegators.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Delegator addresses:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Staking address: Used for delegating stake, adding stake and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.</p>
+</li>
+<li>
+<p>Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The protocol uses a hierarchical approach between the staking and rewards addresses, and both validators and delegator can also use their staking address whenever their rewards address is required.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="epochs"><a class="anchor" href="#epochs"></a>Epochs</h3>
+<div class="paragraph">
+<p>Starting from its second phase, the staking protocol introduces the notion of <em>epochs</em> (similarly to many other protocols). Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch \(i\) are applied in epoch \(i+k\), where \(k\) is a new latency parameter. For example, the following figure illustrates a scenario where in epoch \(i\) validator \(A\) has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch \(i+1\) someone undelegates 30K STRK from \(A\):</p>
+</div>
+<div class="imageblock">
 <div class="content">
-<img src="../_images/STRK_estimated_circulating_supply.jpg" alt="Estimated supply of STRK in circulation">
+<img src="../_images/epochs-example.png" alt="epochs example">
 </div>
-<div class="title">Figure 1. Estimated supply of STRK in circulation</div>
 </div>
-<div class="exampleblock">
+</div>
+<div class="sect2">
+<h3 id="responsibilities"><a class="anchor" href="#responsibilities"></a>Responsibilities</h3>
+<div class="sect3">
+<h4 id="running_a_full_node"><a class="anchor" href="#running_a_full_node"></a>Running a full node</h4>
+<div class="paragraph">
+<p>The staking protocol requires validators to run one of the following full node implementations:</p>
+</div>
+<table class="tableblock frame-all grid-all fit-content">
+<colgroup>
+<col>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Hardware requirements</th>
+<th class="tableblock halign-left valign-top">Integration guide</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Juno</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://juno.nethermind.io/hardware-requirements" target="_blank" rel="noopener">juno.nethermind.io/hardware-requirements</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://juno.nethermind.io/running-juno" target="_blank" rel="noopener">juno.nethermind.io/running-juno</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Madara</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://docs.madara.build/hardware" target="_blank" rel="noopener">docs.madara.build/hardware</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/madara-alliance/madara/blob/main/README.md#%EF%B8%8F-installation" target="_blank" rel="noopener">github.com/madara-alliance/madara/README.md</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Pathfinder</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://eqlabs.github.io/pathfinder/getting-started/hardware-requirements" target="_blank" rel="noopener">eqlabs.github.io/pathfinder/getting-started/hardware-requirements</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://eqlabs.github.io/pathfinder/getting-started/running-pathfinder" target="_blank" rel="noopener">eqlabs.github.io/pathfinder/getting-started/running-pathfinder</a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="block_attestation"><a class="anchor" href="#block_attestation"></a>Block attestation</h4>
+<div class="paragraph">
+<p>Starting from its second phase, the staking protocol requires validators to attest to blocks, by running one of the following software:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/NethermindEth/starknet-staking-v2/blob/main/README.md" target="_blank" rel="noopener">Starknet Staking v2</a> by Nethermind</p>
+</li>
+<li>
+<p><a href="https://github.com/eqlabs/starknet-validator-attestation/blob/main/README.md" target="_blank" rel="noopener">Starknet Validator Attestation</a> by Equilibrium</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<div class="title">How does the block attestation mechanism work?</div>
+<p>In each epoch, each validator is assigned a single block whose relative number within the epoch is defined as follows:</p>
+</div>
+<div class="stemblock">
 <div class="content">
-<div class="paragraph">
-<p><em>The graph, <a href="#estimated_supply">Estimated supply of STRK in circulation</a>, excludes newly circulating tokens resulting from inflation or staking (see below).</em></p>
-</div>
-<div class="paragraph">
-<p><em>Token allotments currently retained by the Starknet Foundation, while contractually unlocked, are not considered circulating unless granted, donated, or otherwise allocated out of originating wallets through future grants, provisions, donations, developer initiatives, or other programs.</em></p>
-</div>
+\[h(\text{staked amount},\text{epoch id},\text{validator address}) \mod (E-W)\]
 </div>
 </div>
 <div class="paragraph">
-<p>Through this lock-up period, token holders cannot transfer, sell, or pledge their STRK tokens. Delegation of voting is permitted with locked tokens and, when available, staking might also be permitted.</p>
+<p>where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(E\) is the number of blocks in an epoch, termed <em>epoch length</em></p>
+</li>
+<li>
+<p>\(W\) is the number of blocks applicable for attestation submittal, termed <em>attestation window</em></p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>The total circulating supply of tokens is planned to increase over time with the minting of new tokens by the protocol, as staking rewards, block rewards, or other rewards associated with the staking process. Such minting will be made pursuant to a schedule that will be determined with the community at a later point, not before Starknet services are more decentralized. The supply in circulation might not, therefore, remain fixed. However, as long as StarkWare is the sole operator of the Starknet sequencer, there will be no issuance of new tokens for the purpose of block rewards. For more information, see <a href="https://starkware.co/resource/a-token-minting-proposal-to-manage-inflation/"><em>A token-minting proposal to manage inflation</em></a>.</p>
+<p>During each epoch, validators have the opportunity to attest to their assigned block by submitting an <code>attest</code> transaction, which must be included within the attestation window. For example, if \(W = 20\) and \(N\) is the relative block number assigned to validator \(A\), then \(A\) must submit an <code>attest</code> transaction between the blocks whose relative number within the epoch are \(N+1\) and \(N+20\).</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In the second phase of the protocol, each Validator is required to perform only one attestation per epoch.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>The <code>attest</code> transaction includes the block hash of the attested block, ensuring validators actively use full nodes, as they need to continuously track block hashes. Additionally, the attestation is publicly verifiable, ensuring validators' reliability is publicly tested — a crucial prerequisite before handing them any core responsibilities.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="rewards"><a class="anchor" href="#rewards"></a>Rewards</h3>
+<div class="paragraph">
+<p>Rewards are distributed based on the amount staked and the commission policy constant \(CP\) set by the validator, with yearly reward percentages calculated using the following formulas:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>For delegators:</p>
+<div class="stemblock">
+<div class="content">
+\[\text{stake_delegated} \cdot (1 - CP) \cdot \frac{M}{S}\]
+</div>
+</div>
+</li>
+<li>
+<p>For validators:</p>
+<div class="stemblock">
+<div class="content">
+\[\left(\text{self_stake} + \text{total_stake_delegated} \cdot CP\right) \cdot \frac{M}{S}\]
+</div>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>where \(M\) and \(S\) are defined by the <a href="#minting_curve">Minting curve</a>.</p>
+</div>
+<div class="paragraph">
+<p>Starting from the second phase of the protocol, rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn&#8217;t will get no rewards for the epoch&#8217;s entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator&#8217;s pool. Stakers that enter the protocol on epoch \(i\) will start getting rewards only on epoch \(i+k\), and stakers that signal an intent to exit the protocol on epoch \(i\) will still get rewards until epoch \(i+k-1\).</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Starting from the second phase of the protocol, when a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is \(O(\text{#delegator's balance changes since last claim})\) — and not \(O(\text{#epochs since last claim})\) — which is assumed to be small enough to fit in one transaction in any real-world-scenario. This mechanism replaces the global reward index that was used prior to the protocol&#8217;s second phase.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect3">
+<h4 id="minting_curve"><a class="anchor" href="#minting_curve"></a>Minting curve</h4>
+<div class="paragraph">
+<p>The minting curve balances participation and inflation by adjusting rewards based on the total STRK locked in the protocol, and is defined by the following formula:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[M = \frac{C}{10} \times \sqrt{S}\]
+</div>
+</div>
+<div class="paragraph">
+<p>where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(S\) is the staking rate as a percentage of the total token supply</p>
+</li>
+<li>
+<p>\(M\) is the annual minting rate as a percentage of the total token supply</p>
+</li>
+<li>
+<p>\(C\) is the maximum theoretical inflation percentage, set to 1.6%</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="latencies"><a class="anchor" href="#latencies"></a>Latencies</h3>
+<div class="paragraph">
+<p>The following latencies are set in place:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>To disincentivise sudden large withdrawals that could destabilize the network, funds are subject to a 21-day lockup after signaling an unstake intent, during which no rewards are earned and funds cannot be withdrawn.</p>
+</li>
+<li>
+<p>Starting from the second phase of the protocol, to prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch \(i\) takes effect only on epoch \(i+1\).</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="commissions"><a class="anchor" href="#commissions"></a>Commissions</h3>
+<div class="paragraph">
+<p>Starting from its second phase, the staking protocol allows validators to increase their commission. To avoid an unexpected increase in commissions, validators must commit to a certain maximum commission \(M\) and the last date (in epochs) that this commitment is relevant for. Until this date arrives, validators cannot increase their commission beyond \(M\), but can freely change their commission in the range \([0,M]\).</p>
+</div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="risks_and_disclaimers"><a class="anchor" href="#risks_and_disclaimers"></a>Risks and disclaimers</h2>
+<h2 id="architecture"><a class="anchor" href="#architecture"></a>Architecture</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Starknet is a developing decentralized protocol and the economic mechanisms described herein are subject to change based on decisions made by the larger community of Starknet builders and users. Starknet relies upon third parties to adopt and implement software and protocols as users and contributors of Starknet. It also relies, in whole or partly, on third parties to develop, supply and otherwise support it. There is no assurance or guarantee that such third parties will continue to participate in the network or that the network will continue to function as intended.</p>
+<p>The implementation of Starknet&#8217;s staking protocol is divided into several contracts, summarized in the following figure:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/staking-architecture.png" alt="staking architecture">
+</div>
 </div>
 <div class="paragraph">
-<p>The technical documents provided herein describe certain planned and specified economic fundamentals of a digital asset, STRK. These materials are intended for informational purposes only and are meant to outline the usage and functionalities of the asset within Starknet. It is important to understand that the primary purpose of STRK is to pay for fees, provide a mechanism for securing consensus, and allow for decentralized governance on Starknet; it is not intended to serve as an investment.</p>
+<p>This modular architecture allows for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are also in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process. The following table details the key components of the architecture:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 11.1111%;">
+<col style="width: 88.8889%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Contract</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Staking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The staking contract is the core of the staking system, managing the entire lifecycle of staking, from initial staking to claiming rewards and unstaking.</p>
+<p class="tableblock">The staking contract also stores the <code>StakerInfo</code> data structure, which holds detailed information about each validator, including their staked amount, unclaimed rewards, delegation details, and operational parameters, and helps to ensure that validators' information is accurately tracked and updated.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Delegation pooling</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All delegation interactions, such as entering or exiting a pool, are enabled through the delegation pooling contract, which tracks each delegator&#8217;s contribution, calculates their rewards, and manages the delegation lifecycle.</p>
+<p class="tableblock">The delegation pooling contract also stores the <code>PoolMemberInfo</code> data structure, which holds information about each delegator&#8217;s contributions, rewards, and status within the pool, and helps manage and calculate the delegation and reward distribution processes for pool members.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Reward Supplier</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve, ensuring the rewards are distributed fairly and in accordance with the protocol&#8217;s economic parameters.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minting Curve</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The minting curve contract defines the economic model that governs reward distribution, ensuring that the network&#8217;s inflation is managed while incentivizing participation of stakers.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Attestation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The attestation contract manages the tracking of successful validator attestations, by verifying whether the validator has correctly attested to their assigned block within a designated attestation window.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="procedures"><a class="anchor" href="#procedures"></a>Procedures</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following tables detail the procedures enabled by the staking protocol for both <a href="#staking_as_validators">validators</a> and <a href="#staking_as_delegators">delegators</a>, along with the instructions to perform them.</p>
 </div>
 <div class="paragraph">
-<p>Starknet relies upon third parties to adopt and implement the software and protocols as users of Starknet. It also relies, in whole or partly, on third parties to develop, supply and otherwise support it. As a Layer 2 network over Ethereum, Starknet also relies upon third parties maintaining and operating the Ethereum network. There is no assurance or guarantee that those third parties will complete their work, properly carry out their obligations, and/or otherwise meet anyone’s needs.</p>
+<p>To invoke onchain contracts, use <a href="https://foundry-rs.github.io/starknet-foundry/starknet/sncast-overview.html" target="_blank" rel="noopener">Starknet Foundry&#8217;s <code>sncast</code></a>, <a href="../../tools/interacting-with-starknet/#starkli" class="xref page">Starkli</a>, or a <a href="../../ecosystem/block-explorers-monitoring-tools/#block_explorers" class="xref page">block explorer</a>. To get the onchain addresses of the staking and STRK contracts, see <a href="../../resources/chain-info/#staking" class="xref page">Important addresses</a>.</p>
 </div>
-<div class="paragraph">
-<p>STRK, as the native token of Starknet, may be subject to the risks of the Starknet network, including, without limitation, the following: (i) the technology associated with Starknet may not function as intended; (ii) the details of the Starknet token economics including the total supply and distribution schedule may be changed due to decisions made by the consensus of participants of the Starknet network; (iii) Starknet may fail to attract sufficient interest from key stakeholders or users; (iv) Starknet may not progress satisfactorily and Starknet tokens may not be useful or valuable; (v) Starknet may suffer from attacks by hackers or other individuals; and (vi) Starknet is comprised of open-source technologies that depend on a network of computers to run certain software programs to process transactions, and because of this model StarkWare and the Starknet Foundation have limited control over Starknet.</p>
+<div class="sect2">
+<h3 id="staking_as_validators"><a class="anchor" href="#staking_as_validators"></a>Staking as validators</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Procedure</th>
+<th class="tableblock halign-left valign-top">Instructions</th>
+<th class="tableblock halign-left valign-top">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Staking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#stake" target="_blank" rel="noopener"><code>stake</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>You should make sure you are <a href="#responsibilities">running a full node and attesting to blocks</a> before staking</p>
+</li>
+<li>
+<p>You must first approve the transfer of the amount of STRK tokens to be staked to the staking contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+<li>
+<p><code>operational_address</code> should have sufficient funds to pay for attestation transactions</p>
+</li>
+<li>
+<p><code>amount</code> should be equal or greater than the <a href="#protocol">minimum stake for validators</a> and denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p><code>commission</code> should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Claiming rewards</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards" target="_blank" rel="noopener"><code>claim_rewards</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Increasing stake</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#increase_stake" target="_blank" rel="noopener"><code>increase_stake</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p>You must first approve the transfer of STRK tokens to the staking contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Setting commission</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission" target="_blank" rel="noopener"><code>set_commission</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>commission</code> should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)</p>
+</li>
+<li>
+<p>Commissions can be increased only after <a href="#commissions">setting a commission commitment</a> using <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission_commitment" target="_blank" rel="noopener"><code>set_commission_commitment</code></a></p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changing reward address</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address" target="_blank" rel="noopener"><code>change_reward_address</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changing operational address</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#declare_operational_address" target="_blank" rel="noopener"><code>declare_operational_address</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_operational_address" target="_blank" rel="noopener"><code>change_operational_address</code></a> functions</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>declare_operational_address</code> should be invoked by your new operational address and <code>change_operational_address</code> should be invoked by your staking address</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Opening delegation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_open_for_delegation" target="_blank" rel="noopener"><code>set_open_for_delegation</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Opening delegation is necessary only if <code>pool_enabled</code> was set to <code>false</code> when invoking the staking contract&#8217;s <code>stake</code> function</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Unstaking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_intent"><code>unstake_intent</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_action"><code>unstake_action</code></a> functions</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>Once an unstake intent is signaled:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Funds are removed from the total balance and are no longer part of the staking protocol</p>
+</li>
+<li>
+<p>The same staking address cannot be used to "restake" (i.e., <code>unstake_action</code> is <strong>irreversible</strong>)</p>
+</li>
+</ul>
 </div>
-<div class="paragraph">
-<p>Risks related to blockchain technology in general and Starknet in particular may impact the usefulness of Starknet, and, in turn, the utility or value of STRK. The software and hardware, technology and technical concepts and theories applicable to Starknet and STRK are still in an early development stage and unproven, there is no warranty that Starknet will achieve any specific level of functionality or success, nor that the underlying technology will be uninterrupted or error-free, and there is an inherent risk that the technology could contain weaknesses, vulnerabilities or bugs causing, potentially, the complete loss of any Starknet tokens held by Starknet users.</p>
+</li>
+<li>
+<p><code>unstake_action</code> should be invoked only after the appropriate <a href="#latencies">waiting period</a> has ended</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+</tbody>
+</table>
 </div>
+<div class="sect2">
+<h3 id="staking_as_delegators"><a class="anchor" href="#staking_as_delegators"></a>Staking as delegators</h3>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>As with most commonly used public blockchains, STRK is accessed using a private key that corresponds to the address at which they are stored. If the private key, or the "seed" used to create the address and corresponding private key are lost or stolen, the tokens associated with that address might be unrecoverable and will be permanently lost.</p>
+<p>The following procedures are only intended for developers who are either interested (for whatever reason) in staking as delegators without using a <a href="#introduction">staking dashboard</a>, or are building one.</p>
 </div>
-<div class="paragraph">
-<p>Public blockchain-based systems, including Starknet and the underlying Ethereum network, depend on independent verifiers, and therefore may be vulnerable to consensus attacks including, but not limited to, double-spend attacks, majority voting power attacks, race condition attacks, and censorship attacks. These attacks, if successful, could result in the permanent loss of STRK.</p>
+</td>
+</tr>
+</table>
 </div>
-<div class="paragraph">
-<p>Starknet, STRK, and blockchain technology are nascent, and there may be additional risks not described above or that may be new or unanticipated. We recommend only using Starknet or holding STRK if you are familiar with the technology and aware of the risks.</p>
-</div>
-<div class="paragraph">
-<p>This document and its contents are not, and should not be construed as, an offer to sell, or the solicitation of an offer to buy, any tokens, nor should it or any part of it form the basis or be relied on in connection with any contract or commitment whatsoever. This document is not advice of any kind, including legal, investment, financial, tax, or any other professional advice. Nothing in this document should be read or interpreted as a guarantee or promise of how the Starknet network or its STRK will develop, be utilized, or accrue value.</p>
-</div>
-<div class="paragraph">
-<p>All information in this document is provided on an “as is” basis without any representation or warranty of any kind. This document only outlines current plans, which could change at the discretion of various parties, and the success of which will depend on many factors outside of Starknet Foundation’s control. Such future statements necessarily involve known and unknown risks, which may cause actual performance and results in future periods to differ materially from what we have described or implied in this document. StarkWare and the Starknet Foundation disclaim all warranties, express or implied, to the fullest extent permitted by law with respect to the functionality of Starknet and STRK.</p>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Procedure</th>
+<th class="tableblock halign-left valign-top">Instructions</th>
+<th class="tableblock halign-left valign-top">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Entering a delegation pool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#enter_delegation_pool" target="_blank" rel="noopener"><code>enter_delegation_pool</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p>You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Claiming rewards</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards-1" target="_blank" rel="noopener"><code>claim_rewards</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Adding to a delegation pool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#add_to_delegation_pool" target="_blank" rel="noopener"><code>add_to_delegation_pool</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p>You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Switching delegation pools</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#switch_delegation_pool" target="_blank" rel="noopener"><code>switch_delegation_pool</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changing reward address</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address-1" target="_blank" rel="noopener"><code>change_reward_address</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Exiting a delegation pool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_intent" target="_blank" rel="noopener"><code>exit_delegation_pool_intent</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_action" target="_blank" rel="noopener"><code>exit_delegation_pool_action</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>exit_delegation_pool_action</code> should be invoked only after the appropriate <a href="#latencies">waiting period</a> has ended</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../state/">State</a></span>
-  <span class="next"><a href="../transactions/">Transactions</a></span>
+  <span class="prev"><a href="../messaging/">L1-L2 messaging</a></span>
+  <span class="next"><a href="../state/">State</a></span>
 </nav>
 </article>
   </div>

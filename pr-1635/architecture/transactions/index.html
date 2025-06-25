@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>SHARP (Shared Prover) :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/sharp/">
-    <link rel="prev" href="../transactions/">
-    <link rel="next" href="../os/">
+    <title>Transactions :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/transactions/">
+    <link rel="prev" href="../economics-of-starknet/">
+    <link rel="next" href="../sharp/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -349,10 +349,10 @@
        class="nav-link"
      href="../economics-of-starknet/">Tokenomics</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../transactions/">Transactions</a>
+     href="./">Transactions</a>
   </li>
 </ul>
   </li>
@@ -363,10 +363,10 @@
   <li class="nav-item" data-depth="2">
     <span class="nav-text"><a href="https://book.cairo-lang.org/" target="_blank" rel="noopener">Cairo ↗</a></span>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">SHARP</a>
+     href="../sharp/">SHARP</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,25 +515,53 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/sharp.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/transactions.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "SHARP (Shared Prover)"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Transactions"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">SHARP (Shared Prover)</h1>
+<h1 class="page">Transactions</h1>
 <div class="sect1">
 <h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>SHARP is like public transportation for proofs on Starknet, aggregating multiple Cairo programs to save costs and boost efficiency. It uses recursive proofs, enabling parallelization and optimization, making it more affordable for all users. Critical services like the gateway, validator, and Prover work together with a stateless design for flexibility. SHARP’s adoption by StarkEx and Starknet highlights its significance and potential for future optimization.</p>
+<p>Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only <a href="#transaction_types">three types</a> of transactions, with each type going through the same <a href="#transaction_lifecycle">lifecycle</a> to receive its <a href="#transaction_statuses">execution and finality statuses</a>. Every transaction that executed successfully is issued a <a href="#transaction_receipt">receipt</a>, which includes its statuses, as well as other information about it.</p>
 </div>
+<div class="ulist">
+<div class="title">Additional information</div>
+<ul>
+<li>
+<p><a href="../../resources/transactions-reference/" class="xref page">Transaction fields and hash calculations reference</a> in <em>Resources</em></p>
+</li>
+<li>
+<p><a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json" target="_blank" rel="noopener"><code>starknet_api_openrpc.json</code></a> in the <code>starknet-specs</code> GitHub repository</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="transaction_types"><a class="anchor" href="#transaction_types"></a>Transaction types</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>This topic discusses SHARP, how it has evolved to incorporate recursive proofs, and its role in reducing costs and improving efficiency within the Starknet network.</p>
+<p>Starknet supports the following types of transactions:</p>
 </div>
+<div class="hdlist">
+<table>
+<colgroup>
+<col style="width: 20%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<code>DECLARE</code>
+</td>
+<td class="hdlist2">
+<p>Introduces a new contract class to Starknet, enabling other contracts to either deploy instances of it or use it via a library call</p>
 <div class="admonitionblock tip">
 <table>
 <tr>
@@ -542,25 +570,59 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p><a href="https://docs.herodotus.cloud/atlantic/introduction" target="_blank" rel="noopener">Atlantic</a> is a managed ZK Prover service that allows developers to easily integrate with SHARP.</p>
+<p>For more information about contract classes and instances, see <a href="https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html">the Cairo Book</a>.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="what-is-sharp"><a class="anchor" href="#what-is-sharp"></a>What is SHARP?</h2>
-<div class="sectionbody">
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>INVOKE</code>
+</td>
+<td class="hdlist2">
+<p>Invokes a function in an existing contract instance, undergoing validation and execution initiated by <a href="../accounts/#starknets_account_structure" class="xref page">the caller account&#8217;s <code>__validate__</code> and <code>__execute__</code> functions</a> (respectively).</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>SHARP, which stands for <em>Shared Prover</em>, is a mechanism that aggregates multiple Cairo programs from different users, each containing different logic. These Cairo programs are then executed together, generating a single proof common to all the programs. Rather than sending the proof directly to the Solidity Verifier in Ethereum, it is initially sent to a STARK Verifier program written in Cairo. The STARK Verifier generates a new proof to confirm that the initial proofs were verified, which can be sent back into SHARP and the STARK Verifier. Details for this recursive proof process appear below. Ultimately, the last proof in the series is sent to the Solidity Verifier on Ethereum. In other words, there are many proofs generated until we reach Ethereum and the Solidity Verifier.</p>
+<p>The validation stage verifies that the caller account approves the transaction. Because an account&#8217;s <code>__validate__</code> and <code>__execute__</code> functions can contain any logic, the caller account ultimately determines how to handle the <code>INVOKE</code> transaction.</p>
 </div>
-<div class="paragraph">
-<p>The primary benefit of SHARP lies in its ability to decrease costs and enhance efficiency within the Starknet network. It achieves this by aggregating multiple Cairo jobs, which are individual sets of computation. This aggregation enables the protocol to leverage the exponential amortization offered by STARK proofs.</p>
+</td>
+</tr>
+</table>
 </div>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>DEPLOY_ACCOUNT</code>
+</td>
+<td class="hdlist2">
+<p>Deploys a new account contract to Starknet.</p>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Exponential amortization means that as the computational load of the proofs increases, the cost of verifying those proofs rises at a slower logarithmic rate than the computation increase. As a result, the cost of each transaction within the aggregated set is significantly reduced, making the overall process more cost-effective and accessible for users.</p>
+<p>For more information about deploying a new account, see <a href="../accounts/#deploying_a_new_account" class="xref page">Accounts</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -570,48 +632,191 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>In the context of SHARP and Cairo context, a <em>jobs</em> refer to the individual Cairo programs or tasks submitted by different users. These jobs contain specific logic or computations that must be executed on the Starknet network.</p>
+<p>The <a href="../messaging/#l1_handler_transaction" class="xref page"><code>L1HandlerTransaction</code> type</a> is also a valid transaction type within Starknet, be it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations (particularly, handling messages from L1 to L2).</p>
+</div>
+<div class="paragraph">
+<p>The <code>DEPLOY</code> transaction type existed in Starknet for deploying account before being replaced by <code>DEPLOY_ACCOUNT</code>. <code>DEPLOY</code> only had one version (v0) and is now unsupported by Starknet.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>Additionally, SHARP enables smaller users with limited computation to benefit from joining other jobs and share the cost of generating the proofs. This collaborative approach is similar to using public transportation instead of a private car, where the cost is distributed among all participants, making it more affordable for everyone.</p>
+<p>Each transaction type is versioned, with versions increasing when the fields that comprise the transaction change, either with the addition of a new field or the removal of an existing field. The following table summarizes the current, deprecated, and unsupported versions of each transaction type:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Current version</th>
+<th class="tableblock halign-left valign-top">Deprecated versions</th>
+<th class="tableblock halign-left valign-top">Unsupported versions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>INVOKE</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v1, v0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DECLARE</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v2, v1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v0</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DEPLOY_ACCOUNT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Do not submit a transaction that uses an unsupported transaction type, as it cannot be included in a proof, and therefore cannot become part of a Starknet block.</p>
+</div>
+<div class="paragraph">
+<p>Sending transaction that use deprecated versions is still supported, but support will be removed in an upcoming Starknet release.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="recursive-proofs-in-sharp"><a class="anchor" href="#recursive-proofs-in-sharp"></a>Recursive proofs in SHARP</h2>
+<h2 id="transaction_lifecycle"><a class="anchor" href="#transaction_lifecycle"></a>Transaction lifecycle</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>One of the most powerful features of SHARP is its use of recursive proofs. Rather than directly sending the generated proofs to the Solidity Verifier, they are first sent to a STARK Verifier program written in Cairo. This Verifier, which is also a Cairo program, receives the proof and creates a new Cairo job that is sent to the Prover. The Prover then generates a new proof to confirm that the initial proofs were verified. These new proofs can be sent back into SHARP and the STARK Verifier, restarting the process.</p>
-</div>
-<div class="paragraph">
-<p>This process continues recursively, with each new proof being sent to the Cairo Verifier until a trigger is reached. At this point, the last proof in the series is sent to the Solidity Verifier on Ethereum. This approach enables greater parallelization of the computation and reduces the time and cost associated with generating and verifying proofs.</p>
-</div>
-<div class="paragraph">
-<p>At first glance, recursive proofs may seem more complex and time-consuming. However, there are several benefits to this approach:</p>
+<p>The high-level steps in the Starknet transaction lifecycle are as follows:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p><strong>Parallelization</strong>: Recursive proofs enable work parallelization, reducing user latency and improving SHARP efficiency.</p>
+<p><strong>Transaction submission:</strong> A transaction is submitted to a sequencer by a full node.</p>
 </li>
 <li>
-<p><strong>Cheaper onchain costs</strong>: Parallelization enables SHARP to create larger proofs, which were previously dependent on the limited availability of large cloud machines. As a result, onchain costs are reduced.</p>
+<p><strong>Mempool validation:</strong>
+The sequencer&#8217;s <a href="#transaction_mempool">mempool</a> performs preliminary validation of the transaction, such as ensuring that its invoker&#8217;s balance exceeds the transaction&#8217;s <code>max_fee</code> value, assuring the transaction&#8217;s calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Mempool validation in this context is analogous to Ethereum&#8217;s signature checking, and includes running the account&#8217;s <code>__validate__</code> function for an <code>INVOKE</code> transaction, <code>__validate_declare__</code> for a <code>DECLARE</code> transaction, or <code>__validate_deploy__</code> for a <code>DEPLOY_ACCOUNT</code> transaction.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </li>
 <li>
-<p><strong>Lower cloud costs</strong>: Since each job is shorter, the required memory for processing is reduced, resulting in lower cloud costs.</p>
+<p><strong>Sequencer validation:</strong> The sequencer performs preliminary validation of the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The sequencer repeats the same validation performed by the mempool.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </li>
 <li>
-<p><strong>Optimization</strong>: Recursive proofs enable SHARP to optimize for various factors, including latency, onchain costs, and time to proof.</p>
+<p><strong>Execution:</strong> The sequencer batches all transactions that passed the preliminary validation into a block, and applies them to the state sequentially. If a transaction fails during execution, it is included in the block with as reverted.</p>
 </li>
 <li>
-<p><strong>Cairo support</strong>: Recursive proofs only require support in Cairo, without the need to add support in the Solidity Verifier.</p>
+<p><strong>Proof generation and verification:</strong> The prover uses the <a href="../os/" class="xref page">Starknet operating system</a> to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.</p>
 </li>
 </ol>
 </div>
+<div class="sect2">
+<h3 id="transaction_mempool"><a class="anchor" href="#transaction_mempool"></a>Transaction mempool</h3>
+<div class="paragraph">
+<p>Up to (and including) v0.13.5 of Starknet, transactions were received and ordered by the sequencer in a FIFO fashion. In v0.14.0, sequencers instead maintain a mempool: this decouples the order of arrival from the transaction ordering in the blocks. The block ordering is decided by each block proposer according to their local policy. A transaction with a higher tip will likely be placed earlier in the block. The mempool architecture has some implications on how transactions are accepted and processed, which we describe below.</p>
+</div>
+<div class="sect3">
+<h4 id="nonces"><a class="anchor" href="#nonces"></a>Nonces</h4>
+<div class="paragraph">
+<p>Transactions with a nonce greater than current sender nonce + X will be rejected from the mempool (the “current sender nonce” refers to the sender nonce in the latest finalized state at the time of receival of the tx). The final config is still in discussion, but it should be 50 &#8656; X &#8656; 100.
+Declare transactions whose nonce is invalid against the current state will be rejected (i.e. no declares with future nonces).</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="fee_escalation"><a class="anchor" href="#fee_escalation"></a>Fee escalation</h4>
+<div class="paragraph">
+<p>A transaction (say from account A and with nonce n) is replaced if a more profitable transaction, i.e. with a higher tip, from the same account A and nonce n is received. To successfully replace a transaction, <code>tip</code> and <code>max_l2_gas_price</code> need to be bumped by at least 10%. Note that there are unlikely edge cases in which the transaction is not replaced, e.g. the lower paying transaction enters a block while the higher paying transaction is processed in the gateway.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="eviction_policy"><a class="anchor" href="#eviction_policy"></a>Eviction policy</h4>
+<div class="paragraph">
+<p>The mempool keeps track of the time in which a tx enters and it does a periodical clean-up of transactions that cannot be included in a block and which have been in the mempool for too long, i.e. have exceeded their time-to-live (TTL). The TTL is configured to be 5 mins.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="declare_transaction_behavior"><a class="anchor" href="#declare_transaction_behavior"></a>Declare transaction behavior</h4>
+<div class="paragraph">
+<p>When <code>DECLARE</code> transactions are sent to the mempool, they first go through the usual validations (including nonce validation and fee escalation) and then are inserted into a "waiting room" before they are inserted into the pool. In particular, maturing transactions cannot enter a block.
+While in the waiting room, no escalation is possible: i.e. a transaction with the same nonce from the same account will be rejected. This impedes a DoS where a <code>DECLARE</code> transaction is sent, compiled and then removed by sending a transaction with the same nonce while it matures. After the transaction has matured and entered the mempool, escalation is possible again (maturation time &lt;&lt; time to live).</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="transaction_statuses"><a class="anchor" href="#transaction_statuses"></a>Transaction statuses</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A transaction&#8217;s current state is represented by the following <em>finality</em> and <em>execution</em> statuses:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 28.5714%;">
+<col style="width: 57.1429%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Status</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-middle" rowspan="6"><p class="tableblock"><strong>Finality</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>NOT_RECEIVED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction is not yet known to any sequencer.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RECEIVED</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>A full node has successfully submitted the transaction to a sequencer.</p>
+</div>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -620,72 +825,316 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Latency in Starknet encompasses the time taken for processing, confirming, and including transactions in a block. Latency is affected by factors like network congestion, transaction fees, and system efficiency. Minimizing latency ensures faster transaction processing and user feedback.</p>
+<p>As there is currently no P2P protocol between full nodes for updating on each other about received transactions, querying a different node than the one that submitted the transaction for its status will result in a <code>Transaction hash not found</code> error.</p>
 </div>
 <div class="paragraph">
-<p>Time to proof, however, specifically pertains to the amount of time required to generate and verify cryptographic proofs for transactions or operations.</p>
+<p>Therefore, relying on <code>RECEIVED</code> statuses requires initiating sticky HTTP sessions with your full node provider.</p>
 </div>
 </td>
 </tr>
 </table>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>PRE-CONFIRMED</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>The transaction was written to the feeder gateway&#8217;s storage by a sequencer.</p>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="sharp_backend_architecture_and_data_pipeline"><a class="anchor" href="#sharp_backend_architecture_and_data_pipeline"></a>SHARP backend architecture and data pipeline</h2>
-<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>SHARP&#8217;s backend architecture consists of several services that work together to process Cairo jobs and generate proofs. These services include:</p>
+<p>As the transaction hasn&#8217;t been executed yet, no execution information is available and only the transaction hash is written to the feeder gateway&#8217;s storage.</p>
 </div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Gateway</strong>: Cairo jobs enter SHARP through the gateway.</p>
-</li>
-<li>
-<p><strong>Job Creator</strong>: This service prevents job duplication and ensures that the system operates consistently, regardless of multiple identical requests.</p>
-</li>
-<li>
-<p><strong>Validator</strong>: The validator service runs validation checks on each job, ensuring they meet the requirements and can fit within the Prover machines. Invalid jobs are tagged as such and do not proceed to the Prover.</p>
-</li>
-<li>
-<p><strong>Scheduler</strong>: The scheduler service creates <em>trains</em> that aggregate jobs and send them to the Prover. Recursive jobs are paired and sent to the Prover together.</p>
-</li>
-<li>
-<p><strong>Cairo Runner</strong>: This service runs Cairo for the Prover’s needs. The Cairo Runner service runs Cairo programs, executing the necessary computations and generating the execution trace as an intermediate result. The Prover then uses this execution trace.</p>
-</li>
-<li>
-<p><strong>Prover</strong>: The Prover computes the proofs for each train.</p>
-</li>
-<li>
-<p><strong>Dispatcher</strong>: The Dispatcher serves two functions in the SHARP system.</p>
+</td>
+</tr>
+</table>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>EXECUTED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by a sequencer and its receipt was written to the feeder gateway&#8217;s storage.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L2</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was included in a block finalized by the consensus protocol.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Starknet state on L1 moved to a block height which is greater than or equal to the height of the block containing the transaction.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-middle" rowspan="2"><p class="tableblock"><strong>Execution</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REVERTED</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>The transaction failed during execution by a sequencer, and was included in a block as reverted.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Since the <code>DEPLOY_ACCOUNT</code> and <code>DECLARE</code> transactions don&#8217;t have an execution phase, they cannot be reverted.</p>
+</div>
+</td>
+</tr>
+</table>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SUCCEEDED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by a sequencer and is included in a block.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="sect2">
+<h3 id="state_implications_of_reverted_transactions"><a class="anchor" href="#state_implications_of_reverted_transactions"></a>State implications of reverted transactions</h3>
+<div class="paragraph">
+<p>When a transaction is marked as <code>REVERTED</code>, the following state implications occur:</p>
+</div>
+<div class="hdlist">
+<table>
+<colgroup>
+<col style="width: 20%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+Nonce increases
+</td>
+<td class="hdlist2">
+<p>The nonce value for the account of the failed transaction iterates despite the failure.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Fee charge
+</td>
+<td class="hdlist2">
+<p>The sequencer charges a fee for the execution of the transaction up to the point of failure, and a respective <code>Transfer</code> event is emitted.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Partial reversion
+</td>
+<td class="hdlist2">
+<p>All changes that occurred during the validation stage are not reverted. However, all changes that occurred during the execution stage are reverted, including all messages to L1 or any events that were emitted during this stage. Events might still be emitted from the validation stage or the fee charge stage.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Fee calculation
+</td>
+<td class="hdlist2">
+<p>The fee charged for <code>REVERTED</code> transactions is the smaller of the following two values:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>In the case of a recursive proof, the Dispatcher runs the Cairo Verifier program on the proof it has received from the Prover, resulting in a new Cairo job that goes back to the Validator.</p>
+<p>The maximum fee that the user is willing to pay, either <code>max_fee</code> (pre-v3 transactions) or \(\text{max_amount} \cdot \text{max_price_per_unit}\) (v3 transactions).</p>
 </li>
 <li>
-<p>In the case of a proof that is to be published onchain, the Dispatcher creates <em>packages</em> from the proof, which can then be sent to the <em>Blockchain Writer</em>.</p>
+<p>The total consumed resources.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Consumed resources are resources used for the execution of the transaction up to the point of failure, including Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the validation and execution stages.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </li>
 </ul>
 </div>
-</li>
-<li>
-<p><strong>Blockchain Writer</strong>: Once the packages have been created by the Dispatcher, they are sent to the Blockchain Writer. The Blockchain Writer is responsible for sending the packages to the appropriate blockchain, such as Ethereum, for verification. This step in the SHARP system ensures that the proofs are properly verified and that the transactions are securely recorded on the blockchain.</p>
-</li>
-<li>
-<p><strong>Catcher</strong>: The Catcher monitors onchain transactions to ensure that they have been accepted. While the Catcher is relevant for internal monitoring purposes, be aware that if a transaction fails, the fact won’t be registered onchain in the Fact Registry. As a result, the soundness of the system is still preserved even without the Catcher.</p>
-</li>
-</ol>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="transaction_receipt"><a class="anchor" href="#transaction_receipt"></a>Transaction receipt</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A transaction receipt can be obtained by using the Starknet API&#8217;s <code>starknet_getTransactionReceipt</code> endpoint and contains the following fields:</p>
+</div>
+<div class="hdlist">
+<table>
+<colgroup>
+<col style="width: 25%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<code>transaction_hash</code>
+</td>
+<td class="hdlist2">
+<p>The hash of the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>actual_fee</code>
+</td>
+<td class="hdlist2">
+<p>The actual fee paid for the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>finality_status</code>
+</td>
+<td class="hdlist2">
+<p>The finality status of the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>execution_status</code>
+</td>
+<td class="hdlist2">
+<p>The execution status of the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>block_hash</code>
+</td>
+<td class="hdlist2">
+<p>The hash of the block that includes the transaction</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>block_number</code>
+</td>
+<td class="hdlist2">
+<p>The sequential number of the block that includes the transaction</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>messages_sent</code>
+</td>
+<td class="hdlist2">
+<p>A list of messages sent to L1.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>events</code>
+</td>
+<td class="hdlist2">
+<p>The events emitted.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>execution_resource</code>
+</td>
+<td class="hdlist2">
+<p>A summary of the execution resources used by the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>type</code>
+</td>
+<td class="hdlist2">
+<p>The type of the transaction.</p>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>SHARP is designed to be stateless. That is, each Cairo job is executed in its own context and has no dependency on other jobs, enabling greater flexibility in processing jobs.</p>
+<p>The following is an example of a transaction receipt:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "jsonrpc": "2.0",
+  "result": {
+    "actual_fee": "0x221db5dbf6db",
+    "block_hash": "0x301fc0d09c5810600af7bb9610be10596ad6f4e6d28a60d397dd148f0962a88",
+    "block_number": 906096,
+    "events": [
+      {
+        "data": [
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
+          "0x0",
+          "0x9184e72a000",
+          "0x0"
+        ],
+        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "keys": [
+          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+        ]
+      },
+      {
+        "data": [
+          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
+          "0x9184e72a000",
+          "0x0",
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7"
+        ],
+        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
+        "keys": [
+          "0x194fc63c49b0f07c8e7a78476844837255213824bd6cb81e0ccfb949921aad1"
+        ]
+      },
+      {
+        "data": [
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
+          "0x1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
+          "0x221db5dbf6db",
+          "0x0"
+        ],
+        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "keys": [
+          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+        ]
+      }
+    ],
+    "execution_status": "SUCCEEDED",
+    "finality_status": "ACCEPTED_ON_L2",
+    "messages_sent": [
+      {
+        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
+        "payload": [
+          "0x0",
+          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
+          "0x9184e72a000",
+          "0x0"
+        ],
+        "to_address": "0xc3511006c04ef1d78af4c8e0e74ec18a6e64ff9e"
+      }
+    ],
+    "transaction_hash": "0xdeadbeef",
+    "type": "INVOKE"
+  },
+  "id": 1
+}</code></pre>
+</div>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../transactions/">Transactions</a></span>
-  <span class="next"><a href="../os/">SNOS</a></span>
+  <span class="prev"><a href="../economics-of-starknet/">Tokenomics</a></span>
+  <span class="next"><a href="../sharp/">SHARP</a></span>
 </nav>
 </article>
   </div>
