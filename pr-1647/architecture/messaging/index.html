@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Accounts :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/accounts/">
-    <link rel="prev" href="../../tools/running-devnets/">
-    <link rel="next" href="../blocks/">
+    <title>L1-L2 messaging mechanism :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/messaging/">
+    <link rel="prev" href="../fees/">
+    <link rel="next" href="../staking/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -304,10 +304,10 @@
     <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">Protocol</span>
 <ul class="nav-list">
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Accounts</a>
+     href="../accounts/">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -329,10 +329,10 @@
        class="nav-link"
      href="../fees/">Fees</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../messaging/">L1-L2 messaging</a>
+     href="./">L1-L2 messaging</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,54 +515,167 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/accounts.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/messaging.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Accounts"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "L1-L2 messaging mechanism"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Accounts</h1>
-<div class="sect1">
-<h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
+<h1 class="page">L1-L2 messaging mechanism</h1>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Accounts represent users onchain, and enable them to interact with the blockchain. <a href="#ethereums_account_structure">Unlike Ethereum</a>, Starknet facilitates account abstraction natively, via its unique account <a href="#starknets_account_structure">structure</a> and <a href="#account_nonces">nonce management</a>. Accounts can be <a href="#deploying_a_new_account">easily deployed on Starknet</a>, both with or without having a preexisting account.</p>
+<p>Starknet&#8217;s ability to interact with L1 is crucial. <em>Messaging</em> is the mechanism that enables this interaction.</p>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="ethereums_account_structure"><a class="anchor" href="#ethereums_account_structure"></a>Ethereum&#8217;s account structure</h2>
-<div class="sectionbody">
 <div class="paragraph">
-<p>Within Ethereum individual user accounts are known as Externally Owned Accounts (EOAs). EOAs differ from smart contracts in that EOAs are not controlled by code, but rather by a pair of private and public keys. The account&#8217;s address is derived from those keys, and only by possessing the private key can you initiate transactions from an account. While simple, because the signature scheme is fixed, EOAs have some drawbacks, including the following:</p>
+<p>For example, you can perform computations on L2 and use the result on L1.</p>
+</div>
+<div class="paragraph">
+<p>Bridges on Starknet use the L1-L2  messaging mechanism. Consider that you want to bridge tokens from Ethereum to Starknet. You deposit your tokens in the L1 bridge contract, which automatically triggers the minting of the same token on L2. Another good use case for L1-L2 messaging is Defi pooling. For more information, see <a href="https://starkware.co/resource/defi-pooling/">DeFi pooling</a> on StarkWare&#8217;s site and <a href="https://www.starknet.io/en/ecosystem/dapps">dApps</a> on <a href="https://www.starknet.io" class="bare">https://www.starknet.io</a>.</p>
+</div>
+<div class="paragraph">
+<p>Be aware that the messaging mechanism is <em>asynchronous</em> and <em>asymmetric</em>.</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Control over the private key gives complete control over
-the account, so you must keep your seed phrase secure yet accessible.</p>
+<p><em>Asynchronous</em>: Your contract code, whether Cairo or Solidity, cannot await the result of the message being sent on the other layer within your contract code&#8217;s execution.</p>
 </li>
 <li>
-<p>Wallet functionality has limited flexibility</p>
+<p><em>Asymmetric</em>: Sending a message from Ethereum to Starknet, L1&#8594;L2, is fully automated by the Starknet sequencer, so the message is automatically delivered to the target contract on L2. However, when sending a message from Starknet to Ethereum, L2&#8594;L1, the sequencer only sends the hash of the message. You must then consume the message manually using a transaction on L1.</p>
 </li>
 </ul>
 </div>
-<div class="paragraph">
-<p><a href="https://eips.ethereum.org/EIPS/eip-4337" target="_blank" rel="noopener">ERC-4337</a> is a design proposal for Ethereum that outlines <em>_account abstraction</em>, whereby all accounts are managed via a dedicated smart contract on the Ethereum network, as a way to increase flexibility and usability. Using account abstraction you can program how your account functions, including:</p>
 </div>
+</div>
+<div class="sect1">
+<h2 id="l2-l1_messages"><a class="anchor" href="#l2-l1_messages"></a>L2 &#8594; L1 messages</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Contracts on L2 can interact asynchronously with contracts on L1 using the L2&#8594;L1 messaging protocol.</p>
+</div>
+<div class="paragraph">
+<p>The protocol consists of the following stages:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>During the execution of a transaction, a contract on Starknet sends a message from L2 to L1 by calling the <code>send_message_to_L1</code> syscall.</p>
+</li>
+<li>
+<p>The sequencer attaches the message parameters to the block that includes the syscall invocation. The message parameters include the address of the sender on L2, the address of the recipient contract on L1, and the message data.</p>
+<div class="paragraph">
+<p>For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let mut payload: Array&lt;felt252&gt; = ArrayTrait::new();
+let to_address: EthAddress = 1_felt252.try_into().unwrap();
+payload.append(1);
+// potentially add more elements to payload (payload[1], payload[2],  etc.)
+
+send_message_to_l1_syscall(to_address: to_address.into(), payload: payload.span());</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>The prover proves the state update that includes this transaction.</p>
+</li>
+<li>
+<p>The sequencer updates the L1 state.</p>
+</li>
+<li>
+<p>The message is stored on L1 in the Starknet Core Contract and a counter on the Core Contract increases by one.<br></p>
+</li>
+<li>
+<p>The <code>processMessage</code> function, which is part of the Starknet Core Contract, emits the <code>LogMessageToL1</code> event, which contains the message parameters.</p>
+</li>
+<li>
+<p>The message recipient on L1 can access and consume the message by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119"><code>consumeMessageFromL2</code></a> function, which includes the message parameters within the transaction.
+This function, which is part of the Starknet Core Contract, verifies the following:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>Determine what it means for a signature to be valid, or what contracts your account is allowed to interact with, also known as <em>signature abstraction</em></p>
+<p>The hashes of the L2 sent message parameters, now stored on the Core Contract, and the L1 received message parameters, are the same.</p>
 </li>
 <li>
-<p>Pay transaction fees in different tokens, also known as <em>fee abstraction</em></p>
+<p>The entity calling the function is indeed the recipient on L1.</p>
+<div class="paragraph">
+<p>In such a case, the counter corresponding to the message hash in the Starknet Core Contract decreases by one. For more information, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L130C7-L130C7#"><code>consumeMessageFromL2</code></a> function in <code>StarknetMessaging.sol</code>.</p>
+</div>
 </li>
-<li>
-<p>Design your own replay protection mechanism and allow sending multiple uncoupled transactions in parallel, also known as <em>nonce abstraction</em></p>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p><a href="#diagram_l2-l1_messaging_mechanism">L2&#8594;L1 Messaging mechanism</a> illustrates this flow:</p>
+</div>
+<div id="diagram_l2-l1_messaging_mechanism" class="imageblock">
+<div class="content">
+<img src="../_images/l2l1.png" alt="L2&#8594;L1 message mechanism">
+</div>
+<div class="title">Figure 1. L2&#8594;L1 Messaging mechanism</div>
+</div>
+<div class="sect2">
+<h3 id="l2_l1_message_structure"><a class="anchor" href="#l2_l1_message_structure"></a>L2 &#8594; L1 message structure</h3>
+<div class="paragraph">
+<p>The structure of an L2 &#8594; L1 message is described as follows under <code>MSG_TO_L1</code> in the <a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json">Starknet API JSON RPC</a> specification:</p>
+</div>
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 30%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<code>from_address</code> (<code>felt252</code>)
+</td>
+<td class="hdlist2">
+<p>The address of the L2 contract sending the message.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>to_address</code> (<code>EthAddress</code>)
+</td>
+<td class="hdlist2">
+<p>The target L1 address the message is sent to.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>payload</code> (<code>Array&lt;felt252&gt;</code>) 
+</td>
+<td class="hdlist2">
+<p>The payload of the message.</p>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="hashing_l2-l1"><a class="anchor" href="#hashing_l2-l1"></a>L2 &#8594; L1 message hashing</h3>
+<div class="paragraph">
+<p>The hash of an L2 &#8594; L1 message is computed on L1 as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">keccak256(
+    abi.encodePacked(
+        FromAddress,
+        uint256(ToAddress),
+        Payload.length,
+        Payload
+    )
+);</code></pre>
+</div>
+</div>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -571,7 +684,100 @@ the account, so you must keep your seed phrase secure yet accessible.</p>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Without account abstractions, EOAs cannot send two transactions in parallel, but rather must wait for confirmation of the first before sending the second, as otherwise the second transaction can be rejected due to an invalid nonce. With account abstraction, sequential nonces is not required.</p>
+<p>Sending an L2 to L1 message always incurs a fixed cost of 20,000 L1 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core Contract.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="l1-l2-messages"><a class="anchor" href="#l1-l2-messages"></a>L1 &#8594; L2 messages</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Contracts on L1 can interact asynchronously with contracts on L2 using the <em>L1&#8594;L2</em> messaging protocol.</p>
+</div>
+<div class="paragraph">
+<p>The protocol consists of the following stages:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>An L1 contract induces a message to an L2 contract on Starknet by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract with the message parameters.</p>
+<div class="paragraph">
+<p>The Starknet Core Contract hashes the message parameters and updates the L1&#8594;L2 message mapping to indicate that a message with this hash was indeed sent. The L1 contract records the fee that the sender paid. For more information, see <a href="#l1-l2-message-fees">L1 &#8594; L2 message fees</a>.</p>
+</div>
+</li>
+<li>
+<p>The message is then decoded into a Starknet transaction that invokes a function annotated with the <code>l1_handler</code> decorator on the target contract. Transactions like this on L2 are called <a href="#l1_handler_transaction">L1 handler transactions</a>.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>The Starknet sequencer, upon receiving enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction.</p>
+</li>
+<li>
+<p>The L2 transaction invokes the relevant <code>l1_handler</code> function.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>The L1 Handler transaction that was created in the previous step is added to a proof.</p>
+</li>
+<li>
+<p>The Core Contract receives the state update.</p>
+</li>
+<li>
+<p>The message is cleared from the Core Contract&#8217;s storage to consume the message. Clearing the Core Contract&#8217;s storage does the following:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>incurs a fixed cost of 5,000 L1 gas</p>
+</li>
+<li>
+<p>emits an L1 event logging the message consumption</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>At this point, the message is handled.</p>
+</div>
+<div class="paragraph">
+<p>An L1&#8594;L2 message consists of the following:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>L1 sender&#8217;s address</p>
+</li>
+<li>
+<p>L2 recipient&#8217;s contract address</p>
+</li>
+<li>
+<p>Function selector</p>
+</li>
+<li>
+<p>Calldata array</p>
+</li>
+<li>
+<p>Message nonce</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The message nonce is maintained on the Starknet Core Contract on L1, and is incremented whenever a message is sent to L2. The nonce is used to avoid a hash collision between different L1 handler transactions that is caused by the same message being sent on L1 multiple times.</p>
+</div>
+<div class="paragraph">
+<p>For more information, see <a href="#l1_l2_message_structure">L1&#8594;L2 structure</a>.</p>
 </div>
 </td>
 </tr>
@@ -580,143 +786,198 @@ the account, so you must keep your seed phrase secure yet accessible.</p>
 </li>
 </ul>
 </div>
+<div class="sect2">
+<h3 id="l2-l1_message_cancellation"><a class="anchor" href="#l2-l1_message_cancellation"></a>L1 &#8594; L2 message cancellation</h3>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Two prominent examples of how account abstraction might be used to program account functionality include:</p>
+<p>The flow described here should only be used in edge cases such as bugs on the Layer 2 contract preventing message consumption.</p>
 </div>
-<div class="ulist">
-<ul>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Consider that Alice sends an L1 asset to a Starknet bridge to transfer it to L2, which generates the corresponding L1&#8594;L2 message. Now, consider that the L2 message consumption doesn&#8217;t function, which might happen due to a bug in the dApp&#8217;s Cairo contract. This bug could result in Alice losing custody of their asset forever.</p>
+</div>
+<div class="paragraph">
+<p>To mitigate this risk, the contract that initiated the L1&#8594;L2 message can cancel it by declaring the intent to cancel, waiting five days, and then completing the cancellation. This delay protects the sequencer from a DoS attack in the form of repeatedly sending and canceling a message before it is included in L1, rendering the L2 block which contains the activation of the corresponding L1 handler invalid.</p>
+</div>
+<div class="paragraph">
+<p>The steps in this flow are as follows:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p><strong>Social recovery:</strong> retrieving your wallet if in case its lost via a selected social network, vastly improving the typical experience of wallet recovery</p>
+<p>The user that initiated the L1&#8594;L2 message calls the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L134"><code>startL1ToL2MessageCancellation</code></a> function in the Starknet Core Contract.</p>
 </li>
 <li>
-<p><strong>Operating your account via facial recognition:</strong> Using your phone&#8217;s native hardware to sign transactions, making it practically impossible to take control of another user&#8217;s account, even if your phone is stolen</p>
+<p>The user waits five days until she can finalize the cancellation.</p>
 </li>
-</ul>
+<li>
+<p>The user calls the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L147"><code>cancelL1ToL2Message</code></a> function.</p>
+</li>
+</ol>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="starknets_account_structure"><a class="anchor" href="#starknets_account_structure"></a>Starknet&#8217;s account structure</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="l1-l2-message-fees"><a class="anchor" href="#l1-l2-message-fees"></a>L1 &#8594; L2 message fees</h3>
 <div class="paragraph">
-<p>Starknet&#8217;s account structure is inspired by Ethereum&#8217;s EIP-4337 where
-smart contract accounts with arbitrary verification logic are used instead of EOAs.</p>
+<p>An L1 &#8594; L2 message induces a transaction on L2, which, unlike regular transactions, is not sent by an account. This calls for a different mechanism for paying the transaction&#8217;s fee, for otherwise the sequencer has no incentive of including L1 handler transactions inside a block.</p>
 </div>
 <div class="paragraph">
-<p>A valid account contract in Starknet is simply a contract that includes the following functions:</p>
+<p>To avoid having to interact with both L1 and L2 when sending a message, L1 &#8594; L2 messages are payable on L1, by sending ETH with the call to the payable function <code>sendMessageToL2</code> on the Starknet Core Contract.</p>
 </div>
-<table class="tableblock frame-all grid-all stretch">
+<div class="paragraph">
+<p>The sequencer takes this fee in exchange for handling the message. The sequencer charges the fee in full upon updating the L1 state with the consumption of this message.</p>
+</div>
+<div class="paragraph">
+<p>The fee itself is calculated in the <a href="../fees/#overall_fee" class="xref page">same manner</a> as
+"regular" L2 transactions.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="l1_l2_message_structure"><a class="anchor" href="#l1_l2_message_structure"></a>L1 &#8594; L2 structure</h3>
+<div class="paragraph">
+<p>For completeness, <a href="#l1_l2_message_structure">L1 &#8594; L2 structure</a> describes the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.</p>
+</div>
+<table id="L1-L2_message_structure" class="tableblock frame-all grid-all fit-content stretch">
+<caption class="title">Table 1. L1 &#8594; L2 message structure</caption>
 <colgroup>
-<col style="width: 25%;">
-<col style="width: 75%;">
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Function name</th>
-<th class="tableblock halign-left valign-top">When required</th>
+<th class="tableblock halign-left valign-top">FromAddress</th>
+<th class="tableblock halign-left valign-top">ToAddress</th>
+<th class="tableblock halign-left valign-top">Selector</th>
+<th class="tableblock halign-left valign-top">Payload</th>
+<th class="tableblock halign-left valign-top">Nonce</th>
+<th class="tableblock halign-left valign-top"></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate__</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>Always required</p>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__execute__</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>Always required. The signatures of <code>__validate__</code> and <code>__execute__</code> must be identical.</p>
-</div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Two critical validations must happen in <code>__execute__</code>, and their absence can lead to draining of the account&#8217;s funds:</p>
-</div>
-<div class="paragraph">
-<p>(1) <code>assert!(get_caller_address().is_zero())</code></p>
-</div>
-<div class="paragraph">
-<p>This asserts that the account&#8217;s <code>__execute__</code> is not called from another contract, thus skipping validations (in later versions we may disallow calling <code>__execute__</code> from another contract at the protocol level)</p>
-</div>
-<div class="paragraph">
-<p>(2) <code>assert!(get_tx_info().unbox().version.into() &gt;= 1_u32)</code></p>
-</div>
-<div class="paragraph">
-<p>This asserts that the transaction&#8217;s version is at least 1, preventing the account from accepting <code>INVOKE</code> v0 transactions. It is critical to explicitly disallow the deprecated v0 transaction type, as v0 transactions assume that the signature verification happens in <code>__execute__</code>, and are thus skipping <code>__validate__</code> entirely.</p>
-</div>
-</td>
-</tr>
-</table>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate_declare__</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>Required for the account to be able to send a <code>DECLARE</code> transaction. This function must receive exactly one argument, which is the class hash of the declared class.</p>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate_deploy__</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>Required to allow deploying an instance of the account contract with a <code>DEPLOY_ACCOUNT</code> transaction. The arguments of <code>__validate_deploy__</code> must be the class hash of the account to be deployed and the salt used for computing the account&#8217;s contract address, followed by the constructor arguments.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>You can only use the <code>__validate_deploy__</code> function in an account contract to validate the <code>DEPLOY_ACCOUNT</code> transaction for that same contract.
-That is, this function runs at most once throughout the lifecycle of the account.</p>
-</div>
-</td>
-</tr>
-</table>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>constructor</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>All contracts have a <code>constructor</code> function. It can be explicitly defined in the contract, or if not explicitly defined, the sequencer uses a default <code>constructor</code> function, which is empty.</p>
-</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>EthereumAddress</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>List<FieldElement></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 </tbody>
 </table>
+</div>
 <div class="sect2">
-<h3 id="flow"><a class="anchor" href="#flow"></a>Flow</h3>
+<h3 id="hashing_l1-l2"><a class="anchor" href="#hashing_l1-l2"></a>L1 &#8594; L2 hashing</h3>
 <div class="paragraph">
-<p>When the sequencer receives a transaction, it calls the corresponding function with the appropriate input from the transaction&#8217;s data, as follows:</p>
+<p>The hash of the message is computed on L1 as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">keccak256(
+    abi.encodePacked(
+        uint256(FromAddress),
+        ToAddress,
+        Nonce,
+        Selector,
+        Payload.length,
+        Payload
+    )
+);</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="l1_handler_transaction"><a class="anchor" href="#l1_handler_transaction"></a>L1 handler transaction</h3>
+<table class="tableblock frame-all grid-all fit-content stretch">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Version</th>
+<th class="tableblock halign-left valign-top">ContractAddress</th>
+<th class="tableblock halign-left valign-top">Selector</th>
+<th class="tableblock halign-left valign-top">Calldata</th>
+<th class="tableblock halign-left valign-top">Nonce</th>
+<th class="tableblock halign-left valign-top"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>List<FieldElement></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>The hash of the corresponding L1 handler transaction on L2 is computed as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">l1_handler_tx_hash = _h_(
+    "l1_handler",
+    version,
+    contract_address,
+    entry_point_selector,
+    _h_(calldata),
+    0,
+    chain_id,
+    nonce
+)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Where:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>For a <code>DECLARE</code> transaction, the sequencer validates the transaction by calling the <code>__validate_declare__</code> function.</p>
+<p><code>l1_handler</code> is a constant prefix, encoded in bytes (ASCII), as big-endian.</p>
 </li>
 <li>
-<p>For an <code>INVOKE</code> transaction, the sequencer calls the <code>__validate__</code> function with the transaction&#8217;s calldata as input, after being deserialized to the arguments in the <code>__validate__</code> function&#8217;s signature. After successfully completing validation, the sequencer calls the <code>__execute__</code> function with the same arguments.</p>
+<p><code>version</code> is the transaction version. Only version 0 is currently supported.</p>
 </li>
 <li>
-<p>For a <code>DEPLOY_ACCOUNT</code> transaction, the sequencer calls the <code>constructor</code> function with the transaction&#8217;s <code>constructor_calldata</code> as input, after being deserialized to the arguments in the constructor signature. After the successful execution of the constructor, the sequencer validates the transaction by calling the <code>__validate_deploy__</code> function.</p>
+<p><code>chain_id</code> is a constant value that specifies the network to which this transaction is sent.</p>
+</li>
+<li>
+<p><em>h</em> is the <a href="../cryptography/#hash-functions#pedersen_hash" class="xref page">Pedersen</a> hash (note that since we&#8217;re hashing an array, the # of inputs needs to be appended to the hash).</p>
+</li>
+<li>
+<p><code>0</code> indicates that L1 to L2 message fees are charged on L1.</p>
 </li>
 </ul>
 </div>
-<div class="admonitionblock important">
+<div class="admonitionblock note">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-important" title="Important"></i>
+<i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>For an <code>INVOKE</code> and <code>DEPLOY_ACCOUNT</code> transactions, it is up to the sender to make sure that the calldata is serializied correctly according to either the <code>__validate__</code> or <code>constructor</code> function&#8217;s signature.</p>
+<p>In an L1 handler transaction, the first element of the calldata is always the sender&#8217;s Ethereum address.</p>
 </div>
 </td>
 </tr>
@@ -730,295 +991,58 @@ That is, this function runs at most once throughout the lifecycle of the account
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from DoS attacks.</p>
+<p>Since L1 handler transactions are not initiated by an account, invoking <a href="https://github.com/starkware-libs/cairo/blob/2203a47f8a098cd4718d03bd109ca014049419e7/corelib/src/starknet/info.cairo#L49"><code>get_caller_address()</code></a> or similar account-related functions returns the address <code>0x0</code>.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-<div class="admonitionblock tip">
-<table>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 2. Supported versions of the <code>L1HandlerTransaction</code> transaction type</caption>
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
 <tr>
-<td class="icon">
-<i class="fa icon-tip" title="Tip"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>For more information on transaction types and lifecycle, see <a href="../transactions/" class="xref page">Transactions</a>.</p>
-</div>
-<div class="paragraph">
-<p>For more information on the each transaction&#8217;s fields, see <a href="../../resources/transactions-reference/" class="xref page">Transaction fields and hash calculations reference</a>.</p>
-</div>
-</td>
+<th class="tableblock halign-left valign-top">Current version</th>
+<th class="tableblock halign-left valign-top">Deprecated versions</th>
+<th class="tableblock halign-left valign-top">Unsupported versions</th>
 </tr>
-</table>
-</div>
-</div>
-<div class="sect2">
-<h3 id="limitations"><a class="anchor" href="#limitations"></a>Limitations</h3>
-<div class="paragraph">
-<p>The logic of the <code>__validate__</code>, <code>__validate_deploy__</code>, <code>__validate_declare__</code>, and <code>constructor</code> functions can be mostly arbitrary, except for the following limitations:</p>
-</div>
-<div class="admonitionblock note">
-<table>
+</thead>
+<tbody>
 <tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>For the <code>constructor</code> function, limitations apply only when run in a <code>DEPLOY_ACCOUNT</code> transaction (in particular, <strong>not</strong> when an account is deployed from an existing class via the <code>deploy</code> syscall)</p>
-</div>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
 </tr>
+</tbody>
 </table>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>You cannot use more than 1,000,000 Cairo steps</p>
-</li>
-<li>
-<p>You cannot use more than 100,000,000 gas</p>
-</li>
-<li>
-<p>You cannot call the following syscalls:</p>
-<div class="ulist">
-<ul>
-<li>
-<p><code>get_class_hash_at</code></p>
-</li>
-<li>
-<p><code>get_sequencer_address</code> (this syscall is only supported for Cairo 0 contracts)</p>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Starting from Starknet version 0.14.0, calling the <code>deploy</code> syscall from the <code>__validate__</code>, <code>__validate_deploy__</code>, <code>__validate_declare__</code>, and <code>constructor</code> functions will also not be possible.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>You cannot call functions in external contracts</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>This restriction enforces a single storage update being able to invalidate only transactions from a single account. However, be aware that an account can always invalidate its own past transactions by e.g. changing its public key.</p>
-</div>
-<div class="paragraph">
-<p>This limitation implies that the fees you need to pay to invalidate transactions in the mempool are directly proportional to the number of unique accounts whose transactions you want to invalidate.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>When calling the <code>get_execution_info</code> syscall:</p>
-<div class="ulist">
-<ul>
-<li>
-<p><code>sequencer_address</code> is set to zero</p>
-</li>
-<li>
-<p><code>block_timestamp</code> returns the time (in UTC), rounded to the most recent hour</p>
-</li>
-<li>
-<p><code>block_number</code> returns the block number, rounded down to the nearest multiple of 100</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>These limitations are designed to prevent the following DoS attacks on the sequencer:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>An attacker could cause the sequencer to perform a large amount of work before a transaction fails validation. Two examples of such attacks are:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Spamming <code>INVOKE</code> transactions whose <code>__validate__</code> requires many steps, but eventually fails</p>
-</li>
-<li>
-<p>Spamming <code>DEPLOY_ACCOUNT</code> transactions that are invalid as a result of the constructor or <code>__validate_deploy__</code> failing.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>The above attacks are solved by making sure that the validation step is not resource-intensive, e.g. by keeping the maximal number of steps low. However, even if the validation is simple, the following "mempool pollution" attack could still be possible:</p>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>An attacker fills the mempool with transactions that are valid at the time they are sent.</p>
-</li>
-<li>
-<p>The sequencer is ready to execute them, thinking that by the time it includes them in a block, they will still be valid.</p>
-</li>
-<li>
-<p>Shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it&#8217;s included in a block, e.g. by offering higher fees for this one transaction.
-An example of such an attack is having the implementation of <code>__validate__</code> checks that the value of a storage slot is <code>1</code>, and the attacker&#8217;s transaction later sets it to <code>0</code>. Restricting validation functions from calling external contracts prevents this attack.</p>
-</li>
-</ol>
-</div>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="failures"><a class="anchor" href="#failures"></a>Failures</h3>
-<div class="paragraph">
-<p>When the <code>__validate__</code>, <code>__validate_deploy__</code>, or <code>__validate_declare__</code> functions fail, the account in question does not pay any fee, and the transaction&#8217;s status is <code>REJECTED</code>.</p>
-</div>
-<div class="paragraph">
-<p>When the <code>__execute__</code> function fails, the transaction&#8217;s status is <code>REVERTED</code>. Similar to Ethereum, a reverted transaction is included in a block, and the sequencer is eligible to charge a fee for the work done up to the point of failure.</p>
-</div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-tip" title="Tip"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>To learn more about transaction statuses, see <a href="../transactions/#transaction_statuses" class="xref page">Transactions</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect2">
-<h3 id="snip_6"><a class="anchor" href="#snip_6"></a>SNIP-6</h3>
-<div class="paragraph">
-<p>While not mandatory at the protocol level, you can use a richer standard interface for accounts, defined in <a href="https://github.com/starknet-io/SNIPs/blob/main/SNIPS/snip-6.md" target="_blank" rel="noopener">Starknet Improvement Proposal 6 (SNIP-6)</a>. SNIP-6 was developed by community members at <a href="https://www.openzeppelin.com/" target="_blank" rel="noopener">OpenZeppelin</a>, in close collaboration with wallet teams and other core Starknet developers.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="example"><a class="anchor" href="#example"></a>Example</h3>
-<div class="paragraph">
-<p>Thanks to account abstraction, the logic of <code>__execute__</code> and the different validation functions is up to the party implementing the account. To review a concrete implementation, you can check out OpenZeppelin&#8217;s <a href="https://github.com/OpenZeppelin/cairo-contracts/blob/v0.14.0/src/account/account.cairo#L72" target="_blank" rel="noopener">account component</a>, which also adheres to <a href="#snip-6">SNIP6</a>.</p>
-</div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="account_nonces"><a class="anchor" href="#account_nonces"></a>Account nonces</h2>
+<h2 id="additional_resources"><a class="anchor" href="#additional_resources"></a>Additional resources</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Similar to Ethereum, every contract in Starknet, including account contracts, has a nonce. The nonce of a transaction sent from an account must match the nonce of that account, which changes after the transaction is executed — even if it was reverted. Nonces serves two important roles:</p>
-</div>
 <div class="ulist">
 <ul>
 <li>
-<p>They guarantee transaction hash uniqueness, which is important for a good user experience</p>
+<p><a href="https://book.cairo-lang.org/appendix-08-system-calls.html#send_message_to_l1" target="_blank" rel="noopener"><code>send_message_to_L1</code></a> syscall</p>
 </li>
 <li>
-<p>They provide replay protection to the account, by binding the signature to a particular nonce and preventing a malicious party from replaying the transaction</p>
+<p><a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract</p>
+</li>
+<li>
+<p>For more information on how messaging works within the Starknet Core Contract, including details on coding, see <a href="https://book.cairo-lang.org/ch16-04-L1-L2-messaging.html">L1-L2 Messaging</a> in <em>The Cairo Book: The Cairo Programming Language</em></p>
 </li>
 </ul>
-</div>
-<div class="paragraph">
-<p>Also similarly to Ethereum, Starknet currently determines the nonce structure at the protocol level to be sequential (i.e., the nonce of a transaction sent from an account is incremented by one after the transaction is executed). In the future, Starknet will consider a more flexible design, extending account abstraction to nonce abstraction.</p>
-</div>
-<div class="paragraph">
-<p>However, unlike Ethereum, only the nonce of account contracts — that is, those adhering to <a href="#starknets_account_structure">Starknet&#8217;s account structure</a> — can be non-zero in Starknet. In contrast, in Ethereum, regular smart contracts can also increment their nonce by deploying smart contracts (i.e., executing the <code>CREATE</code> and <code>CREATE2</code> opcodes).</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="deploying_a_new_account"><a class="anchor" href="#deploying_a_new_account"></a>Deploying a new account</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>New accounts can be deployed in the following ways:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Sending a <code>DEPLOY_ACCOUNT</code> transaction, which does not require a preexisting account.</p>
-</li>
-<li>
-<p>Using the <a href="https://docs.openzeppelin.com/contracts-cairo/0.12.0/udc" target="_blank" rel="noopener">Universal Deployer Contract (UDC)</a>, which requires an existing account to send the <code>INVOKE</code> transaction</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>Upon receiving one of these transactions, the sequencer performs the following steps:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>Runs the respective validation function in the contract, as follows:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>When deploying with the <code>DEPLOY_ACCOUNT</code> transaction type, the sequencer executes the <code>__validate_deploy__</code> function in the deployed contract.</p>
-</li>
-<li>
-<p>When deploying using the UDC, the sequencer executes the <code>__validate__</code> function in the contract of the sender&#8217;s address.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>Executes the constructor with the given arguments.</p>
-</li>
-<li>
-<p>Charges fees from the new account address.</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>If you use a <code>DEPLOY_ACCOUNT</code> transaction, the fees are paid from the address of the deployed account. If you use the UDC, which requires an <code>INVOKE</code> transaction, the fees are paid from the sender&#8217;s account. For information on the differences between V1 and V3 <code>INVOKE</code> transactions, see <a href="../transactions/#transaction_types" class="xref page"><code>INVOKE</code> transaction</a> in <em>Transaction types</em>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>Sets the account&#8217;s nonce as follows:</p>
-<div class="ulist">
-<ul>
-<li>
-<p><code>1</code>, when deployed with a <code>DEPLOY_ACCOUNT</code> transaction</p>
-</li>
-<li>
-<p><code>0</code>, when deployed with the UDC</p>
-</li>
-</ul>
-</div>
-</li>
-</ol>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../../tools/running-devnets/">Working locally</a></span>
-  <span class="next"><a href="../blocks/">Blocks</a></span>
+  <span class="prev"><a href="../fees/">Fees</a></span>
+  <span class="next"><a href="../staking/">Staking</a></span>
 </nav>
 </article>
   </div>
