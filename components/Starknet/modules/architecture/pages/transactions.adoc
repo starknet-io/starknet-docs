@@ -1,7 +1,7 @@
 = Transactions
 
 == Introduction
-Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only xref:transaction_types[three types] of transactions, with each type going through the same xref:transaction_lifecycle[lifecycle] to receive its xref:transaction_statuses[execution and finality statuses]. Every transaction that executed successfully is issued a xref:transaction_receipt[receipt], which includes its statuses, as well as other information about it.
+Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only xref:transaction_types[three types] of transactions, with each type going through the same xref:transaction_lifecycle[lifecycle] to receive its xref:transaction_statuses[execution and finality statuses]. Every transaction that was executed successfully is issued a xref:transaction_receipt[receipt], which includes its statuses, as well as other information about it.
 
 .Additional information
 
@@ -16,10 +16,10 @@ Starknet supports the following types of transactions:
 +
 [TIP]
 ====
-For more information about contract classes and instances, see https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html[the Cairo Book].
+For more information about contract classes and instances, see the https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html[Cairo Book].
 ====
 
-`INVOKE`:: Invokes a function in an existing contract instance, undergoing validation and execution initiated by xref:accounts.adoc#starknets_account_structure[the caller account's `+__validate__+` and `+__execute__+` functions] (respectively).
+`INVOKE`:: Invokes a function in an existing contract instance, undergoing validation and execution initiated by the caller account's xref:accounts.adoc#starknets_account_structure[`+__validate__+` and `+__execute__+` functions] (respectively).
 +
 [NOTE]
 ====
@@ -48,18 +48,18 @@ Each transaction type is versioned, with versions increasing when the fields tha
 
 |`INVOKE`
 | v3
-| v1, v0
 | None
+| v1, v0
 
 |`DECLARE`
 | v3
-| v2, v1
-| v0
+| None
+| v2, v1, v0
 
 |`DEPLOY_ACCOUNT`
 | v3
-| v1
 | None
+| v1
 |===
 
 [IMPORTANT]
@@ -76,43 +76,51 @@ The high-level steps in the Starknet transaction lifecycle are as follows:
 
 . *Mempool validation:*
 The sequencer's xref:transaction_mempool[mempool] performs preliminary validation of the transaction, such as ensuring that its invoker's balance exceeds the transaction's `max_fee` value, assuring the transaction's calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.
-+
-[NOTE]
-====
-Mempool validation in this context is analogous to Ethereum's signature checking, and includes running the account's `+__validate__+` function for an `INVOKE` transaction, `+__validate_declare__+` for a `DECLARE` transaction, or `+__validate_deploy__+` for a `DEPLOY_ACCOUNT` transaction.
-====
+// +
+// [NOTE]
+// ====
+// Mempool validation in this context is analogous to Ethereum's signature checking, and includes running the account's `+__validate__+` function for an `INVOKE` transaction, `+__validate_declare__+` for a `DECLARE` transaction, or `+__validate_deploy__+` for a `DEPLOY_ACCOUNT` transaction.
+// ====
 . *Sequencer validation:* The sequencer performs preliminary validation of the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.
 +
-[NOTE]
-====
-The sequencer repeats the same validation performed by the mempool.
-====
+// [NOTE]
+// ====
+// The sequencer repeats the same validation performed by the mempool.
+// ====
 
 . *Execution:* The sequencer batches all transactions that passed the preliminary validation into a block, and applies them to the state sequentially. If a transaction fails during execution, it is included in the block with as reverted.
 
 . *Proof generation and verification:* The prover uses the xref:os.adoc[Starknet operating system] to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.
 
-=== Transaction mempool
+=== The mempool
 
-Up to (and including) v0.13.5 of Starknet, transactions were received and ordered by the sequencer in a FIFO fashion. In v0.14.0, sequencers instead maintain a mempool: this decouples the order of arrival from the transaction ordering in the blocks. The block ordering is decided by each block proposer according to their local policy. A transaction with a higher tip will likely be placed earlier in the block. The mempool architecture has some implications on how transactions are accepted and processed, which we describe below.
+Up to and including Starknet v0.13.5, transactions were received and ordered by the sequencer in a first-in-first-out (FIFO) fashion. Starting from Starknet v0.14.0, sequencers instead maintain a mempool, decouping the transaction order of arrival from the transaction ordering in blocks, with the latter decided by each sequencer according to their own policy.
 
-==== Nonces
-Transactions with a nonce greater than current sender nonce + X will be rejected from the mempool (the “current sender nonce” refers to the sender nonce in the latest finalized state at the time of receival of the tx). The final config is still in discussion, but it should be 50 <= X <= 100.
-Declare transactions whose nonce is invalid against the current state will be rejected (i.e. no declares with future nonces).
+The introduction of mempools has the following implications on how transactions are processed:
 
-==== Fee escalation
-A transaction (say from account A and with nonce n) is replaced if a more profitable transaction, i.e. with a higher tip, from the same account A and nonce n is received. To successfully replace a transaction, `tip` and `max_l2_gas_price` need to be bumped by at least 10%. Note that there are unlikely edge cases in which the transaction is not replaced, e.g. the lower paying transaction enters a block while the higher paying transaction is processed in the gateway.
+* *Nonces*: Transactions with a nonce greater than the sender's current nonce + stem:[x] will be rejected by the mempool, where:
+** A sender's current nonce is the sender's nonce in the latest finalized state at the time the transaction is received
+** stem:[50 \leq x \leq 100] is still TBD for `INVOKE` and `DEPLOY_ACCOUNT` transactions and stem:[x = 0] for `DECLARE` transactions (i.e., no declares with future nonces)
 
-==== Eviction policy
-The mempool keeps track of the time in which a tx enters and it does a periodical clean-up of transactions that cannot be included in a block and which have been in the mempool for too long, i.e. have exceeded their time-to-live (TTL). The TTL is configured to be 5 mins.
+* *Fee escalation*: A transaction in the mempool can be replaced by a transaction sent from the same account with the same nonce and both `tip` and `max_l2_gas_price` increased by at least 10%
++
+[NOTE]
+====
+There are unlikely edge cases in which a transaction is not replaced despite submitting a valid transaction to replace it, such as the existing transaction entering a block while the new one is stil processed in the gateway.
+====
 
-==== Declare transaction behavior
-When `DECLARE` transactions are sent to the mempool, they first go through the usual validations (including nonce validation and fee escalation) and then are inserted into a "waiting room" before they are inserted into the pool. In particular, maturing transactions cannot enter a block.
-While in the waiting room, no escalation is possible: i.e. a transaction with the same nonce from the same account will be rejected. This impedes a DoS where a `DECLARE` transaction is sent, compiled and then removed by sending a transaction with the same nonce while it matures. After the transaction has matured and entered the mempool, escalation is possible again (maturation time << time to live).
+* *Transaction time-to-live (TTL)*: Transactions that cannot be included in a block and have exceeded their TTL, currently configured to be 5 mins, are periodically evicted from the mempool
+
+* *`DECLARE` transactions time-to-mature (TTM)*: Before being inserted into the mempool, `DECLARE` transactions are sent to a "waiting room" until they exceed their TTM, where TTM < TTL but is still TBD. While in the "waiting room", `DECLARE` transactions can't be replaced, and transactions sent with the same nonce as a transaction in the "waiting room" by the same account are rejected
+// +
+// [NOTE]
+// ====
+// The motiviation for the `DECLARE` transactions "waiting room" is to impede a DoS attack where a `DECLARE` transaction is submitted and its code is compiled, but is then reaplced by sending a transaction with the same nonce while it matures.
+// ====
 
 == Transaction statuses
 
-A transaction's current state is represented by the following _finality_ and _execution_ statuses:
+A transaction's state is represented by the following _finality_ and _execution_ statuses:
 
 [cols="1,2,4"]
 |===
