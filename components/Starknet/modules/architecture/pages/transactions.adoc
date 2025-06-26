@@ -92,11 +92,11 @@ The sequencer's xref:transaction_mempool[mempool] performs preliminary validatio
 
 . *Proof generation and verification:* The prover uses the xref:os.adoc[Starknet operating system] to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.
 
-=== The mempool
+=== Mempools
 
-Up to and including Starknet v0.13.5, transactions were received and ordered by the sequencer in a first-in-first-out (FIFO) fashion. Starting from Starknet v0.14.0, sequencers instead maintain a mempool, decouping the transaction order of arrival from the transaction ordering in blocks, with the latter decided by each sequencer according to their own policy.
+Up to and including Starknet v0.13.5, transactions were received and ordered by the sequencer in a first-in-first-out (FIFO) fashion. Starting from Starknet v0.14.0, each sequencer will instead maintain a mempool, decouping the transaction order of arrival from the transaction ordering in blocks, for which they are can decide their own policy.
 
-The introduction of mempools has the following implications on how transactions are processed:
+The introduction of mempools will have the following implications on how transactions are processed:
 
 * *Nonces*: Transactions with a nonce greater than the sender's current nonce + stem:[x] will be rejected by the mempool, where:
 ** A sender's current nonce is the sender's nonce in the latest finalized state at the time the transaction is received
@@ -121,6 +121,46 @@ There are unlikely edge cases in which a transaction is not replaced despite sub
 == Transaction statuses
 
 A transaction's state is represented by the following _finality_ and _execution_ statuses:
+
+[cols="1,2,4"]
+|===
+| Type | Status | Description
+
+.5+.^| *Finality*
+
+| `NOT_RECEIVED`
+| The transaction is not yet known to the sequencer.
+
+| `RECEIVED`
+a|The transaction was received by the mempool. The transaction is now either executed successfully, rejected, or reverted.
+
+| `REJECTED`
+a| The transaction was received by the mempool but failed the validation by the sequencer. Such transactions are not included in a block.
+[NOTE]
+====
+A rejected transaction is stored in the mempool. You cannot send another transaction with the same transaction hash.
+====
+
+| `ACCEPTED_ON_L2`
+| The transaction was executed and included in a block.
+
+| `ACCEPTED_ON_L1`
+| The transaction was accepted on Ethereum.
+
+.2+.^| *Execution*
+
+| `REVERTED`
+a| The transaction passed validation but failed during the execution by the sequencer, and is included in a block as reverted.
+[NOTE]
+====
+Since the `DEPLOY_ACCOUNT` and `DECLARE` transactions don't have an execution phase, they cannot be reverted.
+====
+
+| `SUCCEEDED`
+| The transaction was successfully executed by the sequencer and is included in a block.
+|===
+
+Starting from Starknet version 0.14.0, these statuses will change to the following:
 
 [cols="1,2,4"]
 |===
