@@ -17,7 +17,7 @@ In Cairo, only statements of the form _"a specific Cairo program with specific i
 
 This is where SNOS comes in: it is a Cairo Zero program that verifies the validity of blocks by getting an initial state and a list of transactions as input and outputting the state that is the result of applying these transactions on the initial state.
 
-SNOS is the program required for updating Starknet's state on Ethereum (xref:#os-and-core-contract[with some subtilities]). As such, is it also the final arbiter on what does it mean for a transaction to execute correctly. For example, while a malicious sequencer can deviate from xref:architecture-and-concepts:network-architecture/transaction-life-cycle.adoc#transaction_flow[the `INVOKE` transaction's behavior] by skipping the execution of `+__validate__+` before `+__execute__+` in the calling account contract, this specification is https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_transactions.cairo#L390[enforced by SNOS^] and therefore this sequencer will not be able to produce the proof for the block in which this transaction was included. 
+SNOS is the program required for updating Starknet's state on Ethereum (xref:#os-and-core-contract[up to some caveats]). As such, is it also the final arbiter on what does it mean for a transaction to execute correctly. For example, while a malicious sequencer can deviate from xref:architecture:transactions.adoc#transaction_flow[the `INVOKE` transaction's behavior] by skipping the execution of `+__validate__+` before `+__execute__+` in the calling account contract, this specification is https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_transactions.cairo#L390[enforced by SNOS^] and therefore this sequencer will not be able to produce the proof for the block in which this transaction was included. 
 
 == How does SNOS work?
 
@@ -48,12 +48,12 @@ Contract calls are in fact done non-deterministically, i.e. the contract's respo
 [id="syscall-mechanism"]
 === Syscall mechanism
 
-A contract can invoke xref:smart-contracts/system-calls-cairo1.adoc[system calls] throughout its execution, which pass the control from the currently executing contract to SNOS itself. Such operations are required when a contract needs information that does not exist within its code, e.g. accessing the Starknet state to read a storage value or to call another contract.
+A contract can invoke https://book.cairo-lang.org/appendix-08-system-calls.html[system calls^] throughout its execution, which pass the control from the currently executing contract to SNOS itself. Such operations are required when a contract needs information that does not exist within its code, e.g. accessing the Starknet state to read a storage value or to call another contract.
 
 SNOS's code heavily relies on non-determinism to handle system calls. Whenever a contract invokes some syscall, the request, alongside the guessed response, is recorded in a syscalls array.
 At the end of every entry point execution, we go over the syscalls array and verify that the responses were correct (for more details, see the https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L286[`execute_entry_point` function in `execute_transactions.cairo`^]).
 
-For syscalls such as xref:architecture-and-concepts:smart-contracts/system-calls-cairo1.adoc#get_execution_info[`get_execution_info`], 
+For syscalls such as https://book.cairo-lang.org/appendix-08-system-calls.html#get_execution_info[`get_execution_info`^], 
 which returns the block hash and number, correctness means consistency with the value given to SNOS as input. For contract calls, however, one needs to execute the called contract and verify that the actual response and the guessed response are identical. But how can we guess the responses to all the contract calls before executing them? For that, it is important to distinguish two different styles-of-execution that a Starknet block goes through:
 
 * The first one is done by a sequencer, when constructing the block from incoming transactions
@@ -61,7 +61,7 @@ which returns the block hash and number, correctness means consistency with the 
 
 Therefore, when running the OS, we already know what is going to happen: the block has already been executed by the sequencer, and so we know exactly what contracts and storage slots will be accessed, what each internal call will return, and so on.
 
-It's worth noting that in the first execution, the sequencer can run in whatever way he chooses. In fact, he doesn't even have to run through the Cairo VM at all, but rather https://github.com/lambdaclass/cairo_native[precompile contracts to machine code and run them natively^]. Moreover, sequencers can also impose restrictions that are not enforced by SNOS. Such discrepancy between the two executions may seem like a bug, but as long as these restrictions only protect the sequencers themselves, rather than the correctness of execution, there is no reason for SNOS to enforce them. A good example for such restriction is the xref:architecture-and-concepts:accounts/account-functions#limitations_of_validation[limits on validation functions] that protect the sequencer from DoS attacks. It is crucial, however, that both executions agree on the execution semantics, since, as mentioned in xref:#introduction[What is SNOS?], SNOS is the final arbiter and if it disagrees on the validity of the block, the sequencer will not be able to produce a proof for that block (and the only way forward would be a reorg on Starknet).
+It's worth noting that in the first execution, the sequencer can run in whatever way he chooses. In fact, he doesn't even have to run through the Cairo VM at all, but rather https://github.com/lambdaclass/cairo_native[precompile contracts to machine code and run them natively^]. Moreover, sequencers can also impose restrictions that are not enforced by SNOS. Such discrepancy between the two executions may seem like a bug, but as long as these restrictions only protect the sequencers themselves, rather than the correctness of execution, there is no reason for SNOS to enforce them. A good example for such restriction is the xref:architecture:accounts#limitations_of_validation[limits on validation functions] that protect the sequencer from DoS attacks. It is crucial, however, that both executions agree on the execution semantics, since, as mentioned in xref:#introduction[What is SNOS?], SNOS is the final arbiter and if it disagrees on the validity of the block, the sequencer will not be able to produce a proof for that block (and the only way forward would be a reorg on Starknet).
 
 === Multiblock input
 
@@ -85,7 +85,7 @@ You can read the program hashes currently registered in the Starknet Core contra
 Finally, the Starknet Core contract is also responsible for verifying the few things that SNOS can't, including:
 
 * Verifying that the state given to SNOS as input is Starknet's current state on Ethereum
-* Verifying that all xref:architecture-and-concepts:network-architecture/messaging-mechanism.adoc#l1-l2-messages[L1→L2 messages] were sent on Ethereum
+* Verifying that all xref:architecture:messaging.adoc#l1-l2-messages[L1→L2 messages] were sent on Ethereum
 
 == Implementations
 
