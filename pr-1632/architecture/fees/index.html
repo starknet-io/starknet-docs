@@ -332,7 +332,7 @@
   <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Fees</a>
+     href="./">Fee mechanism</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -347,7 +347,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../state/">State</a>
+     href="../state/">State management</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -666,10 +666,24 @@ In that case, we can use the estimation&#8217;s <code>overall_fee</code> to deci
 <h2 id="fee_limits"><a class="anchor" href="#fee_limits"></a>Fee limits</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><code>v3</code> transactions already provide STRK-denominated <code>max_amount</code> and <code>max_price_per_unit</code> for each of the three <a href="#fee_units">fee unit</a> (as part of the <code>resource_bounds</code> dictionary), while previous versions only provide a WEI-denominated overall <code>max_fee</code>. However, starting in Starknet v0.14.0, <em>all</em> transactions will have specify STRK-denominated bounds for all three fee unit, as well as a STRK-denominated <code>tip</code>.</p>
+<p>Starting in Starknet v0.14.0, all transactions will have to specify STRK-denominated <code>max_amount</code> and <code>max_price_per_unit</code> for each of the three <a href="#fee_units">fee unit</a>. A necessary condition for a transaction to enter a block is that <code>max_price_per_unit</code> is greater than or equal to the <a href="#gas_prices">block&#8217;s corresponding price</a> for each resource, but if included sequencers are then enforced by the <a href="../os/" class="xref page">Starknet OS</a> (and as such, enforced by a proof) to charge no more than the max price specified by the transaction.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p><code>v3</code> transactions already provide these bounds (as part of the <code>resource_bounds</code> dictionary), while previous versions only provide a WEI-denominated overall <code>max_fee</code>.</p>
 </div>
 <div class="paragraph">
-<p>A necessary condition for a transaction to enter a block is that for each resource, <code>max_price_per_unit</code> is greater than or equal to the <a href="#gas_prices">block&#8217;s corresponding price</a>. <code>tip</code> is a further addition to the <code>max_price_per_unit</code> for <code>l2_gas</code>, i.e. a sequencer will receive <code>(base_fee + tip) * l2_gas_used</code> STRK tokens for including the transaction in a block.</p>
+<p>Sequencers usually charges less than the max price specified in the transaction, as charges are in accordance with the <a href="#overall_fee">formula for determining a transaction&#8217;s fee</a>.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -677,10 +691,21 @@ In that case, we can use the estimation&#8217;s <code>overall_fee</code> to deci
 <h2 id="fee_charges"><a class="anchor" href="#fee_charges"></a>Fee charges</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The fee for a transaction is charged atomically with the transaction execution on L2, by the Starknet OS injecting a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.</p>
+<p>The fee for a transaction is charged atomically with the transaction execution on L2, by the Starknet OS injecting a transfer of STRK with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.</p>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>The only limitation on the sequencer which is currently enforced by the <a href="../os/" class="xref page">Starknet OS</a> (and as such, enforced by a proof), is that the actual fee charged is bounded by the max price specified in the transaction. However, the Starknet sequencer usually charges less, as charges in accordance with the <a href="#overall_fee">formula for determining a transaction&#8217;s fee</a>.</p>
+<p>Starknet does not currently implement burning of fees, and all fees charged are received by the sequencer.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -733,7 +758,7 @@ In that case, we can use the estimation&#8217;s <code>overall_fee</code> to deci
 &amp; \qquad \text{message_calldata_cost}\cdot 3t \; + \\
 &amp; \qquad \; (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
 &amp; \qquad \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t \\
-&amp; \Bigg) + \; \text{l2_gas_price} \cdot (\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) \\
+&amp; \Bigg) + \; (\text{l2_gas_price} + \text{tip}) \cdot (\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) \\
 &amp; \quad + \; \begin{cases}\text{l1_data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\big(\ell + 2(n-1) + 2(m-1) + 2D \big) &amp; \text{if l1_da_mode is BLOB} \\ \\ \text{l1_gas_price} \cdot \Big( \\ \qquad \text{da_calldata_cost} \cdot \left(\ell + 2(n-1)+2(m-1) + 2D\right) \; - \\ \qquad \text{contract_update_discount}\cdot (n-1) \; - &amp; \text{if l1_da_mode is CALLDATA} \\ \qquad \text{sender_balance_update_discount} \\ \Big)\end{cases}
 \end{align}\]
 </div>
@@ -766,6 +791,9 @@ In that case, we can use the estimation&#8217;s <code>overall_fee</code> to deci
 </li>
 <li>
 <p>\(\text{l2_gas_price}\) is the L2 gas price of the block that includes the transaction (see <a href="#gas_prices">Gas prices</a> for more information)</p>
+</li>
+<li>
+<p>\(\text{tip}\) is the tip specified by the transaction</p>
 </li>
 <li>
 <p>\(\text{sierra_gas_consumed}\) is the amount of <a href="#sierra_gas">Sierra gas</a> charged for computation of the transaction</p>
@@ -870,18 +898,14 @@ In that case, we can use the estimation&#8217;s <code>overall_fee</code> to deci
 <div class="sect2">
 <h3 id="gas_prices"><a class="anchor" href="#gas_prices"></a>Gas prices</h3>
 <div class="paragraph">
-<p>Each Starknet block has three integers associated with it: <code>l1_gas_price</code>, <code>l2_gas_price</code>, and <code>l1_data_gas_price</code>, which are defined as follows:</p>
+<p>Each Starknet block has three integers associated with it: <code>l1_gas_price</code>, <code>l2_gas_price</code>, and <code>l1_data_gas_price</code>.</p>
 </div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>l1_gas_price</code> is the average of the last 60 L1 base gas prices sampled by the Starknet sequencer every 60 seconds, plus 1 Gwei</p>
-</li>
-<li>
-<p><code>l1_data_gas_price</code> is the average of the last 60 L1 base data gas prices sampled by the Starknet sequencer every 60 seconds, divided by a scaling factor of 0.135 that approximate for the average rate compression achieved from posting the data to Ethereum</p>
-</li>
-<li>
-<p><code>l2_gas_price</code> is defined by:</p>
+<div class="paragraph">
+<p><code>l1_gas_price</code> and <code>l1_data_price</code> are computed by taking the average of the last 60 L1 base gas or data gas prices sampled every 60 seconds by the sequencer, plus 1 Gwei. For <code>l1_data_gas_price</code>, this number is then multiplied by a scaling factor of 0.135 that approximate for the average rate compression achieved from posting the data to Ethereum.</p>
+</div>
+<div class="paragraph">
+<p><code>l2_gas_price</code> is currently a fixed amount denominated in WEI (the price in FRI is only dependent on the WEI to FRI ratio). Starknet version 0.14.0 will introduce a fee market for  <code>l2_gas</code> similar to Ethereum&#8217;s <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md" target="_blank" rel="noopener">EIP 1559</a>, computing <code>l2_gas_price</code> as follows:</p>
+</div>
 <div class="stemblock">
 <div class="content">
 \[\max\left\{(1 + \frac{\text{prev_L2_gas_use} - \text{TARGET}}{\text{TARGET}}*C)* \text{prev_L2_gas_price}, \text{MIN_PRICE}\right\}\]
@@ -896,21 +920,21 @@ In that case, we can use the estimation&#8217;s <code>overall_fee</code> to deci
 <p>\(\text{prev_L2_gas_use}\) is the total L2 gas used in the previous block</p>
 </li>
 <li>
-<p>\(\text{TARGET}\) is ??? (half of Starknet&#8217;s block capacity)</p>
+<p>\(\text{TARGET}\) is 2 * 10<sup>9</sup> (<a href="../../resources/chain-info/#current_limits" class="xref page">half of Starknet&#8217;s block capacity</a>)</p>
 </li>
 <li>
-<p>\(C\) is ???</p>
+<p>\(0 &lt; C &lt; 1\) is still TBD</p>
 </li>
 <li>
 <p>\(\text{prev_L2_gas_price}\) is the previous block&#8217;s <code>l2_gas_price</code></p>
 </li>
 <li>
-<p>\(\text{MIN_PRICE}\) is ???</p>
+<p>\(\text{MIN_PRICE}\) is still TBD</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>assuring that:</p>
+<p>This assures that:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -920,8 +944,8 @@ In that case, we can use the estimation&#8217;s <code>overall_fee</code> to deci
 <li>
 <p>If the total gas used in the previous block is larger or smaller than \(\text{TARGET}\), then <code>l2_gas_price</code> will respectively decrease or increase by at most \(C\)</p>
 </li>
-</ul>
-</div>
+<li>
+<p>When there is no congestion in the network, the <code>l2_gas_price</code> will be equal to \(\text{MIN_PRICE}\)</p>
 </li>
 </ul>
 </div>
