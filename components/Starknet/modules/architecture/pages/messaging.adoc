@@ -13,8 +13,8 @@ Starknet's messaging mechanism is both _asynchronous_ and _asymmetric_.
 
 .Additional resources
 
-* xref:architecture-and-concepts:smart-contracts/system-calls-cairo1.adoc#send_message_to_L1[The `send_message_to_L1` syscall]
-* https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[the Starknet Core contract's `sendMessageToL2` function^]
+* https://book.cairo-lang.org/appendix-08-system-calls.html#send_message_to_l1[The `send_message_to_L1` syscall^]
+* https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[The Starknet Core contract's `sendMessageToL2` function^]
 * https://book.cairo-lang.org/ch16-04-L1-L2-messaging.html[L1-L2 Messaging in the Cairo Book^]
 
 == L2 -> L1 messages
@@ -55,8 +55,6 @@ The protocol is summarized in the following illustration:
 image::l2l1.png[L2->L1 message mechanism]
 
 === L2 -> L1 message structure
-
-// xref:#structure_l2-l1[] illustrates the structure of an L2 -> L1 message.
 
 The structure of an L2 -> L1 message is defined under `MSG_TO_L1` in the https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json[Starknet API JSON RPC^] specification as follows:
 
@@ -235,12 +233,14 @@ Where:
 
 ==== Caveats and limitations
 
-[NOTE]
-====
-Since L1 handler transactions are not initiated by an account, invoking https://github.com/starkware-libs/cairo/blob/2203a47f8a098cd4718d03bd109ca014049419e7/corelib/src/starknet/info.cairo#L49[`get_caller_address`^] or similar account-related functions returns the address `0x0`.
-====
+* Since L1 handler transactions are not initiated by an account, invoking https://github.com/starkware-libs/cairo/blob/2203a47f8a098cd4718d03bd109ca014049419e7/corelib/src/starknet/info.cairo#L49[`get_caller_address`^] or similar account-related functions returns the address `0x0`.
+*  Starting from Starknet version 0.14.0:
+** L1 handlers that fail execution will appear in a block as `REVERTED`, instead of only be written in the feeder gateway's database as `REJECTED`. The purpose of this change is to simplify the tracking of messages L1 -> L2, and the implementation of `getMessageStatus` in particular.
+** The `l1_gas`, `l2_gas`, and `l1_data_gas` execution resources of L1 handlers will be bounded as follows:
+*** `l2_gas` will bounded by stem:[10^8] (the same as ``++__validate__++``'s)
+*** `l1_gas` and `l1_data_gas` will be bounded by stem:[4*10^4] and stem:[2*10^4], respectively (to allow for sending one L2 -> L1 message)
 
-.Supported versions of the `L1HandlerTransaction` transaction type
+==== Supported versions
 [cols=",,",]
 |===
 |Current version |Deprecated versions | Unsupported versions
