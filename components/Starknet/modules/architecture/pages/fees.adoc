@@ -1,16 +1,17 @@
 [id="gas-and-transaction-fees"]
 = Fee mechanism
 
-[IMPORTANT]
+== Overview
+
+Every transaction on Starknet requires a small fee to process. The components contributing to this fee include xref:#fee_components [L2 computation, L2 data, and L1 data], which are measured in xref:#fee_resources[L2 gas, L1 gas, and L1 data gas]. A transaction's fee can be xref:#estimating_fees[estimated] and xref:fee_limits[limited], and is ultimately xref:#charging_fees[charged] based on a predefined xref:#overall_fee[formula].
+
+
+[NOTE]
 ====
 This section describes fees that are paid on L2 starting in Starknet 0.13.0.
 
 For information about messaging fees that are paid on L1, see xref:messaging.adoc#l1-l2-message-fees[L1→L2 message fees].
 ====
-
-== Overview
-
-Every transaction on Starknet requires a small fee to process. The components contributing to this fee include xref:#fee_components [L2 computation, L2 data, and L1 data], which are measured in xref:#fee_resources[L2 gas, L1 gas, and L1 data gas]. A transaction's fee can be xref:#estimating_fees[estimated] and xref:fee_limits[limited], and is ultimately xref:#charging_fees[charged] based on a predefined xref:#overall_fee[formula].
 
 == Fee components
 
@@ -47,8 +48,7 @@ The fee for a transaction can be estimated by using the https://github.com/stark
 
 [NOTE]
 ====
-When signing resource bounds for all three resource types — the only supported option when sending the transaction via Starknet's JSON-RPC v0.8.0 onwards, and the only supported option in Starknet v0.14.0 —
-the fee estimation response is easily mapped to the transaction's fields (i.e., the response contains price and amounts for xref:fee_resources[all three resources], and the transaction is expected to specify bounds and max prices for each of them).
+When signing resource bounds for all three resource types — the only supported option when sending the transaction via Starknet's JSON-RPC v0.8.0 onwards, and the only supported option in Starknet v0.14.0 — the fee estimation response is easily mapped to the transaction's fields (i.e., the response contains price and amounts for xref:fee_resources[all three resources], and the transaction is expected to specify bounds and max prices for each of them).
 
 On the other hand, when submitting transactions via Starknet's JSON-RPC v0.7.1 or below, the only bounded resource is L1 gas, while the fee estimation contains both L1 gas and L1 data gas. 
 In that case, we can use the estimation's `overall_fee` to decide on the L1 gas bounds.
@@ -81,8 +81,6 @@ While sequencer are xref:fee_limits[enforced not to overcharge fees], they are n
 ====
 
 === Overall fee
-
-// Starting with Starknet v0.13.1, Starknet distinguishes between blocks whose state diffs are sent to L1 as calldata and blocks whose state diffs are sent to L1 as blobs. The `l1_da_mode` property in the Starknet block header contains this information. The cost of computation remains the same on both options, but the cost related to data availability differs.
 
 The following formula describes the overall fee of a transaction:
 
