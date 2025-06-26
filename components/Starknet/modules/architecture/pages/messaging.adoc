@@ -1,23 +1,27 @@
-[id="messaging_mechanism"]
-= L1-L2 messaging mechanism
+= L1 <-> L2 messaging
 
-Starknet's ability to interact with L1 is crucial. _Messaging_ is the mechanism that enables this interaction.
+== Overview 
+Starknet's ability to interact with L1 is crucial, and is used by bridges (e.g., for depositing your tokens in the L1 bridge contract, and automatically triggers the minting of the same token on L2), link:https://starkware.co/resource/defi-pooling/[DeFi pooling^] and https://www.starknet.io/en/ecosystem/dapps[more^]. Messaging — both xref:l2_l1_messages[from L1 to L2] and from xref:l1_l2_message_protocol[L2 to L1] — is the mechanism that enables this interaction.
 
-For example, you can perform computations on L2 and use the result on L1.
-
-Bridges on Starknet use the L1-L2  messaging mechanism. Consider that you want to bridge tokens from Ethereum to Starknet. You deposit your tokens in the L1 bridge contract, which automatically triggers the minting of the same token on L2. Another good use case for L1-L2 messaging is Defi pooling. For more information, see link:https://starkware.co/resource/defi-pooling/[DeFi pooling] on StarkWare's site and link:https://www.starknet.io/en/ecosystem/dapps[dApps] on https://www.starknet.io.
-
-Be aware that the messaging mechanism is _asynchronous_ and _asymmetric_.
+[IMPORTANT]
+====
+Starknet's messaging mechanism is both _asynchronous_ and _asymmetric_.
 
 * _Asynchronous_: Your contract code, whether Cairo or Solidity, cannot await the result of the message being sent on the other layer within your contract code's execution.
 * _Asymmetric_: Sending a message from Ethereum to Starknet, L1->L2, is fully automated by the Starknet sequencer, so the message is automatically delivered to the target contract on L2. However, when sending a message from Starknet to Ethereum, L2->L1, the sequencer only sends the hash of the message. You must then consume the message manually using a transaction on L1.
+====
 
-[id="l2-l1_messages"]
+.Additional resources
+
+* https://book.cairo-lang.org/appendix-08-system-calls.html#send_message_to_l1[The `send_message_to_L1` syscall^]
+* https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[The Starknet Core contract's `sendMessageToL2` function^]
+* https://book.cairo-lang.org/ch16-04-L1-L2-messaging.html[L1-L2 Messaging in the Cairo Book^]
+
 == L2 -> L1 messages
 
-Contracts on L2 can interact asynchronously with contracts on L1 using the L2->L1 messaging protocol.
+=== L2 -> L1 message protocol
 
-The protocol consists of the following stages:
+The L2 -> L1 message protocol consists of the following stages:
 
 . During the execution of a transaction, a contract on Starknet sends a message from L2 to L1 by calling the `send_message_to_L1` syscall.
 . The sequencer attaches the message parameters to the block that includes the syscall invocation. The message parameters include the address of the sender on L2, the address of the recipient contract on L1, and the message data.
@@ -44,27 +48,21 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 * The hashes of the L2 sent message parameters, now stored on the Core Contract, and the L1 received message parameters, are the same.
 * The entity calling the function is indeed the recipient on L1.
 +
-// We need to separate out these functions into a reference.
 In such a case, the counter corresponding to the message hash in the Starknet Core Contract decreases by one. For more information, see the link:https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L130C7-L130C7#[`consumeMessageFromL2`] function in `StarknetMessaging.sol`.
 
-xref:#diagram_l2-l1_messaging_mechanism[] illustrates this flow:
+The protocol is summarized in the following illustration:
 
-[#diagram_l2-l1_messaging_mechanism]
-.L2->L1 Messaging mechanism
 image::l2l1.png[L2->L1 message mechanism]
 
 === L2 -> L1 message structure
 
-// xref:#structure_l2-l1[] illustrates the structure of an L2 -> L1 message.
+The structure of an L2 -> L1 message is defined under `MSG_TO_L1` in the https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json[Starknet API JSON RPC^] specification as follows:
 
-The structure of an L2 -> L1 message is described as follows under `MSG_TO_L1` in the link:https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json[Starknet API JSON RPC] specification:
-
-[horizontal,labelwidth="30",role="stripes-odd"]
+[horizontal,labelwidth="30"]
 `from_address` (`felt252`):: The address of the L2 contract sending the message.
 `to_address` (`EthAddress`):: The target L1 address the message is sent to.
-`payload` (`Array<felt252>`) :: The payload of the message.
+`payload` (`Array<felt252>`):: The payload of the message.
 
-[#hashing_l2-l1]
 === L2 -> L1 message hashing
 
 The hash of an L2 -> L1 message is computed on L1 as follows:
@@ -86,12 +84,11 @@ keccak256(
 Sending an L2 to L1 message always incurs a fixed cost of 20,000 L1 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core Contract.
 ====
 
-[id="l1-l2-messages"]
 == L1 -> L2 messages
 
-Contracts on L1 can interact asynchronously with contracts on L2 using the _L1->L2_ messaging protocol.
+=== L1 -> L2 message protocol
 
-The protocol consists of the following stages:
+The L1 -> L2 message protocol consists of the following stages:
 
 . An L1 contract induces a message to an L2 contract on Starknet by calling the link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract with the message parameters.
 +
@@ -108,11 +105,6 @@ The Starknet Core Contract hashes the message parameters and updates the L1->L2 
 
 At this point, the message is handled.
 
-// The above flow is illustrated in the following diagram:
-// #THIS IMAGE IS WRONG & MISLEADING#
-
-// image::l1l2.png[l1l2]
-
 An L1->L2 message consists of the following:
 
 * L1 sender's address
@@ -128,7 +120,37 @@ The message nonce is maintained on the Starknet Core Contract on L1, and is incr
 For more information, see xref:#l1_l2_message_structure[L1->L2 structure].
 ====
 
-[id="l2-l1_message_cancellation"]
+=== L1 -> L2 message structure
+
+
+For completeness, the following table describes the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2:
+
+[%autowidth.stretch]
+|===
+| FromAddress       | ToAddress      | Selector       | Payload              | Nonce          |
+
+| `EthereumAddress` | `FieldElement` | `FieldElement` | `List+++<FieldElement>+++` | `FieldElement` |
+|===
+
+=== L1 -> L2 message hashing
+
+The hash of the message is computed on L1 as follows:
+
+[source,js]
+----
+keccak256(
+    abi.encodePacked(
+        uint256(FromAddress),
+        ToAddress,
+        Nonce,
+        Selector,
+        Payload.length,
+        Payload
+    )
+);
+----
+
+
 === L1 -> L2 message cancellation
 
 [NOTE]
@@ -148,7 +170,6 @@ The steps in this flow are as follows:
 
 
 
-[id="l1-l2-message-fees"]
 === L1 -> L2 message fees
 
 An L1 -> L2 message induces a transaction on L2, which, unlike regular transactions, is not sent by an account. This calls for a different mechanism for paying the transaction's fee, for otherwise the sequencer has no incentive of including L1 handler transactions inside a block.
@@ -157,45 +178,12 @@ To avoid having to interact with both L1 and L2 when sending a message, L1 -> L2
 
 The sequencer takes this fee in exchange for handling the message. The sequencer charges the fee in full upon updating the L1 state with the consumption of this message.
 
-The fee itself is calculated in the xref:architecture-and-concepts:fees.adoc#overall_fee[same manner] as
+The fee itself is calculated in the xref:architecture:fees.adoc#overall_fee[same manner] as
 "regular" L2 transactions.
 
-[id="structure_and_hashing_l1-l2"]
-[#l1_l2_message_structure]
-=== L1 -> L2 structure
-
-For completeness, xref:#l1_l2_message_structure[] describes the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.
-
-[#L1-L2_message_structure]
-.L1 -> L2 message structure
-[%autowidth.stretch]
-|===
-| FromAddress       | ToAddress      | Selector       | Payload              | Nonce          |
-
-| `EthereumAddress` | `FieldElement` | `FieldElement` | `List+++<FieldElement>+++` | `FieldElement` |
-|===
-
-[#hashing_l1-l2]
-=== L1 -> L2 hashing
-
-The hash of the message is computed on L1 as follows:
-
-[source,js]
-----
-keccak256(
-    abi.encodePacked(
-        uint256(FromAddress),
-        ToAddress,
-        Nonce,
-        Selector,
-        Payload.length,
-        Payload
-    )
-);
-----
-
-[id="l1_handler_transaction"]
 === L1 handler transaction
+
+==== Transaction fields
 
 [%autowidth.stretch]
 |===
@@ -204,16 +192,23 @@ keccak256(
 | `FieldElement` | `FieldElement`  | `FieldElement` | `List+++<FieldElement>+++` | `FieldElement` |
 |===
 
+[NOTE]
+====
+In an L1 handler transaction, the first element of the calldata is always the sender's Ethereum address.
+====
+
+==== Hash calculation
+
 The hash of the corresponding L1 handler transaction on L2 is computed as follows:
 
 [source,cairo]
 ----
-l1_handler_tx_hash = _h_(
+l1_handler_tx_hash = h(
     "l1_handler",
     version,
     contract_address,
     entry_point_selector,
-    _h_(calldata),
+    h(calldata),
     0,
     chain_id,
     nonce
@@ -225,29 +220,22 @@ Where:
 * `l1_handler` is a constant prefix, encoded in bytes (ASCII), as big-endian.
 * `version` is the transaction version. Only version 0 is currently supported.
 * `chain_id` is a constant value that specifies the network to which this transaction is sent.
-* _h_ is the xref:architecture-and-concepts:cryptography.adoc#hash-functions#pedersen_hash[Pedersen] hash (note that since we're hashing an array, the # of inputs needs to be appended to the hash).
+* _h_ is the xref:architecture:cryptography.adoc#hash-functions#pedersen_hash[Pedersen] hash (note that since we're hashing an array, the # of inputs needs to be appended to the hash).
 * `0` indicates that L1 to L2 message fees are charged on L1.
 
-[NOTE]
-====
-In an L1 handler transaction, the first element of the calldata is always the sender's Ethereum address.
-====
+==== Caveats and limitations
 
-[NOTE]
-====
-Since L1 handler transactions are not initiated by an account, invoking link:https://github.com/starkware-libs/cairo/blob/2203a47f8a098cd4718d03bd109ca014049419e7/corelib/src/starknet/info.cairo#L49[`get_caller_address()`] or similar account-related functions returns the address `0x0`.
-====
+* Since L1 handler transactions are not initiated by an account, invoking https://github.com/starkware-libs/cairo/blob/2203a47f8a098cd4718d03bd109ca014049419e7/corelib/src/starknet/info.cairo#L49[`get_caller_address`^] or similar account-related functions returns the address `0x0`.
+*  Starting from Starknet version 0.14.0:
+** L1 handlers that fail execution will appear in a block as `REVERTED`, instead of only be written in the feeder gateway's database as `REJECTED`. The purpose of this change is to simplify the tracking of messages L1 -> L2, and the implementation of `getMessageStatus` in particular.
+** The `l1_gas`, `l2_gas`, and `l1_data_gas` execution resources of L1 handlers will be bounded as follows:
+*** `l2_gas` will bounded by stem:[10^8] (the same as ``++__validate__++``'s)
+*** `l1_gas` and `l1_data_gas` will be bounded by stem:[4*10^4] and stem:[2*10^4], respectively (to allow for sending one L2 -> L1 message)
 
-.Supported versions of the `L1HandlerTransaction` transaction type
+==== Supported versions
 [cols=",,",]
 |===
 |Current version |Deprecated versions | Unsupported versions
 
 | v0 | N/A | N/A
 |===
-
-== Additional resources
-
-* xref:architecture-and-concepts:smart-contracts/system-calls-cairo1.adoc#send_message_to_L1[`send_message_to_L1`] syscall
-* link:https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13[`sendMessageToL2`] function on the Starknet Core Contract
-* For more information on how messaging works within the Starknet Core Contract, including details on coding, see link:https://book.cairo-lang.org/ch16-04-L1-L2-messaging.html[L1-L2 Messaging] in _The Cairo Book: The Cairo Programming Language_
