@@ -530,17 +530,22 @@
 </aside>
 <article class="doc">
 <h1 class="page">SNOS (Starknet operating system)</h1>
-<div id="preamble">
+<div class="sect1">
+<h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
-<div class="admonitionblock important">
+<div class="paragraph">
+<p>As an L2 validity rollup, Starknet&#8217;s state on Ethereum can&#8217;t be updated without proving that all the blocks between the current state and the new state are valid. SNOS is <a href="#what_is_snos?">the key element in Starknet&#8217;s architecture</a> that <a href="#how_does_snos_work?">verifies the validity of Starknet blocks</a> and is required for <a href="#using_snos_to_update_starknets_state">
+updating Starknet&#8217;s state</a>. SNOS has two <a href="#implementations">implementations</a>, a fully-open source one in Rust and a partially open-source one in Python.</p>
+</div>
+<div class="admonitionblock note">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-important" title="Important"></i>
+<i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>SNOS is a key element in Starknet&#8217;s architecture, but also one of its more complicated components. This page&#8217;s aim is to gradually walk you through what SNOS is, how does it work and interact with the Starknet Core contract, and where its implementations can be found. Some parts may require reading more than once, but don&#8217;t hesitate to <a href="https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&amp;title=Feedback%20for%20%22The%20Starknet%20operating%20system%22" target="_blank" rel="noopener">reach out</a> if you feel further clarification is needed.</p>
+<p>SNOS is a key element in Starknet&#8217;s architecture, but also one of its more complicated components. Some parts may require reading more than once, but don&#8217;t hesitate to <a href="https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&amp;title=Feedback%20for%20%22The%20Starknet%20operating%20system%22" target="_blank" rel="noopener">reach out</a> if you feel further clarification is needed.</p>
 </div>
 </td>
 </tr>
@@ -549,13 +554,13 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="what_is_the_snos"><a class="anchor" href="#what_is_the_snos"></a>What is the SNOS?</h2>
+<h2 id="what_is_snos"><a class="anchor" href="#what_is_snos"></a>What is SNOS?</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>As an L2 validity rollup, Starknet&#8217;s state on Ethereum can&#8217;t be updated without proving that all the blocks between the current state and the new state are valid. But what does "proving that a block is valid" mean exactly? Technically, only statements of the form "<em>Cairo program \(P\) ran successfully with output \(O\)</em>" can be proven, which means that the statement "<em>Blocks \(B\) is valid</em>" needs to expressed in the form of a Cairo program.</p>
+<p>In Cairo, only statements of the form <em>"a specific Cairo program with specific inputs and produced specific outputs"</em> can be proven, which means that the statement <em>"A Starknet block is valid"</em> needs to expressed in the form of a Cairo program, inputs, and outputs.</p>
 </div>
 <div class="paragraph">
-<p>This is where SNOS comes in: it is a Cairo Zero program that verifies the validity of blocks by getting an initial state \(S\) and a list of transactions (i.e., block) \(B\) as input and outputting the state that is the result of applying \(B\) on \(S\).</p>
+<p>This is where SNOS comes in: it is a Cairo Zero program that verifies the validity of blocks by getting an initial state and a list of transactions as input and outputting the state that is the result of applying these transactions on the initial state.</p>
 </div>
 <div class="paragraph">
 <p>SNOS is the program required for updating Starknet&#8217;s state on Ethereum (<a href="#os-and-core-contract">up to some caveats</a>). As such, is it also the final arbiter on what does it mean for a transaction to execute correctly. For example, while a malicious sequencer can deviate from <a href="../transactions/#transaction_flow" class="xref page">the <code>INVOKE</code> transaction&#8217;s behavior</a> by skipping the execution of <code>__validate__</code> before <code>__execute__</code> in the calling account contract, this specification is <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_transactions.cairo#L390" target="_blank" rel="noopener">enforced by SNOS</a> and therefore this sequencer will not be able to produce the proof for the block in which this transaction was included.</p>
@@ -622,7 +627,7 @@ the Merkle path of every accessed storage slot and the code of every accessed co
 <p>Verifying that the new commitment corresponds to applying the updates accumulated in the global state updates dictionary to the old commitment (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/state/state.cairo#L40" target="_blank" rel="noopener"><code>state_update</code> function in <code>state.cairo</code></a>).</p>
 </li>
 <li>
-<p>Encoding the state diff and adding it to the output segment for <a href="../data-availability/" class="xref page">data availability</a> purposes (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/output.cairo#L71" target="_blank" rel="noopener"><code>serialize_os_output</code> function in <code>output.cairo</code></a>)</p>
+<p>Encoding the state diff and adding it to the output segment for <a href="#network-architecture/data-availability.adoc" class="xref unresolved">data availability</a> purposes (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/output.cairo#L71" target="_blank" rel="noopener"><code>serialize_os_output</code> function in <code>output.cairo</code></a>)</p>
 </li>
 </ol>
 </div>
@@ -657,10 +662,19 @@ which returns the block hash and number, correctness means consistency with the 
 <p>It&#8217;s worth noting that in the first execution, the sequencer can run in whatever way he chooses. In fact, he doesn&#8217;t even have to run through the Cairo VM at all, but rather <a href="https://github.com/lambdaclass/cairo_native" target="_blank" rel="noopener">precompile contracts to machine code and run them natively</a>. Moreover, sequencers can also impose restrictions that are not enforced by SNOS. Such discrepancy between the two executions may seem like a bug, but as long as these restrictions only protect the sequencers themselves, rather than the correctness of execution, there is no reason for SNOS to enforce them. A good example for such restriction is the <a href="../accounts/#limitations_of_validation" class="xref page">limits on validation functions</a> that protect the sequencer from DoS attacks. It is crucial, however, that both executions agree on the execution semantics, since, as mentioned in <a href="#introduction">What is SNOS?</a>, SNOS is the final arbiter and if it disagrees on the validity of the block, the sequencer will not be able to produce a proof for that block (and the only way forward would be a reorg on Starknet).</p>
 </div>
 </div>
+<div class="sect2">
+<h3 id="multiblock_input"><a class="anchor" href="#multiblock_input"></a>Multiblock input</h3>
+<div class="paragraph">
+<p>Starting from Starknet version 0.14.0, block times on Starknet will be substantially shorter, leading to more frequent but also smaller blocks. As every run of SNOS on a single block incurs a fixed cost which is independent of the size of the block, producing e.g. twice as many blocks also doubles this fixed cost.</p>
+</div>
+<div class="paragraph">
+<p>To mitigate this, SNOS will be modified in version 0.14.0 to receive multiple blocks as inputs. This also amortizes other non-negligible costs over a larger number of blocks: For example, if both block 10 and 11 use the same contract, SNOS loads and hashes its code only once instead of twice.</p>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="os-and-core-contract"><a class="anchor" href="#os-and-core-contract"></a>SNOS and the Starknet Core contract</h2>
+<h2 id="using_snos_to_update_starknets_state"><a class="anchor" href="#using_snos_to_update_starknets_state"></a>Using SNOS to update Starknet&#8217;s state</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The Starknet Core contract is the contract responsible for storing and updating Starknet&#8217;s state on Ethereum. As of Starknet v0.13.2 and as part of <a href="https://community.starknet.io/t/starknet-v0-13-2-pre-release-notes/114223#starknet-applicative-recursion-3" target="_blank" rel="noopener">SHARP&#8217;s applicative recursion feature</a>, proofs of SNOS&#8217;s execution are not enough to update the Starknet Core contract. Instead, it is required to submit an "applicative proof" of a different program called <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/cairo/bootloaders/applicative_bootloader/applicative_bootloader.cairo#L15" target="_blank" rel="noopener">the applicative bootloader</a>.</p>
