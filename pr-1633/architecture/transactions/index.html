@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>StarkGate :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/starkgate/">
-    <link rel="prev" href="../os/">
-    <link rel="next" href="../../ecosystem/overview/">
+    <title>Transactions :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/transactions/">
+    <link rel="prev" href="../strk/">
+    <link rel="next" href="../sharp/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,6 +307,11 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
+     href="../protocol-overview/">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
      href="../accounts/">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -347,12 +352,12 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../transactions/">Transactions</a>
+     href="./">Transactions</a>
   </li>
 </ul>
   </li>
@@ -373,10 +378,10 @@
        class="nav-link"
      href="../os/">SNOS</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">StarkGate</a>
+     href="../starkgate/">StarkGate</a>
   </li>
   <li class="nav-item" data-depth="2">
     <span class="nav-text"><a href="https://docs.starknet.io/stwo-book/" target="_blank" rel="noopener">Stwo ↗</a></span>
@@ -515,40 +520,73 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/starkgate.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/transactions.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "StarkGate"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Transactions"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">StarkGate</h1>
+<h1 class="page">Transactions</h1>
 <div class="sect1">
 <h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="https://starkgate.starknet.io" target="_blank" rel="noopener">StarkGate</a>, developed by StarkWare, bridges ETH and ERC-20 tokens between Ethereum and Starknet. The following is an illustration of its overall architecture:</p>
+<p>Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only <a href="#transaction_types">three types</a> of transactions, with each type going through the same <a href="#transaction_lifecycle">lifecycle</a> to receive its <a href="#transaction_statuses">execution and finality statuses</a>. Each transaction is issued a <a href="#transaction_receipt">receipt</a>, which includes its statuses and other information about it.</p>
 </div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/sg-architecture.png" alt="sg architecture">
-</div>
-</div>
-<div class="paragraph">
-<p>As illustrated, while StarkGate is referred to as a single bridge, some <a href="#legacy_bridge">legacy tokens</a> have their own bridge, each of which is defined in a corresponding pair of L1 and L2 contracts. Moreover, StarkGate also includes additional <a href="#l1_components">L1 components</a>, used for administrative purposes. To best understand the interplay between the different components, it&#8217;s recommended to follow the <a href="#lifecycles">lifecycles of a deposit and withdrawal</a>.</p>
+<div class="ulist">
+<div class="title">Additional information</div>
+<ul>
+<li>
+<p><a href="../../resources/transactions-reference/" class="xref page">Transaction fields and hash calculations reference</a> in <em>Resources</em></p>
+</li>
+<li>
+<p><a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json" target="_blank" rel="noopener"><code>starknet_api_openrpc.json</code></a> in the <code>starknet-specs</code> GitHub repository</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="legacy_bridge"><a class="anchor" href="#legacy_bridge"></a>Legacy bridges</h2>
+<h2 id="transaction_types"><a class="anchor" href="#transaction_types"></a>Transaction types</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Prior to StarkGate 2.0 (Mainnet: January 2024) tokens were bridged with a unique, custom pair of L1 and L2 bridge contracts, where the L1 contract is an instance of <a href="https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/solidity/LegacyBridge.sol" target="_blank" rel="noopener"><code>LegacyBridge.sol</code></a> and the L2 contract is an instance of <a href="https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/cairo/legacy_bridge_eic.cairo" target="_blank" rel="noopener"><code>legacy_bridge_eic.cairo</code></a>. These legacy token bridges are supported by StarkGate 2.0 in a fully backward-compatible fashion, as illustrated in the following example.</p>
+<p>Starknet supports the following types of transactions:</p>
 </div>
-<div class="sect2">
-<h3 id="example"><a class="anchor" href="#example"></a>Example: USDC</h3>
+<div class="hdlist">
+<table>
+<colgroup>
+<col style="width: 20%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<code>DECLARE</code>
+</td>
+<td class="hdlist2">
+<p>Declares new contract classes, enabling new contract instances.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>INVOKE</code>
+</td>
+<td class="hdlist2">
+<p>Invokes an existing function in a contract.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>DEPLOY_ACCOUNT</code>
+</td>
+<td class="hdlist2">
+<p>Deploys new account contracts in smart wallets.</p>
+</td>
+</tr>
+</table>
+</div>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -557,17 +595,300 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>For the complete list of legacy bridges, see the <a href="https://github.com/starknet-io/starknet-addresses/tree/master/bridged_tokens" target="_blank" rel="noopener"><code>bridged_tokens</code></a> directory on GitHub.</p>
+<p>The <a href="../messaging/#l1_handler_transaction" class="xref page"><code>L1HandlerTransaction</code> type</a> is also a valid transaction type within Starknet, be it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations (particularly, handling messages from L1 to L2).</p>
+</div>
+<div class="paragraph">
+<p>The <code>DEPLOY</code> transaction type existed in Starknet for deploying account before being replaced by <code>DEPLOY_ACCOUNT</code>. <code>DEPLOY</code> only had one version (v0) and is now unsupported by Starknet.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>Consider the <code>deposit</code> functions for the L1 bridge contract for USDC on Etherscan: <a href="https://etherscan.io/address/0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract" target="_blank" rel="noopener"><code>0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract</code></a></p>
+<p>Each transaction type is versioned, with versions increasing when the fields that comprise the transaction change, either with the addition of a new field or the removal of an existing field. The following table summarizes the current, deprecated, and unsupported versions of each transaction type:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Current version</th>
+<th class="tableblock halign-left valign-top">Deprecated versions</th>
+<th class="tableblock halign-left valign-top">Unsupported versions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>INVOKE</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v1, v0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DECLARE</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v2, v1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v0</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DEPLOY_ACCOUNT</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Do not submit a transaction that uses an unsupported transaction type, as it cannot be included in a proof, and therefore cannot become part of a Starknet block.</p>
 </div>
 <div class="paragraph">
-<p>This contract has the following two <code>deposit</code> functions: <code>deposit (0x0efe6a8b)</code> and <code>deposit (0xe2bbb158)</code>, which shows that the bridge includes support for the legacy functionality as well as the modern functionality:</p>
+<p>Sending transaction that use deprecated versions is still supported, but support will be removed in an upcoming Starknet release.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="transaction_lifecycle"><a class="anchor" href="#transaction_lifecycle"></a>Transaction lifecycle</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The high-level steps in the Starknet transaction lifecycle are as follows:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Transaction submission:</strong> A transaction is submitted to one of the gateways, which functions as the mempool, and marks it as received.</p>
+</li>
+<li>
+<p><strong>Mempool validation:</strong>
+The mempool performs preliminary validation of the transaction, such as ensuring that its invoker&#8217;s balance exceeds the transaction&#8217;s <code>max_fee</code> value, assuring the transaction&#8217;s calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Mempool validation in this context is analogous to Ethereum&#8217;s signature checking, and includes running the account&#8217;s <code>__validate__</code> function for an <code>INVOKE</code> transaction, <code>__validate_declare__</code> for a <code>DECLARE</code> transaction, or <code>__validate_deploy__</code> for a <code>DEPLOY_ACCOUNT</code> transaction.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p><strong>Sequencer validation:</strong> The sequencer performs preliminary validation of the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The sequencer repeats the same validation performed by the mempool.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p><strong>Execution:</strong> The sequencer batches all transactions that passed the preliminary validation into a block, and applies them to the state sequentially. If a transaction fails during execution, it is included in the block with as reverted.</p>
+</li>
+<li>
+<p><strong>Proof generation and verification:</strong> The prover uses the <a href="../os/" class="xref page">Starknet operating system</a> to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="transaction_statuses"><a class="anchor" href="#transaction_statuses"></a>Transaction statuses</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following are the possible statuses of a transaction from the moment a user sends it until the moment it passes the L1 verifier:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 28.5714%;">
+<col style="width: 57.1429%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Status</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-middle" rowspan="5"><p class="tableblock"><strong>Finality</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>NOT_RECEIVED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction is not yet known to the sequencer.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RECEIVED</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>The transaction was received by the mempool. The transaction is now either executed successfully, rejected, or reverted.</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REJECTED</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>The transaction was received by the mempool but failed the validation by the sequencer. Such transactions are not included in a block.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>A rejected transaction is stored in the mempool. You cannot send another transaction with the same transaction hash.</p>
+</div>
+</td>
+</tr>
+</table>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L2</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was executed and included in a block.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was accepted on Ethereum.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-middle" rowspan="2"><p class="tableblock"><strong>Execution</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REVERTED</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>The transaction passed validation but failed during the execution by the sequencer, and is included in a block as reverted.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Since the <code>DEPLOY_ACCOUNT</code> and <code>DECLARE</code> transactions don&#8217;t have an execution phase, they cannot be reverted.</p>
+</div>
+</td>
+</tr>
+</table>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SUCCEEDED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by the sequencer and is included in a block.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>The diagram below illustrates how each transaction status fits into the overall transaction flow:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/txn-flow.png" alt="txn flow">
+</div>
+</div>
+<div class="sect2">
+<h3 id="state_implications_of_reverted_transactions"><a class="anchor" href="#state_implications_of_reverted_transactions"></a>State implications of reverted transactions</h3>
+<div class="paragraph">
+<p>When a transaction is marked as <code>REVERTED</code>, the following state implications occur:</p>
+</div>
+<div class="hdlist">
+<table>
+<colgroup>
+<col style="width: 20%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+Nonce increases
+</td>
+<td class="hdlist2">
+<p>The nonce value for the account of the failed transaction iterates despite the failure.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Fee charge
+</td>
+<td class="hdlist2">
+<p>The sequencer charges a fee for the execution of the transaction up to the point of failure, and a respective <code>Transfer</code> event is emitted.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Partial reversion
+</td>
+<td class="hdlist2">
+<p>All changes that occurred during the validation stage are not reverted. However, all changes that occurred during the execution stage are reverted, including all messages to L1 or any events that were emitted during this stage. Events might still be emitted from the validation stage or the fee charge stage.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Fee calculation
+</td>
+<td class="hdlist2">
+<p>The fee charged for <code>REVERTED</code> transactions is the smaller of the following two values:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The maximum fee that the user is willing to pay, either <code>max_fee</code> (pre-v3 transactions) or \(\text{max_amount} \cdot \text{max_price_per_unit}\) (v3 transactions).</p>
+</li>
+<li>
+<p>The total consumed resources.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Consumed resources are resources used for the execution of the transaction up to the point of failure, including Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the validation and execution stages.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="transaction_receipt"><a class="anchor" href="#transaction_receipt"></a>Transaction receipt</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A transaction receipt can be obtained by using the Starknet API&#8217;s <code>starknet_getTransactionReceipt</code> endpoint and contains the following fields:</p>
 </div>
 <div class="hdlist">
 <table>
@@ -577,234 +898,161 @@
 </colgroup>
 <tr>
 <td class="hdlist1">
-<code>deposit (0x0efe6a8b)</code>
+<code>transaction_hash</code>
 </td>
 <td class="hdlist2">
-<p>The multi-bridge contract, which includes support for all tokens within a single contract, requiring that you enter the address of the token in the deposit function.</p>
+<p>The hash of the transaction.</p>
 </td>
 </tr>
 <tr>
 <td class="hdlist1">
-<code>deposit (0xe2bbb158)</code>
+<code>actual_fee</code>
 </td>
 <td class="hdlist2">
-<p>The legacy contract, which is labeled <strong>Support Legacy ABI</strong>. This function does not include the <code>token (address)</code> parameter, because the contract that contains this function only supports USDC. Therefore, the address of the token is superfluous.</p>
+<p>The actual fee paid for the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>finality_status</code>
+</td>
+<td class="hdlist2">
+<p>The finality status of the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>execution_status</code>
+</td>
+<td class="hdlist2">
+<p>The execution status of the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>block_hash</code>
+</td>
+<td class="hdlist2">
+<p>The hash of the block that includes the transaction</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>block_number</code>
+</td>
+<td class="hdlist2">
+<p>The sequential number of the block that includes the transaction</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>messages_sent</code>
+</td>
+<td class="hdlist2">
+<p>A list of messages sent to L1.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>events</code>
+</td>
+<td class="hdlist2">
+<p>The events emitted.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>execution_resource</code>
+</td>
+<td class="hdlist2">
+<p>A summary of the execution resources used by the transaction.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>type</code>
+</td>
+<td class="hdlist2">
+<p>The type of the transaction.</p>
 </td>
 </tr>
 </table>
 </div>
+<div class="paragraph">
+<p>The following is an example of a transaction receipt:</p>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="l1_components"><a class="anchor" href="#l1_components"></a>L1 components</h2>
-<div class="sectionbody">
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Contract</th>
-<th class="tableblock halign-left valign-top">Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/StarkgateManager.sol" target="_blank" rel="noopener"><code>StarkgateManager.sol</code></a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Responsible for adding tokens to the multi-bridge.</p>
-<p class="tableblock">An interface is available through <a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/IStarkgateManager.sol"><code>IStarkgateManager.sol</code></a>.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/StarkgateRegistry.sol" target="_blank" rel="noopener"><code>StarkgateRegistry.sol</code></a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Contains the addresses of all supported bridges and tokens and enables to stop servicing an existing bridge.</p>
-<p class="tableblock">An interface is available through <a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/IStarkgateRegistry.sol"><code>IStarkgateRegistry.sol</code></a>.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/StarknetTokenBridge.sol"><code>StarknetTokenBridge.sol</code></a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The primary StarkGate bridge contract, where the main user bridge functionality are defined.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/IStarkgateService.sol"><code>IStarkgateService.sol</code></a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">An interface to check if a contract is servicing a token.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="sect1">
-<h2 id="lifecycles"><a class="anchor" href="#lifecycles"></a>Lifecycles</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="deposit_lifecycle"><a class="anchor" href="#deposit_lifecycle"></a>Deposit lifecycle</h3>
-<div class="sect3">
-<h4 id="step_1_initiating_a_deposit_on_l1"><a class="anchor" href="#step_1_initiating_a_deposit_on_l1"></a>Step 1: Initiating a deposit on L1</h4>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>A call to the L1 <code>deposit</code> function initiates a deposit.</p>
-</li>
-<li>
-<p>The function does the following:</p>
-<div class="openblock">
+<div class="listingblock">
 <div class="content">
-<div class="ulist">
-<ul>
-<li>
-<p>Transfers the funds from the user&#8217;s account to the Starknet bridge.</p>
-</li>
-<li>
-<p>Emits a <code>Deposit</code> event that includes the L1 and L2 addresses of the user, and the amount deposited.</p>
-</li>
-<li>
-<p>Sends a message to the corresponding L2 bridge with the amount deposited, and the recipient&#8217;s address.</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="paragraph">
-<p>Starknet&#8217;s sequencer is now aware of the deposit transaction.</p>
-</div>
-</li>
-<li>
-<p>The sequencer waits for enough L1 block confirmations to fill its quota to run before the corresponding deposit transaction is initiated on L2. During this period of time, the status of the L2 deposit transaction is <a href="../transactions/#transaction_lifecycle" class="xref page"><code>NOT_RECEIVED</code></a>.</p>
-</li>
-</ol>
-</div>
-</div>
-<div class="sect3">
-<h4 id="step_2_triggering_a_deposit_on_l2"><a class="anchor" href="#step_2_triggering_a_deposit_on_l2"></a>Step 2: Triggering a deposit on L2</h4>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>The sequencers refer to the deposit
-request by triggering the L1 handler using the
-<a href="https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/cairo/token_bridge.cairo#L135"><code>handle_deposit</code></a> function on the L2 bridge.</p>
-</li>
-<li>
-<p>The <code>handle_deposit</code> function verifies that the deposit indeed came from the corresponding L1 bridge. It then calls the relevant token&#8217;s contract on Starknet and mints the specified amount of the token on L2 for the user.</p>
-</li>
-<li>
-<p>The sequencers complete constructing the block.</p>
-</li>
-</ol>
-</div>
-<div class="paragraph">
-<p>The status of the deposit request is now <a href="../transactions/#transaction_lifecycle" class="xref page"><code>ACCEPTED_ON_L2</code></a>.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="step_3_proving_the_block_that_includes_the_deposit"><a class="anchor" href="#step_3_proving_the_block_that_includes_the_deposit"></a>Step 3: Proving the block that includes the deposit</h4>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>Starknet&#8217;s provers prove the validity of the block and submit a state update to L1.</p>
-</li>
-<li>
-<p>The message confirming transfer of the funds is cleared from the Starknet Core Contract, and the fact that the user has transferred their funds is part of the now finalized state of Starknet.</p>
-</li>
-</ol>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>If the message wasn&#8217;t on L1 to begin with, that is, if the deposit request was fraudulently created on Starknet, the state update fails.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="withdrawal_lifecycle"><a class="anchor" href="#withdrawal_lifecycle"></a>Withdrawal lifecycle</h3>
-<div class="sect3">
-<h4 id="step_1_initiating_a_withdrawal_on_l2"><a class="anchor" href="#step_1_initiating_a_withdrawal_on_l2"></a>Step 1: Initiating a withdrawal on L2</h4>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>A call to the L2 <code>initiate_token_withdraw</code> function initiates a withdrawal.</p>
-</li>
-<li>
-<p>The function does the following:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Burns the transferred amount of tokens from the balance of the withdrawal&#8217;s initiator.</p>
-</li>
-<li>
-<p>Sends a message to the relevant L1 bridge with the amount to be transferred and the recipient&#8217;s address.</p>
-</li>
-</ul>
-</div>
-</li>
-</ol>
-</div>
-</div>
-<div class="sect3">
-<h4 id="step_2_proving_the_block_that_includes_the_withdrawal"><a class="anchor" href="#step_2_proving_the_block_that_includes_the_withdrawal"></a>Step 2: Proving the block that includes the withdrawal</h4>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>The sequencer completes the block construction</p>
-</li>
-<li>
-<p>Starknet&#8217;s provers prove the validity of the block and submit a state update to L1.</p>
-</li>
-<li>
-<p>The message from the previous step is stored in the Starknet Core Contract.</p>
-</li>
-</ol>
-</div>
-</div>
-<div class="sect3">
-<h4 id="step_3_transferring_the_funds_on_l1"><a class="anchor" href="#step_3_transferring_the_funds_on_l1"></a>Step 3: Transferring the funds on L1</h4>
-<div class="paragraph">
-<p>After the withdrawal message has been recorded on the Starknet Core Contract, anyone can finalize the transfer on L1 from the bridge back to the user, by calling the <a href="../../resources/starkgate-reference/#withdraw" class="xref page"><code>withdraw</code></a> function.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>This step is permissionless, anyone can do it. The recipient&#8217;s address is part of the recorded message on L1, so they receive the funds regardless of who calls the <code>withdraw</code> function on L1.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect3">
-<h4 id="stark_gate_withdrawal_limit"><a class="anchor" href="#stark_gate_withdrawal_limit"></a>Withdrawal limit</h4>
-<div class="paragraph">
-<p>By default, StarkGate imposes no limit on withdrawals. However, in order to mitigate risks associated with critical vulnerabilities that could result in the loss of user funds, StarkGate can enable a withdrawal limit.</p>
-</div>
-<div class="paragraph">
-<p>If a serious security issue arises, the security agent in the StarkGate contract can limit withdrawals to 5% of the Total Value Locked (TVL) per day for any affected token by calling the <code>setWithdrawLimitPCT()</code> function in the <code>WithdrawalLimit.sol</code> contract. A dedicated team can then investigate and resolve the issue.</p>
-</div>
-<div class="paragraph">
-<p>Only a security admin quorum can disable the withdrawal limit. The quorum will consist of Starknet Foundation members, Starknet ecosystem contributors, and StarkWare representatives. This diverse group will ensure that decisions reflect the Starknet community&#8217;s broad interests.</p>
-</div>
-<div class="paragraph">
-<p>This approach, blending manual oversight with automated detection, aims to minimize potential losses.</p>
-</div>
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "jsonrpc": "2.0",
+  "result": {
+    "actual_fee": "0x221db5dbf6db",
+    "block_hash": "0x301fc0d09c5810600af7bb9610be10596ad6f4e6d28a60d397dd148f0962a88",
+    "block_number": 906096,
+    "events": [
+      {
+        "data": [
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
+          "0x0",
+          "0x9184e72a000",
+          "0x0"
+        ],
+        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "keys": [
+          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+        ]
+      },
+      {
+        "data": [
+          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
+          "0x9184e72a000",
+          "0x0",
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7"
+        ],
+        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
+        "keys": [
+          "0x194fc63c49b0f07c8e7a78476844837255213824bd6cb81e0ccfb949921aad1"
+        ]
+      },
+      {
+        "data": [
+          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
+          "0x1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
+          "0x221db5dbf6db",
+          "0x0"
+        ],
+        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "keys": [
+          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+        ]
+      }
+    ],
+    "execution_status": "SUCCEEDED",
+    "finality_status": "ACCEPTED_ON_L2",
+    "messages_sent": [
+      {
+        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
+        "payload": [
+          "0x0",
+          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
+          "0x9184e72a000",
+          "0x0"
+        ],
+        "to_address": "0xc3511006c04ef1d78af4c8e0e74ec18a6e64ff9e"
+      }
+    ],
+    "transaction_hash": "0xdeadbeef",
+    "type": "INVOKE"
+  },
+  "id": 1
+}</code></pre>
 </div>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../os/">SNOS</a></span>
-  <span class="next"><a href="../../ecosystem/overview/">Overview</a></span>
+  <span class="prev"><a href="../strk/">STRK</a></span>
+  <span class="next"><a href="../sharp/">SHARP</a></span>
 </nav>
 </article>
   </div>

@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Transactions :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/transactions/">
-    <link rel="prev" href="../economics-of-starknet/">
-    <link rel="next" href="../sharp/">
+    <title>Accounts :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/accounts/">
+    <link rel="prev" href="../protocol-overview/">
+    <link rel="next" href="../blocks/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,7 +307,12 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../accounts/">Accounts</a>
+     href="../protocol-overview/">Overview</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a 
+       class="nav-link"
+     href="./">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -347,12 +352,12 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Transactions</a>
+     href="../transactions/">Transactions</a>
   </li>
 </ul>
   </li>
@@ -515,72 +520,156 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/transactions.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/accounts.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Transactions"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Accounts"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Transactions</h1>
+<h1 class="page">Accounts</h1>
 <div class="sect1">
 <h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only <a href="#transaction_types">three types</a> of transactions, with each type going through the same <a href="#transaction_lifecycle">lifecycle</a> to receive its <a href="#transaction_statuses">execution and finality statuses</a>. Each transaction is issued a <a href="#transaction_receipt">receipt</a>, which includes its statuses and other information about it.</p>
+<p>Accounts represent users onchain, and enable them to interact with the blockchain. <a href="#ethereums_account_structure">Unlike Ethereum</a>, Starknet facilitates account abstraction natively, via its unique account <a href="#starknets_account_structure">structure</a> and <a href="#account_nonces">nonce management</a>. Accounts can be <a href="#deploying_a_new_account">easily deployed on Starknet</a>, both with or without having a preexisting account.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="ethereums_account_structure"><a class="anchor" href="#ethereums_account_structure"></a>Ethereum&#8217;s account structure</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Within Ethereum individual user accounts are known as Externally Owned Accounts (EOAs). EOAs differ from smart contracts in that EOAs are not controlled by code, but rather by a pair of private and public keys. The account&#8217;s address is derived from those keys, and only by possessing the private key can you initiate transactions from an account. While simple, because the signature scheme is fixed, EOAs have some drawbacks, including the following:</p>
 </div>
 <div class="ulist">
-<div class="title">Additional information</div>
 <ul>
 <li>
-<p><a href="../../resources/transactions-reference/" class="xref page">Transaction fields and hash calculations reference</a> in <em>Resources</em></p>
+<p>Control over the private key gives complete control over
+the account, so you must keep your seed phrase secure yet accessible.</p>
 </li>
 <li>
-<p><a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json" target="_blank" rel="noopener"><code>starknet_api_openrpc.json</code></a> in the <code>starknet-specs</code> GitHub repository</p>
+<p>Wallet functionality has limited flexibility</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><a href="https://eips.ethereum.org/EIPS/eip-4337" target="_blank" rel="noopener">ERC-4337</a> is a design proposal for Ethereum that outlines <em>_account abstraction</em>, whereby all accounts are managed via a dedicated smart contract on the Ethereum network, as a way to increase flexibility and usability. Using account abstraction you can program how your account functions, including:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Determine what it means for a signature to be valid, or what contracts your account is allowed to interact with, also known as <em>signature abstraction</em></p>
+</li>
+<li>
+<p>Pay transaction fees in different tokens, also known as <em>fee abstraction</em></p>
+</li>
+<li>
+<p>Design your own replay protection mechanism and allow sending multiple uncoupled transactions in parallel, also known as <em>nonce abstraction</em></p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Without account abstractions, EOAs cannot send two transactions in parallel, but rather must wait for confirmation of the first before sending the second, as otherwise the second transaction can be rejected due to an invalid nonce. With account abstraction, sequential nonces is not required.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Two prominent examples of how account abstraction might be used to program account functionality include:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Social recovery:</strong> retrieving your wallet if in case its lost via a selected social network, vastly improving the typical experience of wallet recovery</p>
+</li>
+<li>
+<p><strong>Operating your account via facial recognition:</strong> Using your phone&#8217;s native hardware to sign transactions, making it practically impossible to take control of another user&#8217;s account, even if your phone is stolen</p>
 </li>
 </ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="transaction_types"><a class="anchor" href="#transaction_types"></a>Transaction types</h2>
+<h2 id="starknets_account_structure"><a class="anchor" href="#starknets_account_structure"></a>Starknet&#8217;s account structure</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Starknet supports the following types of transactions:</p>
+<p>Starknet&#8217;s account structure is inspired by Ethereum&#8217;s EIP-4337 where
+smart contract accounts with arbitrary verification logic are used instead of EOAs.</p>
 </div>
-<div class="hdlist">
-<table>
+<div class="paragraph">
+<p>A valid account contract in Starknet is simply a contract that includes the following functions:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col style="width: 20%;">
-<col>
+<col style="width: 25%;">
+<col style="width: 75%;">
 </colgroup>
+<thead>
 <tr>
-<td class="hdlist1">
-<code>DECLARE</code>
-</td>
-<td class="hdlist2">
-<p>Declares new contract classes, enabling new contract instances.</p>
-</td>
+<th class="tableblock halign-left valign-top">Function name</th>
+<th class="tableblock halign-left valign-top">When required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate__</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Always required</p>
+</div></div></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>INVOKE</code>
-</td>
-<td class="hdlist2">
-<p>Invokes an existing function in a contract.</p>
-</td>
-</tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__execute__</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Always required. The signatures of <code>__validate__</code> and <code>__execute__</code> must be identical.</p>
+</div>
+<div class="admonitionblock warning">
+<table>
 <tr>
-<td class="hdlist1">
-<code>DEPLOY_ACCOUNT</code>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
 </td>
-<td class="hdlist2">
-<p>Deploys new account contracts in smart wallets.</p>
+<td class="content">
+<div class="paragraph">
+<p>Two critical validations must happen in <code>__execute__</code>, and their absence can lead to draining of the account&#8217;s funds:</p>
+</div>
+<div class="paragraph">
+<p>(1) <code>assert!(get_caller_address().is_zero())</code></p>
+</div>
+<div class="paragraph">
+<p>This asserts that the account&#8217;s <code>__execute__</code> is not called from another contract, thus skipping validations (in later versions we may disallow calling <code>__execute__</code> from another contract at the protocol level)</p>
+</div>
+<div class="paragraph">
+<p>(2) <code>assert!(get_tx_info().unbox().version.into() &gt;= 1_u32)</code></p>
+</div>
+<div class="paragraph">
+<p>This asserts that the transaction&#8217;s version is at least 1, preventing the account from accepting <code>INVOKE</code> v0 transactions. It is critical to explicitly disallow the deprecated v0 transaction type, as v0 transactions assume that the signature verification happens in <code>__execute__</code>, and are thus skipping <code>__validate__</code> entirely.</p>
+</div>
 </td>
 </tr>
 </table>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate_declare__</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Required for the account to be able to send a <code>DECLARE</code> transaction. This function must receive exactly one argument, which is the class hash of the declared class.</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate_deploy__</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Required to allow deploying an instance of the account contract with a <code>DEPLOY_ACCOUNT</code> transaction. The arguments of <code>__validate_deploy__</code> must be the class hash of the account to be deployed and the salt used for computing the account&#8217;s contract address, followed by the constructor arguments.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -590,54 +679,40 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The <a href="../messaging/#l1_handler_transaction" class="xref page"><code>L1HandlerTransaction</code> type</a> is also a valid transaction type within Starknet, be it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations (particularly, handling messages from L1 to L2).</p>
-</div>
-<div class="paragraph">
-<p>The <code>DEPLOY</code> transaction type existed in Starknet for deploying account before being replaced by <code>DEPLOY_ACCOUNT</code>. <code>DEPLOY</code> only had one version (v0) and is now unsupported by Starknet.</p>
+<p>You can only use the <code>__validate_deploy__</code> function in an account contract to validate the <code>DEPLOY_ACCOUNT</code> transaction for that same contract.
+That is, this function runs at most once throughout the lifecycle of the account.</p>
 </div>
 </td>
 </tr>
 </table>
-</div>
-<div class="paragraph">
-<p>Each transaction type is versioned, with versions increasing when the fields that comprise the transaction change, either with the addition of a new field or the removal of an existing field. The following table summarizes the current, deprecated, and unsupported versions of each transaction type:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 25%;">
-<col style="width: 25%;">
-<col style="width: 25%;">
-<col style="width: 25%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Current version</th>
-<th class="tableblock halign-left valign-top">Deprecated versions</th>
-<th class="tableblock halign-left valign-top">Unsupported versions</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>INVOKE</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v1, v0</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+</div></div></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DECLARE</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v2, v1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v0</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DEPLOY_ACCOUNT</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>constructor</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>All contracts have a <code>constructor</code> function. It can be explicitly defined in the contract, or if not explicitly defined, the sequencer uses a default <code>constructor</code> function, which is empty.</p>
+</div></div></td>
 </tr>
 </tbody>
 </table>
+<div class="sect2">
+<h3 id="flow"><a class="anchor" href="#flow"></a>Flow</h3>
+<div class="paragraph">
+<p>When the sequencer receives a transaction, it calls the corresponding function with the appropriate input from the transaction&#8217;s data, as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>For a <code>DECLARE</code> transaction, the sequencer validates the transaction by calling the <code>__validate_declare__</code> function.</p>
+</li>
+<li>
+<p>For an <code>INVOKE</code> transaction, the sequencer calls the <code>__validate__</code> function with the transaction&#8217;s calldata as input, after being deserialized to the arguments in the <code>__validate__</code> function&#8217;s signature. After successfully completing validation, the sequencer calls the <code>__execute__</code> function with the same arguments.</p>
+</li>
+<li>
+<p>For a <code>DEPLOY_ACCOUNT</code> transaction, the sequencer calls the <code>constructor</code> function with the transaction&#8217;s <code>constructor_calldata</code> as input, after being deserialized to the arguments in the constructor signature. After the successful execution of the constructor, the sequencer validates the transaction by calling the <code>__validate_deploy__</code> function.</p>
+</li>
+</ul>
+</div>
 <div class="admonitionblock important">
 <table>
 <tr>
@@ -646,108 +721,11 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Do not submit a transaction that uses an unsupported transaction type, as it cannot be included in a proof, and therefore cannot become part of a Starknet block.</p>
-</div>
-<div class="paragraph">
-<p>Sending transaction that use deprecated versions is still supported, but support will be removed in an upcoming Starknet release.</p>
+<p>For an <code>INVOKE</code> and <code>DEPLOY_ACCOUNT</code> transactions, it is up to the sender to make sure that the calldata is serializied correctly according to either the <code>__validate__</code> or <code>constructor</code> function&#8217;s signature.</p>
 </div>
 </td>
 </tr>
 </table>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="transaction_lifecycle"><a class="anchor" href="#transaction_lifecycle"></a>Transaction lifecycle</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The high-level steps in the Starknet transaction lifecycle are as follows:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Transaction submission:</strong> A transaction is submitted to one of the gateways, which functions as the mempool, and marks it as received.</p>
-</li>
-<li>
-<p><strong>Mempool validation:</strong>
-The mempool performs preliminary validation of the transaction, such as ensuring that its invoker&#8217;s balance exceeds the transaction&#8217;s <code>max_fee</code> value, assuring the transaction&#8217;s calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Mempool validation in this context is analogous to Ethereum&#8217;s signature checking, and includes running the account&#8217;s <code>__validate__</code> function for an <code>INVOKE</code> transaction, <code>__validate_declare__</code> for a <code>DECLARE</code> transaction, or <code>__validate_deploy__</code> for a <code>DEPLOY_ACCOUNT</code> transaction.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p><strong>Sequencer validation:</strong> The sequencer performs preliminary validation of the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The sequencer repeats the same validation performed by the mempool.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p><strong>Execution:</strong> The sequencer batches all transactions that passed the preliminary validation into a block, and applies them to the state sequentially. If a transaction fails during execution, it is included in the block with as reverted.</p>
-</li>
-<li>
-<p><strong>Proof generation and verification:</strong> The prover uses the <a href="../os/" class="xref page">Starknet operating system</a> to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.</p>
-</li>
-</ol>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="transaction_statuses"><a class="anchor" href="#transaction_statuses"></a>Transaction statuses</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The following are the possible statuses of a transaction from the moment a user sends it until the moment it passes the L1 verifier:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 14.2857%;">
-<col style="width: 28.5714%;">
-<col style="width: 57.1429%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Status</th>
-<th class="tableblock halign-left valign-top">Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-middle" rowspan="5"><p class="tableblock"><strong>Finality</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>NOT_RECEIVED</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction is not yet known to the sequencer.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RECEIVED</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>The transaction was received by the mempool. The transaction is now either executed successfully, rejected, or reverted.</p>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REJECTED</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>The transaction was received by the mempool but failed the validation by the sequencer. Such transactions are not included in a block.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -757,104 +735,35 @@ The mempool performs preliminary validation of the transaction, such as ensuring
 </td>
 <td class="content">
 <div class="paragraph">
-<p>A rejected transaction is stored in the mempool. You cannot send another transaction with the same transaction hash.</p>
+<p>Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from DoS attacks.</p>
 </div>
 </td>
 </tr>
 </table>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L2</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was executed and included in a block.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L1</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was accepted on Ethereum.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-middle" rowspan="2"><p class="tableblock"><strong>Execution</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REVERTED</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>The transaction passed validation but failed during the execution by the sequencer, and is included in a block as reverted.</p>
 </div>
-<div class="admonitionblock note">
+<div class="admonitionblock tip">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-note" title="Note"></i>
+<i class="fa icon-tip" title="Tip"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Since the <code>DEPLOY_ACCOUNT</code> and <code>DECLARE</code> transactions don&#8217;t have an execution phase, they cannot be reverted.</p>
+<p>For more information on transaction types and lifecycle, see <a href="../transactions/" class="xref page">Transactions</a>.</p>
+</div>
+<div class="paragraph">
+<p>For more information on the each transaction&#8217;s fields, see <a href="../../resources/transactions-reference/" class="xref page">Transaction fields and hash calculations reference</a>.</p>
 </div>
 </td>
 </tr>
 </table>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SUCCEEDED</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by the sequencer and is included in a block.</p></td>
-</tr>
-</tbody>
-</table>
-<div class="paragraph">
-<p>The diagram below illustrates how each transaction status fits into the overall transaction flow:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/txn-flow.png" alt="txn flow">
 </div>
 </div>
 <div class="sect2">
-<h3 id="state_implications_of_reverted_transactions"><a class="anchor" href="#state_implications_of_reverted_transactions"></a>State implications of reverted transactions</h3>
+<h3 id="limitations"><a class="anchor" href="#limitations"></a>Limitations</h3>
 <div class="paragraph">
-<p>When a transaction is marked as <code>REVERTED</code>, the following state implications occur:</p>
+<p>The logic of the <code>__validate__</code>, <code>__validate_deploy__</code>, <code>__validate_declare__</code>, and <code>constructor</code> functions can be mostly arbitrary, except for the following limitations:</p>
 </div>
-<div class="hdlist">
-<table>
-<colgroup>
-<col style="width: 20%;">
-<col>
-</colgroup>
-<tr>
-<td class="hdlist1">
-Nonce increases
-</td>
-<td class="hdlist2">
-<p>The nonce value for the account of the failed transaction iterates despite the failure.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-Fee charge
-</td>
-<td class="hdlist2">
-<p>The sequencer charges a fee for the execution of the transaction up to the point of failure, and a respective <code>Transfer</code> event is emitted.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-Partial reversion
-</td>
-<td class="hdlist2">
-<p>All changes that occurred during the validation stage are not reverted. However, all changes that occurred during the execution stage are reverted, including all messages to L1 or any events that were emitted during this stage. Events might still be emitted from the validation stage or the fee charge stage.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-Fee calculation
-</td>
-<td class="hdlist2">
-<p>The fee charged for <code>REVERTED</code> transactions is the smaller of the following two values:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>The maximum fee that the user is willing to pay, either <code>max_fee</code> (pre-v3 transactions) or \(\text{max_amount} \cdot \text{max_price_per_unit}\) (v3 transactions).</p>
-</li>
-<li>
-<p>The total consumed resources.</p>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -863,7 +772,38 @@ Fee calculation
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Consumed resources are resources used for the execution of the transaction up to the point of failure, including Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the validation and execution stages.</p>
+<p>For the <code>constructor</code> function, limitations apply only when run in a <code>DEPLOY_ACCOUNT</code> transaction (in particular, <strong>not</strong> when an account is deployed from an existing class via the <code>deploy</code> syscall)</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>You cannot use more than 1,000,000 Cairo steps</p>
+</li>
+<li>
+<p>You cannot use more than 100,000,000 gas</p>
+</li>
+<li>
+<p>You cannot call the following syscalls:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>get_class_hash_at</code></p>
+</li>
+<li>
+<p><code>get_sequencer_address</code> (this syscall is only supported for Cairo 0 contracts)</p>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Starting from Starknet version 0.14.0, calling the <code>deploy</code> syscall from the <code>__validate__</code>, <code>__validate_deploy__</code>, <code>__validate_declare__</code>, and <code>constructor</code> functions will also not be possible.</p>
 </div>
 </td>
 </tr>
@@ -872,182 +812,218 @@ Fee calculation
 </li>
 </ul>
 </div>
+</li>
+<li>
+<p>You cannot call functions in external contracts</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This restriction enforces a single storage update being able to invalidate only transactions from a single account. However, be aware that an account can always invalidate its own past transactions by e.g. changing its public key.</p>
+</div>
+<div class="paragraph">
+<p>This limitation implies that the fees you need to pay to invalidate transactions in the mempool are directly proportional to the number of unique accounts whose transactions you want to invalidate.</p>
+</div>
 </td>
 </tr>
 </table>
+</div>
+</li>
+<li>
+<p>When calling the <code>get_execution_info</code> syscall:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>sequencer_address</code> is set to zero</p>
+</li>
+<li>
+<p><code>block_timestamp</code> returns the time (in UTC), rounded to the most recent hour</p>
+</li>
+<li>
+<p><code>block_number</code> returns the block number, rounded down to the nearest multiple of 100</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>These limitations are designed to prevent the following DoS attacks on the sequencer:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>An attacker could cause the sequencer to perform a large amount of work before a transaction fails validation. Two examples of such attacks are:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Spamming <code>INVOKE</code> transactions whose <code>__validate__</code> requires many steps, but eventually fails</p>
+</li>
+<li>
+<p>Spamming <code>DEPLOY_ACCOUNT</code> transactions that are invalid as a result of the constructor or <code>__validate_deploy__</code> failing.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>The above attacks are solved by making sure that the validation step is not resource-intensive, e.g. by keeping the maximal number of steps low. However, even if the validation is simple, the following "mempool pollution" attack could still be possible:</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>An attacker fills the mempool with transactions that are valid at the time they are sent.</p>
+</li>
+<li>
+<p>The sequencer is ready to execute them, thinking that by the time it includes them in a block, they will still be valid.</p>
+</li>
+<li>
+<p>Shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it&#8217;s included in a block, e.g. by offering higher fees for this one transaction.
+An example of such an attack is having the implementation of <code>__validate__</code> checks that the value of a storage slot is <code>1</code>, and the attacker&#8217;s transaction later sets it to <code>0</code>. Restricting validation functions from calling external contracts prevents this attack.</p>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="failures"><a class="anchor" href="#failures"></a>Failures</h3>
+<div class="paragraph">
+<p>When the <code>__validate__</code>, <code>__validate_deploy__</code>, or <code>__validate_declare__</code> functions fail, the account in question does not pay any fee, and the transaction&#8217;s status is <code>REJECTED</code>.</p>
+</div>
+<div class="paragraph">
+<p>When the <code>__execute__</code> function fails, the transaction&#8217;s status is <code>REVERTED</code>. Similar to Ethereum, a reverted transaction is included in a block, and the sequencer is eligible to charge a fee for the work done up to the point of failure.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>To learn more about transaction statuses, see <a href="../transactions/#transaction_statuses" class="xref page">Transactions</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="snip_6"><a class="anchor" href="#snip_6"></a>SNIP-6</h3>
+<div class="paragraph">
+<p>While not mandatory at the protocol level, you can use a richer standard interface for accounts, defined in <a href="https://github.com/starknet-io/SNIPs/blob/main/SNIPS/snip-6.md" target="_blank" rel="noopener">Starknet Improvement Proposal 6 (SNIP-6)</a>. SNIP-6 was developed by community members at <a href="https://www.openzeppelin.com/" target="_blank" rel="noopener">OpenZeppelin</a>, in close collaboration with wallet teams and other core Starknet developers.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="example"><a class="anchor" href="#example"></a>Example</h3>
+<div class="paragraph">
+<p>Thanks to account abstraction, the logic of <code>__execute__</code> and the different validation functions is up to the party implementing the account. To review a concrete implementation, you can check out OpenZeppelin&#8217;s <a href="https://github.com/OpenZeppelin/cairo-contracts/blob/v0.14.0/src/account/account.cairo#L72" target="_blank" rel="noopener">account component</a>, which also adheres to <a href="#snip-6">SNIP6</a>.</p>
 </div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="transaction_receipt"><a class="anchor" href="#transaction_receipt"></a>Transaction receipt</h2>
+<h2 id="account_nonces"><a class="anchor" href="#account_nonces"></a>Account nonces</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>A transaction receipt can be obtained by using the Starknet API&#8217;s <code>starknet_getTransactionReceipt</code> endpoint and contains the following fields:</p>
+<p>Similar to Ethereum, every contract in Starknet, including account contracts, has a nonce. The nonce of a transaction sent from an account must match the nonce of that account, which changes after the transaction is executed — even if it was reverted. Nonces serves two important roles:</p>
 </div>
-<div class="hdlist">
+<div class="ulist">
+<ul>
+<li>
+<p>They guarantee transaction hash uniqueness, which is important for a good user experience</p>
+</li>
+<li>
+<p>They provide replay protection to the account, by binding the signature to a particular nonce and preventing a malicious party from replaying the transaction</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Also similarly to Ethereum, Starknet currently determines the nonce structure at the protocol level to be sequential (i.e., the nonce of a transaction sent from an account is incremented by one after the transaction is executed). In the future, Starknet will consider a more flexible design, extending account abstraction to nonce abstraction.</p>
+</div>
+<div class="paragraph">
+<p>However, unlike Ethereum, only the nonce of account contracts — that is, those adhering to <a href="#starknets_account_structure">Starknet&#8217;s account structure</a> — can be non-zero in Starknet. In contrast, in Ethereum, regular smart contracts can also increment their nonce by deploying smart contracts (i.e., executing the <code>CREATE</code> and <code>CREATE2</code> opcodes).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="deploying_a_new_account"><a class="anchor" href="#deploying_a_new_account"></a>Deploying a new account</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>New accounts can be deployed in the following ways:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Sending a <code>DEPLOY_ACCOUNT</code> transaction, which does not require a preexisting account.</p>
+</li>
+<li>
+<p>Using the <a href="https://docs.openzeppelin.com/contracts-cairo/0.12.0/udc" target="_blank" rel="noopener">Universal Deployer Contract (UDC)</a>, which requires an existing account to send the <code>INVOKE</code> transaction</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Upon receiving one of these transactions, the sequencer performs the following steps:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Runs the respective validation function in the contract, as follows:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>When deploying with the <code>DEPLOY_ACCOUNT</code> transaction type, the sequencer executes the <code>__validate_deploy__</code> function in the deployed contract.</p>
+</li>
+<li>
+<p>When deploying using the UDC, the sequencer executes the <code>__validate__</code> function in the contract of the sender&#8217;s address.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Executes the constructor with the given arguments.</p>
+</li>
+<li>
+<p>Charges fees from the new account address.</p>
+<div class="admonitionblock note">
 <table>
-<colgroup>
-<col style="width: 25%;">
-<col>
-</colgroup>
 <tr>
-<td class="hdlist1">
-<code>transaction_hash</code>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
 </td>
-<td class="hdlist2">
-<p>The hash of the transaction.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>actual_fee</code>
-</td>
-<td class="hdlist2">
-<p>The actual fee paid for the transaction.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>finality_status</code>
-</td>
-<td class="hdlist2">
-<p>The finality status of the transaction.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>execution_status</code>
-</td>
-<td class="hdlist2">
-<p>The execution status of the transaction.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>block_hash</code>
-</td>
-<td class="hdlist2">
-<p>The hash of the block that includes the transaction</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>block_number</code>
-</td>
-<td class="hdlist2">
-<p>The sequential number of the block that includes the transaction</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>messages_sent</code>
-</td>
-<td class="hdlist2">
-<p>A list of messages sent to L1.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>events</code>
-</td>
-<td class="hdlist2">
-<p>The events emitted.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>execution_resource</code>
-</td>
-<td class="hdlist2">
-<p>A summary of the execution resources used by the transaction.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>type</code>
-</td>
-<td class="hdlist2">
-<p>The type of the transaction.</p>
+<td class="content">
+<div class="paragraph">
+<p>If you use a <code>DEPLOY_ACCOUNT</code> transaction, the fees are paid from the address of the deployed account. If you use the UDC, which requires an <code>INVOKE</code> transaction, the fees are paid from the sender&#8217;s account. For information on the differences between V1 and V3 <code>INVOKE</code> transactions, see <a href="../transactions/#transaction_types" class="xref page"><code>INVOKE</code> transaction</a> in <em>Transaction types</em>.</p>
+</div>
 </td>
 </tr>
 </table>
 </div>
-<div class="paragraph">
-<p>The following is an example of a transaction receipt:</p>
+</li>
+<li>
+<p>Sets the account&#8217;s nonce as follows:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>1</code>, when deployed with a <code>DEPLOY_ACCOUNT</code> transaction</p>
+</li>
+<li>
+<p><code>0</code>, when deployed with the UDC</p>
+</li>
+</ul>
 </div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
-  "jsonrpc": "2.0",
-  "result": {
-    "actual_fee": "0x221db5dbf6db",
-    "block_hash": "0x301fc0d09c5810600af7bb9610be10596ad6f4e6d28a60d397dd148f0962a88",
-    "block_number": 906096,
-    "events": [
-      {
-        "data": [
-          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
-          "0x0",
-          "0x9184e72a000",
-          "0x0"
-        ],
-        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-        "keys": [
-          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
-        ]
-      },
-      {
-        "data": [
-          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
-          "0x9184e72a000",
-          "0x0",
-          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7"
-        ],
-        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
-        "keys": [
-          "0x194fc63c49b0f07c8e7a78476844837255213824bd6cb81e0ccfb949921aad1"
-        ]
-      },
-      {
-        "data": [
-          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
-          "0x1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
-          "0x221db5dbf6db",
-          "0x0"
-        ],
-        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-        "keys": [
-          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
-        ]
-      }
-    ],
-    "execution_status": "SUCCEEDED",
-    "finality_status": "ACCEPTED_ON_L2",
-    "messages_sent": [
-      {
-        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
-        "payload": [
-          "0x0",
-          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
-          "0x9184e72a000",
-          "0x0"
-        ],
-        "to_address": "0xc3511006c04ef1d78af4c8e0e74ec18a6e64ff9e"
-      }
-    ],
-    "transaction_hash": "0xdeadbeef",
-    "type": "INVOKE"
-  },
-  "id": 1
-}</code></pre>
-</div>
+</li>
+</ol>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../economics-of-starknet/">Tokenomics</a></span>
-  <span class="next"><a href="../sharp/">SHARP</a></span>
+  <span class="prev"><a href="../protocol-overview/">Overview</a></span>
+  <span class="next"><a href="../blocks/">Blocks</a></span>
 </nav>
 </article>
   </div>

@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Fees :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/fees/">
-    <link rel="prev" href="../data-availability/">
-    <link rel="next" href="../messaging/">
+    <title>Staking protocol :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/staking/">
+    <link rel="prev" href="../messaging/">
+    <link rel="next" href="../state/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,6 +307,11 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
+     href="../protocol-overview/">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
      href="../accounts/">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -324,20 +329,20 @@
        class="nav-link"
      href="../data-availability/">Data availability</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Fees</a>
+     href="../fees/">Fees</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
      href="../messaging/">L1-L2 messaging</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../staking/">Staking</a>
+     href="./">Staking</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -347,7 +352,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,16 +520,16 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/fees.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/staking.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Fees"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Staking protocol"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Fees</h1>
+<h1 class="page">Staking protocol</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="admonitionblock important">
@@ -535,10 +540,10 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>This section describes fees that are paid on L2 (starting in Starknet 0.13.0).</p>
+<p>The Starknet Improvement Proposal (SNIP) for Bitcoin staking on Starknet is now <a href="https://community.starknet.io/t/staking-upgrade-bitcoin-staking-on-starknet/115696" target="_blank" rel="noopener">live</a>!</p>
 </div>
 <div class="paragraph">
-<p>For information about messaging fees that are paid on L1, see <a href="../messaging/#l1-l2-message-fees" class="xref page">L1→L2 message fees</a>.</p>
+<p>Jump into the discussion and help shape the future of Starknet&#8217;s decentralization 🌐</p>
 </div>
 </td>
 </tr>
@@ -550,531 +555,8 @@
 <h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Every transaction on Starknet requires a small fee to process. The components contributing to this fee include <a href="#fee_components ">L2 computation, L2 data, and L1 data</a>, which are measured in <a href="#fee_units_and_limits">L2 gas, L1 gas, and L1 data gas</a>. A transaction&#8217;s fee is <a href="#charging_fees">charged atomically when it is executed</a> and can be <a href="#estimating_fees">estimated using the <code>starknet_estimateFee</code> call</a>, based on the <a href="#overall_fee">formula for determining a transaction&#8217;s fee</a>.</p>
+<p>While Starknet is currently still centralized, it is <a href="#roadmap">gradually</a> moving towards employing a <a href="#protocol">staking protocol</a>, handing over the responsibilities of producing, attesting, and proving blocks to validators. To facilitate this gradual implementation, the protocol&#8217;s <a href="#architecture">architecture</a> is modular, ensuring maximum flexibility and ease of upgrades. However, anyone holding STRK in their wallets can already stake their tokens and earn rewards based on their level of participation by following <a href="#procedures">a few simple steps</a>.</p>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="fee_components"><a class="anchor" href="#fee_components"></a>Fee components</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The following components contribute to a transaction&#8217;s fee:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="#l2_computation">L2 computation</a></p>
-</li>
-<li>
-<p><a href="#l2_data">L2 data</a> (calldata, events and code)</p>
-</li>
-<li>
-<p><a href="#l1_data">L1 data</a>, which includes:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>The cost of posting the state diffs induced by the transaction to L1 (for more details, see <a href="../data-availability/" class="xref page">Data availability</a>)</p>
-</li>
-<li>
-<p>L2→L1 messages (which are eventually sent to the Starknet core contract as L1 calldata by the Starknet sequencer)</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="fee_units_and_limits"><a class="anchor" href="#fee_units_and_limits"></a>Fee units and limits</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The three components contributing to a transaction&#8217;s fee are measured by the following three resources types:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><em>L2 gas</em>, measuring L2 resources, including computation and data</p>
-</li>
-<li>
-<p><em>L1 data gas</em>, measuring the L1 data required to post the state diff induced by the transaction to L1</p>
-</li>
-<li>
-<p><em>L1 gas fee</em>, measuring the L1 gas required for sending L2→L1 messages, as well as replacing:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>L1 data gas, in case the L2 block in which the transaction was included uses calldata instead of blobs for data availability (for more details, see <a href="../data-availability/" class="xref page">Data availability</a>)</p>
-</li>
-<li>
-<p>L2 gas, in the case the transaction did not specify L2 gas bounds</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>There is a rather natural way to convert costs denominated in L1 gas to costs denominated in L2 gas and vice versa.
-One Cairo step costs 100 L2 gas, and we charge 0.0025 L1 gas per step
-when tracking VM resources (see <a href="#l2_computation">L2 computation</a> for more details), hence can decide that 1 L1 gas = 40,000 L2 gas.</p>
-</div>
-<div class="paragraph">
-<p>This is only a temporary measure to use existing prices (denominated in L1 gas) when the transaction consumes L2 gas, as L1 gas and L2 gas
-are completely independent units. Moreover, the step cost of 0.0025 L1 gas
-is mostly arbitrary at this point due to our use of dynamic layouts (see <a href="#vm_resources">VM resources</a> for more information)</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p><code>v3</code> transactions already provide <code>max_amount</code> and <code>max_price_per_unit</code> for each of these resources (as part of the <code>resource_bounds</code> dictionary), denominated in STRK, while previous versions only provide an overall <code>max_fee</code>, denominated in WEI. However, starting in Starknet v0.14.0, <em>all</em> transactions must specify bounds for all three resource types.</p>
-</div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Starting in Starknet v0.14.0, all transactions must specify bounds for all three resource types.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>The only limitation on the sequencer which is currently enforced by the Starknet OS (and as such, enforced by a proof), is that the actual fee charged is bounded by the max price specified in the transaction. However, the Starknet sequencer usually charges less, as charges in accordance with the <a href="#overall_fee">formula for determining a transaction&#8217;s fee</a>.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="charging_fees"><a class="anchor" href="#charging_fees"></a>Charging fees</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The fee for a transaction is charged atomically with the transaction execution on L2, by the Starknet OS injects a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="estimating_fees"><a class="anchor" href="#estimating_fees"></a>Estimating fees</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The fee for a transaction can be estimated by using the <a href="https://github.com/starkware-libs/starknet-specs/blob/v0.7.1/api/starknet_api_openrpc.json#L612" target="_blank" rel="noopener"><code>starknet_estimateFee</code> call</a>, and interfaces for fee estimations are also exposed by the various <a href="../../tools/interacting-with-starknet/#sdks" class="xref page">Starknet SDKs</a>.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>When signing resource bounds for all three resource types — the only supported option when sending the transaction via Starknet&#8217;s JSON-RPC v0.8.0 onwards, and the only supported option in Starknet v0.14.0 —
-the fee estimation response is easily mapped to the transaction&#8217;s fields (i.e., the response contains price and amounts for all three resources, and the transaction is expected to specify bounds
-and max prices for each of them).</p>
-</div>
-<div class="paragraph">
-<p>On the other hand, when submitting transactions via Starknet&#8217;s JSON-RPC v0.7.1 or below, the only bounded resource is L1 gas, while the fee estimation contains both L1 gas and L1 data gas.
-In that case, we can use the estimation&#8217;s <code>overall_fee</code> to decide on the L1 gas bounds.</p>
-</div>
-<div class="paragraph">
-<p>You can find more details in the <a href="https://community.starknet.io/t/starknet-v0-13-1-pre-release-notes/113664#sdkswallets-how-to-use-the-new-fee-estimates-7" target="_blank" rel="noopener">Starknet v0.13.1 prerelease notes</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="fee_formula"><a class="anchor" href="#fee_formula"></a>Fee formula</h2>
-<div class="sectionbody">
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The formula described in the following sections is highly non-trivial.</p>
-</div>
-<div class="paragraph">
-<p>To mitigate this, the first section details the formula for determining a transaction&#8217;s overall fee, while subsequent ones dive into the different fee components and explain how this formula was derived.</p>
-</div>
-<div class="paragraph">
-<p>Some parts may require reading more than once, but don&#8217;t hesitate to <a href="https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&amp;title=Feedback%20for%20%22The%20Starknet%20operating%20system%22" target="_blank" rel="noopener">reach out</a> if you feel further clarification is needed.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="sect2">
-<h3 id="overall_fee"><a class="anchor" href="#overall_fee"></a>Overall fee</h3>
-<div class="paragraph">
-<p>Starting with Starknet v0.13.1, Starknet distinguishes between blocks whose state diffs are sent to L1 as calldata and blocks whose state diffs are sent to L1 as blobs. The <code>l1_da_mode</code> property in the Starknet block header contains this information. The cost of computation remains the same on both options, but the cost related to data availability differs.</p>
-</div>
-<div class="paragraph">
-<p>The following formula describes the overall fee of a transaction:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[\begin{align}
-\qquad &amp; \text{l1_gas_price} \cdot\Bigg( \\
-&amp; \qquad \text{message_calldata_cost}\cdot 3t \; + \\
-&amp; \qquad \; (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
-&amp; \qquad \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t \\
-&amp; \Bigg) + \; \text{l2_gas_price} \cdot (\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) \\
-&amp; \quad + \; \begin{cases}\text{l1_data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\big(\ell + 2(n-1) + 2(m-1) + 2D \big) &amp; \text{if l1_da_mode is BLOB} \\ \\ \text{l1_gas_price} \cdot \Big( \\ \qquad \text{da_calldata_cost} \cdot \left(\ell + 2(n-1)+2(m-1) + 2D\right) \; - \\ \qquad \text{contract_update_discount}\cdot (n-1) \; - &amp; \text{if l1_da_mode is CALLDATA} \\ \qquad \text{sender_balance_update_discount} \\ \Big)\end{cases}
-\end{align}\]
-</div>
-</div>
-<div class="paragraph">
-<p>where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(\text{l1_gas_price}\) is the averages of the last 60 L1 base gas prices sampled by the Starknet sequencer every 60 seconds, plus 1 Gwei</p>
-</li>
-<li>
-<p>\(\text{message_calldata_cost}\) is 1,124 gas</p>
-</li>
-<li>
-<p>\(t\) is the number of L2&#8594;L1 messages sent</p>
-</li>
-<li>
-<p>\(\text{l1_log_data_cost}\) is 256 gas</p>
-</li>
-<li>
-<p>\(t\) \(q_1,...,q_t\) are the payload sizes of the L2&#8594;L1 messages sent</p>
-</li>
-<li>
-<p>\(\text{l1_storage_write_cost}\) is 20,000 gas (the cost of writing to a new storage slot on Ethereum)</p>
-</li>
-<li>
-<p>\(\text{log_message_to_l1_cost}\) is 1,637 gas (see <a href="#l2l1_messages">L2&#8594;L1 messages</a> for more information)</p>
-</li>
-<li>
-<p>\(\text{l2_gas_price}\) is a fixed amount denominated in WEI (the price in FRI is only dependent on the WEI to FRI ratio). With introduction of EIP1559, this price will be determined by Starknet&#8217;s fee market.</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>If the transaction does not sign over L2 gas bounds (which will not be possible in Starknet v0.14.0), then \(\text{l2_gas_price}\) is replaced by \(\text{l1_gas_price}\)</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>\(\text{sierra_gas_consumed}\) is the amount of <a href="#sierra_gas">Sierra gas</a> charged for computation</p>
-</li>
-<li>
-<p>\(v\) is a vector that represents resource usage (Cairo steps or number of applications of each builtin), where each of its entries, \(v_k\), corresponds to the usage of a different resource type (see <a href="#l2_computation">L2 computation</a> for more information)</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The same transaction can track both raw VM resources (reflected by \(v_k\)) and Sierra gas, depending on what classes it goes through (see <a href="#l2_computation">L2 computation</a> for more details).</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>\(w\) is the <code>CairoResourceFeeWeights</code> vector (see <a href="#l2_computation">L2 computation</a> for more information)</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>\(w_k\) is measured in L2 gas if the transaction signs over L2 gas bounds, and in L1 gas otherwise (which will not be possible in Starknet v0.14.0).</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>\(\text{l2_payload_costs}\) is the gas cost of data sent over L2, which includes calldata, code, and event emission (see <a href="#l2_data">L2 data</a> for more details)</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>\(\text{l2_payload_costs}\) is measured in L2 gas if the transaction signs over L2 gas bounds, and in L1 gas otherwise (which will not be possible in Starknet v0.14.0).</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>\(\text{l1_data_gas_price}\) is the averages of the last 60 L1 base data gas prices sampled by the Starknet sequencer every 60 seconds, plus 1 Gwei</p>
-</li>
-<li>
-<p>\(\text{felt_size_in_bytes}\) is 32 (the number of bytes required to encode a single STARK field element)</p>
-</li>
-<li>
-<p>\(\ell\) is the number of contracts whose class was changed, which happens on contract deployment and when applying the <code>replace_class</code> syscall</p>
-</li>
-<li>
-<p>\(n\) is the number of unique contracts updated, which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched (in other words, \(n\ge\ell\))</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Notice that \(n\ge 1\) always holds, because the fee token contract is always updated, which does not incur any fee.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>\(m\) is the number of values updated, not counting multiple updates for the same key</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Notice that \(m\ge 1\) always holds, because the sequencer&#8217;s balance is always updated, which does not incur any fee.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>\(D\) is 1 if the transaction is of type <code>DECLARE</code> and 0 otherwise, as declare transactions need to post on L1 the new class hash and compiled class hash which are added to the state</p>
-</li>
-<li>
-<p>\(\text{da_calldata_cost}\) is 551 gas, derived as follows:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>512 gas per 32-byte word for calldata</p>
-</li>
-<li>
-<p>~100 gas for onchain hashing that happens for every word sent</p>
-</li>
-<li>
-<p>a 10% discount for not incurring additional costs for repeated updates to the same storage slot within a single block</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>\(\text{contract_update_discount}\) is 312 gas (See <a href="#storage_updates">Storage updates</a> for more information)</p>
-</li>
-<li>
-<p>\(\text{sender_balance_update_discount}\) is \(240\) gas (see <a href="#storage_updates">Storage updates</a> for more information)</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="l2_computation"><a class="anchor" href="#l2_computation"></a>L2 computation</h3>
-<div class="paragraph">
-<p>Measuring the L2 computation component of a transaction differs depending on the contract class version of the caller:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>For CairoZero classes or Sierra ≤ 1.6.0, computation is measured in <a href="#vm_resources">VM resources</a> (steps and builtins)</p>
-</li>
-<li>
-<p>For Sierra ≥ 1.7.0, computation is measured in <a href="#sierra_gas">Sierra gas</a></p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>In Starknet v0.13.4, Sierra gas is only tracked if the parent call was also tracking Sierra gas, which means that if the account contract is Sierra 1.6.0 or older, VM resources will be tracked <strong>throughout the entire transaction</strong>. This condition may be relaxed in the future.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-</ul>
-</div>
-<div class="sect3">
-<h4 id="vm_resources"><a class="anchor" href="#vm_resources"></a>VM resources</h4>
-<div class="paragraph">
-<p>A Cairo program execution yields an execution trace, and when proving a Starknet block, we aggregate all the transactions appearing in that block to the execution trace up to some maximal length \(L\), derived from the specs of the proving machine and the desired proof latency.</p>
-</div>
-<div class="paragraph">
-<p>Tracking the execution trace length associated with each transaction is simple, as Cairo step requires the same constant number of trace cells. Therefore, in a world without builtins, the fee associated with the L2 computation component of a transaction \(tx\) should be correlated with \(\text{TraceCells}[tx]/L\).</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The aforementioned observation is no longer true for Starknet&#8217;s next-gent prover Stwo, which handles some opcodes more efficiently than others. However, we neglect this intricacy for the purposes of this discussion.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>When we introduce builtins into the equation, we need to consider an a priori limit for each builtin in the proof. This set of limits is known as the proof&#8217;s <em>layout</em>, which determines the ratio between steps and each builtin.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Today, Starknet&#8217;s prover is able to dynamically choose a layout based on a given block resource&#8217;s consumption, i.e. there is no longer an a priori fixed layout.
-However, pricing for old classes still behaves as if we are using a fixed layout.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>For example, consider that the prover can process a trace with the following limits:</p>
-</div>
-<table class="tableblock frame-all grid-all fit-content">
-<colgroup>
-<col>
-<col>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Up to 500M Cairo steps</th>
-<th class="tableblock halign-left valign-top">Up to 20M Pedersen hashes</th>
-<th class="tableblock halign-left valign-top">Up to 4M signature verifications</th>
-<th class="tableblock halign-left valign-top">Up to 10M range checks</th>
-</tr>
-</thead>
-</table>
-<div class="paragraph">
-<p>which means that a proof is closed and sent to L1 when any of these slots is filled. Now, suppose that a transaction uses 10K Cairo steps and 500 Pedersen hashes. At most 20M/500 = 40K such transactions can fit into the hypothetical trace, therefore its gas price should correlate with 1/40K of the cost of submitting proof (notice that this estimate ignores the number of Cairo steps as it is not the limiting factor, since 500M/10K &gt; 20M/500).</p>
-</div>
-<div class="paragraph">
-<p>With this example in mind, it is possible to formulate the exact fee associated with L2 computation. For each transaction,
-the sequencer calculates a vector, <code>CairoResourceUsage</code>, that contains the following:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The number of Cairo steps</p>
-</li>
-<li>
-<p>The number of applications of each Cairo builtin (e.g., 5 range checks and 2 Pedersen hashes)</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>and crosses this information with a <code>CairoResourceFeeWeights</code> vector, a predefined weights vector in accordance with the proof parameters, in which each resource type has an entry that specifies the relative gas cost of that component in the proof. The sequencer then charges only according to the limiting factor, making the final fee defined by:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[\max_k[\text{CairoResourceUsage}_k \cdot \text{CairoResourceFeeWeights}_k]\]
-</div>
-</div>
-<div class="paragraph">
-<p>where \(k\) enumerates the Cairo resource components. Going back to the above example, if the cost of submitting a proof with 20M Pedersen hashes is roughly 5M gas, then the weight of the Pedersen builtin is 5,000,000/20,000,0000 = 25 gas per application.</p>
-</div>
-<div class="paragraph">
-<p>The weights most commonly used in Starknet are the following table:</p>
-</div>
-<table class="tableblock frame-all grid-all fit-content stretch">
-<colgroup>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Resource</th>
-<th class="tableblock halign-left valign-top">L1 Gas cost</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Cairo step</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0.0025 gas/step</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Pedersen</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0.08 gas/application</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Poseidon</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0.08 gas/application</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Range check</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0.04 gas/application</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ECDSA</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">5.12 gas/application</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Keccak</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">5.12 gas/application</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Bitwise</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0.16 gas/application</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">EC_OP</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">2.56 gas/application</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="sect3">
-<h4 id="sierra_gas"><a class="anchor" href="#sierra_gas"></a>Sierra gas</h4>
 <div class="admonitionblock tip">
 <table>
 <tr>
@@ -1083,36 +565,68 @@ the sequencer calculates a vector, <code>CairoResourceUsage</code>, that contain
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The following is a very rough description of Sierra&#8217;s built-in gas accounting mechanism. For a comprehensive analysis, see <a href="https://github.com/starkware-libs/cairo/blob/main/docs/other/gas_blog_post.pdf" target="_blank" rel="noopener"><em>Analysis of the gas accounting algorithm of Cairo 1.0</em> by CryptoExperts</a>.</p>
+<p>If you are only interested in learning how to stake on Starknet, feel free to skip straight to <a href="#procedures">Procedures</a>.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-<div class="paragraph">
-<p>A Sierra program has a simple structure: types and function declaration, followed by a sequence of applications of <em>libfuncs</em>, Sierra&#8217;s basic logical units (similar to opcodes, e.g. <code>u8_add</code> is a libfunc).</p>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>Staking dashboards by <a href="https://www.aligned-stake.com/" target="_blank" rel="noopener">AlignedStake</a>, <a href="https://dashboard.endur.fi/" target="_blank" rel="noopener">Ednur</a>, <a href="https://www.stakingrewards.com/stake-app?input=starknet" target="_blank" rel="noopener">Staking Rewards</a>, <a href="https://starkscan.co/staking" target="_blank" rel="noopener">Starkscan</a>, and <a href="https://voyager.online/staking-dashboard" target="_blank" rel="noopener">Voyager</a></p>
+</li>
+<li>
+<p><a href="https://www.starknet.io/staking" target="_blank" rel="noopener">Staking</a> on starknet.io</p>
+</li>
+<li>
+<p><a href="https://github.com/starkware-libs/starknet-staking/tree/%40staking/contracts-v1.0.1-dev.510" target="_blank" rel="noopener"><code>starknet-staking</code></a> on GitHub (deployed tag)</p>
+</li>
+<li>
+<p><a href="https://www.starknet.io/blog/staking-phase-1/" target="_blank" rel="noopener">Starknet launches phase 1 of its staking initiative on mainnet</a> on the Starknet blog</p>
+</li>
+<li>
+<p><a href="https://community.starknet.io/t/snip-28-staking-v2-proposal/115250" target="_blank" rel="noopener">SNIP 28: Staking V2 proposal</a> on the Starknet community forum</p>
+</li>
+</ul>
 </div>
-<div class="paragraph">
-<p>The Cairo compiler defines a libfunc costs table, which is measured in “Sierra gas” and has a 1-1 ratio with L2 gas (i.e., a libfunc which costs 500 Sierra gas adds 500 to a transaction&#8217;s overall L2 gas)</p>
 </div>
-<div class="admonitionblock note">
+</div>
+<div class="sect1">
+<h2 id="roadmap"><a class="anchor" href="#roadmap"></a>Roadmap</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Naturally, handing over the responsibility for maintaining and securing Starknet to validators in one day is neither feasible nor desirable. Instead, the staking protocol is implemented in incremental phases, with each phase bringing additional requirements from validators until they fully maintain and secure the network. The protocol is currently in the second of four phases, illustrated in following figure:</p>
+</div>
+<div class="admonitionblock important">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-note" title="Note"></i>
+<i class="fa icon-important" title="Important"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Despite the 1-1 ratio between Sierra gas and L2 gas, L2 gas accounts for “everything L2”, while Sierra gas strictly deals with computation, hence the distinction in terminology.</p>
+<p>The staking protocol is currently in its second phase on both Sepolia and Mainnet.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-<div class="paragraph">
-<p>The cost of each libfunc is determined by its expanded CASM generated via the Sierra→CASM compiler based on a 100-1 ratio with Cairo steps (i.e., if a libfunc&#8217;s assembly includes 10 Cairo steps, it will cost 1000 Sierra gas), while the costs of the various builtins are defined as follows:</p>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/staking-roadmap.png" alt="staking roadmap">
 </div>
-<table class="tableblock frame-all grid-all fit-content stretch">
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="protocol"><a class="anchor" href="#protocol"></a>Protocol</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following sections describe the details of Starknet&#8217;s staking protocol. The parameters used in the protocol are summarized in the following table:</p>
+</div>
+<table class="tableblock frame-all grid-all fit-content">
 <colgroup>
 <col>
 <col>
@@ -1120,174 +634,189 @@ the sequencer calculates a vector, <code>CairoResourceUsage</code>, that contain
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Builtin</th>
-<th class="tableblock halign-left valign-top">Sierra gas cost</th>
-<th class="tableblock halign-left valign-top"></th>
+<th class="tableblock halign-left valign-top">Parameter</th>
+<th class="tableblock halign-left valign-top">Mainnet</th>
+<th class="tableblock halign-left valign-top">Sepolia</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Range check</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">70</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum stake for validators</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">20K STRK</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1 STRK</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Pedersen</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">4050</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minting curve yearly inflation cap (\(C\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.6</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Poseidon</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">491</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Withdrawal security lockup</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">21 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5 minutes</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Bitwise</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">583</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Epoch length (\(E\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">40</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ECDSA</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">-</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Attestation window (\(W\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">EC_OP</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">4085</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Keccak</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">-</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ADD_MOD</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">230</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">MUL_MOD</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">604</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of epochs used for latency (\(k\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3600</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1200</p></td>
 </tr>
 </tbody>
 </table>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
+<div class="sect2">
+<h3 id="roles"><a class="anchor" href="#roles"></a>Roles</h3>
 <div class="paragraph">
-<p>Pricings for the EC_OP and Keccak builtins are missing since they cannot be accessed directly from Cairo contracts (as opposed to CairoZero contracts, which are no longer declarable). These operations can be used via syscalls, whose price is determined by the underlying trace cell consumption of the builtins involved. To review pricing for various syscalls, see the <code>versioned constants.json</code> files in the <a href="https://github.com/starkware-libs/sequencer/tree/main/crates/blockifier/resources" target="_blank" rel="noopener">sequencer&#8217;s resources directory</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>To handle gas usage, Sierra has special libfuncs for gas-handling, such as the <code>withdraw_gas</code> libfunc. For functions with neither branching nor recursion, the Cairo→Sierra compiler adds a single <code>withdraw_gas(C)</code> call in the beginning of the function, where <code>C</code> is the sum over the costs of the libfuncs included in the function. For functions with branching, the compiler adds a call to <code>withdraw_gas(C)</code> before the actual branching, where <code>C</code> is the maximal branch cost.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>In its latest version, the compiler also adds a call to <code>redeposit_gas(C)</code> on the cheaper branches, where <code>C</code> is unused gas on that branch.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>For functions with recursion (or other cases where costs can only be known in runtime), things get trickier.
-The naive way to handle such cases would be to add a <code>withdraw_gas</code> instruction after every libfunc, but since <code>withdraw_gas</code> itself has some cost (decreasing a counter and handling the insufficient gas case) this would incur a large burden on the program.
-Instead, the compiler constructs the call graph induced by the program, and asserts that every cycle includes a <code>withdraw_gas(X)</code> instruction, where <code>X</code> should cover the cost of a single run through the cycle, greatly reducing the overhead compared to the naive mechanism.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="vm_resources_vs_sierra_gas"><a class="anchor" href="#vm_resources_vs_sierra_gas"></a>VM resources vs. Sierra gas</h4>
-<div class="paragraph">
-<p>The difference in tracking Sierra gas vs. tracking VM resources can be summed up as follows:</p>
+<p>Starknet&#8217;s staking protocol features two options for participation:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>For VM resources builtin weights reflect the proof layout, while for Sierra gas they reflect trace cell consumption</p>
+<p>Staking directly as validators: Staking a minimum of 20,000 STRK and earning rewards by handling any responsibilities the protocol requires</p>
 </li>
 <li>
-<p>For VM resources only the maximal resource (e.g., most used builtin) is considered, while for Sierra gas the sum of all resources (i.e., all libfuncs) is considered</p>
+<p>Staking indirectly as delegators: Delegating STRKs to validators who allow delegation and sharing in their rewards without handling any of their responsibilities</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Validators can choose whether to allow delegation or not.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="addresses"><a class="anchor" href="#addresses"></a>Addresses</h3>
+<div class="paragraph">
+<p>To reduce exposure to threats and enhance security, multiple addresses for defined for both validators and delegators:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Validator addresses:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Staking address: Used for staking, adding stake, and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.</p>
+</li>
+<li>
+<p>Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.</p>
+</li>
+<li>
+<p>Operational Address: Used for operational purposes, such as block attestations (starting from the protocol&#8217;s second phase), block proposing (starting from the protocol&#8217;s third phase), etc. This address is used frequently and doesn&#8217;t handle large amounts of funds, and therefore is best kept by a hot wallet. Starting from the protocol&#8217;s second phase, however, hacking the operational address can lead to a lose of yield for the validator and its delegators.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Delegator addresses:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Staking address: Used for delegating stake, adding stake and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.</p>
+</li>
+<li>
+<p>Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.</p>
+</li>
+</ul>
+</div>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>This means that when the tracking Sierra gas, step-heavy transactions will most likely be slightly more expensive, as builtins will be taken into account <em>in addition</em> to Cairo steps. On the other hand, builtin-heavy transactions will become much cheaper — depending on the builtin that maximized the old fee and with the exception of the Pedersen builtin.</p>
+<p>The protocol uses a hierarchical approach between the staking and rewards addresses, and both validators and delegator can also use their staking address whenever their rewards address is required.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="epochs"><a class="anchor" href="#epochs"></a>Epochs</h3>
+<div class="paragraph">
+<p>Starting from its second phase, the staking protocol introduces the notion of <em>epochs</em> (similarly to many other protocols). Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch \(i\) are applied in epoch \(i+k\), where \(k\) is a new latency parameter. For example, the following figure illustrates a scenario where in epoch \(i\) validator \(A\) has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch \(i+1\) someone undelegates 30K STRK from \(A\):</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/epochs-example.png" alt="epochs example">
 </div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="l1_data"><a class="anchor" href="#l1_data"></a>L1 data</h3>
+<h3 id="responsibilities"><a class="anchor" href="#responsibilities"></a>Responsibilities</h3>
 <div class="sect3">
-<h4 id="storage_updates"><a class="anchor" href="#storage_updates"></a>Storage updates</h4>
+<h4 id="running_a_full_node"><a class="anchor" href="#running_a_full_node"></a>Running a full node</h4>
 <div class="paragraph">
-<p>Whenever a transaction updates some value in the storage of some contract, the following data is sent to L1:</p>
+<p>The staking protocol requires validators to run one of the following full node implementations:</p>
+</div>
+<table class="tableblock frame-all grid-all fit-content">
+<colgroup>
+<col>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Hardware requirements</th>
+<th class="tableblock halign-left valign-top">Integration guide</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Juno</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://juno.nethermind.io/hardware-requirements" target="_blank" rel="noopener">juno.nethermind.io/hardware-requirements</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://juno.nethermind.io/running-juno" target="_blank" rel="noopener">juno.nethermind.io/running-juno</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Madara</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://docs.madara.build/hardware" target="_blank" rel="noopener">docs.madara.build/hardware</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/madara-alliance/madara/blob/main/README.md#%EF%B8%8F-installation" target="_blank" rel="noopener">github.com/madara-alliance/madara/README.md</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Pathfinder</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://eqlabs.github.io/pathfinder/getting-started/hardware-requirements" target="_blank" rel="noopener">eqlabs.github.io/pathfinder/getting-started/hardware-requirements</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://eqlabs.github.io/pathfinder/getting-started/running-pathfinder" target="_blank" rel="noopener">eqlabs.github.io/pathfinder/getting-started/running-pathfinder</a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="block_attestation"><a class="anchor" href="#block_attestation"></a>Block attestation</h4>
+<div class="paragraph">
+<p>Starting from its second phase, the staking protocol requires validators to attest to blocks, by running one of the following software:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>One 32-byte word if the transaction is a <code>DEPLOY</code> transaction (since we need to specify the deployed contract&#8217;s class hash)</p>
+<p><a href="https://github.com/NethermindEth/starknet-staking-v2/blob/main/README.md" target="_blank" rel="noopener">Starknet Staking v2</a> by Nethermind</p>
 </li>
 <li>
-<p>Two 32-byte words per contract</p>
-</li>
-<li>
-<p>Two 32-byte words for every updated storage value</p>
+<p><a href="https://github.com/eqlabs/starknet-validator-attestation/blob/main/README.md" target="_blank" rel="noopener">Starknet Validator Attestation</a> by Equilibrium</p>
 </li>
 </ul>
 </div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
 <div class="paragraph">
-<p>Only the most recent value reaches L1, making the transaction&#8217;s fee depend on the number of <em>unique</em> storage updates. If the same storage cell is updated multiple times within the transaction, the fee remains that of a single update.</p>
-</div>
-<div class="paragraph">
-<p>For information on the exact data and its construction, see <a href="../data-availability/#v0.11.0_format" class="xref page">Data availability</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>Therefore, the storage update fee for a transaction is defined as follows:</p>
+<div class="title">How does the block attestation mechanism work?</div>
+<p>In each epoch, each validator is assigned a single block whose relative number within the epoch is defined as follows:</p>
 </div>
 <div class="stemblock">
 <div class="content">
-\[\text{data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\bigg(\ell + 2(n-1) + 2(m-1) + 2D \bigg)\]
+\[h(\text{staked amount},\text{epoch id},\text{validator address}) \mod (E-W)\]
 </div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>This formula only refer to the case of submitting data to L1 via blobs, for the calldata case, see <a href="#overall_fee">Overall fee</a>).</p>
-</div>
-</td>
-</tr>
-</table>
 </div>
 <div class="paragraph">
 <p>where:</p>
@@ -1295,21 +824,15 @@ Instead, the compiler constructs the call graph induced by the program, and asse
 <div class="ulist">
 <ul>
 <li>
-<p>\(\text{felt_size_in_bytes}\) is 32, which is the number of bytes required to encode a single STARK field element.</p>
+<p>\(E\) is the number of blocks in an epoch, termed <em>epoch length</em></p>
 </li>
 <li>
-<p>\(\ell\) is the number of contracts whose class was changed, which happens on contract deployment and when applying the <code>replace_class</code> syscall.</p>
-</li>
-<li>
-<p>\(n\) is the number of unique contracts updated, which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, \(n\ge\ell\). Notice that \(n\ge 1\) always holds, because the fee token contract is always updated, which does not incur any fee.</p>
-</li>
-<li>
-<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Notice that \(m\ge 1\) always holds, because the sequencer&#8217;s balance is always updated, which does not incur any fee.</p>
-</li>
-<li>
-<p>\(D\) is 1 if the transaction is of type <code>DECLARE</code> and 0 otherwise. Declare transactions need to post on L1 the new class hash and compiled class hash which are added to the state.</p>
+<p>\(W\) is the number of blocks applicable for attestation submittal, termed <em>attestation window</em></p>
 </li>
 </ul>
+</div>
+<div class="paragraph">
+<p>During each epoch, validators have the opportunity to attest to their assigned block by submitting an <code>attest</code> transaction, which must be included within the attestation window. For example, if \(W = 20\) and \(N\) is the relative block number assigned to validator \(A\), then \(A\) must submit an <code>attest</code> transaction between the blocks whose relative number within the epoch are \(N+1\) and \(N+20\).</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -1319,142 +842,366 @@ Instead, the compiler constructs the call graph induced by the program, and asse
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Improvements to the above pessimistic estimation might be gradually implemented in future versions of Starknet.</p>
-</div>
-<div class="paragraph">
-<p>For example, if different transactions within the same block update the same storage cell, there is no need to charge for both transactions, because only the last value reaches L1. In the future, Starknet might include a refund mechanism for such cases.</p>
+<p>In the second phase of the protocol, each Validator is required to perform only one attestation per epoch.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-</div>
-<div class="sect3">
-<h4 id="l2l1_messages"><a class="anchor" href="#l2l1_messages"></a>L2&#8594;L1 messages</h4>
 <div class="paragraph">
-<p>When a transaction that raises the <code>send_message_to_l1</code> syscall is included in a state update, the following data reaches L1:</p>
+<p>The <code>attest</code> transaction includes the block hash of the attested block, ensuring validators actively use full nodes, as they need to continuously track block hashes. Additionally, the attestation is publicly verifiable, ensuring validators' reliability is publicly tested — a crucial prerequisite before handing them any core responsibilities.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="rewards"><a class="anchor" href="#rewards"></a>Rewards</h3>
+<div class="paragraph">
+<p>Rewards are distributed based on the amount staked and the commission policy constant \(CP\) set by the validator, with yearly reward percentages calculated using the following formulas:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>L2 sender address</p>
+<p>For delegators:</p>
+<div class="stemblock">
+<div class="content">
+\[\text{stake_delegated} \cdot (1 - CP) \cdot \frac{M}{S}\]
+</div>
+</div>
 </li>
 <li>
-<p>L1 destination address</p>
-</li>
-<li>
-<p>Payload size</p>
-</li>
-<li>
-<p>Payload (list of field elements)</p>
+<p>For validators:</p>
+<div class="stemblock">
+<div class="content">
+\[\left(\text{self_stake} + \text{total_stake_delegated} \cdot CP\right) \cdot \frac{M}{S}\]
+</div>
+</div>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>Therefore, the gas cost associated with a single L2→L1 message is defined as follows:</p>
+<p>where \(M\) and \(S\) are defined by the <a href="#minting_curve">Minting curve</a>.</p>
+</div>
+<div class="paragraph">
+<p>Starting from the second phase of the protocol, rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn&#8217;t will get no rewards for the epoch&#8217;s entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator&#8217;s pool. Stakers that enter the protocol on epoch \(i\) will start getting rewards only on epoch \(i+k\), and stakers that signal an intent to exit the protocol on epoch \(i\) will still get rewards until epoch \(i+k-1\).</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Starting from the second phase of the protocol, when a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is \(O(\text{#delegator's balance changes since last claim})\) — and not \(O(\text{#epochs since last claim})\) — which is assumed to be small enough to fit in one transaction in any real-world-scenario. This mechanism replaces the global reward index that was used prior to the protocol&#8217;s second phase.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect3">
+<h4 id="minting_curve"><a class="anchor" href="#minting_curve"></a>Minting curve</h4>
+<div class="paragraph">
+<p>The minting curve balances participation and inflation by adjusting rewards based on the total STRK locked in the protocol, and is defined by the following formula:</p>
 </div>
 <div class="stemblock">
 <div class="content">
-\[\qquad \text{message_calldata_cost} \cdot \left(3+\text{payload_size}\right) \; + \text{l1_log_data_cost}\cdot\text{payload_size} \; + \text{log_message_to_l1_cost} \; + \text{l1_storage_write_cost} \qquad\]
+\[M = \frac{C}{10} \times \sqrt{S}\]
 </div>
 </div>
 <div class="paragraph">
-<p>Where:</p>
+<p>where:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>\(\text{message_calldata_cost}\) is 1,124 gas, which is the sum of the 512 gas for submitting the state update to the core contract and 612 gas for the submitting the state update the verifier contract (which incurs ~100 additional gas for hashing)</p>
+<p>\(S\) is the staking rate as a percentage of the total token supply</p>
 </li>
 <li>
-<p>\(\text{l1_log_data_cost}\) is 256 gas, paid for every payload element during the emission of the <code>LogMessageToL1</code> event</p>
+<p>\(M\) is the annual minting rate as a percentage of the total token supply</p>
 </li>
 <li>
-<p>\(\text{log_message_to_l1_cost}\) is 1,637 gas, which is the fixed cost involved in emitting a <code>LogMessageToL1</code> event with two topics and a two words data array, resulting in a total of \(375+2\cdot 375+2\cdot 256\) gas (log opcode cost, topics cost, and data array cost)</p>
-</li>
-<li>
-<p>\(\text{l1_storage_write_cost}\) is 20K gas per message, paid in order to store the message hash on the Starknet core contract and enable the target L1 contract to consume the message</p>
+<p>\(C\) is the maximum theoretical inflation percentage, set to 1.6%</p>
 </li>
 </ul>
 </div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="l2_data"><a class="anchor" href="#l2_data"></a>L2 data</h3>
+<h3 id="latencies"><a class="anchor" href="#latencies"></a>Latencies</h3>
 <div class="paragraph">
-<p>As of Starknet v0.13.1 onwards, L2 data is also taken into account during pricing, including:</p>
+<p>The following latencies are set in place:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Calldata, including transaction calldata (in the case of <code>INVOKE</code> transactions or <code>L1_HANDLER</code>), constructor calldata (in the case of <code>DEPLOY_ACCOUNT</code> transactions), and signatures</p>
+<p>To disincentivise sudden large withdrawals that could destabilize the network, funds are subject to a 21-day lockup after signaling an unstake intent, during which no rewards are earned and funds cannot be withdrawn.</p>
 </li>
 <li>
-<p>Events, including data and keys of emitted events</p>
-</li>
-<li>
-<p>ABI, including classes ABI in <code>DECLARE</code> transactions (only relevant for <code>DECLARE</code> transactions of version ≥ 2)</p>
-</li>
-<li>
-<p>Casm bytecode (for all available <code>DECLARE</code> transactions, where in version &lt; 2 this refers to the compiled class)</p>
-</li>
-<li>
-<p>Sierra bytecode (relevant only for <code>DECLARE</code> transactions of version ≥ 2)</p>
+<p>Starting from the second phase of the protocol, to prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch \(i\) takes effect only on epoch \(i+1\).</p>
 </li>
 </ul>
 </div>
-<div class="paragraph">
-<p>The L1 gas cost of each component in as follows:</p>
 </div>
-<div class="admonitionblock note">
+<div class="sect2">
+<h3 id="commissions"><a class="anchor" href="#commissions"></a>Commissions</h3>
+<div class="paragraph">
+<p>Starting from its second phase, the staking protocol allows validators to increase their commission. To avoid an unexpected increase in commissions, validators must commit to a certain maximum commission \(M\) and the last date (in epochs) that this commitment is relevant for. Until this date arrives, validators cannot increase their commission beyond \(M\), but can freely change their commission in the range \([0,M]\).</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="architecture"><a class="anchor" href="#architecture"></a>Architecture</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The implementation of Starknet&#8217;s staking protocol is divided into several contracts, summarized in the following figure:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/staking-architecture.png" alt="staking architecture">
+</div>
+</div>
+<div class="paragraph">
+<p>This modular architecture allows for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are also in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process. The following table details the key components of the architecture:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 11.1111%;">
+<col style="width: 88.8889%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Contract</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Staking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The staking contract is the core of the staking system, managing the entire lifecycle of staking, from initial staking to claiming rewards and unstaking.</p>
+<p class="tableblock">The staking contract also stores the <code>StakerInfo</code> data structure, which holds detailed information about each validator, including their staked amount, unclaimed rewards, delegation details, and operational parameters, and helps to ensure that validators' information is accurately tracked and updated.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Delegation pooling</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All delegation interactions, such as entering or exiting a pool, are enabled through the delegation pooling contract, which tracks each delegator&#8217;s contribution, calculates their rewards, and manages the delegation lifecycle.</p>
+<p class="tableblock">The delegation pooling contract also stores the <code>PoolMemberInfo</code> data structure, which holds information about each delegator&#8217;s contributions, rewards, and status within the pool, and helps manage and calculate the delegation and reward distribution processes for pool members.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Reward Supplier</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve, ensuring the rewards are distributed fairly and in accordance with the protocol&#8217;s economic parameters.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minting Curve</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The minting curve contract defines the economic model that governs reward distribution, ensuring that the network&#8217;s inflation is managed while incentivizing participation of stakers.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Attestation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The attestation contract manages the tracking of successful validator attestations, by verifying whether the validator has correctly attested to their assigned block within a designated attestation window.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="procedures"><a class="anchor" href="#procedures"></a>Procedures</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following tables detail the procedures enabled by the staking protocol for both <a href="#staking_as_validators">validators</a> and <a href="#staking_as_delegators">delegators</a>, along with the instructions to perform them.</p>
+</div>
+<div class="paragraph">
+<p>To invoke onchain contracts, use <a href="https://foundry-rs.github.io/starknet-foundry/starknet/sncast-overview.html" target="_blank" rel="noopener">Starknet Foundry&#8217;s <code>sncast</code></a>, <a href="../../tools/interacting-with-starknet/#starkli" class="xref page">Starkli</a>, or a <a href="../../ecosystem/block-explorers-monitoring-tools/#block_explorers" class="xref page">block explorer</a>. To get the onchain addresses of the staking and STRK contracts, see <a href="../../resources/chain-info/#staking" class="xref page">Important addresses</a>.</p>
+</div>
+<div class="sect2">
+<h3 id="staking_as_validators"><a class="anchor" href="#staking_as_validators"></a>Staking as validators</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Procedure</th>
+<th class="tableblock halign-left valign-top">Instructions</th>
+<th class="tableblock halign-left valign-top">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Staking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#stake" target="_blank" rel="noopener"><code>stake</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>You should make sure you are <a href="#responsibilities">running a full node and attesting to blocks</a> before staking</p>
+</li>
+<li>
+<p>You must first approve the transfer of the amount of STRK tokens to be staked to the staking contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+<li>
+<p><code>operational_address</code> should have sufficient funds to pay for attestation transactions</p>
+</li>
+<li>
+<p><code>amount</code> should be equal or greater than the <a href="#protocol">minimum stake for validators</a> and denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p><code>commission</code> should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Claiming rewards</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards" target="_blank" rel="noopener"><code>claim_rewards</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Increasing stake</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#increase_stake" target="_blank" rel="noopener"><code>increase_stake</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p>You must first approve the transfer of STRK tokens to the staking contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Setting commission</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission" target="_blank" rel="noopener"><code>set_commission</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>commission</code> should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)</p>
+</li>
+<li>
+<p>Commissions can be increased only after <a href="#commissions">setting a commission commitment</a> using <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission_commitment" target="_blank" rel="noopener"><code>set_commission_commitment</code></a></p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changing reward address</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address" target="_blank" rel="noopener"><code>change_reward_address</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changing operational address</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#declare_operational_address" target="_blank" rel="noopener"><code>declare_operational_address</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_operational_address" target="_blank" rel="noopener"><code>change_operational_address</code></a> functions</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>declare_operational_address</code> should be invoked by your new operational address and <code>change_operational_address</code> should be invoked by your staking address</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Opening delegation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_open_for_delegation" target="_blank" rel="noopener"><code>set_open_for_delegation</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Opening delegation is necessary only if <code>pool_enabled</code> was set to <code>false</code> when invoking the staking contract&#8217;s <code>stake</code> function</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Unstaking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_intent"><code>unstake_intent</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_action"><code>unstake_action</code></a> functions</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>Once an unstake intent is signaled:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Funds are removed from the total balance and are no longer part of the staking protocol</p>
+</li>
+<li>
+<p>The same staking address cannot be used to "restake" (i.e., <code>unstake_action</code> is <strong>irreversible</strong>)</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><code>unstake_action</code> should be invoked only after the appropriate <a href="#latencies">waiting period</a> has ended</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="staking_as_delegators"><a class="anchor" href="#staking_as_delegators"></a>Staking as delegators</h3>
+<div class="admonitionblock important">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-note" title="Note"></i>
+<i class="fa icon-important" title="Important"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>When a transaction&#8217;s L2 cost is paid for by L2 gas, the following numbers are translated via the standard conversion rate of 1 L1 gas = 40K L2 gas.</p>
+<p>The following procedures are only intended for developers who are either interested (for whatever reason) in staking as delegators without using a <a href="#introduction">staking dashboard</a>, or are building one.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-<table class="tableblock frame-all grid-all fit-content stretch">
+<table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col>
-<col>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Resource</th>
-<th class="tableblock halign-left valign-top">L2 Gas cost</th>
+<th class="tableblock halign-left valign-top">Procedure</th>
+<th class="tableblock halign-left valign-top">Instructions</th>
+<th class="tableblock halign-left valign-top">Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Event key</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">10,240 gas/felt</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Entering a delegation pool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#enter_delegation_pool" target="_blank" rel="noopener"><code>enter_delegation_pool</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p>You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+</ul>
+</div></div></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Event data</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">5,120 gas/felt</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Claiming rewards</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards-1" target="_blank" rel="noopener"><code>claim_rewards</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Calldata</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">5,120 gas/felt</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Adding to a delegation pool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#add_to_delegation_pool" target="_blank" rel="noopener"><code>add_to_delegation_pool</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p>You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+</ul>
+</div></div></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">CASM bytecode</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">40,000 gas/felt</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Switching delegation pools</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#switch_delegation_pool" target="_blank" rel="noopener"><code>switch_delegation_pool</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Sierra bytecode</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">40,000 gas/felt</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changing reward address</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address-1" target="_blank" rel="noopener"><code>change_reward_address</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ABI</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1,280 gas/character</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Exiting a delegation pool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_intent" target="_blank" rel="noopener"><code>exit_delegation_pool_intent</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_action" target="_blank" rel="noopener"><code>exit_delegation_pool_action</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>exit_delegation_pool_action</code> should be invoked only after the appropriate <a href="#latencies">waiting period</a> has ended</p></td>
 </tr>
 </tbody>
 </table>
@@ -1462,8 +1209,8 @@ Instead, the compiler constructs the call graph induced by the program, and asse
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../data-availability/">Data availability</a></span>
-  <span class="next"><a href="../messaging/">L1-L2 messaging</a></span>
+  <span class="prev"><a href="../messaging/">L1-L2 messaging</a></span>
+  <span class="next"><a href="../state/">State</a></span>
 </nav>
 </article>
   </div>

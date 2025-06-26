@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>State :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/state/">
-    <link rel="prev" href="../staking/">
-    <link rel="next" href="../economics-of-starknet/">
+    <title>Blocks :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/blocks/">
+    <link rel="prev" href="../accounts/">
+    <link rel="next" href="../cryptography/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,12 +307,17 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../accounts/">Accounts</a>
+     href="../protocol-overview/">Overview</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../blocks/">Blocks</a>
+     href="../accounts/">Accounts</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a 
+       class="nav-link"
+     href="./">Blocks</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -339,15 +344,15 @@
        class="nav-link"
      href="../staking/">Staking</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">State</a>
+     href="../state/">State</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,156 +520,152 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/state.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/blocks.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "State"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Blocks"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">State</h1>
+<h1 class="page">Blocks</h1>
 <div class="sect1">
 <h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Starknet&#8217;s state <a href="#state_structure">is composed of contract classes and instances</a> and <a href="#state_transition">tracks any changes to them</a>. Its <a href="#state_commitment">commitment</a> uses a cryptographic structure optimized for zero-knowledge proofs, enabling efficient proof generation of state updates and forming the backbone of Starknet&#8217;s scalability and security.</p>
+<p>A Starknet block is a list of transactions and a block header that contains <a href="#block_header_fields">multiple fields</a>, including the <a href="#block_hash">hash of the previous block</a> and a <a href="#state_diff_commitment">commitment to their state diff</a>, as well as <a href="#transactions_events_and_receipts_commitments">commitments to the transactions, events, and receipts</a> it includes.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="state_structure"><a class="anchor" href="#state_structure"></a>State structure</h2>
+<h2 id="block_header_fields"><a class="anchor" href="#block_header_fields"></a>Block header fields</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Starknet&#8217;s state consists of:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>A mapping between the hashes of contract classes and their definitions</p>
-</li>
-<li>
-<p>A mapping between the addresses of contract instances and their <a href="#contract_instance_state">states</a></p>
-</li>
-</ul>
-</div>
-<div class="sect2">
-<h3 id="contract_instance_state"><a class="anchor" href="#contract_instance_state"></a>Contract instance state</h3>
-<div class="paragraph">
-<p>A contract instance state consists of:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>A class hash, which defines the functionality of the contract</p>
-</li>
-<li>
-<p>A key-value mapping (where the key and values are field elements), which comprises the contract&#8217;s storage</p>
-</li>
-<li>
-<p>A nonce, which tracks the number of transactions sent from this contract</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="special_addresses"><a class="anchor" href="#special_addresses"></a>Special addresses</h3>
-<div class="paragraph">
-<p>Starknet uses special contract addresses to provide distinct capabilities beyond regular contract deployment.</p>
-</div>
-<div class="paragraph">
-<p>Two such addresses are <code>0x0</code> and <code>0x1</code>. These addresses are reserved for specific purposes and are
-characterized by their unique behavior in comparison to traditional contract addresses.</p>
-</div>
-<div class="sect3">
-<h4 id="address_0x0"><a class="anchor" href="#address_0x0"></a>Address <code>0x0</code></h4>
-<div class="paragraph">
-<p>Address <code>0x0</code> functions as the default <code>caller_address</code> for external calls, including interactions with the L1 handler or deprecated Deploy transactions. Unlike regular contracts, address <code>0x0</code> does not possess a storage structure and does not accommodate storage mapping.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="address_0x1"><a class="anchor" href="#address_0x1"></a>Address <code>0x1</code></h4>
-<div class="paragraph">
-<p>Address <code>0x1</code> is another special contract address within Starknet&#8217;s architecture. It functions as a storage space for mapping block numbers to their corresponding block hashes. The storage structure at this address is organized as follows:</p>
-</div>
-<div class="hdlist">
-<table>
+<table class="tableblock frame-all grid-all fit-content">
 <colgroup>
-<col style="width: 20%;">
+<col>
+<col>
 <col>
 </colgroup>
+<thead>
 <tr>
-<td class="hdlist1">
-Keys
-</td>
-<td class="hdlist2">
-<p>Block numbers between \(\text{first_v0_12_0_block}\) and \(\text{current_block - 10}\).</p>
-</td>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>block_number</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>u64</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The number of this block (i.e., its height)</p></td>
 </tr>
 <tr>
-<td class="hdlist1">
-Values
-</td>
-<td class="hdlist2">
-<p>Corresponding block hashes for the specified blocks.</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>parent_block_hash</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>felt252</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The <a href="#block_hash">hash</a> of the block&#8217;s parent</p></td>
 </tr>
 <tr>
-<td class="hdlist1">
-Default Values
-</td>
-<td class="hdlist2">
-<p>For all other block numbers, the values are set to <code>0</code>.</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>global_state_root</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>felt252</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A <a href="../state/#state_commitment" class="xref page">commitment</a> to the new state</p></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sequencer_address</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ContractAddress</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Starknet address of the sequencer that created the block</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>block_timestamp</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Timestamp</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The time at which the sequencer began building the block, in seconds since the Unix epoch</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>transaction_count</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>u32</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The number of transactions in the block</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>events_count</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>u32</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The number of events in the block.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>state_diff_length</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>u32</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The total amount of storage diffs, nonce updates, deployed contracts, and declared classes</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>state_diff_commitment</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>felt252</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A <a href="#state_diff_hash">commitment</a> to the state diff of the block</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>transactions_commitment</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>felt252</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A <a href="#transactions_events_receipts_commitments">commitment</a> to the transactions included in the block</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>events_commitment</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>felt252</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A <a href="#transactions_events_receipts_commitments">commitment</a> to the events included in the block</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>receipts_commitment</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>felt252</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A <a href="#transactions_events_receipts_commitments">commitment</a> to the receipts of the transactions included in the block</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>l1_gas_price</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>(u128, u128)</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The price of L1 gas that was used while constructing the block, where the first value is the price in wei and the second is the price in fri (see <a href="../fees/" class="xref page">Fees</a> for more details)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>l1_data_gas_price</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>(u128, u128)</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The price of L1 blob gas that was used while constructing the block, where the first value is the price in wei and the second is the price in fri (see <a href="../fees/" class="xref page">Fees</a> for more details)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>l2_gas_price</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>(u128, u128)</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The price of L2 gas that was used while constructing the block, where the first value is the price in wei and the second is the price in fri (see <a href="../fees/" class="xref page">Fees</a> for more details)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>l1_da_mode</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>String</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>CALLDATA</code> or <code>BLOB</code>, depending on how Starknet state diffs are sent to L1</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>protocol_version</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>String</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The version of the Starknet protocol used when creating the block</p></td>
+</tr>
+</tbody>
 </table>
 </div>
-<div class="paragraph">
-<p>The storage organization of address <code>0x1</code> supports the efficient retrieval of block hashes based on block numbers within a defined range and is also used by the <a href="https://book.cairo-lang.org/appendix-08-system-calls.html#get_block_hash" target="_blank" rel="noopener"><code>get_block_hash</code></a> system call.</p>
-</div>
-</div>
-</div>
-</div>
 </div>
 <div class="sect1">
-<h2 id="state_transition"><a class="anchor" href="#state_transition"></a>State transition</h2>
+<h2 id="block_hash"><a class="anchor" href="#block_hash"></a>Block hash</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>A transaction \(tx\) transitions the system from state \(S\) to state \(S'\) if:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(tx\) is an <code>INVOKE</code> transaction, and the storage of \(S'\) is the result of executing the target contract code with respect to the previous state \(S\). The arguments,
-contract instance&#8217;s address, and the specific function entry point are part of the transaction.</p>
-</li>
-<li>
-<p>\(tx\) is a <code>DEPLOY_ACCOUNT</code> transaction, and \(S'\) contains the new contract instance&#8217;s state at the contract instance&#8217;s address. Additionally, the storage of \(S\) is updated
-according to the execution of the contract instance&#8217;s constructor.</p>
-</li>
-<li>
-<p>\(tx\) is a <code>DECLARE</code> transaction, and \(S'\) contains the class hash and definition in the contract class&#8217;s mapping</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="state_commitment"><a class="anchor" href="#state_commitment"></a>State commitment</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The state commitment is a digest that represents the state.</p>
-</div>
-<div class="paragraph">
-<p>In Starknet, the state commitment combines the roots of two binary <a href="#merkle_patricia_trie">Merkle-Patricia tries</a> of height 251 in the following manner:</p>
+<p>A block hash is defined by:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>state_commitment = <em>h</em><sub>Pos</sub>(
-    "STARKNET_STATE_V0",
-    contract_trie_root,
-    class_trie_root
+<pre>h(
+    "STARKNET_BLOCK_HASH1",
+    block_number,
+    global_state_root,
+    sequencer_address,
+    block_timestamp,
+    transaction_count || event_count || state_diff_length || l1_da_mode,
+    state_diff_commitment,
+    transactions_commitment
+    events_commitment,
+    receipts_commitment,
+    gas_prices_hash
+    0,
+    parent_block_hash
 )</pre>
 </div>
 </div>
@@ -674,39 +675,69 @@ according to the execution of the contract instance&#8217;s constructor.</p>
 <div class="ulist">
 <ul>
 <li>
-<p><code><em>h</em><sub>Pos</sub></code> is the <a href="../cryptography/#poseidon_hash" class="xref page">Poseidon</a> hash
-function.</p>
+<p><code>h</code> is the <a href="../cryptography/#poseidon-hash" class="xref page">Poseidon hash function</a></p>
 </li>
 <li>
-<p><code>STARKNET_STATE_V0</code> is a constant prefix string encoded in ASCII (and represented as a field element).</p>
+<p><code>transaction_count || event_count || state_diff_length || l1_da_mode</code> is the concatenation of the 64-bit representations of <code>transaction_count</code>, <code>event_count</code>, and <code>state_diff_length</code> with 0 if <code>l1_da_mode</code> is <code>CALLDATA</code> and 1 if <code>l1_da_mode</code> is <code>BLOB</code></p>
 </li>
 <li>
-<p><code>contract_trie_root</code> is the root of the <a href="#contracts_trie"><em>contract trie</em></a>, a Merkle-Patricia trie whose leaves are the contracts' states.</p>
-</li>
-<li>
-<p><code>class_trie_root</code> is the root of the <a href="#classes_trie"><em>class trie</em></a>, a Merkle-Patricia trie whose leaves are the compiled class hashes.</p>
+<p><code>gas_prices_hash</code> is defined by:</p>
+<div class="listingblock">
+<div class="content">
+<pre>h(
+    "STARKNET_GAS_PRICES0",
+    l1_gas_price_wei,
+    l1_gas_price_fri,
+    l1_data_gas_price_wei,
+    l1_data_gas_price_fri,
+    l2_gas_price_wei,
+    l2_gas_price_fri
+)</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>where <code>h</code> is the <a href="../cryptography/#poseidon-hash" class="xref page">Poseidon hash function</a> and <code>l1_gas_price_wei</code>, <code>l1_gas_price_fri</code>, <code>l1_data_gas_price_wei</code>, <code>l1_data_gas_price_fri</code>, <code>l2_gas_price_wei</code>, and <code>l2_gas_price_fri</code> are the wei and fri denominated prices for the three resource types.</p>
+</div>
 </li>
 </ul>
 </div>
-<div class="sect2">
-<h3 id="contracts_trie"><a class="anchor" href="#contracts_trie"></a>The contract trie</h3>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>As with Ethereum, this trie is a two-level structure, whose leaves correspond to distinct contracts. The address of each contract determines the path from the trie&#8217;s root to its corresponding leaf, whose content encodes the contract&#8217;s state.</p>
+<p>For a reference implementation, see <a href="https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L68"> <code>block_hash_calculator.rs</code></a> in the Starknet sequencer&#8217;s GitHub repository</p>
 </div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="state_diff_commitment"><a class="anchor" href="#state_diff_commitment"></a>State diff commitment</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>The information stored in the leaf is as follows:</p>
+<p>The state diff commitment is defined by:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre><em>h</em><sub>Ped</sub>(
-  <em>h</em><sub>Ped</sub>(
-    <em>h</em><sub>Ped</sub>(
-      class_hash,
-      storage_root
-    ),
-    nonce
-  ),
-  0
+<pre>h(
+    "STARKNET_STATE_DIFF0",
+    s + r,
+    deployed_address<sub>1</sub>, deployed_class_hash<sub>1</sub>, ... , deployed_address<sub>s</sub>, deployed_class_hash<sub>s</sub>,
+    replaced_contract_address<sub>1</sub>, new_class_hash<sub>1</sub>, ... , replaced_contract_address<sub>r</sub>, new_class_hash<sub>r</sub>,
+    d,
+    declared_class_hash<sub>1</sub>, declared_compiled_class_hash<sub>1</sub>, ... , declared_class_hash<sub>d</sub>, declared_compiled_class_hash<sub>d</sub>,
+    1,
+    0,
+    n,
+    c<sub>1</sub>, k<sub>1,1</sub>, v<sub>1,1</sub>, ... ,k<sub>1,m<sup>1</sup></sub>, v<sub>1,m<sup>1</sup></sub>, ... ,c<sub>n</sub>, k<sub>n,1</sub>, v<sub>n,1</sub>, ... ,k<sub>n,m<sup>n</sup></sub>, v<sub>n,m<sup>n</sup></sub>,
+    k,
+    account<sub>1</sub>, new_nonce<sub>1</sub>, ... ,account<sub>k</sub>, new_nonce<sub>k</sub>
 )</pre>
 </div>
 </div>
@@ -716,33 +747,68 @@ function.</p>
 <div class="ulist">
 <ul>
 <li>
-<p><code><em>h</em><sub>Ped</sub></code> is the <a href="../cryptography/#hash-functions#pedersen_hash" class="xref page">Pedersen</a> hash function.</p>
+<p><code>h</code> is the  Poseidon hash function</p>
 </li>
 <li>
-<p><code>class_hash</code> is the hash of <a href="https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html" target="_blank" rel="noopener">the contract&#8217;s definition</a>.</p>
+<p><code>1</code> and <code>0</code> are placeholders that may be used in the future</p>
 </li>
 <li>
-<p><code>storage_root</code> is the root of another Merkle-Patricia trie of height 251 that is constructed from the contract&#8217;s storage.</p>
-</li>
-<li>
-<p><code>nonce</code> is the current nonce of the contract.</p>
+<p><code>c<sub>i</sub>,k<sub>i,1</sub>, v<sub>i,1</sub>, &#8230;&#8203; , k<sub>i,m<sup>i</sup></sub>,v<sub>i,m<sup>i</sup></sub></code> are <code>m<sup>i</sup></code> updates <code>(k<sub>i,1</sub>, v<sub>i,1</sub>), &#8230;&#8203; ,(k<sub>i,m<sup>i</sup></sub>, v<sub>i,m<sup>i</sup></sub>)</code> to contract addresses <code>c<sub>i</sub></code></p>
 </li>
 </ul>
 </div>
 </div>
-<div class="sect2">
-<h3 id="classes_trie"><a class="anchor" href="#classes_trie"></a>The class trie</h3>
+</div>
+<div class="sect1">
+<h2 id="transactions_events_and_receipts_commitments"><a class="anchor" href="#transactions_events_and_receipts_commitments"></a>Transactions, events, and receipts commitments</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>The class trie encodes the information about all existing
-<a href="https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html" target="_blank" rel="noopener">classes</a> in Starknet&#8217;s state. This trie maps <a href="https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html" target="_blank" rel="noopener">class hashes</a> to their
-compiled class hashes. The information stored in a leaf at a path corresponding to some class hash is as follows:</p>
+<p>The commitment to transactions, the commitment to events and the commitment to receipts are all roots of height-64 binary Merkle Patricia tries where the leaf at index <code>i</code> corresponds to:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>For transactions: <code>h(transaction_hash, signature)</code> for the <code>i</code>'th transaction included in the block, where <code>h</code> is the <a href="../cryptography/#poseidon-hash" class="xref page">Poseidon hash function</a>.
+Note that the signature is itself a (possibly empty) array of field elements.</p>
+</li>
+<li>
+<p>For events: The <a href="#event_hash">event hash</a> of the <code>i</code>'th emitted event included in the block</p>
+</li>
+<li>
+<p>For receipts: The <a href="#receipt_hash">receipt hash</a> of the <code>i</code>'th transaction receipt included in the block</p>
+</li>
+</ul>
+</div>
+<h3 id="event_hash" class="discrete">Event hash</h3>
+<div class="paragraph">
+<p>The hash of an <a href="https://book.cairo-lang.org/ch101-03-contract-events.html" target="_blank" rel="noopener">event</a> emitted by a contract whose address is <code>emitter_address</code> and a transaction whose hash is <code>tx_hash</code> is defined by:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-none hljs"><em>h</em><sub>Pos</sub>(
-    CONTRACT_CLASS_LEAF_V0,
-    compiled_class_hash
-)</code></pre>
+<pre>h(
+    emitter_address,
+    tx_hash,
+    h(keys),
+    h(data)
+)</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Where <code>h</code> is the <a href="../cryptography/#poseidon-hash" class="xref page">Poseidon hash function</a>.</p>
+</div>
+<h3 id="receipt_hash" class="discrete">Receipt hash</h3>
+<div class="paragraph">
+<p>The hash of a <a href="../transactions/#transaction_receipt" class="xref page">transaction receipt</a> is defined by:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>h(
+    transaction_hash,
+    actual_fee,
+    h(messages),
+    sn_keccak(revert_reason),
+    h(l2_gas_consumed, l1_gas_consumed, l1_data_gas_consumed)
+)</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -751,198 +817,26 @@ compiled class hashes. The information stored in a leaf at a path corresponding 
 <div class="ulist">
 <ul>
 <li>
-<p><code><em>h</em><sub>Pos</sub></code> is the <a href="../cryptography/#poseidon_hash" class="xref page">Poseidon</a> hash function</p>
+<p><code>h</code> is the <a href="../cryptography/#poseidon-hash" class="xref page">Poseidon hash function</a></p>
 </li>
 <li>
-<p><code>CONTRACT_CLASS_LEAF_V0</code> is a constant prefix string encoded in ASCII (and represented as a field element).</p>
-</li>
-<li>
-<p><code>compiled_class_hash</code> is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler.</p>
+<p><code>h(messages)</code> for <code>messages = (from<sub>1</sub>, to<sub>1</sub>, payload<sub>1</sub>), &#8230;&#8203; , (from<sub>n</sub>, to<sub>n</sub>, payload<sub>n</sub>)</code> is defined by:</p>
+<div class="listingblock">
+<div class="content">
+<pre>h(
+    n,
+    from<sub>1</sub>, to<sub>1</sub>, h(len(payload<sub>1</sub>) || payload<sub>1</sub>), ... , from<sub>n</sub>, to<sub>n</sub>, h(len(payload<sub>n</sub>) || payload<sub>n</sub>)
+)</pre>
+</div>
+</div>
 </li>
 </ul>
-</div>
-<div id="note_compiled_class_hash" class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<div class="title">Compiled class hash</div>
-<p>The compiled class hash identifies the output of a specific Casm compilation as unique.</p>
-</div>
-<div class="paragraph">
-<p>Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly (Casm). However, the prover only works with Casm.</p>
-</div>
-<div class="paragraph">
-<p>So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly. The compiled class hash provides this information.</p>
-</div>
-<div class="paragraph">
-<p>For more information, see <a href="https://book.cairo-lang.org/appendix-09-sierra.html" target="_blank" rel="noopener">the Cairo Book</a>.</p>
-</div>
-<div class="paragraph">
-<p>The party that declares the contract signs the compiled class hash, which they obtain using an SDK, as part of the <a href="../transactions/#transaction_types" class="xref page"><code>DECLARE</code></a> transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.</p>
-</div>
-<div class="paragraph">
-<p>In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect2">
-<h3 id="merkle_patricia_trie"><a class="anchor" href="#merkle_patricia_trie"></a>Merkle-Patricia trie</h3>
-<div class="paragraph">
-<p>The state commitment scheme uses a binary Merkle-Patricia trie with the Pedersen hash function.</p>
-</div>
-<div class="sect3">
-<h4 id="about_nodes"><a class="anchor" href="#about_nodes"></a>About nodes</h4>
-<div class="paragraph">
-<p>Each node in the trie is represented by a triplet \((length, path, value)\), where:</p>
-</div>
-<div class="hdlist">
-<table>
-<colgroup>
-<col style="width: 10%;">
-<col>
-</colgroup>
-<tr>
-<td class="hdlist1">
-\(length\)
-</td>
-<td class="hdlist2">
-<p>is the length of the path, measured in nodes.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-\(path\)
-</td>
-<td class="hdlist2">
-<p>is the path from the current node to its unique non-empty subtrie.</p>
-<div class="paragraph">
-<p>\(path\) is an integer in the set \(\{0,\ldots,2^{length}-1\}\), and the binary expansion of \(path\) indicates how to proceed along the trie, as follows:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>Expand \(path\) to its binary representation.</p>
-</li>
-<li>
-<p>Starting with the most significant bit, representing the root of the trie, traverse the tree node by node, where the bit values \(0\) and \(1\) indicate left and right, respectively.</p>
-</li>
-</ol>
-</div>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-\(value\)
-</td>
-<td class="hdlist2">
-<p>is the value of the node, which can be either data, or the hash of two non-empty child nodes.</p>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>An empty node is one whose triplet values are \((0,0,0)\). Leaf nodes and internal nodes can be empty. A subtrie rooted at a node \((length, path, value)\) has a single non-empty subtrie, rooted at the node obtained by following the path specified by \(path\).</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Length is specified, and cannot be deduced from \(path\), because the numbers in the triplet \((length, path, value)\) are field elements of fixed size, 251 bits each.</p>
-</div>
-<div class="paragraph">
-<p>For a node where \(length&gt;0\), \(path\) leads to the highest node whose left and right children are not empty.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect3">
-<h4 id="trie_construction"><a class="anchor" href="#trie_construction"></a>Trie construction</h4>
-<div class="paragraph">
-<p>The following rules specify how the trie is constructed from a given set of leaves:</p>
-</div>
-<div class="paragraph">
-<p>The hash of a node \(N =(length, path, value)\), denoted by \(H(N)\), is:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[H(N)=\begin{cases}
-value, &amp; \text{if } length = 0 \\
-h_{Ped}(value, path) + length, &amp; \text{otherwise}
-\end{cases}\]
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>All arithmetic operations in the above description of \(H\) are done in the STARK field, as described in <a href="../cryptography/#stark-field" class="xref page">The STARK field</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect3">
-<h4 id="mathematical_definition_of_the_nodes_in_the_trie"><a class="anchor" href="#mathematical_definition_of_the_nodes_in_the_trie"></a>Mathematical definition of the nodes in the trie</h4>
-<div class="paragraph">
-<p>The triplet representing the parent of the nodes \(left=(\ell_L, p_L, v_L)\), \(right=(\ell_R, p_R, v_R)\) is defined as follows:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[parent=
-\begin{cases}
-(0,0,0), &amp; \text{if } left=right=(0,0,0)\\
-(\ell_L + 1, p_L, v_L), &amp; \text{if } right=(0,0,0) \text{ and } left \neq (0,0,0)\\
-(\ell_R + 1, p_R + 2^{\ell_R}, v_R), &amp; \text{if } right\neq (0,0,0) \text{ and } left = (0,0,0)\\
-(0, 0, h_{Ped}(H(left), H(right))), &amp; \text{otherwise}
-\end{cases}\]
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="example_trie"><a class="anchor" href="#example_trie"></a>Example trie</h4>
-<div class="paragraph">
-<p>The diagram <a href="#3-level_trie">A three-level Merkle-Patricia trie</a> illustrates  the construction of a three-level-high Merkle-Patricia trie from the leaves whose values are \((0,0,1,0,0,1,0,0)\):</p>
-</div>
-<div id="3-level_trie" class="imageblock">
-<div class="content">
-<img src="../_images/trie.png" alt="3-level-high Merkle-Patricia trie">
-</div>
-<div class="title">Figure 1. A three-level Merkle-Patricia trie</div>
-</div>
-<div class="paragraph">
-<p>Where \(r=h_{Ped}(H(2,2,1),H((2,1,1))\). Notice that the example does not skip from the root, whose length is zero, so the final state commitment to the trie is \(H((0,0,r))=r\).</p>
-</div>
-<div class="paragraph">
-<p>Suppose that you want to prove, with respect to the state commitment just computed, that the value of the leaf whose path is given by \(101\) is \(1\). In a standard Merkle trie, the proof would consist of data from three nodes, which are siblings along the path to the root.</p>
-</div>
-<div class="paragraph">
-<p>In a Merkle-Patricia trie, because the trie is sparse, you only need to send the two children of the root, which are \((2,2,1)\) and \((2,1,1)\). These two children are enough to reproduce the state commitment \(r\), and because you know that the height of the trie is three, and that it is fixed, you know that the path \(01\) of length \(2\) specified by the right-hand child, \((2,1,1)\), leads to the desired leaf.</p>
-</div>
-</div>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../staking/">Staking</a></span>
-  <span class="next"><a href="../economics-of-starknet/">Tokenomics</a></span>
+  <span class="prev"><a href="../accounts/">Accounts</a></span>
+  <span class="next"><a href="../cryptography/">Cryptography</a></span>
 </nav>
 </article>
   </div>

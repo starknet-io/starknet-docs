@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Staking protocol :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/staking/">
-    <link rel="prev" href="../messaging/">
-    <link rel="next" href="../state/">
+    <title>Data availability :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/data-availability/">
+    <link rel="prev" href="../cryptography/">
+    <link rel="next" href="../fees/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,6 +307,11 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
+     href="../protocol-overview/">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
      href="../accounts/">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -319,10 +324,10 @@
        class="nav-link"
      href="../cryptography/">Cryptography</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../data-availability/">Data availability</a>
+     href="./">Data availability</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -334,10 +339,10 @@
        class="nav-link"
      href="../messaging/">L1-L2 messaging</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Staking</a>
+     href="../staking/">Staking</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -347,7 +352,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,21 +520,248 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/staking.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/data-availability.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Staking protocol"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Data availability"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Staking protocol</h1>
+<h1 class="page">Data availability</h1>
 <div class="sect1">
 <h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>While Starknet is currently still centralized, it is <a href="#roadmap">gradually</a> moving towards employing a <a href="#protocol">staking protocol</a>, handing over the responsibilities of producing, attesting, and proving blocks to validators. To facilitate this gradual implementation, the protocol&#8217;s <a href="#architecture">architecture</a> is modular, ensuring maximum flexibility and ease of upgrades. However, anyone holding STRK in their wallets can already stake their tokens and earn rewards based on their level of participation by following <a href="#procedures">a few simple steps</a>.</p>
+<p>Starknet is a Validity Rollup, which means that after consolidating and proving a set of changes to Starknet&#8217;s state, it updates the latest proven state on Ethereum. Alongside the proof, it sends the <a href="#state_diff_format">formatted</a> difference between the previous and new states, also known as <em>state diff</em>, allowing anyone monitoring Ethereum to use this data and reconstruct Starknet&#8217;s current state.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="state_diff_format"><a class="anchor" href="#state_diff_format"></a>State diff format</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="pre_v0_11_0"><a class="anchor" href="#pre_v0_11_0"></a>Pre-v0.11.0</h3>
+<div class="paragraph">
+<p>Before Starknet version 0.11.0, state diffs contained information on every contract whose storage was updated, along with additional information on contract deployments. Those differences were sent as part of the calldata of the transaction that registered the proof on Ethereum, in a <code>uint256[]</code> array that included:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The number of contracts that were deployed</p>
+</li>
+<li>
+<p>The address and class hash of each deployed contract</p>
+</li>
+<li>
+<p>The number of contracts whose storage was updated</p>
+</li>
+<li>
+<p>For each contract whose storage was updated:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Its address</p>
+</li>
+<li>
+<p>A <code>uint256</code> value that encodes both the number of its storage updates and its updated nonce, defined as follows:</p>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{128 bits}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |
+{\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}\]
+</div>
+</div>
+</li>
+<li>
+<p>The key and new value for each storage update</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This format is demonstrated by the following example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">[
+  2, <i class="conum" data-value="1"></i><b>(1)</b>
+  2472939307328371039455977650994226407024607754063562993856224077254594995194, <i class="conum" data-value="2"></i><b>(2)</b>
+  1336043477925910602175429627555369551262229712266217887481529642650907574765, <i class="conum" data-value="3"></i><b>(3)</b>
+  1, <i class="conum" data-value="4"></i><b>(4)</b>
+  2019172390095051323869047481075102003731246132997057518965927979101413600827, <i class="conum" data-value="5"></i><b>(5)</b>
+  18446744073709551617, <i class="conum" data-value="6"></i><b>(6)</b>
+  5, <i class="conum" data-value="7"></i><b>(7)</b>
+  102, <i class="conum" data-value="8"></i><b>(8)</b>
+]</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>The number of deployed contracts</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>The address of the first, and only, contract whose state changed</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>The class hash of the first, and only, contract whose state changed</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>The number of contracts whose storage was updated</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="5"></i><b>5</b></td>
+<td>The address of the first, and only, contract whose storage was updated</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="6"></i><b>6</b></td>
+<td>The <code>uint256</code> value that encodes the number of storage updates and updated nonce of the first, and only, contract whose storage was updated, which equals \(2^{64}+1 = 0^{128}|0^{63}1|0^{63}1\) and therefore:
+<div class="ulist">
+<ul>
+<li>
+<p>One storage cell was updated</p>
+</li>
+<li>
+<p>The updated nonce is <code>1</code></p>
+</li>
+</ul>
+</div></td>
+</tr>
+<tr>
+<td><i class="conum" data-value="7"></i><b>7</b></td>
+<td>The key of the first, and only, storage update of the first, and only, contract whose storage was updated</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="8"></i><b>8</b></td>
+<td>The new value of the first, and only, storage update of the first, and only, contract whose storage was updated</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="v0_11_0"><a class="anchor" href="#v0_11_0"></a>v0.11.0</h3>
+<div class="paragraph">
+<p>In Starknet version 0.11.0, state diffs changed to contain information on every contract whose storage was updated and additional information on contract deployments. This information was still sent as part of the calldata of the transaction that registered the proof on Ethereum, in a <code>uint256[]</code> array that included:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The number of contracts whose storage was updated</p>
+</li>
+<li>
+<p>For contract whose storage was updated:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Its contract address</p>
+</li>
+<li>
+<p>A single 32-byte word that includes its updated nonce and meta information about the storage updates, defined as follows:</p>
+<div class="stemblock">
+<div class="content">
+\[\underbrace{0\cdots0}_{\text{127 bits}}|
+\underbrace{\text{class information flag}}_{\text{1 bit}}|
+\underbrace{\text{new nonce}}_{\text{64 bits}}|{
+\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}\]
+</div>
+</div>
+<div class="paragraph">
+<p>where the class information flag&#8217;s value is <code>1</code> if the contract was deployed or replaced and <code>0</code> otherwise (i.e., there were only storage updates). When set to <code>1</code>, the new class hash occupies the next entry in the array</p>
+</div>
+</li>
+<li>
+<p>The key and new value for each storage update</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>The number of classes that were declared</p>
+</li>
+<li>
+<p>The class hash and compiled class hash of each declared class</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This format is demonstrated by the following example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">[
+  1, <i class="conum" data-value="1"></i><b>(1)</b>
+  2019172390095051323869047481075102003731246132997057518965927979101413600827, <i class="conum" data-value="2"></i><b>(2)</b>
+  18446744073709551617, <i class="conum" data-value="3"></i><b>(3)</b>
+  100, <i class="conum" data-value="4"></i><b>(4)</b>
+  200, <i class="conum" data-value="5"></i><b>(5)</b>
+  1, <i class="conum" data-value="6"></i><b>(6)</b>
+  1351148242645005540004162531550805076995747746087542030095186557536641755046, <i class="conum" data-value="7"></i><b>(7)</b>
+  558404273560404778508455254030458021013656352466216690688595011803280448032 <i class="conum" data-value="8"></i><b>(8)</b>
+]</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>The number of contracts whose storage was updated</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>The address of the first, and only, contract whose storage changed</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>The 32-byte word that encodes the updated nonce and meta information about the storage updates of the first, and only, contract whose storage was updated, which equals \(2^{64}+1 = 0^{127}|0|0^{63}1|0^{63}1\) and therefore:
+<div class="ulist">
+<ul>
+<li>
+<p>One storage cell was update</p>
+</li>
+<li>
+<p>The new nonce is <code>1</code></p>
+</li>
+<li>
+<p>The class information flag is <code>0</code>, which means that the contract was not deployed or replaced and therefore the next word shouldn&#8217;t be treated as the class hash</p>
+</li>
+</ul>
+</div></td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>The key of the first, and only, storage update of the first, and only, contract whose storage was updated</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="5"></i><b>5</b></td>
+<td>The new value of the first, and only, storage update of the first, and only, contract whose storage was updated
+These two elements, <code>100</code> and <code>200</code>, encode the storage update, where the value of key <code>100</code> is set to <code>200</code>.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="6"></i><b>6</b></td>
+<td>The number of classes that were declared</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="7"></i><b>7</b></td>
+<td>The class hash of the first, and only, declared class</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="8"></i><b>8</b></td>
+<td>The compiled class hash of the first, and only, declared class</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="v0_13_1"><a class="anchor" href="#v0_13_1"></a>v0.13.1</h3>
+<div class="paragraph">
+<p>In Starknet version 0.13.1, sending state diffs to Ethereum changed from using calldata to using either calldata or blobs. Under normal conditions, using blobs is default method, but in extreme situations where blob prices significantly exceed those of calldata, the Starknet sequencer can switch to use calldata instead.</p>
 </div>
 <div class="admonitionblock tip">
 <table>
@@ -539,39 +771,179 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>If you are only interested in learning how to stake on Starknet, feel free to skip straight to <a href="#procedures">Procedures</a>.</p>
+<p>See <a href="https://community.starknet.io/t/data-availability-with-eip4844/" target="_blank" rel="noopener">Data availability with EIP-4844</a> on the Starknet Community Forum or review <a href="https://etherscan.io/tx/0x8a227491bc78424c2cac1b203c95cdd99ede5112d41f0e7eab26f3c8aa9c658d/" target="_blank" rel="noopener">an example blob published on Ethereum by the Starknet sequencer</a> for more details.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+<div class="paragraph">
+<p>The format for state diffs remains the same as in version 0.11.0, but the data sent to Ethereum changed to a Fast Fourier Transform (FFT) of the original data. To recover Starknet&#8217;s state diff based on blobs or calldata published onchain, an Inverse Fast Fourier Transform (IFFT) on the data must first be performed, afterwhich decoding can proceed as usual.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="v0_13_3"><a class="anchor" href="#v0_13_3"></a>v0.13.3</h3>
+<div class="paragraph">
+<p>In Starknet version 0.13.3, sending state diffs to Ethereum changed from sending raw state diffs to sending compressed state diffs. The employed compression scheme is a simple lookup table variant, where a list of 252-bit field elements is transformed into a (usually smaller) list of 252-bit field elements as follows:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Unique field elements in the data are split into buckets of 15, 31, 62, 83, 125, and 252 bits (i.e. felts that require less than 15 bits go into the 15 bits bucket, felts that require 16 to 31 bits go into the 31 bits bucket, and so on).</p>
+</li>
+<li>
+<p>Each bucket is packed according to its number of bits (e.g., the 31 bits bucket allows the packing of 8 elements into a single felt).</p>
+</li>
+<li>
+<p>A list of pointers whose length is the length of the original data is constructed, where the <code>i</code>'th pointer is the bucket of the <code>i</code>'th element if the <code>i</code>'th element is a first occurrence, or a special index that indicates a repetition otherwise.</p>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The list of pointers can be packed to ~ 1/84 of the original list length since we only need 3 bits to indicate the bucket and we can fit 84 of those into a felt.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>A list of repeating value pointers is constructed, by adding <code>(bucket_index, index_in_bucket)</code> for every repetition in the original data.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>To illustrate the above, consider the following example: Let indices 0,1, …, 5 correspond to buckets 252, 125, …, 15, and let 6 denote a special bucket of repetitions. For the data list <code>[2^250, 10, 100, 2^63, 2^63+1, 10, 100]</code>, we construct the following:</p>
+</div>
 <div class="ulist">
-<div class="title">Additional resources</div>
 <ul>
 <li>
-<p>Staking dashboards by <a href="https://www.aligned-stake.com/" target="_blank" rel="noopener">AlignedStake</a>, <a href="https://dashboard.endur.fi/" target="_blank" rel="noopener">Ednur</a>, <a href="https://www.stakingrewards.com/stake-app?input=starknet" target="_blank" rel="noopener">Staking Rewards</a>, <a href="https://starkscan.co/staking" target="_blank" rel="noopener">Starkscan</a>, and <a href="https://voyager.online/staking-dashboard" target="_blank" rel="noopener">Voyager</a></p>
+<p>Bucket 252: <code>[2^250]</code></p>
 </li>
 <li>
-<p><a href="https://www.starknet.io/staking" target="_blank" rel="noopener">Staking</a> on starknet.io</p>
+<p>Bucket 83: <code>[2^63, 2^63+1]</code></p>
 </li>
 <li>
-<p><a href="https://github.com/starkware-libs/starknet-staking/tree/%40staking/contracts-v1.0.1-dev.510" target="_blank" rel="noopener"><code>starknet-staking</code></a> on GitHub (deployed tag)</p>
+<p>Bucket 15: <code>[10, 100]</code></p>
 </li>
 <li>
-<p><a href="https://www.starknet.io/blog/staking-phase-1/" target="_blank" rel="noopener">Starknet launches phase 1 of its staking initiative on mainnet</a> on the Starknet blog</p>
+<p>Pointers: <code>[0, 5, 5, 3, 3, 6, 6]</code></p>
 </li>
 <li>
-<p><a href="https://community.starknet.io/t/snip-28-staking-v2-proposal/115250" target="_blank" rel="noopener">SNIP 28: Staking V2 proposal</a> on the Starknet community forum</p>
+<p>Repeating value pointers: <code>[(5, 0), (5, 1)]</code> (We have two repetitions: the first for 10, which is the first element in bucket index 5, and the second for 100, which is the second element in the same bucket)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The final compressed list packs each bucket and each list individually and adds some necessary metadata.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This simple-to-write compression was chosen over the common Brotli or gzip compressions employed by other chains for similar purposes because the compression must be proven (i.e., either the compression or decompression must be implemented within the Starknet OS, and therefore its efficiency is crucial).</p>
+</div>
+<div class="paragraph">
+<p>You can find a Python implementation of it in the <a href="https://github.com/starkware-libs/cairo-lang" target="_blank" rel="noopener">cairo-lang repository</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>To better lends itself to the new compression scheme, as well as allow its construction to be based on the state diff alone, the uncompressed encoding of contract diff headers also changed as follows:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[|
+\underbrace{\text{new nonce (if changed)}}_{\text{64 bits}}
+|
+\underbrace{\text{# of storage updates}}_{\text{64 bits}}
+|
+\underbrace{\text{class information flag}}_{\text{1 bit}}
+|
+{\underbrace{\text{updates information flag}}_{\text{1 bit}}}_{\text{LSB}}\]
+</div>
+</div>
+<div class="paragraph">
+<p>where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The updates information flag is <code>0</code> if the number of updates is less than 256 (and therefore can fit in 8 bits), and <code>1</code> otherwise</p>
+</li>
+<li>
+<p>The semantics of class information flag is unchanged (i.e., it indicates whether or not the class was replaced)</p>
+</li>
+<li>
+<p>If the nonce of the contract is unchanged, the value of the new nonce is zero</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This definition can slightly deviate from the previous semantics, if an account contract was modified externally (e.g., via <code>execute_from_outside</code>). In this case, the contract&#8217;s nonce is unchanged, yet it appears in the state update (since its storage was updated). Pre-v0.13.3, the current nonce of the account would have appeared although it is unchanged, while in v0.13.3 the value of new nonce is zero. This change helps with making the encoding derivable solely from the state diff itself, without referring to the global state of the chain.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </li>
 </ul>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="roadmap"><a class="anchor" href="#roadmap"></a>Roadmap</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="v0_13_4"><a class="anchor" href="#v0_13_4"></a>v0.13.4</h3>
 <div class="paragraph">
-<p>Naturally, handing over the responsibility for maintaining and securing Starknet to validators in one day is neither feasible nor desirable. Instead, the staking protocol is implemented in incremental phases, with each phase bringing additional requirements from validators until they fully maintain and secure the network. The protocol is currently in the second of four phases, illustrated in following figure:</p>
+<p>In Starknet v0.13.4, a second layer, termed <em>stateful compression</em>, was added to the compression of state diffs.</p>
+</div>
+<div class="paragraph">
+<p>Stateful compression is based on the observation that most parts that were “incompressible” by the previous compression — now termed <em>stateless compression</em> — are storage keys and contract addresses, which can be indexed based on their first occurrence in a state diff, thus encoding them with potentially much less than the full 32bytes.</p>
+</div>
+<div class="paragraph">
+<p>To achieve this, a new system contract at address <code>0x2</code> was introduced, defined as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Storage slot <code>0x0</code> of the contract is the value of a global counter, initialized to <code>128</code> in the beginning of the first block of v0.13.4.</p>
+</li>
+<li>
+<p>Whenever a non-indexed storage key or contract address appears in a state diff, it is mapped to the current value of the counter, and the counter is increased.</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Storage keys that require at most 127 bits and addresses of system contracts (currently, <code>0x1</code> and <code>0x2</code>) are not mapped and continue to be referred to directly.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>The (uncompressed) state-diff includes the corresponding counter values from the value-to-index mapping rather than the original values.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>As its name suggests, stateful compression introduces dependency between state diffs submitted to Ethereum. That is, state diffs of a given block cannot be decoded without knowing the state diffs of the previous blocks. This dependency is only relevant for post-v0.13.4 state diffs, while pre-v0.13.4 state diffs remain self-contained.</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -581,610 +953,18 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The staking protocol is currently in its second phase on both Sepolia and Mainnet.</p>
+<p>Starknet v0.13.4 introduces dependency between state diffs, making post-v0.13.4 state diffs non-decodable without knowledge of previous post-v0.13.4 state diffs.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/staking-roadmap.png" alt="staking roadmap">
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="protocol"><a class="anchor" href="#protocol"></a>Protocol</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The following sections describe the details of Starknet&#8217;s staking protocol. The parameters used in the protocol are summarized in the following table:</p>
-</div>
-<table class="tableblock frame-all grid-all fit-content">
-<colgroup>
-<col>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Parameter</th>
-<th class="tableblock halign-left valign-top">Mainnet</th>
-<th class="tableblock halign-left valign-top">Sepolia</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum stake for validators</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">20K STRK</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1 STRK</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Minting curve yearly inflation cap (\(C\))</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.6</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.6</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Withdrawal security lockup</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">21 days</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">5 minutes</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Epoch length (\(E\))</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">40</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Attestation window (\(W\))</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of epochs used for latency (\(k\))</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">3600</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1200</p></td>
-</tr>
-</tbody>
-</table>
-<div class="sect2">
-<h3 id="roles"><a class="anchor" href="#roles"></a>Roles</h3>
-<div class="paragraph">
-<p>Starknet&#8217;s staking protocol features two options for participation:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Staking directly as validators: Staking a minimum of 20,000 STRK and earning rewards by handling any responsibilities the protocol requires</p>
-</li>
-<li>
-<p>Staking indirectly as delegators: Delegating STRKs to validators who allow delegation and sharing in their rewards without handling any of their responsibilities</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Validators can choose whether to allow delegation or not.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="addresses"><a class="anchor" href="#addresses"></a>Addresses</h3>
-<div class="paragraph">
-<p>To reduce exposure to threats and enhance security, multiple addresses for defined for both validators and delegators:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Validator addresses:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Staking address: Used for staking, adding stake, and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.</p>
-</li>
-<li>
-<p>Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.</p>
-</li>
-<li>
-<p>Operational Address: Used for operational purposes, such as block attestations (starting from the protocol&#8217;s second phase), block proposing (starting from the protocol&#8217;s third phase), etc. This address is used frequently and doesn&#8217;t handle large amounts of funds, and therefore is best kept by a hot wallet. Starting from the protocol&#8217;s second phase, however, hacking the operational address can lead to a lose of yield for the validator and its delegators.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>Delegator addresses:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Staking address: Used for delegating stake, adding stake and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.</p>
-</li>
-<li>
-<p>Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>The protocol uses a hierarchical approach between the staking and rewards addresses, and both validators and delegator can also use their staking address whenever their rewards address is required.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="epochs"><a class="anchor" href="#epochs"></a>Epochs</h3>
-<div class="paragraph">
-<p>Starting from its second phase, the staking protocol introduces the notion of <em>epochs</em> (similarly to many other protocols). Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch \(i\) are applied in epoch \(i+k\), where \(k\) is a new latency parameter. For example, the following figure illustrates a scenario where in epoch \(i\) validator \(A\) has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch \(i+1\) someone undelegates 30K STRK from \(A\):</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/epochs-example.png" alt="epochs example">
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="responsibilities"><a class="anchor" href="#responsibilities"></a>Responsibilities</h3>
-<div class="sect3">
-<h4 id="running_a_full_node"><a class="anchor" href="#running_a_full_node"></a>Running a full node</h4>
-<div class="paragraph">
-<p>The staking protocol requires validators to run one of the following full node implementations:</p>
-</div>
-<table class="tableblock frame-all grid-all fit-content">
-<colgroup>
-<col>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Name</th>
-<th class="tableblock halign-left valign-top">Hardware requirements</th>
-<th class="tableblock halign-left valign-top">Integration guide</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Juno</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://juno.nethermind.io/hardware-requirements" target="_blank" rel="noopener">juno.nethermind.io/hardware-requirements</a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://juno.nethermind.io/running-juno" target="_blank" rel="noopener">juno.nethermind.io/running-juno</a></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Madara</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://docs.madara.build/hardware" target="_blank" rel="noopener">docs.madara.build/hardware</a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/madara-alliance/madara/blob/main/README.md#%EF%B8%8F-installation" target="_blank" rel="noopener">github.com/madara-alliance/madara/README.md</a></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Pathfinder</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://eqlabs.github.io/pathfinder/getting-started/hardware-requirements" target="_blank" rel="noopener">eqlabs.github.io/pathfinder/getting-started/hardware-requirements</a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://eqlabs.github.io/pathfinder/getting-started/running-pathfinder" target="_blank" rel="noopener">eqlabs.github.io/pathfinder/getting-started/running-pathfinder</a></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="sect3">
-<h4 id="block_attestation"><a class="anchor" href="#block_attestation"></a>Block attestation</h4>
-<div class="paragraph">
-<p>Starting from its second phase, the staking protocol requires validators to attest to blocks, by running one of the following software:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="https://github.com/NethermindEth/starknet-staking-v2/blob/main/README.md" target="_blank" rel="noopener">Starknet Staking v2</a> by Nethermind</p>
-</li>
-<li>
-<p><a href="https://github.com/eqlabs/starknet-validator-attestation/blob/main/README.md" target="_blank" rel="noopener">Starknet Validator Attestation</a> by Equilibrium</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<div class="title">How does the block attestation mechanism work?</div>
-<p>In each epoch, each validator is assigned a single block whose relative number within the epoch is defined as follows:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[h(\text{staked amount},\text{epoch id},\text{validator address}) \mod (E-W)\]
-</div>
-</div>
-<div class="paragraph">
-<p>where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(E\) is the number of blocks in an epoch, termed <em>epoch length</em></p>
-</li>
-<li>
-<p>\(W\) is the number of blocks applicable for attestation submittal, termed <em>attestation window</em></p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>During each epoch, validators have the opportunity to attest to their assigned block by submitting an <code>attest</code> transaction, which must be included within the attestation window. For example, if \(W = 20\) and \(N\) is the relative block number assigned to validator \(A\), then \(A\) must submit an <code>attest</code> transaction between the blocks whose relative number within the epoch are \(N+1\) and \(N+20\).</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>In the second phase of the protocol, each Validator is required to perform only one attestation per epoch.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>The <code>attest</code> transaction includes the block hash of the attested block, ensuring validators actively use full nodes, as they need to continuously track block hashes. Additionally, the attestation is publicly verifiable, ensuring validators' reliability is publicly tested — a crucial prerequisite before handing them any core responsibilities.</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="rewards"><a class="anchor" href="#rewards"></a>Rewards</h3>
-<div class="paragraph">
-<p>Rewards are distributed based on the amount staked and the commission policy constant \(CP\) set by the validator, with yearly reward percentages calculated using the following formulas:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>For delegators:</p>
-<div class="stemblock">
-<div class="content">
-\[\text{stake_delegated} \cdot (1 - CP) \cdot \frac{M}{S}\]
-</div>
-</div>
-</li>
-<li>
-<p>For validators:</p>
-<div class="stemblock">
-<div class="content">
-\[\left(\text{self_stake} + \text{total_stake_delegated} \cdot CP\right) \cdot \frac{M}{S}\]
-</div>
-</div>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>where \(M\) and \(S\) are defined by the <a href="#minting_curve">Minting curve</a>.</p>
-</div>
-<div class="paragraph">
-<p>Starting from the second phase of the protocol, rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn&#8217;t will get no rewards for the epoch&#8217;s entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator&#8217;s pool. Stakers that enter the protocol on epoch \(i\) will start getting rewards only on epoch \(i+k\), and stakers that signal an intent to exit the protocol on epoch \(i\) will still get rewards until epoch \(i+k-1\).</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Starting from the second phase of the protocol, when a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is \(O(\text{#delegator's balance changes since last claim})\) — and not \(O(\text{#epochs since last claim})\) — which is assumed to be small enough to fit in one transaction in any real-world-scenario. This mechanism replaces the global reward index that was used prior to the protocol&#8217;s second phase.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="sect3">
-<h4 id="minting_curve"><a class="anchor" href="#minting_curve"></a>Minting curve</h4>
-<div class="paragraph">
-<p>The minting curve balances participation and inflation by adjusting rewards based on the total STRK locked in the protocol, and is defined by the following formula:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[M = \frac{C}{10} \times \sqrt{S}\]
-</div>
-</div>
-<div class="paragraph">
-<p>where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(S\) is the staking rate as a percentage of the total token supply</p>
-</li>
-<li>
-<p>\(M\) is the annual minting rate as a percentage of the total token supply</p>
-</li>
-<li>
-<p>\(C\) is the maximum theoretical inflation percentage, set to 1.6%</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="latencies"><a class="anchor" href="#latencies"></a>Latencies</h3>
-<div class="paragraph">
-<p>The following latencies are set in place:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>To disincentivise sudden large withdrawals that could destabilize the network, funds are subject to a 21-day lockup after signaling an unstake intent, during which no rewards are earned and funds cannot be withdrawn.</p>
-</li>
-<li>
-<p>Starting from the second phase of the protocol, to prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch \(i\) takes effect only on epoch \(i+1\).</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="commissions"><a class="anchor" href="#commissions"></a>Commissions</h3>
-<div class="paragraph">
-<p>Starting from its second phase, the staking protocol allows validators to increase their commission. To avoid an unexpected increase in commissions, validators must commit to a certain maximum commission \(M\) and the last date (in epochs) that this commitment is relevant for. Until this date arrives, validators cannot increase their commission beyond \(M\), but can freely change their commission in the range \([0,M]\).</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="architecture"><a class="anchor" href="#architecture"></a>Architecture</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The implementation of Starknet&#8217;s staking protocol is divided into several contracts, summarized in the following figure:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/staking-architecture.png" alt="staking architecture">
-</div>
-</div>
-<div class="paragraph">
-<p>This modular architecture allows for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are also in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process. The following table details the key components of the architecture:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 11.1111%;">
-<col style="width: 88.8889%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Contract</th>
-<th class="tableblock halign-left valign-top">Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Staking</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The staking contract is the core of the staking system, managing the entire lifecycle of staking, from initial staking to claiming rewards and unstaking.</p>
-<p class="tableblock">The staking contract also stores the <code>StakerInfo</code> data structure, which holds detailed information about each validator, including their staked amount, unclaimed rewards, delegation details, and operational parameters, and helps to ensure that validators' information is accurately tracked and updated.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Delegation pooling</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">All delegation interactions, such as entering or exiting a pool, are enabled through the delegation pooling contract, which tracks each delegator&#8217;s contribution, calculates their rewards, and manages the delegation lifecycle.</p>
-<p class="tableblock">The delegation pooling contract also stores the <code>PoolMemberInfo</code> data structure, which holds information about each delegator&#8217;s contributions, rewards, and status within the pool, and helps manage and calculate the delegation and reward distribution processes for pool members.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Reward Supplier</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve, ensuring the rewards are distributed fairly and in accordance with the protocol&#8217;s economic parameters.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Minting Curve</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The minting curve contract defines the economic model that governs reward distribution, ensuring that the network&#8217;s inflation is managed while incentivizing participation of stakers.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Attestation</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The attestation contract manages the tracking of successful validator attestations, by verifying whether the validator has correctly attested to their assigned block within a designated attestation window.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="sect1">
-<h2 id="procedures"><a class="anchor" href="#procedures"></a>Procedures</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The following tables detail the procedures enabled by the staking protocol for both <a href="#staking_as_validators">validators</a> and <a href="#staking_as_delegators">delegators</a>, along with the instructions to perform them.</p>
-</div>
-<div class="paragraph">
-<p>To invoke onchain contracts, use <a href="https://foundry-rs.github.io/starknet-foundry/starknet/sncast-overview.html" target="_blank" rel="noopener">Starknet Foundry&#8217;s <code>sncast</code></a>, <a href="../../tools/interacting-with-starknet/#starkli" class="xref page">Starkli</a>, or a <a href="../../ecosystem/block-explorers-monitoring-tools/#block_explorers" class="xref page">block explorer</a>. To get the onchain addresses of the staking and STRK contracts, see <a href="../../resources/chain-info/#staking" class="xref page">Important addresses</a>.</p>
-</div>
-<div class="sect2">
-<h3 id="staking_as_validators"><a class="anchor" href="#staking_as_validators"></a>Staking as validators</h3>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 20%;">
-<col style="width: 40%;">
-<col style="width: 40%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Procedure</th>
-<th class="tableblock halign-left valign-top">Instructions</th>
-<th class="tableblock halign-left valign-top">Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Staking</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#stake" target="_blank" rel="noopener"><code>stake</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p>You should make sure you are <a href="#responsibilities">running a full node and attesting to blocks</a> before staking</p>
-</li>
-<li>
-<p>You must first approve the transfer of the amount of STRK tokens to be staked to the staking contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
-</li>
-<li>
-<p><code>operational_address</code> should have sufficient funds to pay for attestation transactions</p>
-</li>
-<li>
-<p><code>amount</code> should be equal or greater than the <a href="#protocol">minimum stake for validators</a> and denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
-</li>
-<li>
-<p><code>commission</code> should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Claiming rewards</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards" target="_blank" rel="noopener"><code>claim_rewards</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Increasing stake</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#increase_stake" target="_blank" rel="noopener"><code>increase_stake</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
-</li>
-<li>
-<p>You must first approve the transfer of STRK tokens to the staking contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Setting commission</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission" target="_blank" rel="noopener"><code>set_commission</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p><code>commission</code> should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)</p>
-</li>
-<li>
-<p>Commissions can be increased only after <a href="#commissions">setting a commission commitment</a> using <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission_commitment" target="_blank" rel="noopener"><code>set_commission_commitment</code></a></p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Changing reward address</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address" target="_blank" rel="noopener"><code>change_reward_address</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Changing operational address</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#declare_operational_address" target="_blank" rel="noopener"><code>declare_operational_address</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_operational_address" target="_blank" rel="noopener"><code>change_operational_address</code></a> functions</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>declare_operational_address</code> should be invoked by your new operational address and <code>change_operational_address</code> should be invoked by your staking address</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Opening delegation</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_open_for_delegation" target="_blank" rel="noopener"><code>set_open_for_delegation</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Opening delegation is necessary only if <code>pool_enabled</code> was set to <code>false</code> when invoking the staking contract&#8217;s <code>stake</code> function</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Unstaking</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_intent"><code>unstake_intent</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_action"><code>unstake_action</code></a> functions</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p>Once an unstake intent is signaled:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Funds are removed from the total balance and are no longer part of the staking protocol</p>
-</li>
-<li>
-<p>The same staking address cannot be used to "restake" (i.e., <code>unstake_action</code> is <strong>irreversible</strong>)</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p><code>unstake_action</code> should be invoked only after the appropriate <a href="#latencies">waiting period</a> has ended</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="sect2">
-<h3 id="staking_as_delegators"><a class="anchor" href="#staking_as_delegators"></a>Staking as delegators</h3>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The following procedures are only intended for developers who are either interested (for whatever reason) in staking as delegators without using a <a href="#introduction">staking dashboard</a>, or are building one.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 20%;">
-<col style="width: 40%;">
-<col style="width: 40%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Procedure</th>
-<th class="tableblock halign-left valign-top">Instructions</th>
-<th class="tableblock halign-left valign-top">Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Entering a delegation pool</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#enter_delegation_pool" target="_blank" rel="noopener"><code>enter_delegation_pool</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
-</li>
-<li>
-<p>You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Claiming rewards</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards-1" target="_blank" rel="noopener"><code>claim_rewards</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Adding to a delegation pool</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#add_to_delegation_pool" target="_blank" rel="noopener"><code>add_to_delegation_pool</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
-</li>
-<li>
-<p>You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Switching delegation pools</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#switch_delegation_pool" target="_blank" rel="noopener"><code>switch_delegation_pool</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Changing reward address</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address-1" target="_blank" rel="noopener"><code>change_reward_address</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Exiting a delegation pool</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_intent" target="_blank" rel="noopener"><code>exit_delegation_pool_intent</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_action" target="_blank" rel="noopener"><code>exit_delegation_pool_action</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>exit_delegation_pool_action</code> should be invoked only after the appropriate <a href="#latencies">waiting period</a> has ended</p></td>
-</tr>
-</tbody>
-</table>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../messaging/">L1-L2 messaging</a></span>
-  <span class="next"><a href="../state/">State</a></span>
+  <span class="prev"><a href="../cryptography/">Cryptography</a></span>
+  <span class="next"><a href="../fees/">Fees</a></span>
 </nav>
 </article>
   </div>

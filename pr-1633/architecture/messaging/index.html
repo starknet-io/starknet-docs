@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>SNOS (Starknet operating system) :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/os/">
-    <link rel="prev" href="../sharp/">
-    <link rel="next" href="../starkgate/">
+    <title>L1-L2 messaging mechanism :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/messaging/">
+    <link rel="prev" href="../fees/">
+    <link rel="next" href="../staking/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,6 +307,11 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
+     href="../protocol-overview/">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
      href="../accounts/">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -329,10 +334,10 @@
        class="nav-link"
      href="../fees/">Fees</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../messaging/">L1-L2 messaging</a>
+     href="./">L1-L2 messaging</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -347,7 +352,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -368,10 +373,10 @@
        class="nav-link"
      href="../sharp/">SHARP</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">SNOS</a>
+     href="../os/">SNOS</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,86 +520,166 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/os.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/messaging.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "SNOS (Starknet operating system)"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "L1-L2 messaging mechanism"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">SNOS (Starknet operating system)</h1>
-<div class="sect1">
-<h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
+<h1 class="page">L1-L2 messaging mechanism</h1>
+<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>As an L2 validity rollup, Starknet&#8217;s state on Ethereum can&#8217;t be updated without proving that all the blocks between the current state and the new state are valid. SNOS is <a href="#what_is_snos?">the key element in Starknet&#8217;s architecture</a> that <a href="#how_does_snos_work?">verifies the validity of Starknet blocks</a> and is required for <a href="#using_snos_to_update_starknets_state">
-updating Starknet&#8217;s state</a>. SNOS has two <a href="#implementations">implementations</a>, a fully-open source one in Rust and a partially open-source one in Python.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>SNOS is a key element in Starknet&#8217;s architecture, but also one of its more complicated components. Some parts may require reading more than once, but don&#8217;t hesitate to <a href="https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&amp;title=Feedback%20for%20%22The%20Starknet%20operating%20system%22" target="_blank" rel="noopener">reach out</a> if you feel further clarification is needed.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="what_is_snos"><a class="anchor" href="#what_is_snos"></a>What is SNOS?</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>In Cairo, only statements of the form <em>"a specific Cairo program with specific inputs and produced specific outputs"</em> can be proven, which means that the statement <em>"A Starknet block is valid"</em> needs to expressed in the form of a Cairo program, inputs, and outputs.</p>
+<p>Starknet&#8217;s ability to interact with L1 is crucial. <em>Messaging</em> is the mechanism that enables this interaction.</p>
 </div>
 <div class="paragraph">
-<p>This is where SNOS comes in: it is a Cairo Zero program that verifies the validity of blocks by getting an initial state and a list of transactions as input and outputting the state that is the result of applying these transactions on the initial state.</p>
+<p>For example, you can perform computations on L2 and use the result on L1.</p>
 </div>
 <div class="paragraph">
-<p>SNOS is the program required for updating Starknet&#8217;s state on Ethereum (<a href="#os-and-core-contract">with some subtilities</a>). As such, is it also the final arbiter on what does it mean for a transaction to execute correctly. For example, while a malicious sequencer can deviate from <a href="#architecture-and-concepts:network-architecture/transaction-life-cycle.adoc#transaction_flow" class="xref unresolved">the <code>INVOKE</code> transaction&#8217;s behavior</a> by skipping the execution of <code>__validate__</code> before <code>__execute__</code> in the calling account contract, this specification is <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_transactions.cairo#L390" target="_blank" rel="noopener">enforced by SNOS</a> and therefore this sequencer will not be able to produce the proof for the block in which this transaction was included.</p>
+<p>Bridges on Starknet use the L1-L2  messaging mechanism. Consider that you want to bridge tokens from Ethereum to Starknet. You deposit your tokens in the L1 bridge contract, which automatically triggers the minting of the same token on L2. Another good use case for L1-L2 messaging is Defi pooling. For more information, see <a href="https://starkware.co/resource/defi-pooling/">DeFi pooling</a> on StarkWare&#8217;s site and <a href="https://www.starknet.io/en/ecosystem/dapps">dApps</a> on <a href="https://www.starknet.io" class="bare">https://www.starknet.io</a>.</p>
+</div>
+<div class="paragraph">
+<p>Be aware that the messaging mechanism is <em>asynchronous</em> and <em>asymmetric</em>.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><em>Asynchronous</em>: Your contract code, whether Cairo or Solidity, cannot await the result of the message being sent on the other layer within your contract code&#8217;s execution.</p>
+</li>
+<li>
+<p><em>Asymmetric</em>: Sending a message from Ethereum to Starknet, L1&#8594;L2, is fully automated by the Starknet sequencer, so the message is automatically delivered to the target contract on L2. However, when sending a message from Starknet to Ethereum, L2&#8594;L1, the sequencer only sends the hash of the message. You must then consume the message manually using a transaction on L1.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="how_does_snos_work"><a class="anchor" href="#how_does_snos_work"></a>How does SNOS work?</h2>
+<h2 id="l2-l1_messages"><a class="anchor" href="#l2-l1_messages"></a>L2 &#8594; L1 messages</h2>
 <div class="sectionbody">
-<div class="sect2">
-<h3 id="high_level_overview"><a class="anchor" href="#high_level_overview"></a>High-level overview</h3>
 <div class="paragraph">
-<p>The following is a rough sketch of the SNOS program, starting at <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/os.cairo#L38">os.cairo</a>'s <code>main</code> function:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/os_flow_copy.png" alt="os flow copy">
-</div>
+<p>Contracts on L2 can interact asynchronously with contracts on L1 using the L2&#8594;L1 messaging protocol.</p>
 </div>
 <div class="paragraph">
-<p>In broad strokes, SNOS&#8217;s execution consists of the following steps:</p>
+<p>The protocol consists of the following stages:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Preprocessing: preparing the SNOS&#8217;s inputs, which include the various hints that will be needed throughout the execution (for example,
-the Merkle path of every accessed storage slot and the code of every accessed contract)</p>
+<p>During the execution of a transaction, a contract on Starknet sends a message from L2 to L1 by calling the <code>send_message_to_L1</code> syscall.</p>
 </li>
 <li>
-<p>Running the transactions: the bulk of SNOS&#8217;s execution, where transactions are executed sequentially such that for each transaction:</p>
+<p>The sequencer attaches the message parameters to the block that includes the syscall invocation. The message parameters include the address of the sender on L2, the address of the recipient contract on L1, and the message data.</p>
+<div class="paragraph">
+<p>For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">let mut payload: Array&lt;felt252&gt; = ArrayTrait::new();
+let to_address: EthAddress = 1_felt252.try_into().unwrap();
+payload.append(1);
+// potentially add more elements to payload (payload[1], payload[2],  etc.)
+
+send_message_to_l1_syscall(to_address: to_address.into(), payload: payload.span());</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>The prover proves the state update that includes this transaction.</p>
+</li>
+<li>
+<p>The sequencer updates the L1 state.</p>
+</li>
+<li>
+<p>The message is stored on L1 in the Starknet Core Contract and a counter on the Core Contract increases by one.<br></p>
+</li>
+<li>
+<p>The <code>processMessage</code> function, which is part of the Starknet Core Contract, emits the <code>LogMessageToL1</code> event, which contains the message parameters.</p>
+</li>
+<li>
+<p>The message recipient on L1 can access and consume the message by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L119"><code>consumeMessageFromL2</code></a> function, which includes the message parameters within the transaction.
+This function, which is part of the Starknet Core Contract, verifies the following:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>The associated account contract is loaded into the memory and called</p>
+<p>The hashes of the L2 sent message parameters, now stored on the Core Contract, and the L1 received message parameters, are the same.</p>
 </li>
 <li>
-<p>Inner contracts are called, such that <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L149" target="_blank" rel="noopener">the entry <code>(contract_address, class_hash)</code> is added to a global state updates dictionary</a> for each loaded contract (which is needed to assert that the loaded code corresponds to the class hash that is part of the state commitment)</p>
+<p>The entity calling the function is indeed the recipient on L1.</p>
+<div class="paragraph">
+<p>In such a case, the counter corresponding to the message hash in the Starknet Core Contract decreases by one. For more information, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L130C7-L130C7#"><code>consumeMessageFromL2</code></a> function in <code>StarknetMessaging.sol</code>.</p>
+</div>
 </li>
 </ul>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p><a href="#diagram_l2-l1_messaging_mechanism">L2&#8594;L1 Messaging mechanism</a> illustrates this flow:</p>
+</div>
+<div id="diagram_l2-l1_messaging_mechanism" class="imageblock">
+<div class="content">
+<img src="../_images/l2l1.png" alt="L2&#8594;L1 message mechanism">
+</div>
+<div class="title">Figure 1. L2&#8594;L1 Messaging mechanism</div>
+</div>
+<div class="sect2">
+<h3 id="l2_l1_message_structure"><a class="anchor" href="#l2_l1_message_structure"></a>L2 &#8594; L1 message structure</h3>
+<div class="paragraph">
+<p>The structure of an L2 &#8594; L1 message is described as follows under <code>MSG_TO_L1</code> in the <a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json">Starknet API JSON RPC</a> specification:</p>
+</div>
+<div class="hdlist stripes-odd">
+<table>
+<colgroup>
+<col style="width: 30%;">
+<col>
+</colgroup>
+<tr>
+<td class="hdlist1">
+<code>from_address</code> (<code>felt252</code>)
+</td>
+<td class="hdlist2">
+<p>The address of the L2 contract sending the message.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>to_address</code> (<code>EthAddress</code>)
+</td>
+<td class="hdlist2">
+<p>The target L1 address the message is sent to.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<code>payload</code> (<code>Array&lt;felt252&gt;</code>) 
+</td>
+<td class="hdlist2">
+<p>The payload of the message.</p>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="hashing_l2-l1"><a class="anchor" href="#hashing_l2-l1"></a>L2 &#8594; L1 message hashing</h3>
+<div class="paragraph">
+<p>The hash of an L2 &#8594; L1 message is computed on L1 as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">keccak256(
+    abi.encodePacked(
+        FromAddress,
+        uint256(ToAddress),
+        Payload.length,
+        Payload
+    )
+);</code></pre>
+</div>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -604,140 +689,365 @@ the Merkle path of every accessed storage slot and the code of every accessed co
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Contract calls are in fact done non-deterministically, i.e. the contract&#8217;s response are guessed and verified later. For more details, see <a href="#syscall-mechanism">Syscall mechanism</a>.</p>
+<p>Sending an L2 to L1 message always incurs a fixed cost of 20,000 L1 gas, because the hash of the message being sent must be written to L1 storage in the Starknet Core Contract.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="l1-l2-messages"><a class="anchor" href="#l1-l2-messages"></a>L1 &#8594; L2 messages</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Contracts on L1 can interact asynchronously with contracts on L2 using the <em>L1&#8594;L2</em> messaging protocol.</p>
+</div>
+<div class="paragraph">
+<p>The protocol consists of the following stages:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>An L1 contract induces a message to an L2 contract on Starknet by calling the <a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract with the message parameters.</p>
+<div class="paragraph">
+<p>The Starknet Core Contract hashes the message parameters and updates the L1&#8594;L2 message mapping to indicate that a message with this hash was indeed sent. The L1 contract records the fee that the sender paid. For more information, see <a href="#l1-l2-message-fees">L1 &#8594; L2 message fees</a>.</p>
+</div>
+</li>
+<li>
+<p>The message is then decoded into a Starknet transaction that invokes a function annotated with the <code>l1_handler</code> decorator on the target contract. Transactions like this on L2 are called <a href="#l1_handler_transaction">L1 handler transactions</a>.</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>The Starknet sequencer, upon receiving enough L1 confirmations for the transaction that sent the message, initiates the corresponding L2 transaction.</p>
+</li>
+<li>
+<p>The L2 transaction invokes the relevant <code>l1_handler</code> function.</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>The L1 Handler transaction that was created in the previous step is added to a proof.</p>
+</li>
+<li>
+<p>The Core Contract receives the state update.</p>
+</li>
+<li>
+<p>The message is cleared from the Core Contract&#8217;s storage to consume the message. Clearing the Core Contract&#8217;s storage does the following:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>State updates are accumulated in the global state updates dictionary</p>
+<p>incurs a fixed cost of 5,000 L1 gas</p>
+</li>
+<li>
+<p>emits an L1 event logging the message consumption</p>
 </li>
 </ul>
 </div>
 </li>
+</ol>
+</div>
+<div class="paragraph">
+<p>At this point, the message is handled.</p>
+</div>
+<div class="paragraph">
+<p>An L1&#8594;L2 message consists of the following:</p>
+</div>
+<div class="ulist">
+<ul>
 <li>
-<p>Verifying that the new commitment corresponds to applying the updates accumulated in the global state updates dictionary to the old commitment (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/state/state.cairo#L40" target="_blank" rel="noopener"><code>state_update</code> function in <code>state.cairo</code></a>).</p>
+<p>L1 sender&#8217;s address</p>
 </li>
 <li>
-<p>Encoding the state diff and adding it to the output segment for <a href="#network-architecture/data-availability.adoc" class="xref unresolved">data availability</a> purposes (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/output.cairo#L71" target="_blank" rel="noopener"><code>serialize_os_output</code> function in <code>output.cairo</code></a>)</p>
+<p>L2 recipient&#8217;s contract address</p>
+</li>
+<li>
+<p>Function selector</p>
+</li>
+<li>
+<p>Calldata array</p>
+</li>
+<li>
+<p>Message nonce</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The message nonce is maintained on the Starknet Core Contract on L1, and is incremented whenever a message is sent to L2. The nonce is used to avoid a hash collision between different L1 handler transactions that is caused by the same message being sent on L1 multiple times.</p>
+</div>
+<div class="paragraph">
+<p>For more information, see <a href="#l1_l2_message_structure">L1&#8594;L2 structure</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="l2-l1_message_cancellation"><a class="anchor" href="#l2-l1_message_cancellation"></a>L1 &#8594; L2 message cancellation</h3>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The flow described here should only be used in edge cases such as bugs on the Layer 2 contract preventing message consumption.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Consider that Alice sends an L1 asset to a Starknet bridge to transfer it to L2, which generates the corresponding L1&#8594;L2 message. Now, consider that the L2 message consumption doesn&#8217;t function, which might happen due to a bug in the dApp&#8217;s Cairo contract. This bug could result in Alice losing custody of their asset forever.</p>
+</div>
+<div class="paragraph">
+<p>To mitigate this risk, the contract that initiated the L1&#8594;L2 message can cancel it by declaring the intent to cancel, waiting five days, and then completing the cancellation. This delay protects the sequencer from a DoS attack in the form of repeatedly sending and canceling a message before it is included in L1, rendering the L2 block which contains the activation of the corresponding L1 handler invalid.</p>
+</div>
+<div class="paragraph">
+<p>The steps in this flow are as follows:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>The user that initiated the L1&#8594;L2 message calls the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L134"><code>startL1ToL2MessageCancellation</code></a> function in the Starknet Core Contract.</p>
+</li>
+<li>
+<p>The user waits five days until she can finalize the cancellation.</p>
+</li>
+<li>
+<p>The user calls the <a href="https://github.com/starkware-libs/cairo-lang/blob/4e233516f52477ad158bc81a86ec2760471c1b65/src/starkware/starknet/eth/StarknetMessaging.sol#L147"><code>cancelL1ToL2Message</code></a> function.</p>
 </li>
 </ol>
 </div>
 </div>
 <div class="sect2">
-<h3 id="syscall-mechanism"><a class="anchor" href="#syscall-mechanism"></a>Syscall mechanism</h3>
+<h3 id="l1-l2-message-fees"><a class="anchor" href="#l1-l2-message-fees"></a>L1 &#8594; L2 message fees</h3>
 <div class="paragraph">
-<p>A contract can invoke <a href="https://book.cairo-lang.org/appendix-08-system-calls.html" target="_blank" rel="noopener">system calls</a> throughout its execution, which pass the control from the currently executing contract to SNOS itself. Such operations are required when a contract needs information that does not exist within its code, e.g. accessing the Starknet state to read a storage value or to call another contract.</p>
+<p>An L1 &#8594; L2 message induces a transaction on L2, which, unlike regular transactions, is not sent by an account. This calls for a different mechanism for paying the transaction&#8217;s fee, for otherwise the sequencer has no incentive of including L1 handler transactions inside a block.</p>
 </div>
 <div class="paragraph">
-<p>SNOS&#8217;s code heavily relies on non-determinism to handle system calls. Whenever a contract invokes some syscall, the request, alongside the guessed response, is recorded in a syscalls array.
-At the end of every entry point execution, we go over the syscalls array and verify that the responses were correct (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L286" target="_blank" rel="noopener"><code>execute_entry_point</code> function in <code>execute_transactions.cairo</code></a>).</p>
+<p>To avoid having to interact with both L1 and L2 when sending a message, L1 &#8594; L2 messages are payable on L1, by sending ETH with the call to the payable function <code>sendMessageToL2</code> on the Starknet Core Contract.</p>
 </div>
 <div class="paragraph">
-<p>For syscalls such as <a href="https://book.cairo-lang.org/appendix-08-system-calls.html#get_execution_info" target="_blank" rel="noopener"><code>get_execution_info</code></a>,
-which returns the block hash and number, correctness means consistency with the value given to SNOS as input. For contract calls, however, one needs to execute the called contract and verify that the actual response and the guessed response are identical. But how can we guess the responses to all the contract calls before executing them? For that, it is important to distinguish two different styles-of-execution that a Starknet block goes through:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The first one is done by a sequencer, when constructing the block from incoming transactions</p>
-</li>
-<li>
-<p>The second one is done by a prover, when executing SNOS in order to generate a proof for the (already finalized) block</p>
-</li>
-</ul>
+<p>The sequencer takes this fee in exchange for handling the message. The sequencer charges the fee in full upon updating the L1 state with the consumption of this message.</p>
 </div>
 <div class="paragraph">
-<p>Therefore, when running the OS, we already know what is going to happen: the block has already been executed by the sequencer, and so we know exactly what contracts and storage slots will be accessed, what each internal call will return, and so on.</p>
-</div>
-<div class="paragraph">
-<p>It&#8217;s worth noting that in the first execution, the sequencer can run in whatever way he chooses. In fact, he doesn&#8217;t even have to run through the Cairo VM at all, but rather <a href="https://github.com/lambdaclass/cairo_native" target="_blank" rel="noopener">precompile contracts to machine code and run them natively</a>. Moreover, sequencers can also impose restrictions that are not enforced by SNOS. Such discrepancy between the two executions may seem like a bug, but as long as these restrictions only protect the sequencers themselves, rather than the correctness of execution, there is no reason for SNOS to enforce them. A good example for such restriction is the <a href="#architecture-and-concepts:accounts/account-functions.adoc#limitations_of_validation" class="xref unresolved">limits on validation functions</a> that protect the sequencer from DoS attacks. It is crucial, however, that both executions agree on the execution semantics, since, as mentioned in <a href="#introduction">What is SNOS?</a>, SNOS is the final arbiter and if it disagrees on the validity of the block, the sequencer will not be able to produce a proof for that block (and the only way forward would be a reorg on Starknet).</p>
+<p>The fee itself is calculated in the <a href="../fees/#overall_fee" class="xref page">same manner</a> as
+"regular" L2 transactions.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="multiblock_input"><a class="anchor" href="#multiblock_input"></a>Multiblock input</h3>
+<h3 id="l1_l2_message_structure"><a class="anchor" href="#l1_l2_message_structure"></a>L1 &#8594; L2 structure</h3>
 <div class="paragraph">
-<p>Starting from Starknet version 0.14.0, block times on Starknet are substantially shorter, leading to substantially smaller blocks. Every run of SNOS on a block also incurs a fixed cost of one recursion, which is independent of the size of the block. Therefore, if one produces e.g. twice as many blocks, one also doubles the accompanied fixed cost.</p>
+<p>For completeness, <a href="#l1_l2_message_structure">L1 &#8594; L2 structure</a> describes the precise structure of both the message as it appears on L1 and the induced transaction as it appears on L2.</p>
 </div>
-<div class="paragraph">
-<p>To mitigate this, SNOS has been modified in version 0.14.0 to receive multiple blocks as inputs, which also amortizes other non-negligible costs over a larger number of blocks. For example, if both block 10 and 11 use the same contract, SNOS loads and hashes its code only once instead of twice.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="using_snos_to_update_starknets_state"><a class="anchor" href="#using_snos_to_update_starknets_state"></a>Using SNOS to update Starknet&#8217;s state</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The Starknet Core contract is the contract responsible for storing and updating Starknet&#8217;s state on Ethereum. As of Starknet v0.13.2 and as part of <a href="https://community.starknet.io/t/starknet-v0-13-2-pre-release-notes/114223#starknet-applicative-recursion-3" target="_blank" rel="noopener">SHARP&#8217;s applicative recursion feature</a>, proofs of SNOS&#8217;s execution are not enough to update the Starknet Core contract. Instead, it is required to submit an "applicative proof" of a different program called <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/cairo/bootloaders/applicative_bootloader/applicative_bootloader.cairo#L15" target="_blank" rel="noopener">the applicative bootloader</a>.</p>
-</div>
-<div class="paragraph">
-<p>The way the applicative bootloader works is by verifying a proof of one or more executions of a base program \(B\) and then using their outputs as input to an aggregator program \(A\). In the case of Starknet, \(B\) is the SNOS program and \(A\) is a new cairo program that squashes the state diffs of several blocks (the code of which can be found in the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/aggregator/main.cairo#L8" target="_blank" rel="noopener">cairo-lang GitHub repository</a>). This way, individual executions of SNOS for some block range can be "squashed" into a single program whose valid execution attests to the validity of all blocks within that range and whose output is the squashed state diff of these blocks.</p>
-</div>
-<div class="paragraph">
-<p>In order to verify that an "applicative proof" used the correct SNOS and aggregator programs, their program hashes must be stored in the Starknet Core contract. As each Starknet version is associated with a given SNOS program, this means that breaking protocol changes must be accompanied by an update to SNOS&#8217;s (and possibly the aggregator&#8217;s) program hash registered in the Starknet Core contract.</p>
-</div>
-<div class="admonitionblock tip">
-<table>
+<table id="L1-L2_message_structure" class="tableblock frame-all grid-all fit-content stretch">
+<caption class="title">Table 1. L1 &#8594; L2 message structure</caption>
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead>
 <tr>
-<td class="icon">
-<i class="fa icon-tip" title="Tip"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>You can read the program hashes currently registered in the Starknet Core contract by using its <a href="https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F13" target="_blank" rel="noopener"><code>programHash</code></a> (for SNOS&#8217;s program hash) and <a href="https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F1" target="_blank" rel="noopener"><code>aggregatorProgramHash</code></a> (for the aggregator&#8217;s program hash) functions.</p>
-</div>
-</td>
+<th class="tableblock halign-left valign-top">FromAddress</th>
+<th class="tableblock halign-left valign-top">ToAddress</th>
+<th class="tableblock halign-left valign-top">Selector</th>
+<th class="tableblock halign-left valign-top">Payload</th>
+<th class="tableblock halign-left valign-top">Nonce</th>
+<th class="tableblock halign-left valign-top"></th>
 </tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>EthereumAddress</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>List<FieldElement></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+</tbody>
 </table>
 </div>
+<div class="sect2">
+<h3 id="hashing_l1-l2"><a class="anchor" href="#hashing_l1-l2"></a>L1 &#8594; L2 hashing</h3>
 <div class="paragraph">
-<p>Finally, the Starknet Core contract is also responsible for verifying the few things that SNOS can&#8217;t, including:</p>
+<p>The hash of the message is computed on L1 as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-js hljs" data-lang="js">keccak256(
+    abi.encodePacked(
+        uint256(FromAddress),
+        ToAddress,
+        Nonce,
+        Selector,
+        Payload.length,
+        Payload
+    )
+);</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="l1_handler_transaction"><a class="anchor" href="#l1_handler_transaction"></a>L1 handler transaction</h3>
+<table class="tableblock frame-all grid-all fit-content stretch">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Version</th>
+<th class="tableblock halign-left valign-top">ContractAddress</th>
+<th class="tableblock halign-left valign-top">Selector</th>
+<th class="tableblock halign-left valign-top">Calldata</th>
+<th class="tableblock halign-left valign-top">Nonce</th>
+<th class="tableblock halign-left valign-top"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>List<FieldElement></code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FieldElement</code></p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>The hash of the corresponding L1 handler transaction on L2 is computed as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cairo hljs" data-lang="cairo">l1_handler_tx_hash = _h_(
+    "l1_handler",
+    version,
+    contract_address,
+    entry_point_selector,
+    _h_(calldata),
+    0,
+    chain_id,
+    nonce
+)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Where:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Verifying that the state given to SNOS as input is Starknet&#8217;s current state on Ethereum</p>
+<p><code>l1_handler</code> is a constant prefix, encoded in bytes (ASCII), as big-endian.</p>
 </li>
 <li>
-<p>Verifying that all <a href="#architecture-and-concepts:network-architecture/messaging-mechanism.adoc#l1-l2-messages" class="xref unresolved">L1→L2 messages</a> were sent on Ethereum</p>
+<p><code>version</code> is the transaction version. Only version 0 is currently supported.</p>
+</li>
+<li>
+<p><code>chain_id</code> is a constant value that specifies the network to which this transaction is sent.</p>
+</li>
+<li>
+<p><em>h</em> is the <a href="../cryptography/#hash-functions#pedersen_hash" class="xref page">Pedersen</a> hash (note that since we&#8217;re hashing an array, the # of inputs needs to be appended to the hash).</p>
+</li>
+<li>
+<p><code>0</code> indicates that L1 to L2 message fees are charged on L1.</p>
 </li>
 </ul>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="implementations"><a class="anchor" href="#implementations"></a>Implementations</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The Cairo code of SNOS is available in the <a href="https://github.com/starkware-libs/cairo-lang/tree/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os" target="_blank" rel="noopener">cairo-lang GitHub repository</a>.
-However, this repository does not include all the hints implementation, which are necessary to locally run SNOS. The current implementation of these hints in Python is now deprecated, and will no longer be maintained in future Starknet versions.</p>
-</div>
-<div class="admonitionblock important">
+<div class="admonitionblock note">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-important" title="Important"></i>
+<i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>As part of the transition of Starknet&#8217;s infrastructure to Rust, SNOS&#8217;s Pythonic hints implementation is deprecated, and will no longer be maintained in future Starknet versions.</p>
+<p>In an L1 handler transaction, the first element of the calldata is always the sender&#8217;s Ethereum address.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>Instead, a new Rust implementation of the hints, including initializing all inputs of SNOS via a Starknet full node connection, is available in the <a href="https://github.com/keep-starknet-strange/snos/tree/cb2a6d26faeb658492756fe100bbdf5b1600c768" target="_blank" rel="noopener">SNOS GitHub repository</a>. At the time of writing, this codebase supports the execution of SNOS for Starknet version 0.13.2.</p>
+<p>Since L1 handler transactions are not initiated by an account, invoking <a href="https://github.com/starkware-libs/cairo/blob/2203a47f8a098cd4718d03bd109ca014049419e7/corelib/src/starknet/info.cairo#L49"><code>get_caller_address()</code></a> or similar account-related functions returns the address <code>0x0</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<caption class="title">Table 2. Supported versions of the <code>L1HandlerTransaction</code> transaction type</caption>
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Current version</th>
+<th class="tableblock halign-left valign-top">Deprecated versions</th>
+<th class="tableblock halign-left valign-top">Unsupported versions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="additional_resources"><a class="anchor" href="#additional_resources"></a>Additional resources</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://book.cairo-lang.org/appendix-08-system-calls.html#send_message_to_l1" target="_blank" rel="noopener"><code>send_message_to_L1</code></a> syscall</p>
+</li>
+<li>
+<p><a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13"><code>sendMessageToL2</code></a> function on the Starknet Core Contract</p>
+</li>
+<li>
+<p>For more information on how messaging works within the Starknet Core Contract, including details on coding, see <a href="https://book.cairo-lang.org/ch16-04-L1-L2-messaging.html">L1-L2 Messaging</a> in <em>The Cairo Book: The Cairo Programming Language</em></p>
+</li>
+</ul>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../sharp/">SHARP</a></span>
-  <span class="next"><a href="../starkgate/">StarkGate</a></span>
+  <span class="prev"><a href="../fees/">Fees</a></span>
+  <span class="next"><a href="../staking/">Staking</a></span>
 </nav>
 </article>
   </div>
