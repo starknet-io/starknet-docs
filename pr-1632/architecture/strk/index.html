@@ -3,10 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Fee mechanism :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/fees/">
-    <link rel="prev" href="../data-availability/">
-    <link rel="next" href="../messaging/">
+    <title>The STRK token :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/strk/">
+    <link rel="prev" href="../state/">
+    <link rel="next" href="../transactions/">
+    <meta name="description" content="How token economics work in a block chain in general, and specifically in Starknet. The purpose of the Starknet token, its supply, and distribution.">
+    <meta name="keywords" content="tokenomics, STRK, token economics, economic mechanisms of Starknet">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,6 +309,11 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
+     href="../protocol-overview/">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
      href="../accounts/">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -324,15 +331,15 @@
        class="nav-link"
      href="../data-availability/">Data availability</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Fees</a>
+     href="../fees/">Fees</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../messaging/">L1-L2 messaging</a>
+     href="../messaging/">L1 ↔ L2 messaging</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -344,10 +351,10 @@
        class="nav-link"
      href="../state/">State</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="./">STRK</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,175 +522,22 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/fees.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/strk.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Fee mechanism"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "The STRK token"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Fee mechanism</h1>
-<div id="preamble">
-<div class="sectionbody">
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>This section describes fees that are paid on L2 starting in Starknet 0.13.0.</p>
-</div>
-<div class="paragraph">
-<p>For information about messaging fees that are paid on L1, see <a href="../messaging/#l1-l2-message-fees" class="xref page">L1→L2 message fees</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
+<h1 class="page">The STRK token</h1>
 <div class="sect1">
 <h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Every transaction on Starknet requires a small fee to process. The components contributing to this fee include <a href="#fee_components ">L2 computation, L2 data, and L1 data</a>, which are measured in <a href="#fee_resources">L2 gas, L1 gas, and L1 data gas</a>. A transaction&#8217;s fee can be <a href="#estimating_fees">estimated</a> and <a href="#fee_limits">limited</a>, and is ultimately <a href="#charging_fees">charged</a> based on a predefined <a href="#overall_fee">formula</a>.</p>
+<p><a href="#background">Similar to other blockchains</a>, Starknet uses the STRK token for <a href="#purposes">paying fees to enable operation of the network, maintaining and securing the network by enabling staking for consensus, and deciding on Starknet&#8217;s values and technology goals by voting for governance proposals</a>, of which <a href="#supply_and_distribution">ten billion tokens are planned to or have already been distributed</a>.</p>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="fee_components"><a class="anchor" href="#fee_components"></a>Fee components</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The following components contribute to a transaction&#8217;s fee:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="#l2_computation">L2 computation</a></p>
-</li>
-<li>
-<p><a href="#l2_data">L2 data</a> (calldata, events and code)</p>
-</li>
-<li>
-<p><a href="#l1_data">L1 data</a>, which includes:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>The cost of posting the state diffs induced by the transaction to L1 (for more details, see <a href="../data-availability/" class="xref page">Data availability</a>)</p>
-</li>
-<li>
-<p>L2→L1 messages (which are eventually sent to the Starknet core contract as L1 calldata by the Starknet sequencer)</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="fee_units"><a class="anchor" href="#fee_units"></a>Fee units</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The three components contributing to a transaction&#8217;s fee are measured by the following three units:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><em>L2 gas</em>, measuring L2 resources, including computation and data</p>
-</li>
-<li>
-<p><em>L1 data gas</em>, measuring the L1 data required to post the state diff induced by the transaction to L1</p>
-</li>
-<li>
-<p><em>L1 gas</em>, measuring the L1 gas required for sending L2→L1 messages, as well as replacing:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>L1 data gas, in case the L2 block in which the transaction was included uses calldata instead of blobs for data availability (for more details, see <a href="../data-availability/" class="xref page">Data availability</a>)</p>
-</li>
-<li>
-<p>L2 gas, in the case the transaction did not specify L2 gas bounds</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>There is a rather natural way to convert costs denominated in L1 gas to costs denominated in L2 gas and vice versa. One Cairo step costs 100 L2 gas, and we charge 0.0025 L1 gas per step
-when tracking VM resources (see <a href="#l2_computation">L2 computation</a> for more details), hence can decide that 1 L1 gas = 40,000 L2 gas.</p>
-</div>
-<div class="paragraph">
-<p>This is only a temporary measure to use existing prices (denominated in L1 gas) when the transaction consumes L2 gas, as L1 gas and L2 gas are completely independent resources. Moreover, the step cost of 0.0025 L1 gas
-is mostly arbitrary at this point due to our use of dynamic layouts (see <a href="#vm_resources">VM resources</a> for more information)</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="fee_estimations"><a class="anchor" href="#fee_estimations"></a>Fee estimations</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The fee for a transaction can be estimated by using the <a href="https://github.com/starkware-libs/starknet-specs/blob/v0.7.1/api/starknet_api_openrpc.json#L612" target="_blank" rel="noopener"><code>starknet_estimateFee</code> endpoint</a>, and interfaces for fee estimations are also exposed by the various <a href="../../tools/interacting-with-starknet/#sdks" class="xref page">Starknet SDKs</a>.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>When signing resource bounds for all three resource types — the only supported option when sending the transaction via Starknet&#8217;s JSON-RPC v0.8.0 onwards, and the only supported option in Starknet v0.14.0 —
-the fee estimation response is easily mapped to the transaction&#8217;s fields (i.e., the response contains price and amounts for <a href="#fee_resources">all three resources</a>, and the transaction is expected to specify bounds and max prices for each of them).</p>
-</div>
-<div class="paragraph">
-<p>On the other hand, when submitting transactions via Starknet&#8217;s JSON-RPC v0.7.1 or below, the only bounded resource is L1 gas, while the fee estimation contains both L1 gas and L1 data gas.
-In that case, we can use the estimation&#8217;s <code>overall_fee</code> to decide on the L1 gas bounds.</p>
-</div>
-<div class="paragraph">
-<p>You can find more details in the <a href="https://community.starknet.io/t/starknet-v0-13-1-pre-release-notes/113664#sdkswallets-how-to-use-the-new-fee-estimates-7" target="_blank" rel="noopener">Starknet v0.13.1 prerelease notes</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="fee_limits"><a class="anchor" href="#fee_limits"></a>Fee limits</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Starting in Starknet v0.14.0, all transactions must specify STRK-denominated <code>max_amount</code> and <code>max_price_per_unit</code> for each of <a href="#fee_units">fee unit</a> (as part of the <code>resource_bounds</code> dictionary), and sequencers are enforced (by <a href="../os/" class="xref page">SNOS</a>) not to charge fees the exceed the max prices specified in the transaction.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="fee_charges"><a class="anchor" href="#fee_charges"></a>Fee charges</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The fee for a transaction is charged atomically with the transaction execution on L2, by the Starknet OS injecting a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="fee_formula"><a class="anchor" href="#fee_formula"></a>Fee formula</h2>
-<div class="sectionbody">
 <div class="admonitionblock important">
 <table>
 <tr>
@@ -692,268 +546,15 @@ In that case, we can use the estimation&#8217;s <code>overall_fee</code> to deci
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Starknet&#8217;s fee formula is highly non-trivial.</p>
-</div>
-<div class="paragraph">
-<p>To mitigate this, the first section details the formula for determining a transaction&#8217;s overall fee, while subsequent ones dive into the different fee components and explain how this formula was derived.</p>
-</div>
-<div class="paragraph">
-<p>Some parts may require reading more than once, but don&#8217;t hesitate to <a href="https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&amp;title=Feedback%20for%20%22The%20Starknet%20operating%20system%22" target="_blank" rel="noopener">reach out</a> if you feel further clarification is needed.</p>
+<p>The primary purpose of the Starknet token, STRK, is to facilitate operations and activities on Starknet and it is not intended to serve as an investment.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
 <div class="paragraph">
-<p>While sequencer are <a href="#fee_limits">enforced not to overcharge fees</a>, they are not yet enforced to charge fees charged according to Starknet&#8217;s fee formula.</p>
+<p>The economic mechanisms of STRK, also known as <em>tokenomics</em>, <a href="#risks_and_disclaimers">are subject to change based on governance decisions made by the larger community of Starknet and are described here for informational purposes only</a>.</p>
 </div>
-</td>
-</tr>
-</table>
-</div>
-<div class="sect2">
-<h3 id="overall_fee"><a class="anchor" href="#overall_fee"></a>Overall fee</h3>
-<div class="paragraph">
-<p>The following formula describes the overall fee of a transaction:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[\begin{align}
-\qquad &amp; \text{l1_gas_price} \cdot\Bigg( \\
-&amp; \qquad \text{message_calldata_cost}\cdot 3t \; + \\
-&amp; \qquad \; (\text{message_calldata_cost} + \text{l1_log_data_cost})\cdot \sum\limits_{i=1}^t q_i \; + \\
-&amp; \qquad \; \left(\text{l1_storage_write_cost}+\text{log_message_to_l1_cost}\right)\cdot t \\
-&amp; \Bigg) + \; \text{l2_gas_price} \cdot (\text{sierra_gas_consumed} + \max_k v_k w_k + \text{l2_payload_costs}) \\
-&amp; \quad + \; \begin{cases}\text{l1_data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\big(\ell + 2(n-1) + 2(m-1) + 2D \big) &amp; \text{if l1_da_mode is BLOB} \\ \\ \text{l1_gas_price} \cdot \Big( \\ \qquad \text{da_calldata_cost} \cdot \left(\ell + 2(n-1)+2(m-1) + 2D\right) \; - \\ \qquad \text{contract_update_discount}\cdot (n-1) \; - &amp; \text{if l1_da_mode is CALLDATA} \\ \qquad \text{sender_balance_update_discount} \\ \Big)\end{cases}
-\end{align}\]
-</div>
-</div>
-<div class="paragraph">
-<p>where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(\text{l1_gas_price}\) is the L1 gas price of the block that includes the transaction (see <a href="#gas_prices">Gas prices</a> for more information)</p>
-</li>
-<li>
-<p>\(\text{message_calldata_cost}\) is 1,124 gas</p>
-</li>
-<li>
-<p>\(t\) is the number of L2&#8594;L1 messages sent by the transaction</p>
-</li>
-<li>
-<p>\(\text{l1_log_data_cost}\) is 256 gas</p>
-</li>
-<li>
-<p>\(t\) \(q_1,...,q_t\) are the payload sizes of the L2&#8594;L1 messages sent by the transaction</p>
-</li>
-<li>
-<p>\(\text{l1_storage_write_cost}\) is 20,000 gas (the cost of writing to a new storage slot on Ethereum)</p>
-</li>
-<li>
-<p>\(\text{log_message_to_l1_cost}\) is 1,637 gas (see <a href="#l2l1_messages">L2&#8594;L1 messages</a> for more information)</p>
-</li>
-<li>
-<p>\(\text{l2_gas_price}\) is the L2 gas price of the block that includes the transaction (see <a href="#gas_prices">Gas prices</a> for more information)</p>
-</li>
-<li>
-<p>\(\text{sierra_gas_consumed}\) is the amount of <a href="#sierra_gas">Sierra gas</a> charged for computation of the transaction</p>
-</li>
-<li>
-<p>\(v\) is a vector that represents resource usage of the transaction (Cairo steps or number of applications of each builtin), where each of its entries, \(v_k\), corresponds to the usage of a different resource type (see <a href="#vm_resources">VM resources</a> for more information)</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The fee formula of a transaction can track both raw VM resources (reflected by \(v_k\)) and Sierra gas, depending on what classes it goes through (see <a href="#l2_computation">L2 computation</a> for more details).</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>\(w\) is the <code>CairoResourceFeeWeights</code> vector (see <a href="#vm_resources">VM resources</a> for more information)</p>
-</li>
-<li>
-<p>\(\text{l2_payload_costs}\) is the gas cost of the data sent by the transaction over Starknet, which includes calldata, code, and event emission (see <a href="#l2_data">L2 data</a> for more information)</p>
-</li>
-<li>
-<p>\(\text{l1_da_mode}\) is \(\text{CALLDATA}\) or \(\text{BLOB}\) depending on how the state diff of the block that includes the transaction is sent to L1 (see <a href="../data-availability/" class="xref page">Data availability</a> for more information)</p>
-</li>
-<li>
-<p>\(\text{l1_data_gas_price}\) is the L1 data gas price of the block that includes the transaction (see <a href="#gas_prices">Gas prices</a> for more information)</p>
-</li>
-<li>
-<p>\(\text{felt_size_in_bytes}\) is 32 (the number of bytes required to encode a single STARK field element)</p>
-</li>
-<li>
-<p>\(\ell\) is the number of contracts whose class was changed by the transaction, which happens on contract deployment and when applying the <code>replace_class</code> syscall</p>
-</li>
-<li>
-<p>\(n\) is the number of unique contracts updated by the transaction, which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched (in other words, \(n\ge\ell\))</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Notice that \(n\ge 1\) always holds, because the fee token contract is always updated, which does not incur any fee.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>\(m\) is the number of storage values updated by the transaction, not counting multiple updates for the same key</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Notice that \(m\ge 1\) always holds, because the sequencer&#8217;s balance is always updated, which does not incur any fee.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>\(D\) is 1 if the transaction is of type <code>DECLARE</code> and 0 otherwise, as declare transactions need to post on L1 the new class hash and compiled class hash which are added to the state</p>
-</li>
-<li>
-<p>\(\text{da_calldata_cost}\) is 551 gas, derived as follows:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>512 gas per 32-byte word for calldata</p>
-</li>
-<li>
-<p>~100 gas for onchain hashing that happens for every word sent</p>
-</li>
-<li>
-<p>a 10% discount for not incurring additional costs for repeated updates to the same storage slot within a single block</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>\(\text{contract_update_discount}\) is 312 gas (See <a href="#storage_updates">Storage updates</a> for more information)</p>
-</li>
-<li>
-<p>\(\text{sender_balance_update_discount}\) is \(240\) gas (see <a href="#storage_updates">Storage updates</a> for more information)</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="gas_prices"><a class="anchor" href="#gas_prices"></a>Gas prices</h3>
-<div class="paragraph">
-<p>Each Starknet block has three integers associated with it: <code>l1_gas_price</code>, <code>l2_gas_price</code>, and <code>l1_data_gas_price</code>, which are defined as follows:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>l1_gas_price</code> is the average of the last 60 L1 base gas prices sampled by the Starknet sequencer every 60 seconds, plus 1 Gwei</p>
-</li>
-<li>
-<p><code>l1_data_gas_price</code> is the average of the last 60 L1 base data gas prices sampled by the Starknet sequencer every 60 seconds, divided by a scaling factor of 0.135 that approximate for the average rate compression achieved from posting the data to Ethereum</p>
-</li>
-<li>
-<p><code>l2_gas_price</code> is defined by:</p>
-<div class="stemblock">
-<div class="content">
-\[\max\left\{(1 + \frac{\text{prev_L2_gas_use} - \text{TARGET}}{\text{TARGET}}*C)* \text{prev_L2_gas_price}, \text{MIN_PRICE}\right\}\]
-</div>
-</div>
-<div class="paragraph">
-<p>where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(\text{prev_L2_gas_use}\) is the total L2 gas used in the previous block</p>
-</li>
-<li>
-<p>\(\text{TARGET}\) is ??? (half of Starknet&#8217;s block capacity)</p>
-</li>
-<li>
-<p>\(C\) is ???</p>
-</li>
-<li>
-<p>\(\text{prev_L2_gas_price}\) is the previous block&#8217;s <code>l2_gas_price</code></p>
-</li>
-<li>
-<p>\(\text{MIN_PRICE}\) is ???</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>assuring that:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>If the total gas used in the previous block is equal to \(\text{TARGET}\), then <code>l2_gas_price</code> won&#8217;t change</p>
-</li>
-<li>
-<p>If the total gas used in the previous block is larger or smaller than \(\text{TARGET}\), then <code>l2_gas_price</code> will respectively decrease or increase by at most \(C\)</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="l2_computation"><a class="anchor" href="#l2_computation"></a>L2 computation</h3>
-<div class="paragraph">
-<p>Measuring the L2 computation component of a transaction differs depending on the contract class version of the caller:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>For Sierra ≥ 1.7.0, computation is measured in <a href="#sierra_gas">Sierra gas</a></p>
-</li>
-<li>
-<p>For CairoZero classes or Sierra ≤ 1.6.0, computation is measured in <a href="#vm_resources">VM resources</a></p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Sierra gas is only tracked if the parent call was also tracking Sierra gas, which means that if the account contract is Sierra 1.6.0 or older, VM resources will be tracked <strong>throughout the entire transaction</strong>. This condition may be relaxed in the future.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-</ul>
-</div>
-<div class="sect3">
-<h4 id="sierra_gas"><a class="anchor" href="#sierra_gas"></a>Sierra gas</h4>
 <div class="admonitionblock tip">
 <table>
 <tr>
@@ -962,284 +563,136 @@ In that case, we can use the estimation&#8217;s <code>overall_fee</code> to deci
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The following is a very rough description of Sierra&#8217;s built-in gas accounting mechanism. For a comprehensive analysis, see <a href="https://github.com/starkware-libs/cairo/blob/main/docs/other/gas_blog_post.pdf" target="_blank" rel="noopener"><em>Analysis of the gas accounting algorithm of Cairo 1.0</em> by CryptoExperts</a>.</p>
+<p>For more details on Starknet&#8217;s governance processes, see the <a href="https://governance.starknet.io/" target="_blank" rel="noopener">Starknet Governance Hub</a>.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="background"><a class="anchor" href="#background"></a>Background</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>A Sierra program has a simple structure: types and function declaration, followed by a sequence of applications of <em>libfuncs</em>, Sierra&#8217;s basic logical units (similar to opcodes, e.g. <code>u8_add</code> is a libfunc).</p>
+<p>Blockchains are valuable because they are data structures maintained by diverse and, ideally, large groups of otherwise unaffiliated persons. This gives them resilience: Any one participant can disappear, but the data structure is preserved. This also gives them censorship resistance: No single person can unilaterally decide to forbid certain persons from using the network.</p>
 </div>
 <div class="paragraph">
-<p>The Cairo compiler defines a libfunc costs table, which is measured in “Sierra gas” and has a 1-1 ratio with L2 gas (i.e., a libfunc which costs 500 Sierra gas adds 500 to a transaction&#8217;s overall L2 gas)</p>
+<p>To achieve this, blockchains work through a combination of cryptography and economic incentives: Cryptography limits what actors in the system can do (for example, transactions must be validly signed to be included in the chain) and economic incentives encourage actors to voluntarily perform actions that maintain the network&#8217;s capabilities when spending their own resources (for example, miners or stakers actively publish new blocks to the chain because they can receive fees and new tokens as a reward).</p>
 </div>
-<div class="admonitionblock note">
+<div class="paragraph">
+<p>Starknet achieves secure low-cost transactions by using the STARK cryptographic proof system to reduce the size of transaction data while preserving and verifying the integrity of that data. To achieve resilience and censorship resistance, Starknet uses the STRK token to incentivize network participants to sequence transactions for users of the network and to ensure that there is a provably fair proof-of-stake mechanism to determine who should sequence and submit a proof for the network blocks.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="purposes"><a class="anchor" href="#purposes"></a>Purposes</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Transaction fees:</strong> Originally, fees in Starknet were paid only in Ether (ETH). As of v.0.13.0, fees for transactions on the network can be paid using STRK, as well as ETH.</p>
+<div class="paragraph">
+<p>A portion of the fees paid in STRK are converted to ETH by the receiving sequencer, in order to cover Ethereum L1 gas costs, which, due to the specifications of the Ethereum protocol, must be paid in ETH.</p>
+</div>
+</li>
+<li>
+<p><strong>Staking:</strong> Certain services that are critical to the liveness and security of Starknet may require the staking of Starknet tokens. These services might be offered by multiple providers, and could include sequencing, reaching temporary L2 consensus before L1 finality is reached, STARK-proving services, and data availability provisioning, to name a few examples. These <a href="https://starkware.co/resource/starknet-decentralization-a-roadmap-in-broad-strokes/">protocol changes</a> are still under discussion within the larger governance community and are targeted for <a href="https://starkware.co/resource/starknet-decentralization-a-roadmap-in-broad-strokes/">2024 -2025</a>.</p>
+</li>
+<li>
+<p><strong>Governance:</strong> Proposals for improving Starknet might require a minimal token support threshold. Voting, either directly or via delegation, will be required for changes to the protocol that are essential to Starknet&#8217;s liveness, security, and maintenance. Today, for example, major updates to the Starknet Operating System require the approval of token holders.
+For more information about Governance see the <a href="https://governance.starknet.io/">Starknet Governance Hub</a></p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock important">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-note" title="Note"></i>
+<i class="fa icon-important" title="Important"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Despite the 1-1 ratio between Sierra gas and L2 gas, L2 gas accounts for “everything L2”, while Sierra gas strictly deals with computation, hence the distinction in terminology.</p>
+<p>As discussed above, the Starknet tokens are digital assets intended to support the operation and usage of Starknet and are not offered as an investment. As such, the Starknet tokens do not represent any equity in StarkWare or the Starknet Foundation, nor do they provide any participation right in StarkWare or grant any right of claim from StarkWare or the Starknet Foundation.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-<div class="paragraph">
-<p>The cost of each libfunc is determined by its expanded CASM generated via the Sierra→CASM compiler based on a 100-1 ratio with Cairo steps (i.e., if a libfunc&#8217;s assembly includes 10 Cairo steps, it will cost 1000 Sierra gas), while the costs of the various builtins are defined as follows:</p>
 </div>
-<table class="tableblock frame-all grid-all fit-content stretch">
+</div>
+<div class="sect1">
+<h2 id="supply_and_distribution"><a class="anchor" href="#supply_and_distribution"></a>Supply and distribution</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Ten billion Starknet tokens were initially created by StarkWare in May 2022 and minted onchain on November 30, 2022.</p>
+</div>
+<div class="paragraph">
+<p>The existing ten billion tokens have been or are planned to be distributed according to the following:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col>
-<col>
-<col>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
 </colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Builtin</th>
-<th class="tableblock halign-left valign-top">Sierra gas cost</th>
-<th class="tableblock halign-left valign-top"></th>
-</tr>
-</thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Range check</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">70</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>20.04%: Early Contributors</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for StarkWare&#8217;s team members and early contributors. These tokens are subject to a lock-up schedule, as further detailed below.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Pedersen</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">4,050</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>18.17%: Investors</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for StarkWare&#8217;s investors. These tokens are subject to a lock-up schedule, as further detailed below.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Poseidon</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">491</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>10.76%: StarkWare</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for StarkWare for operation services such as to pay fees, provide other services on Starknet, and engage other service providers.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Bitwise</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">583</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>12.93%: Grants including Development Partners (aka DPs)</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for grants for research or work done to develop, test, deploy and maintain the Starknet protocol. The process for applications and allocations related to Starknet Foundation Grants will be outlined in a post at a later date.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ECDSA</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">10,561</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>9.00%: Community Provisions</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens distributed to those who contributed to Starknet and powered or developed its underlying technology.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">EC_OP</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">4,085</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>9.00%: Community Rebates</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for rebates in Starknet tokens to partially cover the costs of onboarding to Starknet from Ethereum. Community rebates are not yet available and will be announced in 2024 in a subsequent post.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Keccak</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">136,189</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>10.00%: Foundation Strategic Reserves</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens allocated for the Starknet Foundation to fund ecosystem activities that are aligned with the <a href="https://www.starknet.io/en/content/introducing-the-starknet-foundation">Foundation&#8217;s mission</a>.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ADD_MOD</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">230</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>8.10%: Foundation Treasury</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Token allocated for the Starknet Foundation&#8217;s treasury available for operations and other future initiatives by the Starknet Foundation.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">MUL_MOD</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">604</p></td>
-<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>2.00%: Donations</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Tokens reserved for donations to institutions and organizations, such as universities, NGOs, etc, as decided by the Starknet Foundation.</p></td>
 </tr>
 </tbody>
 </table>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-tip" title="Tip"></i>
-</td>
-<td class="content">
 <div class="paragraph">
-<p>To review pricing for various syscalls, see the <code>versioned constants.json</code> files in the <a href="https://github.com/starkware-libs/sequencer/tree/main/crates/blockifier/resources" target="_blank" rel="noopener">sequencer&#8217;s resources directory</a>.</p>
-</div>
-</td>
-</tr>
-</table>
+<p><span class="image"><img src="../_images/planned_distribution_STRK.jpg" alt="Planned distribution of STRK"></span></p>
 </div>
 <div class="paragraph">
-<p>To handle gas usage, Sierra has special libfuncs for gas-handling, such as the <code>withdraw_gas</code> libfunc. For functions with neither branching nor recursion, the Cairo→Sierra compiler adds a single <code>withdraw_gas(C)</code> call in the beginning of the function, where <code>C</code> is the sum over the costs of the libfuncs included in the function. For functions with branching, the compiler adds a call to <code>withdraw_gas(C)</code> before the actual branching, where <code>C</code> is the maximal branch cost.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>In its latest version, the compiler also adds a call to <code>redeposit_gas(C)</code> on the cheaper branches, where <code>C</code> is unused gas on that branch.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>For functions with recursion (or other cases where costs can only be known in runtime), things get trickier.
-The naive way to handle such cases would be to add a <code>withdraw_gas</code> instruction after every libfunc, but since <code>withdraw_gas</code> itself has some cost (decreasing a counter and handling the insufficient gas case) this would incur a large burden on the program.
-Instead, the compiler constructs the call graph induced by the program, and asserts that every cycle includes a <code>withdraw_gas(X)</code> instruction, where <code>X</code> should cover the cost of a single run through the cycle, greatly reducing the overhead compared to the naive mechanism.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="vm_resources"><a class="anchor" href="#vm_resources"></a>VM resources</h4>
-<div class="paragraph">
-<p>A Cairo program execution yields an execution trace, and when proving a Starknet block, we aggregate all the transactions appearing in that block to the execution trace up to some maximal length \(L\), derived from the specs of the proving machine and the desired proof latency.</p>
-</div>
-<div class="paragraph">
-<p>Tracking the execution trace length associated with each transaction is simple, as Cairo step requires the same constant number of trace cells. Therefore, in a world without builtins, the fee associated with the L2 computation component of a transaction \(tx\) should be correlated with \(\text{TraceCells}[tx]/L\).</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The aforementioned observation is no longer true for Starknet&#8217;s next-gent prover Stwo, which handles some opcodes more efficiently than others. However, we neglect this intricacy for the purposes of this discussion.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>When we introduce builtins into the equation, we need to consider an a priori limit for each builtin in the proof. This set of limits is known as the proof&#8217;s <em>layout</em>, which determines the ratio between steps and each builtin.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Today, Starknet&#8217;s prover is able to dynamically choose a layout based on a given block resource&#8217;s consumption, i.e. there is no longer an a priori fixed layout.
-However, pricing for old classes still behaves as if we are using a fixed layout.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>For example, consider that the prover can process a trace with the following limits:</p>
-</div>
-<table class="tableblock frame-all grid-all fit-content">
-<colgroup>
-<col>
-<col>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Up to 500M Cairo steps</th>
-<th class="tableblock halign-left valign-top">Up to 20M Pedersen hashes</th>
-<th class="tableblock halign-left valign-top">Up to 4M signature verifications</th>
-<th class="tableblock halign-left valign-top">Up to 10M range checks</th>
-</tr>
-</thead>
-</table>
-<div class="paragraph">
-<p>which means that a proof is closed and sent to L1 when any of these slots is filled. Now, suppose that a transaction uses 10K Cairo steps and 500 Pedersen hashes. At most 20M/500 = 40K such transactions can fit into the hypothetical trace, therefore its gas price should correlate with 1/40K of the cost of submitting proof (notice that this estimate ignores the number of Cairo steps as it is not the limiting factor, since 500M/10K &gt; 20M/500).</p>
-</div>
-<div class="paragraph">
-<p>With this example in mind, it is possible to formulate the exact fee associated with L2 computation. For each transaction,
-the sequencer calculates a vector, <code>CairoResourceUsage</code>, that contains the following:</p>
+<p>To align long-term incentives of the Investors and Early Contributors with the interests of the Starknet community, and following common practice in decentralized ecosystems, all tokens allocated to Investors and Early Contributors is subject to the following lock-up schedule, where percentages are based on the total token supply:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>The number of Cairo steps</p>
+<p>Up to 0.64% (64 million tokens) will be unlocked on the 15th of each month, starting April 15, 2024, and going through March 15, 2025, for a total of 7.68% (768 million tokens) unlocked by March 15, 2025.<br></p>
 </li>
 <li>
-<p>The number of applications of each Cairo builtin (e.g., 5 range checks and 2 Pedersen hashes)</p>
+<p>Up to 1.27% (127 million tokens) will be unlocked on the 15th of each month, starting April 15, 2025, and going through March 15, 2027, for a total of 30.48% (3.048 billion tokens) unlocked by March 15, 2027.</p>
 </li>
 </ul>
 </div>
-<div class="paragraph">
-<p>and crosses this information with a <code>CairoResourceFeeWeights</code> vector, a predefined weights vector in accordance with the proof parameters, in which each resource type has an entry that specifies the relative gas cost of that component in the proof. The sequencer then charges only according to the limiting factor, making the final fee defined by:</p>
-</div>
-<div class="stemblock">
+<div class="imageblock">
 <div class="content">
-\[\max_k[\text{CairoResourceUsage}_k \cdot \text{CairoResourceFeeWeights}_k]\]
-</div>
-</div>
-<div class="paragraph">
-<p>where \(k\) enumerates the Cairo resource components. Going back to the above example, if the cost of submitting a proof with 20M Pedersen hashes is roughly 5M gas, then the weight of the Pedersen builtin is 5,000,000/20,000,0000 = 25 gas per application.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="vm_resources_vs_sierra_gas"><a class="anchor" href="#vm_resources_vs_sierra_gas"></a>VM resources vs. Sierra gas</h4>
-<div class="paragraph">
-<p>The difference in tracking Sierra gas vs. tracking VM resources can be summed up as follows:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>For VM resources builtin weights reflect the proof layout, while for Sierra gas they reflect trace cell consumption</p>
-</li>
-<li>
-<p>For VM resources only the maximal resource (e.g., most used builtin) is considered, while for Sierra gas the sum of all resources (i.e., all libfuncs) is considered</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>This means that when the tracking Sierra gas, step-heavy transactions will most likely be slightly more expensive, as builtins will be taken into account <em>in addition</em> to Cairo steps. On the other hand, builtin-heavy transactions will become much cheaper — depending on the builtin that maximized the old fee and with the exception of the Pedersen builtin.</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="l1_data"><a class="anchor" href="#l1_data"></a>L1 data</h3>
-<div class="sect3">
-<h4 id="storage_updates"><a class="anchor" href="#storage_updates"></a>Storage updates</h4>
-<div class="paragraph">
-<p>Whenever a transaction updates some value in the storage of some contract, the following data is sent to L1:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>One 32-bye word if the transaction is a <code>DEPLOY</code> transaction (since we need to specify the deployed contract&#8217;s class hash)</p>
-</li>
-<li>
-<p>Two 32-byte words per contract</p>
-</li>
-<li>
-<p>Two 32-byte words for every updated storage value</p>
-</li>
-</ul>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Only the most recent value reaches L1, making the transaction&#8217;s fee depend on the number of <em>unique</em> storage updates. If the same storage cell is updated multiple times within the transaction, the fee remains that of a single update.</p>
-</div>
-<div class="paragraph">
-<p>For information on the exact data and its construction, see <a href="../data-availability/#v0.11.0_format" class="xref page">Data availability</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>Therefore, the storage update fee for a transaction is defined as follows:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[\text{data_gas_price}\cdot\text{felt_size_in_bytes}\cdot\bigg(\ell + 2(n-1) + 2(m-1) + 2D \bigg)\]
+<img src="../_images/STRK_estimated_circulating_supply.jpg" alt="Estimated supply of STRK in circulation">
 </div>
 </div>
 <div class="admonitionblock note">
@@ -1250,187 +703,61 @@ the sequencer calculates a vector, <code>CairoResourceUsage</code>, that contain
 </td>
 <td class="content">
 <div class="paragraph">
-<p>This formula only refer to the case of submitting data to L1 via blobs, for the calldata case, see <a href="#overall_fee">Overall fee</a>).</p>
+<p>The above graph excludes newly circulating tokens resulting from inflation or staking (see below).</p>
+</div>
+<div class="paragraph">
+<p>Token allotments currently retained by the Starknet Foundation, while contractually unlocked, are not considered circulating unless granted, donated, or otherwise allocated out of originating wallets through future grants, provisions, donations, developer initiatives, or other programs.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(\text{felt_size_in_bytes}\) is 32, which is the number of bytes required to encode a single STARK field element.</p>
-</li>
-<li>
-<p>\(\ell\) is the number of contracts whose class was changed, which happens on contract deployment and when applying the <code>replace_class</code> syscall.</p>
-</li>
-<li>
-<p>\(n\) is the number of unique contracts updated, which also includes changes to classes of existing contracts and contract deployments, even if the storage of the newly deployed contract is untouched. In other words, \(n\ge\ell\). Notice that \(n\ge 1\) always holds, because the fee token contract is always updated, which does not incur any fee.</p>
-</li>
-<li>
-<p>\(m\) is the number of values updated, not counting multiple updates for the same key. Notice that \(m\ge 1\) always holds, because the sequencer&#8217;s balance is always updated, which does not incur any fee.</p>
-</li>
-<li>
-<p>\(D\) is 1 if the transaction is of type <code>DECLARE</code> and 0 otherwise. Declare transactions need to post on L1 the new class hash and compiled class hash which are added to the state.</p>
-</li>
-</ul>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Improvements to the above pessimistic estimation might be gradually implemented in future versions of Starknet.</p>
+<p>Through this lock-up period, token holders cannot transfer, sell, or pledge their STRK tokens. Delegation of voting is permitted with locked tokens and, when available, staking might also be permitted.</p>
 </div>
 <div class="paragraph">
-<p>For example, if different transactions within the same block update the same storage cell, there is no need to charge for both transactions, because only the last value reaches L1. In the future, Starknet might include a refund mechanism for such cases.</p>
-</div>
-</td>
-</tr>
-</table>
+<p>The total circulating supply of tokens is planned to increase over time with the minting of new tokens by the protocol, as staking rewards, block rewards, or other rewards associated with the staking process. Such minting will be made pursuant to a schedule that will be determined with the community at a later point, not before Starknet services are more decentralized. The supply in circulation might not, therefore, remain fixed. However, as long as StarkWare is the sole operator of the Starknet sequencer, there will be no issuance of new tokens for the purpose of block rewards. For more information, see <a href="https://starkware.co/resource/a-token-minting-proposal-to-manage-inflation/" target="_blank" rel="noopener"><em>A token-minting proposal to manage inflation</em></a>.</p>
 </div>
 </div>
-<div class="sect3">
-<h4 id="l2l1_messages"><a class="anchor" href="#l2l1_messages"></a>L2&#8594;L1 messages</h4>
+</div>
+<div class="sect1">
+<h2 id="risks_and_disclaimers"><a class="anchor" href="#risks_and_disclaimers"></a>Risks and disclaimers</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>When a transaction that raises the <code>send_message_to_l1</code> syscall is included in a state update, the following data reaches L1:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>L2 sender address</p>
-</li>
-<li>
-<p>L1 destination address</p>
-</li>
-<li>
-<p>Payload size</p>
-</li>
-<li>
-<p>Payload (list of field elements)</p>
-</li>
-</ul>
+<p>Starknet is a developing decentralized protocol and the economic mechanisms described herein are subject to change based on decisions made by the larger community of Starknet builders and users. Starknet relies upon third parties to adopt and implement software and protocols as users and contributors of Starknet. It also relies, in whole or partly, on third parties to develop, supply and otherwise support it. There is no assurance or guarantee that such third parties will continue to participate in the network or that the network will continue to function as intended.</p>
 </div>
 <div class="paragraph">
-<p>Therefore, the gas cost associated with a single L2→L1 message is defined as follows:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[\qquad \text{message_calldata_cost} \cdot \left(3+\text{payload_size}\right) \; + \text{l1_log_data_cost}\cdot\text{payload_size} \; + \text{log_message_to_l1_cost} \; + \text{l1_storage_write_cost} \qquad\]
-</div>
+<p>The technical documents provided herein describe certain planned and specified economic fundamentals of a digital asset, STRK. These materials are intended for informational purposes only and are meant to outline the usage and functionalities of the asset within Starknet. It is important to understand that the primary purpose of STRK is to pay for fees, provide a mechanism for securing consensus, and allow for decentralized governance on Starknet; it is not intended to serve as an investment.</p>
 </div>
 <div class="paragraph">
-<p>Where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(\text{message_calldata_cost}\) is 1,124 gas, which is the sum of the 512 gas for submitting the state update to the core contract and 612 gas for the submitting the state update the verifier contract (which incurs ~100 additional gas for hashing)</p>
-</li>
-<li>
-<p>\(\text{l1_log_data_cost}\) is 256 gas, paid for every payload element during the emission of the <code>LogMessageToL1</code> event</p>
-</li>
-<li>
-<p>\(\text{log_message_to_l1_cost}\) is 1,637 gas, which is the fixed cost involved in emitting a <code>LogMessageToL1</code> event with two topics and a two words data array, resulting in a total of \(375+2\cdot 375+2\cdot 256\) gas (log opcode cost, topics cost, and data array cost)</p>
-</li>
-<li>
-<p>\(\text{l1_storage_write_cost}\) is 20K gas per message, paid in order to store the message hash on the Starknet core contract and enable the target L1 contract to consume the message</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="l2_data"><a class="anchor" href="#l2_data"></a>L2 data</h3>
-<div class="paragraph">
-<p>As of Starknet v0.13.1 onwards, L2 data is also taken into account during pricing, including:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Calldata, including transaction calldata (in the case of <code>INVOKE</code> transactions or <code>L1_HANDLER</code>), constructor calldata (in the case of <code>DEPLOY_ACCOUNT</code> transactions), and signatures</p>
-</li>
-<li>
-<p>Events, including data and keys of emitted events</p>
-</li>
-<li>
-<p>ABI, including classes ABI in <code>DECLARE</code> transactions (only relevant for <code>DECLARE</code> transactions of version ≥ 2)</p>
-</li>
-<li>
-<p>Casm bytecode (for all available <code>DECLARE</code> transactions, where in version &lt; 2 this refers to the compiled class)</p>
-</li>
-<li>
-<p>Sierra bytecode (relevant only for <code>DECLARE</code> transactions of version ≥ 2)</p>
-</li>
-</ul>
+<p>Starknet relies upon third parties to adopt and implement the software and protocols as users of Starknet. It also relies, in whole or partly, on third parties to develop, supply and otherwise support it. As a Layer 2 network over Ethereum, Starknet also relies upon third parties maintaining and operating the Ethereum network. There is no assurance or guarantee that those third parties will complete their work, properly carry out their obligations, and/or otherwise meet anyone&#8217;s needs.</p>
 </div>
 <div class="paragraph">
-<p>The L1 gas cost of each component in as follows:</p>
+<p>STRK, as the native token of Starknet, may be subject to the risks of the Starknet network, including, without limitation, the following: (i) the technology associated with Starknet may not function as intended; (ii) the details of the Starknet token economics including the total supply and distribution schedule may be changed due to decisions made by the consensus of participants of the Starknet network; (iii) Starknet may fail to attract sufficient interest from key stakeholders or users; (iv) Starknet may not progress satisfactorily and Starknet tokens may not be useful or valuable; (v) Starknet may suffer from attacks by hackers or other individuals; and (vi) Starknet is comprised of open-source technologies that depend on a network of computers to run certain software programs to process transactions, and because of this model StarkWare and the Starknet Foundation have limited control over Starknet.</p>
 </div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
 <div class="paragraph">
-<p>When a transaction&#8217;s L2 cost is paid for by L2 gas, the following numbers are translated via the standard conversion rate of 1 L1 gas = 40K L2 gas.</p>
+<p>Risks related to blockchain technology in general and Starknet in particular may impact the usefulness of Starknet, and, in turn, the utility or value of STRK. The software and hardware, technology and technical concepts and theories applicable to Starknet and STRK are still in an early development stage and unproven, there is no warranty that Starknet will achieve any specific level of functionality or success, nor that the underlying technology will be uninterrupted or error-free, and there is an inherent risk that the technology could contain weaknesses, vulnerabilities or bugs causing, potentially, the complete loss of any Starknet tokens held by Starknet users.</p>
 </div>
-</td>
-</tr>
-</table>
+<div class="paragraph">
+<p>As with most commonly used public blockchains, STRK is accessed using a private key that corresponds to the address at which they are stored. If the private key, or the "seed" used to create the address and corresponding private key are lost or stolen, the tokens associated with that address might be unrecoverable and will be permanently lost.</p>
 </div>
-<table class="tableblock frame-all grid-all fit-content stretch">
-<colgroup>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Resource</th>
-<th class="tableblock halign-left valign-top">L2 Gas cost</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Event key</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">10,240 gas/felt</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Event data</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">5,120 gas/felt</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Calldata</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">5,120 gas/felt</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">CASM bytecode</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">40,000 gas/felt</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Sierra bytecode</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">40,000 gas/felt</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ABI</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1,280 gas/character</p></td>
-</tr>
-</tbody>
-</table>
+<div class="paragraph">
+<p>Public blockchain-based systems, including Starknet and the underlying Ethereum network, depend on independent verifiers, and therefore may be vulnerable to consensus attacks including, but not limited to, double-spend attacks, majority voting power attacks, race condition attacks, and censorship attacks. These attacks, if successful, could result in the permanent loss of STRK.</p>
+</div>
+<div class="paragraph">
+<p>Starknet, STRK, and blockchain technology are nascent, and there may be additional risks not described above or that may be new or unanticipated. We recommend only using Starknet or holding STRK if you are familiar with the technology and aware of the risks.</p>
+</div>
+<div class="paragraph">
+<p>This document and its contents are not, and should not be construed as, an offer to sell, or the solicitation of an offer to buy, any tokens, nor should it or any part of it form the basis or be relied on in connection with any contract or commitment whatsoever. This document is not advice of any kind, including legal, investment, financial, tax, or any other professional advice. Nothing in this document should be read or interpreted as a guarantee or promise of how the Starknet network or its STRK will develop, be utilized, or accrue value.</p>
+</div>
+<div class="paragraph">
+<p>All information in this document is provided on an “as is” basis without any representation or warranty of any kind. This document only outlines current plans, which could change at the discretion of various parties, and the success of which will depend on many factors outside of Starknet Foundation&#8217;s control. Such future statements necessarily involve known and unknown risks, which may cause actual performance and results in future periods to differ materially from what we have described or implied in this document. StarkWare and the Starknet Foundation disclaim all warranties, express or implied, to the fullest extent permitted by law with respect to the functionality of Starknet and STRK.</p>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../data-availability/">Data availability</a></span>
-  <span class="next"><a href="../messaging/">L1-L2 messaging</a></span>
+  <span class="prev"><a href="../state/">State</a></span>
+  <span class="next"><a href="../transactions/">Transactions</a></span>
 </nav>
 </article>
   </div>

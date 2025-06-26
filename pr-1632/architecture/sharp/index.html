@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>SNOS (Starknet operating system) :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/os/">
-    <link rel="prev" href="../sharp/">
-    <link rel="next" href="../starkgate/">
+    <title>SHARP (Shared Prover) :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/sharp/">
+    <link rel="prev" href="../transactions/">
+    <link rel="next" href="../os/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,6 +307,11 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
+     href="../protocol-overview/">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
      href="../accounts/">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -332,7 +337,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../messaging/">L1-L2 messaging</a>
+     href="../messaging/">L1 ↔ L2 messaging</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -347,7 +352,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -363,15 +368,15 @@
   <li class="nav-item" data-depth="2">
     <span class="nav-text"><a href="https://book.cairo-lang.org/" target="_blank" rel="noopener">Cairo ↗</a></span>
   </li>
-  <li class="nav-item" data-depth="2">
-    <a 
-       class="nav-link"
-     href="../sharp/">SHARP</a>
-  </li>
   <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="./">SNOS</a>
+     href="./">SHARP</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
+     href="../os/">SNOS</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,156 +520,24 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/os.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/sharp.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "SNOS (Starknet operating system)"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "SHARP (Shared Prover)"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">SNOS (Starknet operating system)</h1>
-<div id="preamble">
-<div class="sectionbody">
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>SNOS is a key element in Starknet&#8217;s architecture, but also one of its more complicated components. This page&#8217;s aim is to gradually walk you through what SNOS is, how does it work and interact with the Starknet Core contract, and where its implementations can be found. Some parts may require reading more than once, but don&#8217;t hesitate to <a href="https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&amp;title=Feedback%20for%20%22The%20Starknet%20operating%20system%22" target="_blank" rel="noopener">reach out</a> if you feel further clarification is needed.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
+<h1 class="page">SHARP (Shared Prover)</h1>
 <div class="sect1">
-<h2 id="what_is_the_snos"><a class="anchor" href="#what_is_the_snos"></a>What is the SNOS?</h2>
+<h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>As an L2 validity rollup, Starknet&#8217;s state on Ethereum can&#8217;t be updated without proving that all the blocks between the current state and the new state are valid. But what does "proving that a block is valid" mean exactly? Technically, only statements of the form "<em>Cairo program \(P\) ran successfully with output \(O\)</em>" can be proven, which means that the statement "<em>Blocks \(B\) is valid</em>" needs to expressed in the form of a Cairo program.</p>
+<p>SHARP is like public transportation for proofs on Starknet, aggregating multiple Cairo programs to save costs and boost efficiency. It uses recursive proofs, enabling parallelization and optimization, making it more affordable for all users. Critical services like the gateway, validator, and Prover work together with a stateless design for flexibility. SHARP’s adoption by StarkEx and Starknet highlights its significance and potential for future optimization.</p>
 </div>
 <div class="paragraph">
-<p>This is where SNOS comes in: it is a Cairo Zero program that verifies the validity of blocks by getting an initial state \(S\) and a list of transactions (i.e., block) \(B\) as input and outputting the state that is the result of applying \(B\) on \(S\).</p>
-</div>
-<div class="paragraph">
-<p>SNOS is the program required for updating Starknet&#8217;s state on Ethereum (<a href="#os-and-core-contract">up to some caveats</a>). As such, is it also the final arbiter on what does it mean for a transaction to execute correctly. For example, while a malicious sequencer can deviate from <a href="../transactions/#transaction_flow" class="xref page">the <code>INVOKE</code> transaction&#8217;s behavior</a> by skipping the execution of <code>__validate__</code> before <code>__execute__</code> in the calling account contract, this specification is <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_transactions.cairo#L390" target="_blank" rel="noopener">enforced by SNOS</a> and therefore this sequencer will not be able to produce the proof for the block in which this transaction was included.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="how_does_snos_work"><a class="anchor" href="#how_does_snos_work"></a>How does SNOS work?</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="high_level_overview"><a class="anchor" href="#high_level_overview"></a>High-level overview</h3>
-<div class="paragraph">
-<p>The following is a rough sketch of the SNOS program, starting at <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/os.cairo#L38">os.cairo</a>'s <code>main</code> function:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/os_flow_copy.png" alt="os flow copy">
-</div>
-</div>
-<div class="paragraph">
-<p>In broad strokes, SNOS&#8217;s execution consists of the following steps:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>Preprocessing: preparing the SNOS&#8217;s inputs, which include the various hints that will be needed throughout the execution (for example,
-the Merkle path of every accessed storage slot and the code of every accessed contract)</p>
-</li>
-<li>
-<p>Running the transactions: the bulk of SNOS&#8217;s execution, where transactions are executed sequentially such that for each transaction:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>The associated account contract is loaded into the memory and called</p>
-</li>
-<li>
-<p>Inner contracts are called, such that <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L149" target="_blank" rel="noopener">the entry <code>(contract_address, class_hash)</code> is added to a global state updates dictionary</a> for each loaded contract (which is needed to assert that the loaded code corresponds to the class hash that is part of the state commitment)</p>
-</li>
-</ul>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Contract calls are in fact done non-deterministically, i.e. the contract&#8217;s response are guessed and verified later. For more details, see <a href="#syscall-mechanism">Syscall mechanism</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>State updates are accumulated in the global state updates dictionary</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>Verifying that the new commitment corresponds to applying the updates accumulated in the global state updates dictionary to the old commitment (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/state/state.cairo#L40" target="_blank" rel="noopener"><code>state_update</code> function in <code>state.cairo</code></a>).</p>
-</li>
-<li>
-<p>Encoding the state diff and adding it to the output segment for <a href="../data-availability/" class="xref page">data availability</a> purposes (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/output.cairo#L71" target="_blank" rel="noopener"><code>serialize_os_output</code> function in <code>output.cairo</code></a>)</p>
-</li>
-</ol>
-</div>
-</div>
-<div class="sect2">
-<h3 id="syscall-mechanism"><a class="anchor" href="#syscall-mechanism"></a>Syscall mechanism</h3>
-<div class="paragraph">
-<p>A contract can invoke <a href="https://book.cairo-lang.org/appendix-08-system-calls.html" target="_blank" rel="noopener">system calls</a> throughout its execution, which pass the control from the currently executing contract to SNOS itself. Such operations are required when a contract needs information that does not exist within its code, e.g. accessing the Starknet state to read a storage value or to call another contract.</p>
-</div>
-<div class="paragraph">
-<p>SNOS&#8217;s code heavily relies on non-determinism to handle system calls. Whenever a contract invokes some syscall, the request, alongside the guessed response, is recorded in a syscalls array.
-At the end of every entry point execution, we go over the syscalls array and verify that the responses were correct (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L286" target="_blank" rel="noopener"><code>execute_entry_point</code> function in <code>execute_transactions.cairo</code></a>).</p>
-</div>
-<div class="paragraph">
-<p>For syscalls such as <a href="https://book.cairo-lang.org/appendix-08-system-calls.html#get_execution_info" target="_blank" rel="noopener"><code>get_execution_info</code></a>,
-which returns the block hash and number, correctness means consistency with the value given to SNOS as input. For contract calls, however, one needs to execute the called contract and verify that the actual response and the guessed response are identical. But how can we guess the responses to all the contract calls before executing them? For that, it is important to distinguish two different styles-of-execution that a Starknet block goes through:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The first one is done by a sequencer, when constructing the block from incoming transactions</p>
-</li>
-<li>
-<p>The second one is done by a prover, when executing SNOS in order to generate a proof for the (already finalized) block</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>Therefore, when running the OS, we already know what is going to happen: the block has already been executed by the sequencer, and so we know exactly what contracts and storage slots will be accessed, what each internal call will return, and so on.</p>
-</div>
-<div class="paragraph">
-<p>It&#8217;s worth noting that in the first execution, the sequencer can run in whatever way he chooses. In fact, he doesn&#8217;t even have to run through the Cairo VM at all, but rather <a href="https://github.com/lambdaclass/cairo_native" target="_blank" rel="noopener">precompile contracts to machine code and run them natively</a>. Moreover, sequencers can also impose restrictions that are not enforced by SNOS. Such discrepancy between the two executions may seem like a bug, but as long as these restrictions only protect the sequencers themselves, rather than the correctness of execution, there is no reason for SNOS to enforce them. A good example for such restriction is the <a href="../accounts/#limitations_of_validation" class="xref page">limits on validation functions</a> that protect the sequencer from DoS attacks. It is crucial, however, that both executions agree on the execution semantics, since, as mentioned in <a href="#introduction">What is SNOS?</a>, SNOS is the final arbiter and if it disagrees on the validity of the block, the sequencer will not be able to produce a proof for that block (and the only way forward would be a reorg on Starknet).</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="os-and-core-contract"><a class="anchor" href="#os-and-core-contract"></a>SNOS and the Starknet Core contract</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The Starknet Core contract is the contract responsible for storing and updating Starknet&#8217;s state on Ethereum. As of Starknet v0.13.2 and as part of <a href="https://community.starknet.io/t/starknet-v0-13-2-pre-release-notes/114223#starknet-applicative-recursion-3" target="_blank" rel="noopener">SHARP&#8217;s applicative recursion feature</a>, proofs of SNOS&#8217;s execution are not enough to update the Starknet Core contract. Instead, it is required to submit an "applicative proof" of a different program called <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/cairo/bootloaders/applicative_bootloader/applicative_bootloader.cairo#L15" target="_blank" rel="noopener">the applicative bootloader</a>.</p>
-</div>
-<div class="paragraph">
-<p>The way the applicative bootloader works is by verifying a proof of one or more executions of a base program \(B\) and then using their outputs as input to an aggregator program \(A\). In the case of Starknet, \(B\) is the SNOS program and \(A\) is a new cairo program that squashes the state diffs of several blocks (the code of which can be found in the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/aggregator/main.cairo#L8" target="_blank" rel="noopener">cairo-lang GitHub repository</a>). This way, individual executions of SNOS for some block range can be "squashed" into a single program whose valid execution attests to the validity of all blocks within that range and whose output is the squashed state diff of these blocks.</p>
-</div>
-<div class="paragraph">
-<p>In order to verify that an "applicative proof" used the correct SNOS and aggregator programs, their program hashes must be stored in the Starknet Core contract. As each Starknet version is associated with a given SNOS program, this means that breaking protocol changes must be accompanied by an update to SNOS&#8217;s (and possibly the aggregator&#8217;s) program hash registered in the Starknet Core contract.</p>
+<p>This topic discusses SHARP, how it has evolved to incorporate recursive proofs, and its role in reducing costs and improving efficiency within the Starknet network.</p>
 </div>
 <div class="admonitionblock tip">
 <table>
@@ -674,56 +547,150 @@ which returns the block hash and number, correctness means consistency with the 
 </td>
 <td class="content">
 <div class="paragraph">
-<p>You can read the program hashes currently registered in the Starknet Core contract by using its <a href="https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F13" target="_blank" rel="noopener"><code>programHash</code></a> (for SNOS&#8217;s program hash) and <a href="https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F1" target="_blank" rel="noopener"><code>aggregatorProgramHash</code></a> (for the aggregator&#8217;s program hash) functions.</p>
+<p><a href="https://docs.herodotus.cloud/atlantic/introduction" target="_blank" rel="noopener">Atlantic</a> is a managed ZK Prover service that allows developers to easily integrate with SHARP.</p>
 </div>
 </td>
 </tr>
 </table>
-</div>
-<div class="paragraph">
-<p>Finally, the Starknet Core contract is also responsible for verifying the few things that SNOS can&#8217;t, including:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Verifying that the state given to SNOS as input is Starknet&#8217;s current state on Ethereum</p>
-</li>
-<li>
-<p>Verifying that all <a href="../messaging/#l1-l2-messages" class="xref page">L1→L2 messages</a> were sent on Ethereum</p>
-</li>
-</ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="implementations"><a class="anchor" href="#implementations"></a>Implementations</h2>
+<h2 id="what-is-sharp"><a class="anchor" href="#what-is-sharp"></a>What is SHARP?</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The Cairo code of SNOS is available in the <a href="https://github.com/starkware-libs/cairo-lang/tree/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os" target="_blank" rel="noopener">cairo-lang GitHub repository</a>.
-However, this repository does not include all the hints implementation, which are necessary to locally run SNOS. The current implementation of these hints in Python is now deprecated, and will no longer be maintained in future Starknet versions.</p>
+<p>SHARP, which stands for <em>Shared Prover</em>, is a mechanism that aggregates multiple Cairo programs from different users, each containing different logic. These Cairo programs are then executed together, generating a single proof common to all the programs. Rather than sending the proof directly to the Solidity Verifier in Ethereum, it is initially sent to a STARK Verifier program written in Cairo. The STARK Verifier generates a new proof to confirm that the initial proofs were verified, which can be sent back into SHARP and the STARK Verifier. Details for this recursive proof process appear below. Ultimately, the last proof in the series is sent to the Solidity Verifier on Ethereum. In other words, there are many proofs generated until we reach Ethereum and the Solidity Verifier.</p>
 </div>
-<div class="admonitionblock important">
+<div class="paragraph">
+<p>The primary benefit of SHARP lies in its ability to decrease costs and enhance efficiency within the Starknet network. It achieves this by aggregating multiple Cairo jobs, which are individual sets of computation. This aggregation enables the protocol to leverage the exponential amortization offered by STARK proofs.</p>
+</div>
+<div class="paragraph">
+<p>Exponential amortization means that as the computational load of the proofs increases, the cost of verifying those proofs rises at a slower logarithmic rate than the computation increase. As a result, the cost of each transaction within the aggregated set is significantly reduced, making the overall process more cost-effective and accessible for users.</p>
+</div>
+<div class="admonitionblock note">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-important" title="Important"></i>
+<i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>As part of the transition of Starknet&#8217;s infrastructure to Rust, SNOS&#8217;s Pythonic hints implementation is deprecated, and will no longer be maintained in future Starknet versions.</p>
+<p>In the context of SHARP and Cairo context, a <em>jobs</em> refer to the individual Cairo programs or tasks submitted by different users. These jobs contain specific logic or computations that must be executed on the Starknet network.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>Instead, a new Rust implementation of the hints, including initializing all inputs of SNOS via a Starknet full node connection, is available in the <a href="https://github.com/keep-starknet-strange/snos/tree/cb2a6d26faeb658492756fe100bbdf5b1600c768" target="_blank" rel="noopener">SNOS GitHub repository</a>. At the time of writing, this codebase supports the execution of SNOS for Starknet version 0.13.2.</p>
+<p>Additionally, SHARP enables smaller users with limited computation to benefit from joining other jobs and share the cost of generating the proofs. This collaborative approach is similar to using public transportation instead of a private car, where the cost is distributed among all participants, making it more affordable for everyone.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="recursive-proofs-in-sharp"><a class="anchor" href="#recursive-proofs-in-sharp"></a>Recursive proofs in SHARP</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>One of the most powerful features of SHARP is its use of recursive proofs. Rather than directly sending the generated proofs to the Solidity Verifier, they are first sent to a STARK Verifier program written in Cairo. This Verifier, which is also a Cairo program, receives the proof and creates a new Cairo job that is sent to the Prover. The Prover then generates a new proof to confirm that the initial proofs were verified. These new proofs can be sent back into SHARP and the STARK Verifier, restarting the process.</p>
+</div>
+<div class="paragraph">
+<p>This process continues recursively, with each new proof being sent to the Cairo Verifier until a trigger is reached. At this point, the last proof in the series is sent to the Solidity Verifier on Ethereum. This approach enables greater parallelization of the computation and reduces the time and cost associated with generating and verifying proofs.</p>
+</div>
+<div class="paragraph">
+<p>At first glance, recursive proofs may seem more complex and time-consuming. However, there are several benefits to this approach:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Parallelization</strong>: Recursive proofs enable work parallelization, reducing user latency and improving SHARP efficiency.</p>
+</li>
+<li>
+<p><strong>Cheaper onchain costs</strong>: Parallelization enables SHARP to create larger proofs, which were previously dependent on the limited availability of large cloud machines. As a result, onchain costs are reduced.</p>
+</li>
+<li>
+<p><strong>Lower cloud costs</strong>: Since each job is shorter, the required memory for processing is reduced, resulting in lower cloud costs.</p>
+</li>
+<li>
+<p><strong>Optimization</strong>: Recursive proofs enable SHARP to optimize for various factors, including latency, onchain costs, and time to proof.</p>
+</li>
+<li>
+<p><strong>Cairo support</strong>: Recursive proofs only require support in Cairo, without the need to add support in the Solidity Verifier.</p>
+</li>
+</ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Latency in Starknet encompasses the time taken for processing, confirming, and including transactions in a block. Latency is affected by factors like network congestion, transaction fees, and system efficiency. Minimizing latency ensures faster transaction processing and user feedback.</p>
+</div>
+<div class="paragraph">
+<p>Time to proof, however, specifically pertains to the amount of time required to generate and verify cryptographic proofs for transactions or operations.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="sharp_backend_architecture_and_data_pipeline"><a class="anchor" href="#sharp_backend_architecture_and_data_pipeline"></a>SHARP backend architecture and data pipeline</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>SHARP&#8217;s backend architecture consists of several services that work together to process Cairo jobs and generate proofs. These services include:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Gateway</strong>: Cairo jobs enter SHARP through the gateway.</p>
+</li>
+<li>
+<p><strong>Job Creator</strong>: This service prevents job duplication and ensures that the system operates consistently, regardless of multiple identical requests.</p>
+</li>
+<li>
+<p><strong>Validator</strong>: The validator service runs validation checks on each job, ensuring they meet the requirements and can fit within the Prover machines. Invalid jobs are tagged as such and do not proceed to the Prover.</p>
+</li>
+<li>
+<p><strong>Scheduler</strong>: The scheduler service creates <em>trains</em> that aggregate jobs and send them to the Prover. Recursive jobs are paired and sent to the Prover together.</p>
+</li>
+<li>
+<p><strong>Cairo Runner</strong>: This service runs Cairo for the Prover’s needs. The Cairo Runner service runs Cairo programs, executing the necessary computations and generating the execution trace as an intermediate result. The Prover then uses this execution trace.</p>
+</li>
+<li>
+<p><strong>Prover</strong>: The Prover computes the proofs for each train.</p>
+</li>
+<li>
+<p><strong>Dispatcher</strong>: The Dispatcher serves two functions in the SHARP system.</p>
+<div class="ulist">
+<ul>
+<li>
+<p>In the case of a recursive proof, the Dispatcher runs the Cairo Verifier program on the proof it has received from the Prover, resulting in a new Cairo job that goes back to the Validator.</p>
+</li>
+<li>
+<p>In the case of a proof that is to be published onchain, the Dispatcher creates <em>packages</em> from the proof, which can then be sent to the <em>Blockchain Writer</em>.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>Blockchain Writer</strong>: Once the packages have been created by the Dispatcher, they are sent to the Blockchain Writer. The Blockchain Writer is responsible for sending the packages to the appropriate blockchain, such as Ethereum, for verification. This step in the SHARP system ensures that the proofs are properly verified and that the transactions are securely recorded on the blockchain.</p>
+</li>
+<li>
+<p><strong>Catcher</strong>: The Catcher monitors onchain transactions to ensure that they have been accepted. While the Catcher is relevant for internal monitoring purposes, be aware that if a transaction fails, the fact won’t be registered onchain in the Fact Registry. As a result, the soundness of the system is still preserved even without the Catcher.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>SHARP is designed to be stateless. That is, each Cairo job is executed in its own context and has no dependency on other jobs, enabling greater flexibility in processing jobs.</p>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../sharp/">SHARP</a></span>
-  <span class="next"><a href="../starkgate/">StarkGate</a></span>
+  <span class="prev"><a href="../transactions/">Transactions</a></span>
+  <span class="next"><a href="../os/">SNOS</a></span>
 </nav>
 </article>
   </div>

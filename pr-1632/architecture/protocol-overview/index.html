@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Data availability :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/data-availability/">
-    <link rel="prev" href="../cryptography/">
-    <link rel="next" href="../fees/">
+    <title>Protocol Overview :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/protocol-overview/">
+    <link rel="prev" href="../../tools/running-devnets/">
+    <link rel="next" href="../accounts/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -304,6 +304,11 @@
     <button class="nav-item-toggle mask-svg-center"></button>
     <span class="nav-text">Protocol</span>
 <ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a 
+       class="nav-link"
+     href="./">Overview</a>
+  </li>
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
@@ -319,10 +324,10 @@
        class="nav-link"
      href="../cryptography/">Cryptography</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Data availability</a>
+     href="../data-availability/">Data availability</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -332,7 +337,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../messaging/">L1-L2 messaging</a>
+     href="../messaging/">L1 ↔ L2 messaging</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -347,7 +352,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,451 +520,49 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/data-availability.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/protocol-overview.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Data availability"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Protocol Overview"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Data availability</h1>
-<div class="sect1">
-<h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
-<div class="sectionbody">
+<h1 class="page">Protocol Overview</h1>
 <div class="paragraph">
-<p>Starknet is a Validity Rollup, which means that after consolidating and proving a set of changes to Starknet&#8217;s state, it updates the latest proven state on Ethereum. Alongside the proof, it sends the <a href="#state_diff_format">formatted</a> difference between the previous and new states, also known as <em>state diff</em>, allowing anyone monitoring Ethereum to use this data and reconstruct Starknet&#8217;s current state.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="state_diff_format"><a class="anchor" href="#state_diff_format"></a>State diff format</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="pre_v0_11_0"><a class="anchor" href="#pre_v0_11_0"></a>Pre-v0.11.0</h3>
-<div class="paragraph">
-<p>Before Starknet version 0.11.0, state diffs contained information on every contract whose storage was updated, along with additional information on contract deployments. Those differences were sent as part of the calldata of the transaction that registered the proof on Ethereum, in a <code>uint256[]</code> array that included:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The number of contracts that were deployed</p>
-</li>
-<li>
-<p>The address and class hash of each deployed contract</p>
-</li>
-<li>
-<p>The number of contracts whose storage was updated</p>
-</li>
-<li>
-<p>For each contract whose storage was updated:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Its address</p>
-</li>
-<li>
-<p>A <code>uint256</code> value that encodes both the number of its storage updates and its updated nonce, defined as follows:</p>
-<div class="stemblock">
-<div class="content">
-\[\underbrace{0\cdots0}_{\text{128 bits}} | \underbrace{\text{new nonce}}_{\text{64 bits}} |
-{\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}\]
-</div>
-</div>
-</li>
-<li>
-<p>The key and new value for each storage update</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
+<p>Starknet is a decentralized ZK-rollup that scales Ethereum by moving computation off-chain and verifying its correctness on-chain. Let&#8217;s walk through the protocol, from user interaction to proof verification, to see how it all works:</p>
 </div>
 <div class="paragraph">
-<p>This format is demonstrated by the following example:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">[
-  2, <i class="conum" data-value="1"></i><b>(1)</b>
-  2472939307328371039455977650994226407024607754063562993856224077254594995194, <i class="conum" data-value="2"></i><b>(2)</b>
-  1336043477925910602175429627555369551262229712266217887481529642650907574765, <i class="conum" data-value="3"></i><b>(3)</b>
-  1, <i class="conum" data-value="4"></i><b>(4)</b>
-  2019172390095051323869047481075102003731246132997057518965927979101413600827, <i class="conum" data-value="5"></i><b>(5)</b>
-  18446744073709551617, <i class="conum" data-value="6"></i><b>(6)</b>
-  5, <i class="conum" data-value="7"></i><b>(7)</b>
-  102, <i class="conum" data-value="8"></i><b>(8)</b>
-]</code></pre>
-</div>
-</div>
-<div class="colist arabic">
-<table>
-<tr>
-<td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>The number of deployed contracts</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>The address of the first, and only, contract whose state changed</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="3"></i><b>3</b></td>
-<td>The class hash of the first, and only, contract whose state changed</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="4"></i><b>4</b></td>
-<td>The number of contracts whose storage was updated</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="5"></i><b>5</b></td>
-<td>The address of the first, and only, contract whose storage was updated</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="6"></i><b>6</b></td>
-<td>The <code>uint256</code> value that encodes the number of storage updates and updated nonce of the first, and only, contract whose storage was updated, which equals \(2^{64}+1 = 0^{128}|0^{63}1|0^{63}1\) and therefore:
-<div class="ulist">
-<ul>
-<li>
-<p>One storage cell was updated</p>
-</li>
-<li>
-<p>The updated nonce is <code>1</code></p>
-</li>
-</ul>
-</div></td>
-</tr>
-<tr>
-<td><i class="conum" data-value="7"></i><b>7</b></td>
-<td>The key of the first, and only, storage update of the first, and only, contract whose storage was updated</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="8"></i><b>8</b></td>
-<td>The new value of the first, and only, storage update of the first, and only, contract whose storage was updated</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect2">
-<h3 id="v0_11_0"><a class="anchor" href="#v0_11_0"></a>v0.11.0</h3>
-<div class="paragraph">
-<p>In Starknet version 0.11.0, state diffs changed to contain information on every contract whose storage was updated and additional information on contract deployments. This information was still sent as part of the calldata of the transaction that registered the proof on Ethereum, in a <code>uint256[]</code> array that included:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The number of contracts whose storage was updated</p>
-</li>
-<li>
-<p>For contract whose storage was updated:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Its contract address</p>
-</li>
-<li>
-<p>A single 32-byte word that includes its updated nonce and meta information about the storage updates, defined as follows:</p>
-<div class="stemblock">
-<div class="content">
-\[\underbrace{0\cdots0}_{\text{127 bits}}|
-\underbrace{\text{class information flag}}_{\text{1 bit}}|
-\underbrace{\text{new nonce}}_{\text{64 bits}}|{
-\underbrace{\text{# of storage updates}}_{\text{64 bits}}}_{\text{LSB}}\]
-</div>
+<p>Everything starts with an <a href="../accounts/" class="xref page">account</a>. On Starknet, accounts are smart contracts — a model known as native account abstraction. This allows for flexible authorization logic like multisig, session keys, or passkey-based authentication, all without changes to the protocol itself.</p>
 </div>
 <div class="paragraph">
-<p>where the class information flag&#8217;s value is <code>1</code> if the contract was deployed or replaced and <code>0</code> otherwise (i.e., there were only storage updates). When set to <code>1</code>, the new class hash occupies the next entry in the array</p>
-</div>
-</li>
-<li>
-<p>The key and new value for each storage update</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>The number of classes that were declared</p>
-</li>
-<li>
-<p>The class hash and compiled class hash of each declared class</p>
-</li>
-</ul>
+<p>When users want to interact with the network, they send <a href="../transactions/" class="xref page">transactions</a>. These invoke contract functions, deploy new contracts, or register new classes, which are all collected and ordered into <a href="../blocks/" class="xref page">blocks</a>.</p>
 </div>
 <div class="paragraph">
-<p>This format is demonstrated by the following example:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">[
-  1, <i class="conum" data-value="1"></i><b>(1)</b>
-  2019172390095051323869047481075102003731246132997057518965927979101413600827, <i class="conum" data-value="2"></i><b>(2)</b>
-  18446744073709551617, <i class="conum" data-value="3"></i><b>(3)</b>
-  100, <i class="conum" data-value="4"></i><b>(4)</b>
-  200, <i class="conum" data-value="5"></i><b>(5)</b>
-  1, <i class="conum" data-value="6"></i><b>(6)</b>
-  1351148242645005540004162531550805076995747746087542030095186557536641755046, <i class="conum" data-value="7"></i><b>(7)</b>
-  558404273560404778508455254030458021013656352466216690688595011803280448032 <i class="conum" data-value="8"></i><b>(8)</b>
-]</code></pre>
-</div>
-</div>
-<div class="colist arabic">
-<table>
-<tr>
-<td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>The number of contracts whose storage was updated</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>The address of the first, and only, contract whose storage changed</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="3"></i><b>3</b></td>
-<td>The 32-byte word that encodes the updated nonce and meta information about the storage updates of the first, and only, contract whose storage was updated, which equals \(2^{64}+1 = 0^{127}|0|0^{63}1|0^{63}1\) and therefore:
-<div class="ulist">
-<ul>
-<li>
-<p>One storage cell was update</p>
-</li>
-<li>
-<p>The new nonce is <code>1</code></p>
-</li>
-<li>
-<p>The class information flag is <code>0</code>, which means that the contract was not deployed or replaced and therefore the next word shouldn&#8217;t be treated as the class hash</p>
-</li>
-</ul>
-</div></td>
-</tr>
-<tr>
-<td><i class="conum" data-value="4"></i><b>4</b></td>
-<td>The key of the first, and only, storage update of the first, and only, contract whose storage was updated</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="5"></i><b>5</b></td>
-<td>The new value of the first, and only, storage update of the first, and only, contract whose storage was updated
-These two elements, <code>100</code> and <code>200</code>, encode the storage update, where the value of key <code>100</code> is set to <code>200</code>.</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="6"></i><b>6</b></td>
-<td>The number of classes that were declared</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="7"></i><b>7</b></td>
-<td>The class hash of the first, and only, declared class</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="8"></i><b>8</b></td>
-<td>The compiled class hash of the first, and only, declared class</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect2">
-<h3 id="v0_13_1"><a class="anchor" href="#v0_13_1"></a>v0.13.1</h3>
-<div class="paragraph">
-<p>In Starknet version 0.13.1, sending state diffs to Ethereum changed from using calldata to using either calldata or blobs. Under normal conditions, using blobs is default method, but in extreme situations where blob prices significantly exceed those of calldata, the Starknet sequencer can switch to use calldata instead.</p>
-</div>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-tip" title="Tip"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>See <a href="https://community.starknet.io/t/data-availability-with-eip4844/" target="_blank" rel="noopener">Data availability with EIP-4844</a> on the Starknet Community Forum or review <a href="https://etherscan.io/tx/0x8a227491bc78424c2cac1b203c95cdd99ede5112d41f0e7eab26f3c8aa9c658d/" target="_blank" rel="noopener">an example blob published on Ethereum by the Starknet sequencer</a> for more details.</p>
-</div>
-</td>
-</tr>
-</table>
+<p>Some transactions involve communication between Ethereum and Starknet. These are handled through <a href="../messaging/" class="xref page">L1↔L2 messaging</a>, allowing asynchronous messages to be passed between contracts on L1 and L2, and enabling secure bridges, cross-layer governance, and composability between chains.</p>
 </div>
 <div class="paragraph">
-<p>The format for state diffs remains the same as in version 0.11.0, but the data sent to Ethereum changed to a Fast Fourier Transform (FFT) of the original data. To recover Starknet&#8217;s state diff based on blobs or calldata published onchain, an Inverse Fast Fourier Transform (IFFT) on the data must first be performed, afterwhich decoding can proceed as usual.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="v0_13_3"><a class="anchor" href="#v0_13_3"></a>v0.13.3</h3>
-<div class="paragraph">
-<p>In Starknet version 0.13.3, sending state diffs to Ethereum changed from sending raw state diffs to sending compressed state diffs. The employed compression scheme is a simple lookup table variant, where a list of 252-bit field elements is transformed into a (usually smaller) list of 252-bit field elements as follows:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>Unique field elements in the data are split into buckets of 15, 31, 62, 83, 125, and 252 bits (i.e. felts that require less than 15 bits go into the 15 bits bucket, felts that require 16 to 31 bits go into the 31 bits bucket, and so on).</p>
-</li>
-<li>
-<p>Each bucket is packed according to its number of bits (e.g., the 31 bits bucket allows the packing of 8 elements into a single felt).</p>
-</li>
-<li>
-<p>A list of pointers whose length is the length of the original data is constructed, where the <code>i</code>'th pointer is the bucket of the <code>i</code>'th element if the <code>i</code>'th element is a first occurrence, or a special index that indicates a repetition otherwise.</p>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The list of pointers can be packed to ~ 1/84 of the original list length since we only need 3 bits to indicate the bucket and we can fit 84 of those into a felt.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>A list of repeating value pointers is constructed, by adding <code>(bucket_index, index_in_bucket)</code> for every repetition in the original data.</p>
-</li>
-</ol>
+<p>All of this activity updates Starknet&#8217;s global <a href="../state/" class="xref page">state</a>. The state includes contract storage, class declarations, and account data — all organized in a Merkle Patricia trie. Every transaction modifies this state, and each new state root reflects the cumulative result of those changes.</p>
 </div>
 <div class="paragraph">
-<p>To illustrate the above, consider the following example: Let indices 0,1, …, 5 correspond to buckets 252, 125, …, 15, and let 6 denote a special bucket of repetitions. For the data list <code>[2^250, 10, 100, 2^63, 2^63+1, 10, 100]</code>, we construct the following:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Bucket 252: <code>[2^250]</code></p>
-</li>
-<li>
-<p>Bucket 83: <code>[2^63, 2^63+1]</code></p>
-</li>
-<li>
-<p>Bucket 15: <code>[10, 100]</code></p>
-</li>
-<li>
-<p>Pointers: <code>[0, 5, 5, 3, 3, 6, 6]</code></p>
-</li>
-<li>
-<p>Repeating value pointers: <code>[(5, 0), (5, 1)]</code> (We have two repetitions: the first for 10, which is the first element in bucket index 5, and the second for 100, which is the second element in the same bucket)</p>
-</li>
-</ul>
+<p>To ensure that state transitions are valid, Starknet generates <a href="../cryptography/" class="xref page">cryptographic</a> proofs for the validity. These proofs compress the entire block&#8217;s execution into a succinct, verifiable artifact. They&#8217;re submitted to Ethereum, where they&#8217;re verified onchain so Ethereum can trust Starknet&#8217;s execution without re-running it.</p>
 </div>
 <div class="paragraph">
-<p>The final compressed list packs each bucket and each list individually and adds some necessary metadata.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>This simple-to-write compression was chosen over the common Brotli or gzip compressions employed by other chains for similar purposes because the compression must be proven (i.e., either the compression or decompression must be implemented within the Starknet OS, and therefore its efficiency is crucial).</p>
+<p>But Ethereum needs more than just a proof — it needs access to the data involved. Starknet ensures this through <a href="../data-availability/" class="xref page">data availability</a>, publishing compressed state diffs to Ethereum so the full state can be reconstructed and verified.</p>
 </div>
 <div class="paragraph">
-<p>You can find a Python implementation of it in the <a href="https://github.com/starkware-libs/cairo-lang" target="_blank" rel="noopener">cairo-lang repository</a>.</p>
-</div>
-</td>
-</tr>
-</table>
+<p>All of this — computation, proof generation, and L1 publishing — requires payment. That&#8217;s where <a href="../fees/" class="xref page">fees</a> come in. Users pay fees to cover the cost of using network resources, and these fees are paid in <a href="../strk/" class="xref page">STRK</a>, Starknet&#8217;s native token.</p>
 </div>
 <div class="paragraph">
-<p>To better lends itself to the new compression scheme, as well as allow its construction to be based on the state diff alone, the uncompressed encoding of contract diff headers also changed as follows:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[|
-\underbrace{\text{new nonce (if changed)}}_{\text{64 bits}}
-|
-\underbrace{\text{# of storage updates}}_{\text{64 bits}}
-|
-\underbrace{\text{class information flag}}_{\text{1 bit}}
-|
-{\underbrace{\text{updates information flag}}_{\text{1 bit}}}_{\text{LSB}}\]
-</div>
+<p>STRK is also used to power Starknet&#8217;s own <a href="../staking/" class="xref page">proof-of-stake consensus</a> protocol. Validators selected from STRK stakers help secure the sequencing layer and validate block production. This mechanism is designed to support decentralization and provide economic guarantees around block inclusion and ordering.</p>
 </div>
 <div class="paragraph">
-<p>where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>The updates information flag is <code>0</code> if the number of updates is less than 256 (and therefore can fit in 8 bits), and <code>1</code> otherwise</p>
-</li>
-<li>
-<p>The semantics of class information flag is unchanged (i.e., it indicates whether or not the class was replaced)</p>
-</li>
-<li>
-<p>If the nonce of the contract is unchanged, the value of the new nonce is zero</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>This definition can slightly deviate from the previous semantics, if an account contract was modified externally (e.g., via <code>execute_from_outside</code>). In this case, the contract&#8217;s nonce is unchanged, yet it appears in the state update (since its storage was updated). Pre-v0.13.3, the current nonce of the account would have appeared although it is unchanged, while in v0.13.3 the value of new nonce is zero. This change helps with making the encoding derivable solely from the state diff itself, without referring to the global state of the chain.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="v0_13_4"><a class="anchor" href="#v0_13_4"></a>v0.13.4</h3>
-<div class="paragraph">
-<p>In Starknet v0.13.4, a second layer, termed <em>stateful compression</em>, was added to the compression of state diffs.</p>
-</div>
-<div class="paragraph">
-<p>Stateful compression is based on the observation that most parts that were “incompressible” by the previous compression — now termed <em>stateless compression</em> — are storage keys and contract addresses, which can be indexed based on their first occurrence in a state diff, thus encoding them with potentially much less than the full 32bytes.</p>
-</div>
-<div class="paragraph">
-<p>To achieve this, a new system contract at address <code>0x2</code> was introduced, defined as follows:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Storage slot <code>0x0</code> of the contract is the value of a global counter, initialized to <code>128</code> in the beginning of the first block of v0.13.4.</p>
-</li>
-<li>
-<p>Whenever a non-indexed storage key or contract address appears in a state diff, it is mapped to the current value of the counter, and the counter is increased.</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Storage keys that require at most 127 bits and addresses of system contracts (currently, <code>0x1</code> and <code>0x2</code>) are not mapped and continue to be referred to directly.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-<li>
-<p>The (uncompressed) state-diff includes the corresponding counter values from the value-to-index mapping rather than the original values.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>As its name suggests, stateful compression introduces dependency between state diffs submitted to Ethereum. That is, state diffs of a given block cannot be decoded without knowing the state diffs of the previous blocks. This dependency is only relevant for post-v0.13.4 state diffs, while pre-v0.13.4 state diffs remain self-contained.</p>
-</div>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Starknet v0.13.4 introduces dependency between state diffs, making post-v0.13.4 state diffs non-decodable without knowledge of previous post-v0.13.4 state diffs.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
+<p>All together, these components form a tightly integrated protocol. Starknet enables scalable, expressive applications with low fees and strong security — all without compromising on decentralization or Ethereum alignment.</p>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../cryptography/">Cryptography</a></span>
-  <span class="next"><a href="../fees/">Fees</a></span>
+  <span class="prev"><a href="../../tools/running-devnets/">Working locally</a></span>
+  <span class="next"><a href="../accounts/">Accounts</a></span>
 </nav>
 </article>
   </div>

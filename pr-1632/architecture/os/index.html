@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Staking protocol :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/staking/">
-    <link rel="prev" href="../messaging/">
-    <link rel="next" href="../state/">
+    <title>SNOS (Starknet operating system) :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/os/">
+    <link rel="prev" href="../sharp/">
+    <link rel="next" href="../starkgate/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,6 +307,11 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
+     href="../protocol-overview/">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
      href="../accounts/">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -332,12 +337,12 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../messaging/">L1-L2 messaging</a>
+     href="../messaging/">L1 ↔ L2 messaging</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Staking</a>
+     href="../staking/">Staking</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -347,7 +352,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -368,10 +373,10 @@
        class="nav-link"
      href="../sharp/">SHARP</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../os/">SNOS</a>
+     href="./">SNOS</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -515,21 +520,170 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/staking.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/os.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Staking protocol"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "SNOS (Starknet operating system)"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Staking protocol</h1>
+<h1 class="page">SNOS (Starknet operating system)</h1>
 <div class="sect1">
 <h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>While Starknet is currently still centralized, it is <a href="#roadmap">gradually</a> moving towards employing a <a href="#protocol">staking protocol</a>, handing over the responsibilities of producing, attesting, and proving blocks to validators. To facilitate this gradual implementation, the protocol&#8217;s <a href="#architecture">architecture</a> is modular, ensuring maximum flexibility and ease of upgrades. However, anyone holding STRK in their wallets can already stake their tokens and earn rewards based on their level of participation by following <a href="#procedures">a few simple steps</a>.</p>
+<p>As an L2 validity rollup, Starknet&#8217;s state on Ethereum can&#8217;t be updated without proving that all the blocks between the current state and the new state are valid. SNOS is <a href="#what_is_snos?">the key element in Starknet&#8217;s architecture</a> that <a href="#how_does_snos_work?">verifies the validity of Starknet blocks</a> and is required for <a href="#using_snos_to_update_starknets_state">
+updating Starknet&#8217;s state</a>. SNOS has two <a href="#implementations">implementations</a>, a fully-open source one in Rust and a partially open-source one in Python.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>SNOS is a key element in Starknet&#8217;s architecture, but also one of its more complicated components. Some parts may require reading more than once, but don&#8217;t hesitate to <a href="https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&amp;title=Feedback%20for%20%22The%20Starknet%20operating%20system%22" target="_blank" rel="noopener">reach out</a> if you feel further clarification is needed.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="what_is_snos"><a class="anchor" href="#what_is_snos"></a>What is SNOS?</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In Cairo, only statements of the form <em>"a specific Cairo program with specific inputs and produced specific outputs"</em> can be proven, which means that the statement <em>"A Starknet block is valid"</em> needs to expressed in the form of a Cairo program, inputs, and outputs.</p>
+</div>
+<div class="paragraph">
+<p>This is where SNOS comes in: it is a Cairo Zero program that verifies the validity of blocks by getting an initial state and a list of transactions as input and outputting the state that is the result of applying these transactions on the initial state.</p>
+</div>
+<div class="paragraph">
+<p>SNOS is the program required for updating Starknet&#8217;s state on Ethereum (<a href="#os-and-core-contract">up to some caveats</a>). As such, is it also the final arbiter on what does it mean for a transaction to execute correctly. For example, while a malicious sequencer can deviate from <a href="../transactions/#transaction_flow" class="xref page">the <code>INVOKE</code> transaction&#8217;s behavior</a> by skipping the execution of <code>__validate__</code> before <code>__execute__</code> in the calling account contract, this specification is <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_transactions.cairo#L390" target="_blank" rel="noopener">enforced by SNOS</a> and therefore this sequencer will not be able to produce the proof for the block in which this transaction was included.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="how_does_snos_work"><a class="anchor" href="#how_does_snos_work"></a>How does SNOS work?</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="high_level_overview"><a class="anchor" href="#high_level_overview"></a>High-level overview</h3>
+<div class="paragraph">
+<p>The following is a rough sketch of the SNOS program, starting at <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/os.cairo#L38">os.cairo</a>'s <code>main</code> function:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/os_flow_copy.png" alt="os flow copy">
+</div>
+</div>
+<div class="paragraph">
+<p>In broad strokes, SNOS&#8217;s execution consists of the following steps:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Preprocessing: preparing the SNOS&#8217;s inputs, which include the various hints that will be needed throughout the execution (for example,
+the Merkle path of every accessed storage slot and the code of every accessed contract)</p>
+</li>
+<li>
+<p>Running the transactions: the bulk of SNOS&#8217;s execution, where transactions are executed sequentially such that for each transaction:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The associated account contract is loaded into the memory and called</p>
+</li>
+<li>
+<p>Inner contracts are called, such that <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L149" target="_blank" rel="noopener">the entry <code>(contract_address, class_hash)</code> is added to a global state updates dictionary</a> for each loaded contract (which is needed to assert that the loaded code corresponds to the class hash that is part of the state commitment)</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Contract calls are in fact done non-deterministically, i.e. the contract&#8217;s response are guessed and verified later. For more details, see <a href="#syscall-mechanism">Syscall mechanism</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>State updates are accumulated in the global state updates dictionary</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Verifying that the new commitment corresponds to applying the updates accumulated in the global state updates dictionary to the old commitment (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/state/state.cairo#L40" target="_blank" rel="noopener"><code>state_update</code> function in <code>state.cairo</code></a>).</p>
+</li>
+<li>
+<p>Encoding the state diff and adding it to the output segment for <a href="../data-availability/" class="xref page">data availability</a> purposes (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/output.cairo#L71" target="_blank" rel="noopener"><code>serialize_os_output</code> function in <code>output.cairo</code></a>)</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="syscall-mechanism"><a class="anchor" href="#syscall-mechanism"></a>Syscall mechanism</h3>
+<div class="paragraph">
+<p>A contract can invoke <a href="https://book.cairo-lang.org/appendix-08-system-calls.html" target="_blank" rel="noopener">system calls</a> throughout its execution, which pass the control from the currently executing contract to SNOS itself. Such operations are required when a contract needs information that does not exist within its code, e.g. accessing the Starknet state to read a storage value or to call another contract.</p>
+</div>
+<div class="paragraph">
+<p>SNOS&#8217;s code heavily relies on non-determinism to handle system calls. Whenever a contract invokes some syscall, the request, alongside the guessed response, is recorded in a syscalls array.
+At the end of every entry point execution, we go over the syscalls array and verify that the responses were correct (for more details, see the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L286" target="_blank" rel="noopener"><code>execute_entry_point</code> function in <code>execute_transactions.cairo</code></a>).</p>
+</div>
+<div class="paragraph">
+<p>For syscalls such as <a href="https://book.cairo-lang.org/appendix-08-system-calls.html#get_execution_info" target="_blank" rel="noopener"><code>get_execution_info</code></a>,
+which returns the block hash and number, correctness means consistency with the value given to SNOS as input. For contract calls, however, one needs to execute the called contract and verify that the actual response and the guessed response are identical. But how can we guess the responses to all the contract calls before executing them? For that, it is important to distinguish two different styles-of-execution that a Starknet block goes through:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The first one is done by a sequencer, when constructing the block from incoming transactions</p>
+</li>
+<li>
+<p>The second one is done by a prover, when executing SNOS in order to generate a proof for the (already finalized) block</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Therefore, when running the OS, we already know what is going to happen: the block has already been executed by the sequencer, and so we know exactly what contracts and storage slots will be accessed, what each internal call will return, and so on.</p>
+</div>
+<div class="paragraph">
+<p>It&#8217;s worth noting that in the first execution, the sequencer can run in whatever way he chooses. In fact, he doesn&#8217;t even have to run through the Cairo VM at all, but rather <a href="https://github.com/lambdaclass/cairo_native" target="_blank" rel="noopener">precompile contracts to machine code and run them natively</a>. Moreover, sequencers can also impose restrictions that are not enforced by SNOS. Such discrepancy between the two executions may seem like a bug, but as long as these restrictions only protect the sequencers themselves, rather than the correctness of execution, there is no reason for SNOS to enforce them. A good example for such restriction is the <a href="../accounts/#limitations_of_validation" class="xref page">limits on validation functions</a> that protect the sequencer from DoS attacks. It is crucial, however, that both executions agree on the execution semantics, since, as mentioned in <a href="#introduction">What is SNOS?</a>, SNOS is the final arbiter and if it disagrees on the validity of the block, the sequencer will not be able to produce a proof for that block (and the only way forward would be a reorg on Starknet).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="multiblock_input"><a class="anchor" href="#multiblock_input"></a>Multiblock input</h3>
+<div class="paragraph">
+<p>Starting from Starknet version 0.14.0, block times on Starknet will be substantially shorter, leading to more frequent but also smaller blocks. As every run of SNOS on a single block incurs a fixed cost which is independent of the size of the block, producing e.g. twice as many blocks also doubles this fixed cost.</p>
+</div>
+<div class="paragraph">
+<p>To mitigate this, SNOS will be modified in version 0.14.0 to receive multiple blocks as inputs. This also amortizes other non-negligible costs over a larger number of blocks: For example, if both block 10 and 11 use the same contract, SNOS loads and hashes its code only once instead of twice.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="using_snos_to_update_starknets_state"><a class="anchor" href="#using_snos_to_update_starknets_state"></a>Using SNOS to update Starknet&#8217;s state</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The Starknet Core contract is the contract responsible for storing and updating Starknet&#8217;s state on Ethereum. As of Starknet v0.13.2 and as part of <a href="https://community.starknet.io/t/starknet-v0-13-2-pre-release-notes/114223#starknet-applicative-recursion-3" target="_blank" rel="noopener">SHARP&#8217;s applicative recursion feature</a>, proofs of SNOS&#8217;s execution are not enough to update the Starknet Core contract. Instead, it is required to submit an "applicative proof" of a different program called <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/cairo/bootloaders/applicative_bootloader/applicative_bootloader.cairo#L15" target="_blank" rel="noopener">the applicative bootloader</a>.</p>
+</div>
+<div class="paragraph">
+<p>The way the applicative bootloader works is by verifying a proof of one or more executions of a base program \(B\) and then using their outputs as input to an aggregator program \(A\). In the case of Starknet, \(B\) is the SNOS program and \(A\) is a new cairo program that squashes the state diffs of several blocks (the code of which can be found in the <a href="https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/aggregator/main.cairo#L8" target="_blank" rel="noopener">cairo-lang GitHub repository</a>). This way, individual executions of SNOS for some block range can be "squashed" into a single program whose valid execution attests to the validity of all blocks within that range and whose output is the squashed state diff of these blocks.</p>
+</div>
+<div class="paragraph">
+<p>In order to verify that an "applicative proof" used the correct SNOS and aggregator programs, their program hashes must be stored in the Starknet Core contract. As each Starknet version is associated with a given SNOS program, this means that breaking protocol changes must be accompanied by an update to SNOS&#8217;s (and possibly the aggregator&#8217;s) program hash registered in the Starknet Core contract.</p>
 </div>
 <div class="admonitionblock tip">
 <table>
@@ -539,39 +693,33 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>If you are only interested in learning how to stake on Starknet, feel free to skip straight to <a href="#procedures">Procedures</a>.</p>
+<p>You can read the program hashes currently registered in the Starknet Core contract by using its <a href="https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F13" target="_blank" rel="noopener"><code>programHash</code></a> (for SNOS&#8217;s program hash) and <a href="https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F1" target="_blank" rel="noopener"><code>aggregatorProgramHash</code></a> (for the aggregator&#8217;s program hash) functions.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+<div class="paragraph">
+<p>Finally, the Starknet Core contract is also responsible for verifying the few things that SNOS can&#8217;t, including:</p>
+</div>
 <div class="ulist">
-<div class="title">Additional resources</div>
 <ul>
 <li>
-<p>Staking dashboards by <a href="https://www.aligned-stake.com/" target="_blank" rel="noopener">AlignedStake</a>, <a href="https://dashboard.endur.fi/" target="_blank" rel="noopener">Ednur</a>, <a href="https://www.stakingrewards.com/stake-app?input=starknet" target="_blank" rel="noopener">Staking Rewards</a>, <a href="https://starkscan.co/staking" target="_blank" rel="noopener">Starkscan</a>, and <a href="https://voyager.online/staking-dashboard" target="_blank" rel="noopener">Voyager</a></p>
+<p>Verifying that the state given to SNOS as input is Starknet&#8217;s current state on Ethereum</p>
 </li>
 <li>
-<p><a href="https://www.starknet.io/staking" target="_blank" rel="noopener">Staking</a> on starknet.io</p>
-</li>
-<li>
-<p><a href="https://github.com/starkware-libs/starknet-staking/tree/%40staking/contracts-v1.0.1-dev.510" target="_blank" rel="noopener"><code>starknet-staking</code></a> on GitHub (deployed tag)</p>
-</li>
-<li>
-<p><a href="https://www.starknet.io/blog/staking-phase-1/" target="_blank" rel="noopener">Starknet launches phase 1 of its staking initiative on mainnet</a> on the Starknet blog</p>
-</li>
-<li>
-<p><a href="https://community.starknet.io/t/snip-28-staking-v2-proposal/115250" target="_blank" rel="noopener">SNIP 28: Staking V2 proposal</a> on the Starknet community forum</p>
+<p>Verifying that all <a href="../messaging/#l1-l2-messages" class="xref page">L1→L2 messages</a> were sent on Ethereum</p>
 </li>
 </ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="roadmap"><a class="anchor" href="#roadmap"></a>Roadmap</h2>
+<h2 id="implementations"><a class="anchor" href="#implementations"></a>Implementations</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Naturally, handing over the responsibility for maintaining and securing Starknet to validators in one day is neither feasible nor desirable. Instead, the staking protocol is implemented in incremental phases, with each phase bringing additional requirements from validators until they fully maintain and secure the network. The protocol is currently in the second of four phases, illustrated in following figure:</p>
+<p>The Cairo code of SNOS is available in the <a href="https://github.com/starkware-libs/cairo-lang/tree/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os" target="_blank" rel="noopener">cairo-lang GitHub repository</a>.
+However, this repository does not include all the hints implementation, which are necessary to locally run SNOS. The current implementation of these hints in Python is now deprecated, and will no longer be maintained in future Starknet versions.</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -581,610 +729,20 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The staking protocol is currently in its second phase on both Sepolia and Mainnet.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/staking-roadmap.png" alt="staking roadmap">
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="protocol"><a class="anchor" href="#protocol"></a>Protocol</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The following sections describe the details of Starknet&#8217;s staking protocol. The parameters used in the protocol are summarized in the following table:</p>
-</div>
-<table class="tableblock frame-all grid-all fit-content">
-<colgroup>
-<col>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Parameter</th>
-<th class="tableblock halign-left valign-top">Mainnet</th>
-<th class="tableblock halign-left valign-top">Sepolia</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum stake for validators</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">20K STRK</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1 STRK</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Minting curve yearly inflation cap (\(C\))</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.6</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1.6</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Withdrawal security lockup</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">21 days</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">5 minutes</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Epoch length (\(E\))</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">40</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Attestation window (\(W\))</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Number of epochs used for latency (\(k\))</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">3600</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1200</p></td>
-</tr>
-</tbody>
-</table>
-<div class="sect2">
-<h3 id="roles"><a class="anchor" href="#roles"></a>Roles</h3>
-<div class="paragraph">
-<p>Starknet&#8217;s staking protocol features two options for participation:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Staking directly as validators: Staking a minimum of 20,000 STRK and earning rewards by handling any responsibilities the protocol requires</p>
-</li>
-<li>
-<p>Staking indirectly as delegators: Delegating STRKs to validators who allow delegation and sharing in their rewards without handling any of their responsibilities</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Validators can choose whether to allow delegation or not.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="addresses"><a class="anchor" href="#addresses"></a>Addresses</h3>
-<div class="paragraph">
-<p>To reduce exposure to threats and enhance security, multiple addresses for defined for both validators and delegators:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Validator addresses:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Staking address: Used for staking, adding stake, and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.</p>
-</li>
-<li>
-<p>Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.</p>
-</li>
-<li>
-<p>Operational Address: Used for operational purposes, such as block attestations (starting from the protocol&#8217;s second phase), block proposing (starting from the protocol&#8217;s third phase), etc. This address is used frequently and doesn&#8217;t handle large amounts of funds, and therefore is best kept by a hot wallet. Starting from the protocol&#8217;s second phase, however, hacking the operational address can lead to a lose of yield for the validator and its delegators.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p>Delegator addresses:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Staking address: Used for delegating stake, adding stake and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.</p>
-</li>
-<li>
-<p>Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.</p>
-</li>
-</ul>
-</div>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>The protocol uses a hierarchical approach between the staking and rewards addresses, and both validators and delegator can also use their staking address whenever their rewards address is required.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="epochs"><a class="anchor" href="#epochs"></a>Epochs</h3>
-<div class="paragraph">
-<p>Starting from its second phase, the staking protocol introduces the notion of <em>epochs</em> (similarly to many other protocols). Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch \(i\) are applied in epoch \(i+k\), where \(k\) is a new latency parameter. For example, the following figure illustrates a scenario where in epoch \(i\) validator \(A\) has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch \(i+1\) someone undelegates 30K STRK from \(A\):</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/epochs-example.png" alt="epochs example">
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="responsibilities"><a class="anchor" href="#responsibilities"></a>Responsibilities</h3>
-<div class="sect3">
-<h4 id="running_a_full_node"><a class="anchor" href="#running_a_full_node"></a>Running a full node</h4>
-<div class="paragraph">
-<p>The staking protocol requires validators to run one of the following full node implementations:</p>
-</div>
-<table class="tableblock frame-all grid-all fit-content">
-<colgroup>
-<col>
-<col>
-<col>
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Name</th>
-<th class="tableblock halign-left valign-top">Hardware requirements</th>
-<th class="tableblock halign-left valign-top">Integration guide</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Juno</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://juno.nethermind.io/hardware-requirements" target="_blank" rel="noopener">juno.nethermind.io/hardware-requirements</a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://juno.nethermind.io/running-juno" target="_blank" rel="noopener">juno.nethermind.io/running-juno</a></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Madara</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://docs.madara.build/hardware" target="_blank" rel="noopener">docs.madara.build/hardware</a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/madara-alliance/madara/blob/main/README.md#%EF%B8%8F-installation" target="_blank" rel="noopener">github.com/madara-alliance/madara/README.md</a></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Pathfinder</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://eqlabs.github.io/pathfinder/getting-started/hardware-requirements" target="_blank" rel="noopener">eqlabs.github.io/pathfinder/getting-started/hardware-requirements</a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://eqlabs.github.io/pathfinder/getting-started/running-pathfinder" target="_blank" rel="noopener">eqlabs.github.io/pathfinder/getting-started/running-pathfinder</a></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="sect3">
-<h4 id="block_attestation"><a class="anchor" href="#block_attestation"></a>Block attestation</h4>
-<div class="paragraph">
-<p>Starting from its second phase, the staking protocol requires validators to attest to blocks, by running one of the following software:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="https://github.com/NethermindEth/starknet-staking-v2/blob/main/README.md" target="_blank" rel="noopener">Starknet Staking v2</a> by Nethermind</p>
-</li>
-<li>
-<p><a href="https://github.com/eqlabs/starknet-validator-attestation/blob/main/README.md" target="_blank" rel="noopener">Starknet Validator Attestation</a> by Equilibrium</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<div class="title">How does the block attestation mechanism work?</div>
-<p>In each epoch, each validator is assigned a single block whose relative number within the epoch is defined as follows:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[h(\text{staked amount},\text{epoch id},\text{validator address}) \mod (E-W)\]
-</div>
-</div>
-<div class="paragraph">
-<p>where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(E\) is the number of blocks in an epoch, termed <em>epoch length</em></p>
-</li>
-<li>
-<p>\(W\) is the number of blocks applicable for attestation submittal, termed <em>attestation window</em></p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>During each epoch, validators have the opportunity to attest to their assigned block by submitting an <code>attest</code> transaction, which must be included within the attestation window. For example, if \(W = 20\) and \(N\) is the relative block number assigned to validator \(A\), then \(A\) must submit an <code>attest</code> transaction between the blocks whose relative number within the epoch are \(N+1\) and \(N+20\).</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>In the second phase of the protocol, each Validator is required to perform only one attestation per epoch.</p>
+<p>As part of the transition of Starknet&#8217;s infrastructure to Rust, SNOS&#8217;s Pythonic hints implementation is deprecated, and will no longer be maintained in future Starknet versions.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>The <code>attest</code> transaction includes the block hash of the attested block, ensuring validators actively use full nodes, as they need to continuously track block hashes. Additionally, the attestation is publicly verifiable, ensuring validators' reliability is publicly tested — a crucial prerequisite before handing them any core responsibilities.</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="rewards"><a class="anchor" href="#rewards"></a>Rewards</h3>
-<div class="paragraph">
-<p>Rewards are distributed based on the amount staked and the commission policy constant \(CP\) set by the validator, with yearly reward percentages calculated using the following formulas:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>For delegators:</p>
-<div class="stemblock">
-<div class="content">
-\[\text{stake_delegated} \cdot (1 - CP) \cdot \frac{M}{S}\]
-</div>
-</div>
-</li>
-<li>
-<p>For validators:</p>
-<div class="stemblock">
-<div class="content">
-\[\left(\text{self_stake} + \text{total_stake_delegated} \cdot CP\right) \cdot \frac{M}{S}\]
-</div>
-</div>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>where \(M\) and \(S\) are defined by the <a href="#minting_curve">Minting curve</a>.</p>
-</div>
-<div class="paragraph">
-<p>Starting from the second phase of the protocol, rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn&#8217;t will get no rewards for the epoch&#8217;s entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator&#8217;s pool. Stakers that enter the protocol on epoch \(i\) will start getting rewards only on epoch \(i+k\), and stakers that signal an intent to exit the protocol on epoch \(i\) will still get rewards until epoch \(i+k-1\).</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Starting from the second phase of the protocol, when a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is \(O(\text{#delegator's balance changes since last claim})\) — and not \(O(\text{#epochs since last claim})\) — which is assumed to be small enough to fit in one transaction in any real-world-scenario. This mechanism replaces the global reward index that was used prior to the protocol&#8217;s second phase.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="sect3">
-<h4 id="minting_curve"><a class="anchor" href="#minting_curve"></a>Minting curve</h4>
-<div class="paragraph">
-<p>The minting curve balances participation and inflation by adjusting rewards based on the total STRK locked in the protocol, and is defined by the following formula:</p>
-</div>
-<div class="stemblock">
-<div class="content">
-\[M = \frac{C}{10} \times \sqrt{S}\]
-</div>
-</div>
-<div class="paragraph">
-<p>where:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>\(S\) is the staking rate as a percentage of the total token supply</p>
-</li>
-<li>
-<p>\(M\) is the annual minting rate as a percentage of the total token supply</p>
-</li>
-<li>
-<p>\(C\) is the maximum theoretical inflation percentage, set to 1.6%</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="latencies"><a class="anchor" href="#latencies"></a>Latencies</h3>
-<div class="paragraph">
-<p>The following latencies are set in place:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>To disincentivise sudden large withdrawals that could destabilize the network, funds are subject to a 21-day lockup after signaling an unstake intent, during which no rewards are earned and funds cannot be withdrawn.</p>
-</li>
-<li>
-<p>Starting from the second phase of the protocol, to prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch \(i\) takes effect only on epoch \(i+1\).</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="commissions"><a class="anchor" href="#commissions"></a>Commissions</h3>
-<div class="paragraph">
-<p>Starting from its second phase, the staking protocol allows validators to increase their commission. To avoid an unexpected increase in commissions, validators must commit to a certain maximum commission \(M\) and the last date (in epochs) that this commitment is relevant for. Until this date arrives, validators cannot increase their commission beyond \(M\), but can freely change their commission in the range \([0,M]\).</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="architecture"><a class="anchor" href="#architecture"></a>Architecture</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The implementation of Starknet&#8217;s staking protocol is divided into several contracts, summarized in the following figure:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/staking-architecture.png" alt="staking architecture">
-</div>
-</div>
-<div class="paragraph">
-<p>This modular architecture allows for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are also in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process. The following table details the key components of the architecture:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 11.1111%;">
-<col style="width: 88.8889%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Contract</th>
-<th class="tableblock halign-left valign-top">Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Staking</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The staking contract is the core of the staking system, managing the entire lifecycle of staking, from initial staking to claiming rewards and unstaking.</p>
-<p class="tableblock">The staking contract also stores the <code>StakerInfo</code> data structure, which holds detailed information about each validator, including their staked amount, unclaimed rewards, delegation details, and operational parameters, and helps to ensure that validators' information is accurately tracked and updated.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Delegation pooling</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">All delegation interactions, such as entering or exiting a pool, are enabled through the delegation pooling contract, which tracks each delegator&#8217;s contribution, calculates their rewards, and manages the delegation lifecycle.</p>
-<p class="tableblock">The delegation pooling contract also stores the <code>PoolMemberInfo</code> data structure, which holds information about each delegator&#8217;s contributions, rewards, and status within the pool, and helps manage and calculate the delegation and reward distribution processes for pool members.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Reward Supplier</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve, ensuring the rewards are distributed fairly and in accordance with the protocol&#8217;s economic parameters.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Minting Curve</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The minting curve contract defines the economic model that governs reward distribution, ensuring that the network&#8217;s inflation is managed while incentivizing participation of stakers.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Attestation</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The attestation contract manages the tracking of successful validator attestations, by verifying whether the validator has correctly attested to their assigned block within a designated attestation window.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="sect1">
-<h2 id="procedures"><a class="anchor" href="#procedures"></a>Procedures</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The following tables detail the procedures enabled by the staking protocol for both <a href="#staking_as_validators">validators</a> and <a href="#staking_as_delegators">delegators</a>, along with the instructions to perform them.</p>
-</div>
-<div class="paragraph">
-<p>To invoke onchain contracts, use <a href="https://foundry-rs.github.io/starknet-foundry/starknet/sncast-overview.html" target="_blank" rel="noopener">Starknet Foundry&#8217;s <code>sncast</code></a>, <a href="../../tools/interacting-with-starknet/#starkli" class="xref page">Starkli</a>, or a <a href="../../ecosystem/block-explorers-monitoring-tools/#block_explorers" class="xref page">block explorer</a>. To get the onchain addresses of the staking and STRK contracts, see <a href="../../resources/chain-info/#staking" class="xref page">Important addresses</a>.</p>
-</div>
-<div class="sect2">
-<h3 id="staking_as_validators"><a class="anchor" href="#staking_as_validators"></a>Staking as validators</h3>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 20%;">
-<col style="width: 40%;">
-<col style="width: 40%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Procedure</th>
-<th class="tableblock halign-left valign-top">Instructions</th>
-<th class="tableblock halign-left valign-top">Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Staking</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#stake" target="_blank" rel="noopener"><code>stake</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p>You should make sure you are <a href="#responsibilities">running a full node and attesting to blocks</a> before staking</p>
-</li>
-<li>
-<p>You must first approve the transfer of the amount of STRK tokens to be staked to the staking contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
-</li>
-<li>
-<p><code>operational_address</code> should have sufficient funds to pay for attestation transactions</p>
-</li>
-<li>
-<p><code>amount</code> should be equal or greater than the <a href="#protocol">minimum stake for validators</a> and denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
-</li>
-<li>
-<p><code>commission</code> should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Claiming rewards</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards" target="_blank" rel="noopener"><code>claim_rewards</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Increasing stake</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#increase_stake" target="_blank" rel="noopener"><code>increase_stake</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
-</li>
-<li>
-<p>You must first approve the transfer of STRK tokens to the staking contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Setting commission</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission" target="_blank" rel="noopener"><code>set_commission</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p><code>commission</code> should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)</p>
-</li>
-<li>
-<p>Commissions can be increased only after <a href="#commissions">setting a commission commitment</a> using <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission_commitment" target="_blank" rel="noopener"><code>set_commission_commitment</code></a></p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Changing reward address</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address" target="_blank" rel="noopener"><code>change_reward_address</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Changing operational address</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#declare_operational_address" target="_blank" rel="noopener"><code>declare_operational_address</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_operational_address" target="_blank" rel="noopener"><code>change_operational_address</code></a> functions</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>declare_operational_address</code> should be invoked by your new operational address and <code>change_operational_address</code> should be invoked by your staking address</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Opening delegation</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_open_for_delegation" target="_blank" rel="noopener"><code>set_open_for_delegation</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Opening delegation is necessary only if <code>pool_enabled</code> was set to <code>false</code> when invoking the staking contract&#8217;s <code>stake</code> function</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Unstaking</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_intent"><code>unstake_intent</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_action"><code>unstake_action</code></a> functions</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p>Once an unstake intent is signaled:</p>
-<div class="ulist">
-<ul>
-<li>
-<p>Funds are removed from the total balance and are no longer part of the staking protocol</p>
-</li>
-<li>
-<p>The same staking address cannot be used to "restake" (i.e., <code>unstake_action</code> is <strong>irreversible</strong>)</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p><code>unstake_action</code> should be invoked only after the appropriate <a href="#latencies">waiting period</a> has ended</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="sect2">
-<h3 id="staking_as_delegators"><a class="anchor" href="#staking_as_delegators"></a>Staking as delegators</h3>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The following procedures are only intended for developers who are either interested (for whatever reason) in staking as delegators without using a <a href="#introduction">staking dashboard</a>, or are building one.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 20%;">
-<col style="width: 40%;">
-<col style="width: 40%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Procedure</th>
-<th class="tableblock halign-left valign-top">Instructions</th>
-<th class="tableblock halign-left valign-top">Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Entering a delegation pool</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#enter_delegation_pool" target="_blank" rel="noopener"><code>enter_delegation_pool</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
-</li>
-<li>
-<p>You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Claiming rewards</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards-1" target="_blank" rel="noopener"><code>claim_rewards</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Adding to a delegation pool</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#add_to_delegation_pool" target="_blank" rel="noopener"><code>add_to_delegation_pool</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
-</li>
-<li>
-<p>You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Switching delegation pools</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#switch_delegation_pool" target="_blank" rel="noopener"><code>switch_delegation_pool</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Changing reward address</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address-1" target="_blank" rel="noopener"><code>change_reward_address</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Exiting a delegation pool</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_intent" target="_blank" rel="noopener"><code>exit_delegation_pool_intent</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_action" target="_blank" rel="noopener"><code>exit_delegation_pool_action</code></a> function</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>exit_delegation_pool_action</code> should be invoked only after the appropriate <a href="#latencies">waiting period</a> has ended</p></td>
-</tr>
-</tbody>
-</table>
+<p>Instead, a new Rust implementation of the hints, including initializing all inputs of SNOS via a Starknet full node connection, is available in the <a href="https://github.com/keep-starknet-strange/snos/tree/cb2a6d26faeb658492756fe100bbdf5b1600c768" target="_blank" rel="noopener">SNOS GitHub repository</a>. At the time of writing, this codebase supports the execution of SNOS for Starknet version 0.13.2.</p>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../messaging/">L1-L2 messaging</a></span>
-  <span class="next"><a href="../state/">State</a></span>
+  <span class="prev"><a href="../sharp/">SHARP</a></span>
+  <span class="next"><a href="../starkgate/">StarkGate</a></span>
 </nav>
 </article>
   </div>

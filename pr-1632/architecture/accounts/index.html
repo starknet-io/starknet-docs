@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>StarkGate :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/starkgate/">
-    <link rel="prev" href="../os/">
-    <link rel="next" href="../../ecosystem/overview/">
+    <title>Accounts :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/accounts/">
+    <link rel="prev" href="../protocol-overview/">
+    <link rel="next" href="../blocks/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,7 +307,12 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../accounts/">Accounts</a>
+     href="../protocol-overview/">Overview</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a 
+       class="nav-link"
+     href="./">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -332,7 +337,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../messaging/">L1-L2 messaging</a>
+     href="../messaging/">L1 ↔ L2 messaging</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -347,7 +352,7 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -373,10 +378,10 @@
        class="nav-link"
      href="../os/">SNOS</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">StarkGate</a>
+     href="../starkgate/">StarkGate</a>
   </li>
   <li class="nav-item" data-depth="2">
     <span class="nav-text"><a href="https://docs.starknet.io/stwo-book/" target="_blank" rel="noopener">Stwo ↗</a></span>
@@ -515,40 +520,54 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/starkgate.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/accounts.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "StarkGate"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Accounts"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">StarkGate</h1>
+<h1 class="page">Accounts</h1>
 <div class="sect1">
 <h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="https://starkgate.starknet.io" target="_blank" rel="noopener">StarkGate</a>, developed by StarkWare, bridges ETH and ERC-20 tokens between Ethereum and Starknet. The following is an illustration of its overall architecture:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/sg-architecture.png" alt="sg architecture">
-</div>
-</div>
-<div class="paragraph">
-<p>As illustrated, while StarkGate is referred to as a single bridge, some <a href="#legacy_bridge">legacy tokens</a> have their own bridge, each of which is defined in a corresponding pair of L1 and L2 contracts. Moreover, StarkGate also includes additional <a href="#l1_components">L1 components</a>, used for administrative purposes. To best understand the interplay between the different components, it&#8217;s recommended to follow the <a href="#lifecycles">lifecycles of a deposit and withdrawal</a>.</p>
+<p>Accounts represent users onchain, and enable them to interact with the blockchain. <a href="#ethereums_account_structure">Unlike Ethereum</a>, Starknet facilitates account abstraction natively, via its unique account <a href="#starknets_account_structure">structure</a> and <a href="#account_nonces">nonce management</a>. Accounts can be <a href="#deploying_a_new_account">easily deployed on Starknet</a>, both with or without having a preexisting account.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="legacy_bridge"><a class="anchor" href="#legacy_bridge"></a>Legacy bridges</h2>
+<h2 id="ethereums_account_structure"><a class="anchor" href="#ethereums_account_structure"></a>Ethereum&#8217;s account structure</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Prior to StarkGate 2.0 (Mainnet: January 2024) tokens were bridged with a unique, custom pair of L1 and L2 bridge contracts, where the L1 contract is an instance of <a href="https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/solidity/LegacyBridge.sol" target="_blank" rel="noopener"><code>LegacyBridge.sol</code></a> and the L2 contract is an instance of <a href="https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/cairo/legacy_bridge_eic.cairo" target="_blank" rel="noopener"><code>legacy_bridge_eic.cairo</code></a>. These legacy token bridges are supported by StarkGate 2.0 in a fully backward-compatible fashion, as illustrated in the following example.</p>
+<p>Within Ethereum individual user accounts are known as Externally Owned Accounts (EOAs). EOAs differ from smart contracts in that EOAs are not controlled by code, but rather by a pair of private and public keys. The account&#8217;s address is derived from those keys, and only by possessing the private key can you initiate transactions from an account. While simple, because the signature scheme is fixed, EOAs have some drawbacks, including the following:</p>
 </div>
-<div class="sect2">
-<h3 id="example"><a class="anchor" href="#example"></a>Example: USDC</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Control over the private key gives complete control over
+the account, so you must keep your seed phrase secure yet accessible.</p>
+</li>
+<li>
+<p>Wallet functionality has limited flexibility</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><a href="https://eips.ethereum.org/EIPS/eip-4337" target="_blank" rel="noopener">ERC-4337</a> is a design proposal for Ethereum that outlines <em>_account abstraction</em>, whereby all accounts are managed via a dedicated smart contract on the Ethereum network, as a way to increase flexibility and usability. Using account abstraction you can program how your account functions, including:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Determine what it means for a signature to be valid, or what contracts your account is allowed to interact with, also known as <em>signature abstraction</em></p>
+</li>
+<li>
+<p>Pay transaction fees in different tokens, also known as <em>fee abstraction</em></p>
+</li>
+<li>
+<p>Design your own replay protection mechanism and allow sending multiple uncoupled transactions in parallel, also known as <em>nonce abstraction</em></p>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -557,156 +576,419 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>For the complete list of legacy bridges, see the <a href="https://github.com/starknet-io/starknet-addresses/tree/master/bridged_tokens" target="_blank" rel="noopener"><code>bridged_tokens</code></a> directory on GitHub.</p>
+<p>Without account abstractions, EOAs cannot send two transactions in parallel, but rather must wait for confirmation of the first before sending the second, as otherwise the second transaction can be rejected due to an invalid nonce. With account abstraction, sequential nonces is not required.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-<div class="paragraph">
-<p>Consider the <code>deposit</code> functions for the L1 bridge contract for USDC on Etherscan: <a href="https://etherscan.io/address/0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract" target="_blank" rel="noopener"><code>0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract</code></a></p>
+</li>
+</ul>
 </div>
 <div class="paragraph">
-<p>This contract has the following two <code>deposit</code> functions: <code>deposit (0x0efe6a8b)</code> and <code>deposit (0xe2bbb158)</code>, which shows that the bridge includes support for the legacy functionality as well as the modern functionality:</p>
+<p>Two prominent examples of how account abstraction might be used to program account functionality include:</p>
 </div>
-<div class="hdlist">
-<table>
-<colgroup>
-<col style="width: 25%;">
-<col>
-</colgroup>
-<tr>
-<td class="hdlist1">
-<code>deposit (0x0efe6a8b)</code>
-</td>
-<td class="hdlist2">
-<p>The multi-bridge contract, which includes support for all tokens within a single contract, requiring that you enter the address of the token in the deposit function.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>deposit (0xe2bbb158)</code>
-</td>
-<td class="hdlist2">
-<p>The legacy contract, which is labeled <strong>Support Legacy ABI</strong>. This function does not include the <code>token (address)</code> parameter, because the contract that contains this function only supports USDC. Therefore, the address of the token is superfluous.</p>
-</td>
-</tr>
-</table>
-</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Social recovery:</strong> retrieving your wallet if in case its lost via a selected social network, vastly improving the typical experience of wallet recovery</p>
+</li>
+<li>
+<p><strong>Operating your account via facial recognition:</strong> Using your phone&#8217;s native hardware to sign transactions, making it practically impossible to take control of another user&#8217;s account, even if your phone is stolen</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="l1_components"><a class="anchor" href="#l1_components"></a>L1 components</h2>
+<h2 id="starknets_account_structure"><a class="anchor" href="#starknets_account_structure"></a>Starknet&#8217;s account structure</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>Starknet&#8217;s account structure is inspired by Ethereum&#8217;s EIP-4337 where
+smart contract accounts with arbitrary verification logic are used instead of EOAs.</p>
+</div>
+<div class="paragraph">
+<p>A valid account contract in Starknet is simply a contract that includes the following functions:</p>
+</div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
+<col style="width: 25%;">
+<col style="width: 75%;">
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Contract</th>
-<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Function name</th>
+<th class="tableblock halign-left valign-top">When required</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/StarkgateManager.sol" target="_blank" rel="noopener"><code>StarkgateManager.sol</code></a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Responsible for adding tokens to the multi-bridge.</p>
-<p class="tableblock">An interface is available through <a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/IStarkgateManager.sol"><code>IStarkgateManager.sol</code></a>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate__</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Always required</p>
+</div></div></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/StarkgateRegistry.sol" target="_blank" rel="noopener"><code>StarkgateRegistry.sol</code></a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Contains the addresses of all supported bridges and tokens and enables to stop servicing an existing bridge.</p>
-<p class="tableblock">An interface is available through <a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/IStarkgateRegistry.sol"><code>IStarkgateRegistry.sol</code></a>.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__execute__</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Always required. The signatures of <code>__validate__</code> and <code>__execute__</code> must be identical.</p>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Two critical validations must happen in <code>__execute__</code>, and their absence can lead to draining of the account&#8217;s funds:</p>
+</div>
+<div class="paragraph">
+<p>(1) <code>assert!(get_caller_address().is_zero())</code></p>
+</div>
+<div class="paragraph">
+<p>This asserts that the account&#8217;s <code>__execute__</code> is not called from another contract, thus skipping validations (in later versions we may disallow calling <code>__execute__</code> from another contract at the protocol level)</p>
+</div>
+<div class="paragraph">
+<p>(2) <code>assert!(get_tx_info().unbox().version.into() &gt;= 1_u32)</code></p>
+</div>
+<div class="paragraph">
+<p>This asserts that the transaction&#8217;s version is at least 1, preventing the account from accepting <code>INVOKE</code> v0 transactions. It is critical to explicitly disallow the deprecated v0 transaction type, as v0 transactions assume that the signature verification happens in <code>__execute__</code>, and are thus skipping <code>__validate__</code> entirely.</p>
+</div>
+</td>
+</tr>
+</table>
+</div></div></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/StarknetTokenBridge.sol"><code>StarknetTokenBridge.sol</code></a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The primary StarkGate bridge contract, where the main user bridge functionality are defined.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate_declare__</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Required for the account to be able to send a <code>DECLARE</code> transaction. This function must receive exactly one argument, which is the class hash of the declared class.</p>
+</div></div></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/starknet-io/starkgate-contracts/tree/v2.0.1/src/solidity/IStarkgateService.sol"><code>IStarkgateService.sol</code></a></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">An interface to check if a contract is servicing a token.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>__validate_deploy__</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Required to allow deploying an instance of the account contract with a <code>DEPLOY_ACCOUNT</code> transaction. The arguments of <code>__validate_deploy__</code> must be the class hash of the account to be deployed and the salt used for computing the account&#8217;s contract address, followed by the constructor arguments.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>You can only use the <code>__validate_deploy__</code> function in an account contract to validate the <code>DEPLOY_ACCOUNT</code> transaction for that same contract.
+That is, this function runs at most once throughout the lifecycle of the account.</p>
+</div>
+</td>
+</tr>
+</table>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>constructor</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>All contracts have a <code>constructor</code> function. It can be explicitly defined in the contract, or if not explicitly defined, the sequencer uses a default <code>constructor</code> function, which is empty.</p>
+</div></div></td>
 </tr>
 </tbody>
 </table>
+<div class="sect2">
+<h3 id="flow"><a class="anchor" href="#flow"></a>Flow</h3>
+<div class="paragraph">
+<p>When the sequencer receives a transaction, it calls the corresponding function with the appropriate input from the transaction&#8217;s data, as follows:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>For a <code>DECLARE</code> transaction, the sequencer validates the transaction by calling the <code>__validate_declare__</code> function.</p>
+</li>
+<li>
+<p>For an <code>INVOKE</code> transaction, the sequencer calls the <code>__validate__</code> function with the transaction&#8217;s calldata as input, after being deserialized to the arguments in the <code>__validate__</code> function&#8217;s signature. After successfully completing validation, the sequencer calls the <code>__execute__</code> function with the same arguments.</p>
+</li>
+<li>
+<p>For a <code>DEPLOY_ACCOUNT</code> transaction, the sequencer calls the <code>constructor</code> function with the transaction&#8217;s <code>constructor_calldata</code> as input, after being deserialized to the arguments in the constructor signature. After the successful execution of the constructor, the sequencer validates the transaction by calling the <code>__validate_deploy__</code> function.</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>For an <code>INVOKE</code> and <code>DEPLOY_ACCOUNT</code> transactions, it is up to the sender to make sure that the calldata is serializied correctly according to either the <code>__validate__</code> or <code>constructor</code> function&#8217;s signature.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Separating the validation and execution stages guarantees payment to sequencers for work completed and protects them from DoS attacks.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>For more information on transaction types and lifecycle, see <a href="../transactions/" class="xref page">Transactions</a>.</p>
+</div>
+<div class="paragraph">
+<p>For more information on the each transaction&#8217;s fields, see <a href="../../resources/transactions-reference/" class="xref page">Transaction fields and hash calculations reference</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="limitations"><a class="anchor" href="#limitations"></a>Limitations</h3>
+<div class="paragraph">
+<p>The logic of the <code>__validate__</code>, <code>__validate_deploy__</code>, <code>__validate_declare__</code>, and <code>constructor</code> functions can be mostly arbitrary, except for the following limitations:</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>For the <code>constructor</code> function, limitations apply only when run in a <code>DEPLOY_ACCOUNT</code> transaction (in particular, <strong>not</strong> when an account is deployed from an existing class via the <code>deploy</code> syscall)</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>You cannot use more than 1,000,000 Cairo steps</p>
+</li>
+<li>
+<p>You cannot use more than 100,000,000 gas</p>
+</li>
+<li>
+<p>You cannot call the following syscalls:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>get_class_hash_at</code></p>
+</li>
+<li>
+<p><code>get_sequencer_address</code> (this syscall is only supported for Cairo 0 contracts)</p>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Starting from Starknet version 0.14.0, calling the <code>deploy</code> syscall from the <code>__validate__</code>, <code>__validate_deploy__</code>, <code>__validate_declare__</code>, and <code>constructor</code> functions will also not be possible.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>You cannot call functions in external contracts</p>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>This restriction enforces a single storage update being able to invalidate only transactions from a single account. However, be aware that an account can always invalidate its own past transactions by e.g. changing its public key.</p>
+</div>
+<div class="paragraph">
+<p>This limitation implies that the fees you need to pay to invalidate transactions in the mempool are directly proportional to the number of unique accounts whose transactions you want to invalidate.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</li>
+<li>
+<p>When calling the <code>get_execution_info</code> syscall:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>sequencer_address</code> is set to zero</p>
+</li>
+<li>
+<p><code>block_timestamp</code> returns the time (in UTC), rounded to the most recent hour</p>
+</li>
+<li>
+<p><code>block_number</code> returns the block number, rounded down to the nearest multiple of 100</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>These limitations are designed to prevent the following DoS attacks on the sequencer:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>An attacker could cause the sequencer to perform a large amount of work before a transaction fails validation. Two examples of such attacks are:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Spamming <code>INVOKE</code> transactions whose <code>__validate__</code> requires many steps, but eventually fails</p>
+</li>
+<li>
+<p>Spamming <code>DEPLOY_ACCOUNT</code> transactions that are invalid as a result of the constructor or <code>__validate_deploy__</code> failing.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>The above attacks are solved by making sure that the validation step is not resource-intensive, e.g. by keeping the maximal number of steps low. However, even if the validation is simple, the following "mempool pollution" attack could still be possible:</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>An attacker fills the mempool with transactions that are valid at the time they are sent.</p>
+</li>
+<li>
+<p>The sequencer is ready to execute them, thinking that by the time it includes them in a block, they will still be valid.</p>
+</li>
+<li>
+<p>Shortly after the transactions are sent, the attacker sends one transaction that somehow invalidates all the previous ones and makes sure it&#8217;s included in a block, e.g. by offering higher fees for this one transaction.
+An example of such an attack is having the implementation of <code>__validate__</code> checks that the value of a storage slot is <code>1</code>, and the attacker&#8217;s transaction later sets it to <code>0</code>. Restricting validation functions from calling external contracts prevents this attack.</p>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="failures"><a class="anchor" href="#failures"></a>Failures</h3>
+<div class="paragraph">
+<p>When the <code>__validate__</code>, <code>__validate_deploy__</code>, or <code>__validate_declare__</code> functions fail, the account in question does not pay any fee, and the transaction&#8217;s status is <code>REJECTED</code>.</p>
+</div>
+<div class="paragraph">
+<p>When the <code>__execute__</code> function fails, the transaction&#8217;s status is <code>REVERTED</code>. Similar to Ethereum, a reverted transaction is included in a block, and the sequencer is eligible to charge a fee for the work done up to the point of failure.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>To learn more about transaction statuses, see <a href="../transactions/#transaction_statuses" class="xref page">Transactions</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="snip_6"><a class="anchor" href="#snip_6"></a>SNIP-6</h3>
+<div class="paragraph">
+<p>While not mandatory at the protocol level, you can use a richer standard interface for accounts, defined in <a href="https://github.com/starknet-io/SNIPs/blob/main/SNIPS/snip-6.md" target="_blank" rel="noopener">Starknet Improvement Proposal 6 (SNIP-6)</a>. SNIP-6 was developed by community members at <a href="https://www.openzeppelin.com/" target="_blank" rel="noopener">OpenZeppelin</a>, in close collaboration with wallet teams and other core Starknet developers.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="example"><a class="anchor" href="#example"></a>Example</h3>
+<div class="paragraph">
+<p>Thanks to account abstraction, the logic of <code>__execute__</code> and the different validation functions is up to the party implementing the account. To review a concrete implementation, you can check out OpenZeppelin&#8217;s <a href="https://github.com/OpenZeppelin/cairo-contracts/blob/v0.14.0/src/account/account.cairo#L72" target="_blank" rel="noopener">account component</a>, which also adheres to <a href="#snip-6">SNIP6</a>.</p>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="lifecycles"><a class="anchor" href="#lifecycles"></a>Lifecycles</h2>
+<h2 id="account_nonces"><a class="anchor" href="#account_nonces"></a>Account nonces</h2>
 <div class="sectionbody">
-<div class="sect2">
-<h3 id="deposit_lifecycle"><a class="anchor" href="#deposit_lifecycle"></a>Deposit lifecycle</h3>
-<div class="sect3">
-<h4 id="step_1_initiating_a_deposit_on_l1"><a class="anchor" href="#step_1_initiating_a_deposit_on_l1"></a>Step 1: Initiating a deposit on L1</h4>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>A call to the L1 <code>deposit</code> function initiates a deposit.</p>
-</li>
-<li>
-<p>The function does the following:</p>
-<div class="openblock">
-<div class="content">
+<div class="paragraph">
+<p>Similar to Ethereum, every contract in Starknet, including account contracts, has a nonce. The nonce of a transaction sent from an account must match the nonce of that account, which changes after the transaction is executed — even if it was reverted. Nonces serves two important roles:</p>
+</div>
 <div class="ulist">
 <ul>
 <li>
-<p>Transfers the funds from the user&#8217;s account to the Starknet bridge.</p>
+<p>They guarantee transaction hash uniqueness, which is important for a good user experience</p>
 </li>
 <li>
-<p>Emits a <code>Deposit</code> event that includes the L1 and L2 addresses of the user, and the amount deposited.</p>
-</li>
-<li>
-<p>Sends a message to the corresponding L2 bridge with the amount deposited, and the recipient&#8217;s address.</p>
+<p>They provide replay protection to the account, by binding the signature to a particular nonce and preventing a malicious party from replaying the transaction</p>
 </li>
 </ul>
 </div>
-</div>
+<div class="paragraph">
+<p>Also similarly to Ethereum, Starknet currently determines the nonce structure at the protocol level to be sequential (i.e., the nonce of a transaction sent from an account is incremented by one after the transaction is executed). In the future, Starknet will consider a more flexible design, extending account abstraction to nonce abstraction.</p>
 </div>
 <div class="paragraph">
-<p>Starknet&#8217;s sequencer is now aware of the deposit transaction.</p>
+<p>However, unlike Ethereum, only the nonce of account contracts — that is, those adhering to <a href="#starknets_account_structure">Starknet&#8217;s account structure</a> — can be non-zero in Starknet. In contrast, in Ethereum, regular smart contracts can also increment their nonce by deploying smart contracts (i.e., executing the <code>CREATE</code> and <code>CREATE2</code> opcodes).</p>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="deploying_a_new_account"><a class="anchor" href="#deploying_a_new_account"></a>Deploying a new account</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>New accounts can be deployed in the following ways:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Sending a <code>DEPLOY_ACCOUNT</code> transaction, which does not require a preexisting account.</p>
 </li>
 <li>
-<p>The sequencer waits for enough L1 block confirmations to fill its quota to run before the corresponding deposit transaction is initiated on L2. During this period of time, the status of the L2 deposit transaction is <a href="../transactions/#transaction_lifecycle" class="xref page"><code>NOT_RECEIVED</code></a>.</p>
+<p>Using the <a href="https://docs.openzeppelin.com/contracts-cairo/0.12.0/udc" target="_blank" rel="noopener">Universal Deployer Contract (UDC)</a>, which requires an existing account to send the <code>INVOKE</code> transaction</p>
 </li>
-</ol>
+</ul>
 </div>
+<div class="paragraph">
+<p>Upon receiving one of these transactions, the sequencer performs the following steps:</p>
 </div>
-<div class="sect3">
-<h4 id="step_2_triggering_a_deposit_on_l2"><a class="anchor" href="#step_2_triggering_a_deposit_on_l2"></a>Step 2: Triggering a deposit on L2</h4>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>The sequencers refer to the deposit
-request by triggering the L1 handler using the
-<a href="https://github.com/starkware-libs/starkgate-contracts/blob/28f4032b101003b2c6682d753ea61c86b732012c/src/starkware/starknet/apps/starkgate/cairo/token_bridge.cairo#L135"><code>handle_deposit</code></a> function on the L2 bridge.</p>
+<p>Runs the respective validation function in the contract, as follows:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>When deploying with the <code>DEPLOY_ACCOUNT</code> transaction type, the sequencer executes the <code>__validate_deploy__</code> function in the deployed contract.</p>
 </li>
 <li>
-<p>The <code>handle_deposit</code> function verifies that the deposit indeed came from the corresponding L1 bridge. It then calls the relevant token&#8217;s contract on Starknet and mints the specified amount of the token on L2 for the user.</p>
+<p>When deploying using the UDC, the sequencer executes the <code>__validate__</code> function in the contract of the sender&#8217;s address.</p>
+</li>
+</ul>
+</div>
 </li>
 <li>
-<p>The sequencers complete constructing the block.</p>
-</li>
-</ol>
-</div>
-<div class="paragraph">
-<p>The status of the deposit request is now <a href="../transactions/#transaction_lifecycle" class="xref page"><code>ACCEPTED_ON_L2</code></a>.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="step_3_proving_the_block_that_includes_the_deposit"><a class="anchor" href="#step_3_proving_the_block_that_includes_the_deposit"></a>Step 3: Proving the block that includes the deposit</h4>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>Starknet&#8217;s provers prove the validity of the block and submit a state update to L1.</p>
+<p>Executes the constructor with the given arguments.</p>
 </li>
 <li>
-<p>The message confirming transfer of the funds is cleared from the Starknet Core Contract, and the fact that the user has transferred their funds is part of the now finalized state of Starknet.</p>
-</li>
-</ol>
-</div>
+<p>Charges fees from the new account address.</p>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -715,96 +997,33 @@ request by triggering the L1 handler using the
 </td>
 <td class="content">
 <div class="paragraph">
-<p>If the message wasn&#8217;t on L1 to begin with, that is, if the deposit request was fraudulently created on Starknet, the state update fails.</p>
+<p>If you use a <code>DEPLOY_ACCOUNT</code> transaction, the fees are paid from the address of the deployed account. If you use the UDC, which requires an <code>INVOKE</code> transaction, the fees are paid from the sender&#8217;s account. For information on the differences between V1 and V3 <code>INVOKE</code> transactions, see <a href="../transactions/#transaction_types" class="xref page"><code>INVOKE</code> transaction</a> in <em>Transaction types</em>.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="withdrawal_lifecycle"><a class="anchor" href="#withdrawal_lifecycle"></a>Withdrawal lifecycle</h3>
-<div class="sect3">
-<h4 id="step_1_initiating_a_withdrawal_on_l2"><a class="anchor" href="#step_1_initiating_a_withdrawal_on_l2"></a>Step 1: Initiating a withdrawal on L2</h4>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>A call to the L2 <code>initiate_token_withdraw</code> function initiates a withdrawal.</p>
 </li>
 <li>
-<p>The function does the following:</p>
+<p>Sets the account&#8217;s nonce as follows:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>Burns the transferred amount of tokens from the balance of the withdrawal&#8217;s initiator.</p>
+<p><code>1</code>, when deployed with a <code>DEPLOY_ACCOUNT</code> transaction</p>
 </li>
 <li>
-<p>Sends a message to the relevant L1 bridge with the amount to be transferred and the recipient&#8217;s address.</p>
+<p><code>0</code>, when deployed with the UDC</p>
 </li>
 </ul>
 </div>
 </li>
 </ol>
-</div>
-</div>
-<div class="sect3">
-<h4 id="step_2_proving_the_block_that_includes_the_withdrawal"><a class="anchor" href="#step_2_proving_the_block_that_includes_the_withdrawal"></a>Step 2: Proving the block that includes the withdrawal</h4>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>The sequencer completes the block construction</p>
-</li>
-<li>
-<p>Starknet&#8217;s provers prove the validity of the block and submit a state update to L1.</p>
-</li>
-<li>
-<p>The message from the previous step is stored in the Starknet Core Contract.</p>
-</li>
-</ol>
-</div>
-</div>
-<div class="sect3">
-<h4 id="step_3_transferring_the_funds_on_l1"><a class="anchor" href="#step_3_transferring_the_funds_on_l1"></a>Step 3: Transferring the funds on L1</h4>
-<div class="paragraph">
-<p>After the withdrawal message has been recorded on the Starknet Core Contract, anyone can finalize the transfer on L1 from the bridge back to the user, by calling the <a href="../../resources/starkgate-reference/#withdraw" class="xref page"><code>withdraw</code></a> function.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>This step is permissionless, anyone can do it. The recipient&#8217;s address is part of the recorded message on L1, so they receive the funds regardless of who calls the <code>withdraw</code> function on L1.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect3">
-<h4 id="stark_gate_withdrawal_limit"><a class="anchor" href="#stark_gate_withdrawal_limit"></a>Withdrawal limit</h4>
-<div class="paragraph">
-<p>By default, StarkGate imposes no limit on withdrawals. However, in order to mitigate risks associated with critical vulnerabilities that could result in the loss of user funds, StarkGate can enable a withdrawal limit.</p>
-</div>
-<div class="paragraph">
-<p>If a serious security issue arises, the security agent in the StarkGate contract can limit withdrawals to 5% of the Total Value Locked (TVL) per day for any affected token by calling the <code>setWithdrawLimitPCT()</code> function in the <code>WithdrawalLimit.sol</code> contract. A dedicated team can then investigate and resolve the issue.</p>
-</div>
-<div class="paragraph">
-<p>Only a security admin quorum can disable the withdrawal limit. The quorum will consist of Starknet Foundation members, Starknet ecosystem contributors, and StarkWare representatives. This diverse group will ensure that decisions reflect the Starknet community&#8217;s broad interests.</p>
-</div>
-<div class="paragraph">
-<p>This approach, blending manual oversight with automated detection, aims to minimize potential losses.</p>
-</div>
-</div>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../os/">SNOS</a></span>
-  <span class="next"><a href="../../ecosystem/overview/">Overview</a></span>
+  <span class="prev"><a href="../protocol-overview/">Overview</a></span>
+  <span class="next"><a href="../blocks/">Blocks</a></span>
 </nav>
 </article>
   </div>

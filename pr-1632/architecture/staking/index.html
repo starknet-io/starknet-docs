@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Transactions :: Starknet documentation</title>
-    <link rel="canonical" href="https://docs.starknet.io/architecture-and-concepts/transactions/">
-    <link rel="prev" href="../economics-of-starknet/">
-    <link rel="next" href="../sharp/">
+    <title>Staking protocol :: Starknet documentation</title>
+    <link rel="canonical" href="https://docs.starknet.io/architecture/staking/">
+    <link rel="prev" href="../messaging/">
+    <link rel="next" href="../state/">
     <meta name="generator" content="Antora 3.1.1">
 
 
@@ -307,6 +307,11 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
+     href="../protocol-overview/">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a 
+       class="nav-link"
      href="../accounts/">Accounts</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -332,12 +337,12 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../messaging/">L1-L2 messaging</a>
+     href="../messaging/">L1 ↔ L2 messaging</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="../staking/">Staking</a>
+     href="./">Staking</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -347,12 +352,12 @@
   <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="../economics-of-starknet/">Tokenomics</a>
+     href="../strk/">STRK</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a 
        class="nav-link"
-     href="./">Transactions</a>
+     href="../transactions/">Transactions</a>
   </li>
 </ul>
   </li>
@@ -515,129 +520,18 @@
 <aside class="toc sidebar" data-title="On this page" data-levels="2">
   <div style="position:sticky;top:7rem;z-index:2;margin-bottom:1rem">
     <div class="edit-this-page">
-      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture-and-concepts/pages/transactions.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
+      <a href="https://github.com/starknet-io/starknet-docs/edit/main/components/Starknet/modules/architecture/pages/staking.adoc" target="_blank">✏️&nbsp;&nbsp;Edit content</a>
     </div>
     <div class="edit-this-page">
-      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Transactions"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
+      <a href='https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz&title=Bug in "Staking protocol"' target="_blank">🪲&nbsp;&nbsp;Report bug</a>
     </div>
   </div>
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Transactions</h1>
-<div class="sect1">
-<h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
+<h1 class="page">Staking protocol</h1>
+<div id="preamble">
 <div class="sectionbody">
-<div class="paragraph">
-<p>Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only <a href="#transaction_types">three types</a> of transactions, with each type going through the same <a href="#transaction_lifecycle">lifecycle</a> to receive its <a href="#transaction_statuses">execution and finality statuses</a>. Each transaction is issued a <a href="#transaction_receipt">receipt</a>, which includes its statuses and other information about it.</p>
-</div>
-<div class="ulist">
-<div class="title">Additional information</div>
-<ul>
-<li>
-<p><a href="../../resources/transactions-reference/" class="xref page">Transaction fields and hash calculations reference</a> in <em>Resources</em></p>
-</li>
-<li>
-<p><a href="https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json" target="_blank" rel="noopener"><code>starknet_api_openrpc.json</code></a> in the <code>starknet-specs</code> GitHub repository</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="transaction_types"><a class="anchor" href="#transaction_types"></a>Transaction types</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Starknet supports the following types of transactions:</p>
-</div>
-<div class="hdlist">
-<table>
-<colgroup>
-<col style="width: 20%;">
-<col>
-</colgroup>
-<tr>
-<td class="hdlist1">
-<code>DECLARE</code>
-</td>
-<td class="hdlist2">
-<p>Declares new contract classes, enabling new contract instances.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>INVOKE</code>
-</td>
-<td class="hdlist2">
-<p>Invokes an existing function in a contract.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-<code>DEPLOY_ACCOUNT</code>
-</td>
-<td class="hdlist2">
-<p>Deploys new account contracts in smart wallets.</p>
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The <a href="../messaging/#l1_handler_transaction" class="xref page"><code>L1HandlerTransaction</code> type</a> is also a valid transaction type within Starknet, be it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations (particularly, handling messages from L1 to L2).</p>
-</div>
-<div class="paragraph">
-<p>The <code>DEPLOY</code> transaction type existed in Starknet for deploying account before being replaced by <code>DEPLOY_ACCOUNT</code>. <code>DEPLOY</code> only had one version (v0) and is now unsupported by Starknet.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>Each transaction type is versioned, with versions increasing when the fields that comprise the transaction change, either with the addition of a new field or the removal of an existing field. The following table summarizes the current, deprecated, and unsupported versions of each transaction type:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 25%;">
-<col style="width: 25%;">
-<col style="width: 25%;">
-<col style="width: 25%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Current version</th>
-<th class="tableblock halign-left valign-top">Deprecated versions</th>
-<th class="tableblock halign-left valign-top">Unsupported versions</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>INVOKE</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v1, v0</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DECLARE</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v2, v1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v0</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DEPLOY_ACCOUNT</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v3</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-</tr>
-</tbody>
-</table>
 <div class="admonitionblock important">
 <table>
 <tr>
@@ -646,10 +540,10 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Do not submit a transaction that uses an unsupported transaction type, as it cannot be included in a proof, and therefore cannot become part of a Starknet block.</p>
+<p>The Starknet Improvement Proposal (SNIP) for Bitcoin staking on Starknet is now <a href="https://community.starknet.io/t/staking-upgrade-bitcoin-staking-on-starknet/115696" target="_blank" rel="noopener">live</a>!</p>
 </div>
 <div class="paragraph">
-<p>Sending transaction that use deprecated versions is still supported, but support will be removed in an upcoming Starknet release.</p>
+<p>Jump into the discussion and help shape the future of Starknet&#8217;s decentralization 🌐</p>
 </div>
 </td>
 </tr>
@@ -658,203 +552,138 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="transaction_lifecycle"><a class="anchor" href="#transaction_lifecycle"></a>Transaction lifecycle</h2>
+<h2 id="overview"><a class="anchor" href="#overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The high-level steps in the Starknet transaction lifecycle are as follows:</p>
+<p>While Starknet is currently still centralized, it is <a href="#roadmap">gradually</a> moving towards employing a <a href="#protocol">staking protocol</a>, handing over the responsibilities of producing, attesting, and proving blocks to validators. To facilitate this gradual implementation, the protocol&#8217;s <a href="#architecture">architecture</a> is modular, ensuring maximum flexibility and ease of upgrades. However, anyone holding STRK in their wallets can already stake their tokens and earn rewards based on their level of participation by following <a href="#procedures">a few simple steps</a>.</p>
 </div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Transaction submission:</strong> A transaction is submitted to one of the gateways, which functions as the mempool, and marks it as received.</p>
-</li>
-<li>
-<p><strong>Mempool validation:</strong>
-The mempool performs preliminary validation of the transaction, such as ensuring that its invoker&#8217;s balance exceeds the transaction&#8217;s <code>max_fee</code> value, assuring the transaction&#8217;s calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.</p>
-<div class="admonitionblock note">
+<div class="admonitionblock tip">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-note" title="Note"></i>
+<i class="fa icon-tip" title="Tip"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Mempool validation in this context is analogous to Ethereum&#8217;s signature checking, and includes running the account&#8217;s <code>__validate__</code> function for an <code>INVOKE</code> transaction, <code>__validate_declare__</code> for a <code>DECLARE</code> transaction, or <code>__validate_deploy__</code> for a <code>DEPLOY_ACCOUNT</code> transaction.</p>
+<p>If you are only interested in learning how to stake on Starknet, feel free to skip straight to <a href="#procedures">Procedures</a>.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+<div class="ulist">
+<div class="title">Additional resources</div>
+<ul>
+<li>
+<p>Staking dashboards by <a href="https://www.aligned-stake.com/" target="_blank" rel="noopener">AlignedStake</a>, <a href="https://dashboard.endur.fi/" target="_blank" rel="noopener">Ednur</a>, <a href="https://www.stakingrewards.com/stake-app?input=starknet" target="_blank" rel="noopener">Staking Rewards</a>, <a href="https://starkscan.co/staking" target="_blank" rel="noopener">Starkscan</a>, and <a href="https://voyager.online/staking-dashboard" target="_blank" rel="noopener">Voyager</a></p>
 </li>
 <li>
-<p><strong>Sequencer validation:</strong> The sequencer performs preliminary validation of the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.</p>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The sequencer repeats the same validation performed by the mempool.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
+<p><a href="https://www.starknet.io/staking" target="_blank" rel="noopener">Staking</a> on starknet.io</p>
 </li>
 <li>
-<p><strong>Execution:</strong> The sequencer batches all transactions that passed the preliminary validation into a block, and applies them to the state sequentially. If a transaction fails during execution, it is included in the block with as reverted.</p>
+<p><a href="https://github.com/starkware-libs/starknet-staking/tree/%40staking/contracts-v1.0.1-dev.510" target="_blank" rel="noopener"><code>starknet-staking</code></a> on GitHub (deployed tag)</p>
 </li>
 <li>
-<p><strong>Proof generation and verification:</strong> The prover uses the <a href="../os/" class="xref page">Starknet operating system</a> to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.</p>
+<p><a href="https://www.starknet.io/blog/staking-phase-1/" target="_blank" rel="noopener">Starknet launches phase 1 of its staking initiative on mainnet</a> on the Starknet blog</p>
 </li>
-</ol>
+<li>
+<p><a href="https://community.starknet.io/t/snip-28-staking-v2-proposal/115250" target="_blank" rel="noopener">SNIP 28: Staking V2 proposal</a> on the Starknet community forum</p>
+</li>
+</ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="transaction_statuses"><a class="anchor" href="#transaction_statuses"></a>Transaction statuses</h2>
+<h2 id="roadmap"><a class="anchor" href="#roadmap"></a>Roadmap</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The following are the possible statuses of a transaction from the moment a user sends it until the moment it passes the L1 verifier:</p>
+<p>Naturally, handing over the responsibility for maintaining and securing Starknet to validators in one day is neither feasible nor desirable. Instead, the staking protocol is implemented in incremental phases, with each phase bringing additional requirements from validators until they fully maintain and secure the network. The protocol is currently in the second of four phases, illustrated in following figure:</p>
 </div>
-<table class="tableblock frame-all grid-all stretch">
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The staking protocol is currently in its second phase on both Sepolia and Mainnet.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/staking-roadmap.png" alt="staking roadmap">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="protocol"><a class="anchor" href="#protocol"></a>Protocol</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following sections describe the details of Starknet&#8217;s staking protocol. The parameters used in the protocol are summarized in the following table:</p>
+</div>
+<table class="tableblock frame-all grid-all fit-content">
 <colgroup>
-<col style="width: 14.2857%;">
-<col style="width: 28.5714%;">
-<col style="width: 57.1429%;">
+<col>
+<col>
+<col>
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Status</th>
-<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Parameter</th>
+<th class="tableblock halign-left valign-top">Mainnet</th>
+<th class="tableblock halign-left valign-top">Sepolia</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-middle" rowspan="5"><p class="tableblock"><strong>Finality</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>NOT_RECEIVED</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction is not yet known to the sequencer.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum stake for validators</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">20K STRK</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1 STRK</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RECEIVED</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>The transaction was received by the mempool. The transaction is now either executed successfully, rejected, or reverted.</p>
-</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minting curve yearly inflation cap (\(C\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.6</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REJECTED</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>The transaction was received by the mempool but failed the validation by the sequencer. Such transactions are not included in a block.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>A rejected transaction is stored in the mempool. You cannot send another transaction with the same transaction hash.</p>
-</div>
-</td>
-</tr>
-</table>
-</div></div></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Withdrawal security lockup</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">21 days</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">5 minutes</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L2</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was executed and included in a block.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Epoch length (\(E\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">120</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">40</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L1</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was accepted on Ethereum.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Attestation window (\(W\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-middle" rowspan="2"><p class="tableblock"><strong>Execution</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REVERTED</code></p></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>The transaction passed validation but failed during the execution by the sequencer, and is included in a block as reverted.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Since the <code>DEPLOY_ACCOUNT</code> and <code>DECLARE</code> transactions don&#8217;t have an execution phase, they cannot be reverted.</p>
-</div>
-</td>
-</tr>
-</table>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SUCCEEDED</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by the sequencer and is included in a block.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Number of epochs used for latency (\(k\))</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">3600</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1200</p></td>
 </tr>
 </tbody>
 </table>
-<div class="paragraph">
-<p>The diagram below illustrates how each transaction status fits into the overall transaction flow:</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="../_images/txn-flow.png" alt="txn flow">
-</div>
-</div>
 <div class="sect2">
-<h3 id="state_implications_of_reverted_transactions"><a class="anchor" href="#state_implications_of_reverted_transactions"></a>State implications of reverted transactions</h3>
+<h3 id="roles"><a class="anchor" href="#roles"></a>Roles</h3>
 <div class="paragraph">
-<p>When a transaction is marked as <code>REVERTED</code>, the following state implications occur:</p>
+<p>Starknet&#8217;s staking protocol features two options for participation:</p>
 </div>
-<div class="hdlist">
-<table>
-<colgroup>
-<col style="width: 20%;">
-<col>
-</colgroup>
-<tr>
-<td class="hdlist1">
-Nonce increases
-</td>
-<td class="hdlist2">
-<p>The nonce value for the account of the failed transaction iterates despite the failure.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-Fee charge
-</td>
-<td class="hdlist2">
-<p>The sequencer charges a fee for the execution of the transaction up to the point of failure, and a respective <code>Transfer</code> event is emitted.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-Partial reversion
-</td>
-<td class="hdlist2">
-<p>All changes that occurred during the validation stage are not reverted. However, all changes that occurred during the execution stage are reverted, including all messages to L1 or any events that were emitted during this stage. Events might still be emitted from the validation stage or the fee charge stage.</p>
-</td>
-</tr>
-<tr>
-<td class="hdlist1">
-Fee calculation
-</td>
-<td class="hdlist2">
-<p>The fee charged for <code>REVERTED</code> transactions is the smaller of the following two values:</p>
 <div class="ulist">
 <ul>
 <li>
-<p>The maximum fee that the user is willing to pay, either <code>max_fee</code> (pre-v3 transactions) or \(\text{max_amount} \cdot \text{max_price_per_unit}\) (v3 transactions).</p>
+<p>Staking directly as validators: Staking a minimum of 20,000 STRK and earning rewards by handling any responsibilities the protocol requires</p>
 </li>
 <li>
-<p>The total consumed resources.</p>
+<p>Staking indirectly as delegators: Delegating STRKs to validators who allow delegation and sharing in their rewards without handling any of their responsibilities</p>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -863,7 +692,7 @@ Fee calculation
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Consumed resources are resources used for the execution of the transaction up to the point of failure, including Cairo steps, builtins, syscalls, L1 messages, events, and state diffs during the validation and execution stages.</p>
+<p>Validators can choose whether to allow delegation or not.</p>
 </div>
 </td>
 </tr>
@@ -872,182 +701,516 @@ Fee calculation
 </li>
 </ul>
 </div>
+</div>
+<div class="sect2">
+<h3 id="addresses"><a class="anchor" href="#addresses"></a>Addresses</h3>
+<div class="paragraph">
+<p>To reduce exposure to threats and enhance security, multiple addresses for defined for both validators and delegators:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Validator addresses:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Staking address: Used for staking, adding stake, and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.</p>
+</li>
+<li>
+<p>Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.</p>
+</li>
+<li>
+<p>Operational Address: Used for operational purposes, such as block attestations (starting from the protocol&#8217;s second phase), block proposing (starting from the protocol&#8217;s third phase), etc. This address is used frequently and doesn&#8217;t handle large amounts of funds, and therefore is best kept by a hot wallet. Starting from the protocol&#8217;s second phase, however, hacking the operational address can lead to a lose of yield for the validator and its delegators.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Delegator addresses:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Staking address: Used for delegating stake, adding stake and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.</p>
+</li>
+<li>
+<p>Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The protocol uses a hierarchical approach between the staking and rewards addresses, and both validators and delegator can also use their staking address whenever their rewards address is required.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="epochs"><a class="anchor" href="#epochs"></a>Epochs</h3>
+<div class="paragraph">
+<p>Starting from its second phase, the staking protocol introduces the notion of <em>epochs</em> (similarly to many other protocols). Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch \(i\) are applied in epoch \(i+k\), where \(k\) is a new latency parameter. For example, the following figure illustrates a scenario where in epoch \(i\) validator \(A\) has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch \(i+1\) someone undelegates 30K STRK from \(A\):</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/epochs-example.png" alt="epochs example">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="responsibilities"><a class="anchor" href="#responsibilities"></a>Responsibilities</h3>
+<div class="sect3">
+<h4 id="running_a_full_node"><a class="anchor" href="#running_a_full_node"></a>Running a full node</h4>
+<div class="paragraph">
+<p>The staking protocol requires validators to run one of the following full node implementations:</p>
+</div>
+<table class="tableblock frame-all grid-all fit-content">
+<colgroup>
+<col>
+<col>
+<col>
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Hardware requirements</th>
+<th class="tableblock halign-left valign-top">Integration guide</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Juno</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://juno.nethermind.io/hardware-requirements" target="_blank" rel="noopener">juno.nethermind.io/hardware-requirements</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://juno.nethermind.io/running-juno" target="_blank" rel="noopener">juno.nethermind.io/running-juno</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Madara</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://docs.madara.build/hardware" target="_blank" rel="noopener">docs.madara.build/hardware</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/madara-alliance/madara/blob/main/README.md#%EF%B8%8F-installation" target="_blank" rel="noopener">github.com/madara-alliance/madara/README.md</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Pathfinder</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://eqlabs.github.io/pathfinder/getting-started/hardware-requirements" target="_blank" rel="noopener">eqlabs.github.io/pathfinder/getting-started/hardware-requirements</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://eqlabs.github.io/pathfinder/getting-started/running-pathfinder" target="_blank" rel="noopener">eqlabs.github.io/pathfinder/getting-started/running-pathfinder</a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="block_attestation"><a class="anchor" href="#block_attestation"></a>Block attestation</h4>
+<div class="paragraph">
+<p>Starting from its second phase, the staking protocol requires validators to attest to blocks, by running one of the following software:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/NethermindEth/starknet-staking-v2/blob/main/README.md" target="_blank" rel="noopener">Starknet Staking v2</a> by Nethermind</p>
+</li>
+<li>
+<p><a href="https://github.com/eqlabs/starknet-validator-attestation/blob/main/README.md" target="_blank" rel="noopener">Starknet Validator Attestation</a> by Equilibrium</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<div class="title">How does the block attestation mechanism work?</div>
+<p>In each epoch, each validator is assigned a single block whose relative number within the epoch is defined as follows:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[h(\text{staked amount},\text{epoch id},\text{validator address}) \mod (E-W)\]
+</div>
+</div>
+<div class="paragraph">
+<p>where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(E\) is the number of blocks in an epoch, termed <em>epoch length</em></p>
+</li>
+<li>
+<p>\(W\) is the number of blocks applicable for attestation submittal, termed <em>attestation window</em></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>During each epoch, validators have the opportunity to attest to their assigned block by submitting an <code>attest</code> transaction, which must be included within the attestation window. For example, if \(W = 20\) and \(N\) is the relative block number assigned to validator \(A\), then \(A\) must submit an <code>attest</code> transaction between the blocks whose relative number within the epoch are \(N+1\) and \(N+20\).</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In the second phase of the protocol, each Validator is required to perform only one attestation per epoch.</p>
+</div>
 </td>
 </tr>
 </table>
+</div>
+<div class="paragraph">
+<p>The <code>attest</code> transaction includes the block hash of the attested block, ensuring validators actively use full nodes, as they need to continuously track block hashes. Additionally, the attestation is publicly verifiable, ensuring validators' reliability is publicly tested — a crucial prerequisite before handing them any core responsibilities.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="rewards"><a class="anchor" href="#rewards"></a>Rewards</h3>
+<div class="paragraph">
+<p>Rewards are distributed based on the amount staked and the commission policy constant \(CP\) set by the validator, with yearly reward percentages calculated using the following formulas:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>For delegators:</p>
+<div class="stemblock">
+<div class="content">
+\[\text{stake_delegated} \cdot (1 - CP) \cdot \frac{M}{S}\]
+</div>
+</div>
+</li>
+<li>
+<p>For validators:</p>
+<div class="stemblock">
+<div class="content">
+\[\left(\text{self_stake} + \text{total_stake_delegated} \cdot CP\right) \cdot \frac{M}{S}\]
+</div>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>where \(M\) and \(S\) are defined by the <a href="#minting_curve">Minting curve</a>.</p>
+</div>
+<div class="paragraph">
+<p>Starting from the second phase of the protocol, rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn&#8217;t will get no rewards for the epoch&#8217;s entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator&#8217;s pool. Stakers that enter the protocol on epoch \(i\) will start getting rewards only on epoch \(i+k\), and stakers that signal an intent to exit the protocol on epoch \(i\) will still get rewards until epoch \(i+k-1\).</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Starting from the second phase of the protocol, when a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is \(O(\text{#delegator's balance changes since last claim})\) — and not \(O(\text{#epochs since last claim})\) — which is assumed to be small enough to fit in one transaction in any real-world-scenario. This mechanism replaces the global reward index that was used prior to the protocol&#8217;s second phase.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect3">
+<h4 id="minting_curve"><a class="anchor" href="#minting_curve"></a>Minting curve</h4>
+<div class="paragraph">
+<p>The minting curve balances participation and inflation by adjusting rewards based on the total STRK locked in the protocol, and is defined by the following formula:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[M = \frac{C}{10} \times \sqrt{S}\]
+</div>
+</div>
+<div class="paragraph">
+<p>where:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>\(S\) is the staking rate as a percentage of the total token supply</p>
+</li>
+<li>
+<p>\(M\) is the annual minting rate as a percentage of the total token supply</p>
+</li>
+<li>
+<p>\(C\) is the maximum theoretical inflation percentage, set to 1.6%</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="latencies"><a class="anchor" href="#latencies"></a>Latencies</h3>
+<div class="paragraph">
+<p>The following latencies are set in place:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>To disincentivise sudden large withdrawals that could destabilize the network, funds are subject to a 21-day lockup after signaling an unstake intent, during which no rewards are earned and funds cannot be withdrawn.</p>
+</li>
+<li>
+<p>Starting from the second phase of the protocol, to prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch \(i\) takes effect only on epoch \(i+1\).</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="commissions"><a class="anchor" href="#commissions"></a>Commissions</h3>
+<div class="paragraph">
+<p>Starting from its second phase, the staking protocol allows validators to increase their commission. To avoid an unexpected increase in commissions, validators must commit to a certain maximum commission \(M\) and the last date (in epochs) that this commitment is relevant for. Until this date arrives, validators cannot increase their commission beyond \(M\), but can freely change their commission in the range \([0,M]\).</p>
 </div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="transaction_receipt"><a class="anchor" href="#transaction_receipt"></a>Transaction receipt</h2>
+<h2 id="architecture"><a class="anchor" href="#architecture"></a>Architecture</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>A transaction receipt can be obtained by using the Starknet API&#8217;s <code>starknet_getTransactionReceipt</code> endpoint and contains the following fields:</p>
+<p>The implementation of Starknet&#8217;s staking protocol is divided into several contracts, summarized in the following figure:</p>
 </div>
-<div class="hdlist">
-<table>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/staking-architecture.png" alt="staking architecture">
+</div>
+</div>
+<div class="paragraph">
+<p>This modular architecture allows for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are also in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process. The following table details the key components of the architecture:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
 <colgroup>
-<col style="width: 25%;">
-<col>
+<col style="width: 11.1111%;">
+<col style="width: 88.8889%;">
 </colgroup>
+<thead>
 <tr>
-<td class="hdlist1">
-<code>transaction_hash</code>
-</td>
-<td class="hdlist2">
-<p>The hash of the transaction.</p>
-</td>
+<th class="tableblock halign-left valign-top">Contract</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Staking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The staking contract is the core of the staking system, managing the entire lifecycle of staking, from initial staking to claiming rewards and unstaking.</p>
+<p class="tableblock">The staking contract also stores the <code>StakerInfo</code> data structure, which holds detailed information about each validator, including their staked amount, unclaimed rewards, delegation details, and operational parameters, and helps to ensure that validators' information is accurately tracked and updated.</p></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>actual_fee</code>
-</td>
-<td class="hdlist2">
-<p>The actual fee paid for the transaction.</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Delegation pooling</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All delegation interactions, such as entering or exiting a pool, are enabled through the delegation pooling contract, which tracks each delegator&#8217;s contribution, calculates their rewards, and manages the delegation lifecycle.</p>
+<p class="tableblock">The delegation pooling contract also stores the <code>PoolMemberInfo</code> data structure, which holds information about each delegator&#8217;s contributions, rewards, and status within the pool, and helps manage and calculate the delegation and reward distribution processes for pool members.</p></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>finality_status</code>
-</td>
-<td class="hdlist2">
-<p>The finality status of the transaction.</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Reward Supplier</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve, ensuring the rewards are distributed fairly and in accordance with the protocol&#8217;s economic parameters.</p></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>execution_status</code>
-</td>
-<td class="hdlist2">
-<p>The execution status of the transaction.</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minting Curve</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The minting curve contract defines the economic model that governs reward distribution, ensuring that the network&#8217;s inflation is managed while incentivizing participation of stakers.</p></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>block_hash</code>
-</td>
-<td class="hdlist2">
-<p>The hash of the block that includes the transaction</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Attestation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The attestation contract manages the tracking of successful validator attestations, by verifying whether the validator has correctly attested to their assigned block within a designated attestation window.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="procedures"><a class="anchor" href="#procedures"></a>Procedures</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The following tables detail the procedures enabled by the staking protocol for both <a href="#staking_as_validators">validators</a> and <a href="#staking_as_delegators">delegators</a>, along with the instructions to perform them.</p>
+</div>
+<div class="paragraph">
+<p>To invoke onchain contracts, use <a href="https://foundry-rs.github.io/starknet-foundry/starknet/sncast-overview.html" target="_blank" rel="noopener">Starknet Foundry&#8217;s <code>sncast</code></a>, <a href="../../tools/interacting-with-starknet/#starkli" class="xref page">Starkli</a>, or a <a href="../../ecosystem/block-explorers-monitoring-tools/#block_explorers" class="xref page">block explorer</a>. To get the onchain addresses of the staking and STRK contracts, see <a href="../../resources/chain-info/#staking" class="xref page">Important addresses</a>.</p>
+</div>
+<div class="sect2">
+<h3 id="staking_as_validators"><a class="anchor" href="#staking_as_validators"></a>Staking as validators</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Procedure</th>
+<th class="tableblock halign-left valign-top">Instructions</th>
+<th class="tableblock halign-left valign-top">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Staking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#stake" target="_blank" rel="noopener"><code>stake</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>You should make sure you are <a href="#responsibilities">running a full node and attesting to blocks</a> before staking</p>
+</li>
+<li>
+<p>You must first approve the transfer of the amount of STRK tokens to be staked to the staking contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+<li>
+<p><code>operational_address</code> should have sufficient funds to pay for attestation transactions</p>
+</li>
+<li>
+<p><code>amount</code> should be equal or greater than the <a href="#protocol">minimum stake for validators</a> and denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p><code>commission</code> should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)</p>
+</li>
+</ul>
+</div></div></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>block_number</code>
-</td>
-<td class="hdlist2">
-<p>The sequential number of the block that includes the transaction</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Claiming rewards</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards" target="_blank" rel="noopener"><code>claim_rewards</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>messages_sent</code>
-</td>
-<td class="hdlist2">
-<p>A list of messages sent to L1.</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Increasing stake</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#increase_stake" target="_blank" rel="noopener"><code>increase_stake</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p>You must first approve the transfer of STRK tokens to the staking contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+</ul>
+</div></div></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>events</code>
-</td>
-<td class="hdlist2">
-<p>The events emitted.</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Setting commission</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission" target="_blank" rel="noopener"><code>set_commission</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>commission</code> should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)</p>
+</li>
+<li>
+<p>Commissions can be increased only after <a href="#commissions">setting a commission commitment</a> using <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission_commitment" target="_blank" rel="noopener"><code>set_commission_commitment</code></a></p>
+</li>
+</ul>
+</div></div></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>execution_resource</code>
-</td>
-<td class="hdlist2">
-<p>A summary of the execution resources used by the transaction.</p>
-</td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changing reward address</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address" target="_blank" rel="noopener"><code>change_reward_address</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
 </tr>
 <tr>
-<td class="hdlist1">
-<code>type</code>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changing operational address</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#declare_operational_address" target="_blank" rel="noopener"><code>declare_operational_address</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_operational_address" target="_blank" rel="noopener"><code>change_operational_address</code></a> functions</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>declare_operational_address</code> should be invoked by your new operational address and <code>change_operational_address</code> should be invoked by your staking address</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Opening delegation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_open_for_delegation" target="_blank" rel="noopener"><code>set_open_for_delegation</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Opening delegation is necessary only if <code>pool_enabled</code> was set to <code>false</code> when invoking the staking contract&#8217;s <code>stake</code> function</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Unstaking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the staking contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_intent"><code>unstake_intent</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_action"><code>unstake_action</code></a> functions</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>Once an unstake intent is signaled:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Funds are removed from the total balance and are no longer part of the staking protocol</p>
+</li>
+<li>
+<p>The same staking address cannot be used to "restake" (i.e., <code>unstake_action</code> is <strong>irreversible</strong>)</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><code>unstake_action</code> should be invoked only after the appropriate <a href="#latencies">waiting period</a> has ended</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="staking_as_delegators"><a class="anchor" href="#staking_as_delegators"></a>Staking as delegators</h3>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
 </td>
-<td class="hdlist2">
-<p>The type of the transaction.</p>
+<td class="content">
+<div class="paragraph">
+<p>The following procedures are only intended for developers who are either interested (for whatever reason) in staking as delegators without using a <a href="#introduction">staking dashboard</a>, or are building one.</p>
+</div>
 </td>
 </tr>
 </table>
 </div>
-<div class="paragraph">
-<p>The following is an example of a transaction receipt:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
-  "jsonrpc": "2.0",
-  "result": {
-    "actual_fee": "0x221db5dbf6db",
-    "block_hash": "0x301fc0d09c5810600af7bb9610be10596ad6f4e6d28a60d397dd148f0962a88",
-    "block_number": 906096,
-    "events": [
-      {
-        "data": [
-          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
-          "0x0",
-          "0x9184e72a000",
-          "0x0"
-        ],
-        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-        "keys": [
-          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
-        ]
-      },
-      {
-        "data": [
-          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
-          "0x9184e72a000",
-          "0x0",
-          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7"
-        ],
-        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
-        "keys": [
-          "0x194fc63c49b0f07c8e7a78476844837255213824bd6cb81e0ccfb949921aad1"
-        ]
-      },
-      {
-        "data": [
-          "0x181de8b0cd32999a5cc962c5f724bc0f6a322f02957b80e1d5fef49a87588b7",
-          "0x1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
-          "0x221db5dbf6db",
-          "0x0"
-        ],
-        "from_address": "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-        "keys": [
-          "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
-        ]
-      }
-    ],
-    "execution_status": "SUCCEEDED",
-    "finality_status": "ACCEPTED_ON_L2",
-    "messages_sent": [
-      {
-        "from_address": "0x73314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
-        "payload": [
-          "0x0",
-          "0x764da020183e28a48ee38a9474f84e7e5ff13194",
-          "0x9184e72a000",
-          "0x0"
-        ],
-        "to_address": "0xc3511006c04ef1d78af4c8e0e74ec18a6e64ff9e"
-      }
-    ],
-    "transaction_hash": "0xdeadbeef",
-    "type": "INVOKE"
-  },
-  "id": 1
-}</code></pre>
-</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Procedure</th>
+<th class="tableblock halign-left valign-top">Instructions</th>
+<th class="tableblock halign-left valign-top">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Entering a delegation pool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#enter_delegation_pool" target="_blank" rel="noopener"><code>enter_delegation_pool</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p>You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Claiming rewards</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards-1" target="_blank" rel="noopener"><code>claim_rewards</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Adding to a delegation pool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#add_to_delegation_pool" target="_blank" rel="noopener"><code>add_to_delegation_pool</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p><code>amount</code> should be denominated in FRI (i.e., 1*10<sup>18</sup> = 1 STRK)</p>
+</li>
+<li>
+<p>You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract&#8217;s <code>approve</code> function</p>
+</li>
+</ul>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Switching delegation pools</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#switch_delegation_pool" target="_blank" rel="noopener"><code>switch_delegation_pool</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Changing reward address</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address-1" target="_blank" rel="noopener"><code>change_reward_address</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Exiting a delegation pool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Invoke the delegation pool contract&#8217;s <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_intent" target="_blank" rel="noopener"><code>exit_delegation_pool_intent</code></a> and <a href="https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_action" target="_blank" rel="noopener"><code>exit_delegation_pool_action</code></a> function</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>exit_delegation_pool_action</code> should be invoked only after the appropriate <a href="#latencies">waiting period</a> has ended</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="../economics-of-starknet/">Tokenomics</a></span>
-  <span class="next"><a href="../sharp/">SHARP</a></span>
+  <span class="prev"><a href="../messaging/">L1 ↔ L2 messaging</a></span>
+  <span class="next"><a href="../state/">State</a></span>
 </nav>
 </article>
   </div>
