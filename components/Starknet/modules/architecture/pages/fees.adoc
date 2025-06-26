@@ -48,9 +48,7 @@ The fee for a transaction can be estimated by using the https://github.com/stark
 
 [NOTE]
 ====
-When signing resource bounds for all three resource types — the only supported option when sending the transaction via Starknet's JSON-RPC v0.8.0 onwards, and the only option that will be supported in Starknet v0.14.0 — the fee estimation response is easily mapped to the transaction's fields (i.e., the response contains price and amounts for xref:fee_resources[all three resources], and the transaction is expected to specify bounds and max prices for each of them).
-
-On the other hand, when submitting transactions via Starknet's JSON-RPC v0.7.1 or below, the only bounded resource is L1 gas, while the fee estimation contains both L1 gas and L1 data gas. 
+When submitting transactions via Starknet's JSON-RPC v0.7.1 or below, the only bounded resource is L1 gas, while the fee estimation contains both L1 gas and L1 data gas. 
 In that case, we can use the estimation's `overall_fee` to decide on the L1 gas bounds.
 
 You can find more details in the https://community.starknet.io/t/starknet-v0-13-1-pre-release-notes/113664#sdkswallets-how-to-use-the-new-fee-estimates-7[Starknet v0.13.1 prerelease notes^].
@@ -58,11 +56,15 @@ You can find more details in the https://community.starknet.io/t/starknet-v0-13-
 
 == Fee limits
 
-Starting in Starknet v0.14.0, all transactions will have to specify STRK-denominated `max_amount` and `max_price_per_unit` for each of xref:fee_units[fee unit] (as part of the `resource_bounds` dictionary), and sequencers will be enforced (by xref:os.adoc[SNOS]) not to charge fees that exceed the max prices specified in the transaction.
+`v3` transactions already provide STRK-denominated `max_amount` and `max_price_per_unit` for each of the three xref:fee_units[fee unit] (as part of the `resource_bounds` dictionary), while previous versions only provide a WEI-denominated overall `max_fee`. However, starting in Starknet v0.14.0, _all_ transactions will have specify STRK-denominated bounds for all three fee unit, as well as a STRK-denominated `tip`.
+
+A necessary condition for a transaction to enter a block is that for each resource, `max_price_per_unit` is greater than or equal to the xref:gas_prices[block's corresponding price]. `tip` is a further addition to the `max_price_per_unit` for `l2_gas`, i.e. a sequencer will receive `(base_fee + tip) * l2_gas_used` STRK tokens for including the transaction in a block. 
 
 == Fee charges
 
 The fee for a transaction is charged atomically with the transaction execution on L2, by the Starknet OS injecting a transfer of the fee-related ERC-20, with an amount equal to the fee paid, the sender equal to the transaction submitter, and the sequencer as a receiver.
+
+The only limitation on the sequencer which is currently enforced by the xref:os.adoc[Starknet OS] (and as such, enforced by a proof), is that the actual fee charged is bounded by the max price specified in the transaction. However, the Starknet sequencer usually charges less, as charges in accordance with the xref:#overall_fee[formula for determining a transaction's fee].
 
 == Fee formula
 
