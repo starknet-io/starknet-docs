@@ -337,7 +337,7 @@
   <li class="nav-item is-current-page" data-depth="2">
     <a 
        class="nav-link"
-     href="./">L1-L2 messaging</a>
+     href="./">L1 ↔ L2 messaging</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a 
@@ -564,10 +564,10 @@
 <div class="title">Additional resources</div>
 <ul>
 <li>
-<p><a href="#architecture-and-concepts:smart-contracts/system-calls-cairo1.adoc#send_message_to_L1" class="xref unresolved">The <code>send_message_to_L1</code> syscall</a></p>
+<p><a href="https://book.cairo-lang.org/appendix-08-system-calls.html#send_message_to_l1" target="_blank" rel="noopener">The <code>send_message_to_L1</code> syscall</a></p>
 </li>
 <li>
-<p><a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13" target="_blank" rel="noopener">the Starknet Core contract&#8217;s <code>sendMessageToL2</code> function</a></p>
+<p><a href="https://github.com/starkware-libs/cairo-lang/blob/54d7e92a703b3b5a1e07e9389608178129946efc/src/starkware/starknet/solidity/IStarknetMessaging.sol#L13" target="_blank" rel="noopener">The Starknet Core contract&#8217;s <code>sendMessageToL2</code> function</a></p>
 </li>
 <li>
 <p><a href="https://book.cairo-lang.org/ch16-04-L1-L2-messaging.html" target="_blank" rel="noopener">L1-L2 Messaging in the Cairo Book</a></p>
@@ -1036,22 +1036,40 @@ This function, which is part of the Starknet Core Contract, verifies the followi
 </div>
 <div class="sect3">
 <h4 id="caveats_and_limitations"><a class="anchor" href="#caveats_and_limitations"></a>Caveats and limitations</h4>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
+<div class="ulist">
+<ul>
+<li>
 <p>Since L1 handler transactions are not initiated by an account, invoking <a href="https://github.com/starkware-libs/cairo/blob/2203a47f8a098cd4718d03bd109ca014049419e7/corelib/src/starknet/info.cairo#L49" target="_blank" rel="noopener"><code>get_caller_address</code></a> or similar account-related functions returns the address <code>0x0</code>.</p>
+</li>
+<li>
+<p>Starting from Starknet version 0.14.0:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>L1 handlers that fail execution will appear in a block as <code>REVERTED</code>, instead of only be written in the feeder gateway&#8217;s database as <code>REJECTED</code>. The purpose of this change is to simplify the tracking of messages L1 &#8594; L2, and the implementation of <code>getMessageStatus</code> in particular.</p>
+</li>
+<li>
+<p>The <code>l1_gas</code>, <code>l2_gas</code>, and <code>l1_data_gas</code> execution resources of L1 handlers will be bounded as follows:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>l2_gas</code> will bounded by \(10^8\) (the same as <code>__validate__</code>'s)</p>
+</li>
+<li>
+<p><code>l1_gas</code> and <code>l1_data_gas</code> will be bounded by \(4*10^4\) and \(2*10^4\), respectively (to allow for sending one L2 &#8594; L1 message)</p>
+</li>
+</ul>
 </div>
-</td>
-</tr>
-</table>
+</li>
+</ul>
 </div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="supported_versions"><a class="anchor" href="#supported_versions"></a>Supported versions</h4>
 <table class="tableblock frame-all grid-all stretch">
-<caption class="title">Table 2. Supported versions of the <code>L1HandlerTransaction</code> transaction type</caption>
 <colgroup>
 <col style="width: 33.3333%;">
 <col style="width: 33.3333%;">
