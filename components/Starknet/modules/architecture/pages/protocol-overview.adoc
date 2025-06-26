@@ -1,0 +1,21 @@
+= Protocol Overview
+
+Starknet is a decentralized ZK-rollup that scales Ethereum by moving computation off-chain and verifying its correctness on-chain. Let's walk through the protocol, from user interaction to proof verification, to see how it all works:
+
+Everything starts with an xref:accounts.adoc[account]. On Starknet, accounts are smart contracts — a model known as native account abstraction. This allows for flexible authorization logic like multisig, session keys, or passkey-based authentication, all without changes to the protocol itself.
+
+When users want to interact with the network, they send xref:transactions.adoc[transactions]. These invoke contract functions, deploy new contracts, or register new classes, which are all collected and ordered into xref:blocks.adoc[blocks].
+
+Some transactions involve communication between Ethereum and Starknet. These are handled through xref:messaging.adoc[L1↔L2 messaging], allowing asynchronous messages to be passed between contracts on L1 and L2, and enabling secure bridges, cross-layer governance, and composability between chains.
+
+All of this activity updates Starknet's global xref:state.adoc[state]. The state includes contract storage, class declarations, and account data — all organized in a Merkle Patricia trie. Every transaction modifies this state, and each new state root reflects the cumulative result of those changes.
+
+To ensure that state transitions are valid, Starknet generates xref:cryptography.adoc[cryptographic] proofs for the validity. These proofs compress the entire block's execution into a succinct, verifiable artifact. They're submitted to Ethereum, where they're verified onchain so Ethereum can trust Starknet's execution without re-running it.
+
+But Ethereum needs more than just a proof — it needs access to the data involved. Starknet ensures this through xref:data-availability.adoc[data availability], publishing compressed state diffs to Ethereum so the full state can be reconstructed and verified.
+
+All of this — computation, proof generation, and L1 publishing — requires payment. That's where xref:fees.adoc[fees] come in. Users pay fees to cover the cost of using network resources, and these fees are paid in xref:strk.adoc[STRK], Starknet's native token.
+
+STRK is also used to power Starknet's own xref:staking.adoc[proof-of-stake consensus] protocol. Validators selected from STRK stakers help secure the sequencing layer and validate block production. This mechanism is designed to support decentralization and provide economic guarantees around block inclusion and ordering.
+
+All together, these components form a tightly integrated protocol. Starknet enables scalable, expressive applications with low fees and strong security — all without compromising on decentralization or Ethereum alignment.
