@@ -731,12 +731,12 @@ The sequencer&#8217;s <a href="#transaction_mempool">mempool</a> performs prelim
 </ol>
 </div>
 <div class="sect2">
-<h3 id="the_mempool"><a class="anchor" href="#the_mempool"></a>The mempool</h3>
+<h3 id="mempools"><a class="anchor" href="#mempools"></a>Mempools</h3>
 <div class="paragraph">
-<p>Up to and including Starknet v0.13.5, transactions were received and ordered by the sequencer in a first-in-first-out (FIFO) fashion. Starting from Starknet v0.14.0, sequencers instead maintain a mempool, decouping the transaction order of arrival from the transaction ordering in blocks, with the latter decided by each sequencer according to their own policy.</p>
+<p>Up to and including Starknet v0.13.5, transactions were received and ordered by the sequencer in a first-in-first-out (FIFO) fashion. Starting from Starknet v0.14.0, each sequencer will instead maintain a mempool, decouping the transaction order of arrival from the transaction ordering in blocks, for which they are can decide their own policy.</p>
 </div>
 <div class="paragraph">
-<p>The introduction of mempools has the following implications on how transactions are processed:</p>
+<p>The introduction of mempools will have the following implications on how transactions are processed:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -786,6 +786,89 @@ The sequencer&#8217;s <a href="#transaction_mempool">mempool</a> performs prelim
 <div class="sectionbody">
 <div class="paragraph">
 <p>A transaction&#8217;s state is represented by the following <em>finality</em> and <em>execution</em> statuses:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 28.5714%;">
+<col style="width: 57.1429%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Status</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-middle" rowspan="5"><p class="tableblock"><strong>Finality</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>NOT_RECEIVED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction is not yet known to the sequencer.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>RECEIVED</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>The transaction was received by the mempool. The transaction is now either executed successfully, rejected, or reverted.</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REJECTED</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>The transaction was received by the mempool but failed the validation by the sequencer. Such transactions are not included in a block.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>A rejected transaction is stored in the mempool. You cannot send another transaction with the same transaction hash.</p>
+</div>
+</td>
+</tr>
+</table>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L2</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was executed and included in a block.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ACCEPTED_ON_L1</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was accepted on Ethereum.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-middle" rowspan="2"><p class="tableblock"><strong>Execution</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REVERTED</code></p></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>The transaction passed validation but failed during the execution by the sequencer, and is included in a block as reverted.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Since the <code>DEPLOY_ACCOUNT</code> and <code>DECLARE</code> transactions don&#8217;t have an execution phase, they cannot be reverted.</p>
+</div>
+</td>
+</tr>
+</table>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SUCCEEDED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The transaction was successfully executed by the sequencer and is included in a block.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Starting from Starknet version 0.14.0, these statuses will change to the following:</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
