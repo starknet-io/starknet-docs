@@ -524,6 +524,26 @@
 <div class="paragraph">
 <p><a href="https://starkgate.starknet.io" target="_blank" rel="noopener">StarkGate</a>, developed by StarkWare, bridges ETH and ERC-20 tokens between Ethereum and Starknet. Its various <a href="#components">components</a> enable anyone to easily <a href="#procedures">deposit funds to Starknet (with and without a message attached), withdraw funds to Ethereum, and add a token to StarkGate</a>.</p>
 </div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Following <a href="https://twitter.com/MakerDAO/status/1746977683190251591?s=20" target="_blank" rel="noopener">Maker DAO&#8217;s announcement</a>, StarkWare launched a new set of DAI bridge and token contracts under StarkGate. This new DAI token retains the same contract 'symbol' and 'name' as the existing one, and to differentiate between the two, the old DAI is referred to as “DAI v0” while the new DAI is simply referred to as “DAI”.</p>
+</div>
+<div class="paragraph">
+<p>Withdrawal of DAI v0 tokens is still possible with no limitations, but depositing DAI v0 using the DAI v0 bridge is disabled. Users are <strong>strongly</strong> encouraged to migrate to the new DAI token, as it cannot support StarkGate&#8217;s latest features (such as Smart Deposits and Withdrawal Limits) and will stop being compatible with Starknet altogether over time.</p>
+</div>
+<div class="paragraph">
+<p>To migrate from DAI v0 to DAI, either swap your DAI v0 for DAI using one of Starknet&#8217;s <a href="https://www.starknet.io/dapps/?type=live&amp;tags=216" target="_blank" rel="noopener">swap apps and aggregators</a> or withdraw your current DAI v0 tokens to L1 using and re-deposit them using StarkGate (which automatically issues the new DAI).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -580,7 +600,7 @@
 </tbody>
 </table>
 <div class="paragraph">
-<p>In addition, prior to StarkGate 2.0 (Mainnet: January 2024) tokens were bridged with a unique and custom pair of L1 and L2 bridge contracts, where the L1 contract is an instance of <a href="https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/solidity/LegacyBridge.sol" target="_blank" rel="noopener"><code>LegacyBridge.sol</code></a> and the L2 contract is an instance of <a href="https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/cairo/legacy_bridge_eic.cairo" target="_blank" rel="noopener"><code>legacy_bridge_eic.cairo</code></a>. These legacy token bridges are supported by StarkGate 2.0 in a fully backward-compatible fashion, as illustrated in the following example:</p>
+<p>In addition, prior to StarkGate 2.0 (Mainnet: January 2024) tokens were bridged with a unique and custom pair of L1 and L2 bridge contracts, where the L1 contract is an instance of <a href="https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/solidity/LegacyBridge.sol" target="_blank" rel="noopener"><code>LegacyBridge.sol</code></a> and the L2 contract is an instance of <a href="https://github.com/starknet-io/starkgate-contracts/blob/cairo-1/src/cairo/legacy_bridge_eic.cairo" target="_blank" rel="noopener"><code>legacy_bridge_eic.cairo</code></a>. These legacy token bridges are supported by StarkGate 2.0 in a fully backward-compatible fashion.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -590,17 +610,7 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p>For the complete list of legacy bridges, see the <a href="https://github.com/starknet-io/starknet-addresses/tree/master/bridged_tokens" target="_blank" rel="noopener"><code>bridged_tokens</code></a> directory on GitHub.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>Consider the <code>deposit</code> functions for the L1 bridge contract for USDC on Etherscan: <a href="https://etherscan.io/address/0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract" target="_blank" rel="noopener"><code>0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract</code></a></p>
-</div>
-<div class="paragraph">
-<p>This contract has the following two <code>deposit</code> functions: <code>deposit (0x0efe6a8b)</code> and <code>deposit (0xe2bbb158)</code>, which shows that the bridge includes support for the legacy functionality as well as the modern functionality:</p>
+<p>For example, the <a href="https://etherscan.io/address/0xf6080d9fbeebcd44d89affbfd42f098cbff92816#writeProxyContract" target="_blank" rel="noopener">L1 bridge contract for USDC</a> has the following two <code>deposit</code> functions:</p>
 </div>
 <div class="hdlist">
 <table>
@@ -622,6 +632,13 @@
 </td>
 <td class="hdlist2">
 <p>The legacy contract, which is labeled <strong>Support Legacy ABI</strong>. This function does not include the <code>token (address)</code> parameter, because the contract that contains this function only supports USDC. Therefore, the address of the token is superfluous.</p>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>For the complete list of legacy bridges, see the <a href="https://github.com/starknet-io/starknet-addresses/tree/master/bridged_tokens" target="_blank" rel="noopener"><code>bridged_tokens</code></a> directory on GitHub.</p>
+</div>
 </td>
 </tr>
 </table>
@@ -746,18 +763,6 @@ a deposit, and only before depositReclaim was performed.</p>
 <p>Use the <code>depositWithMessage</code> function to transfer funds from L1 to L2.</p>
 </li>
 </ol>
-</div>
-</div>
-<div class="sect3">
-<h4 id="dai_v0_to_dai_migration"><a class="anchor" href="#dai_v0_to_dai_migration"></a>DAI v0 to DAI migration</h4>
-<div class="paragraph">
-<p>Following <a href="https://twitter.com/MakerDAO/status/1746977683190251591?s=20" target="_blank" rel="noopener">Maker DAO&#8217;s announcement</a>, StarkWare launched a new set of DAI bridge and token contracts under StarkGate. This new DAI token retains the same contract 'symbol' and 'name' as the existing one, and to differentiate between the two, the old DAI is referred to as “DAI v0” while the new DAI is simply referred to as “DAI”.</p>
-</div>
-<div class="paragraph">
-<p>Withdrawal of DAI v0 tokens is still possible with no limitations, but depositing DAI v0 using the DAI v0 bridge is disabled. Users are <strong>strongly</strong> encouraged to migrate to the new DAI token, as it cannot support StarkGate&#8217;s latest features (such as Smart Deposits and Withdrawal Limits) and will stop being compatible with Starknet altogether over time.</p>
-</div>
-<div class="paragraph">
-<p>To migrate from DAI v0 to DAI, either swap your DAI v0 for DAI using one of Starknet&#8217;s <a href="https://www.starknet.io/dapps/?type=live&amp;tags=216" target="_blank" rel="noopener">swap apps and aggregators</a> or withdraw your current DAI v0 tokens to L1 using and re-deposit them using StarkGate (which automatically issues the new DAI).</p>
 </div>
 </div>
 <div class="sect3">
