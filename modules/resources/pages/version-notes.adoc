@@ -5,23 +5,29 @@
 You can get the latest updates delivered to your inbox by subscribing to the https://www.starknet.io/starknet-devs-newsletter/[Starknet Devs Newsletter^].
 ====
 
-== Starknet v0.14.0 (Pre-release)
+== Starknet v0.14.0 (28 July, '25)
 
-Starknet v0.14.0 is scheduled for Testnet on July 2 2025 and for Mainnet on July 28 2025.
+Starknet v0.14.0 is live on Testnet and scheduled to be live on Mainnet on July 28th.
 
 This version includes the following changes:
 
 * Decentralized sequencing is introduced, with four sequencers, each with its own mempool, taking turns building blocks and reaching consensus using the https://arxiv.org/abs/1807.04938[Tendermint^] protocol (the interfaces for submitting transactions to the gateway and syncing from the feeder gateway remain unchanged)
 
-* The notion of “pending block” now represents the most recent block that reached consensus
-
 * v0, v1, v2 and non-RPC v0.8 compatible v3 transactions are no longer supported, and a new `meta_tx_v0` syscall is introduced to enable calling old accounts (i.e., ones without `++__validate__++`) via v3 transactions
 
-* RPC v0.9 is introduced, removing the `REJECTED` transaction status, adding new `PRE-CONFIRMED` and `EXECUTED` transaction statuses, and changing the behavior of the `RECEIVED` and `ACCEPTED_ON_L2` transaction statuses
+* RPC v0.9 is introduced, removing the `REJECTED` transaction status, changing the behavior of the `RECEIVED` and `ACCEPTED_ON_L2` transaction statuses, adding new `CANDIDATE`, and `PRE_CONFIRMED` transaction statuses, and renaming the `PENDING` block to `PRE_CONFIRMED` block 
 
-* The feeder gateway URL is now `feeder.\{chain\}.starknet.io/feeder_gateway` (while the gateway URL remains `\{chain_name\}.starknet.io/gateway`), adding a new `get_transaction_confirmation` endpoint, deprecating the `get_oldest_transaction_age` and `get_number_of_transactions_in_backlog` endpoints, and changing the behavior of the `get_transaction_status` endpoint
+* The feeder gateway URL is now `feeder.\{chain\}.starknet.io/feeder_gateway` (while the gateway URL remains `\{chain_name\}.starknet.io/gateway`), adding a new `get_preconfirmed_block` endpoint, deprecating the `get_oldest_transaction_age` and `get_number_of_transactions_in_backlog` endpoints, and changing the behavior of the `get_transaction_status` endpoint
 
 * L1 handlers execution resources are bounded and failed L1 handlers are shown as `REVERTED` in blocks
+
+* A fee market on the `l2_gas` resource is introduced, following Ethereum's EIP 1559
+
+* Sequencers now maintain a mempool, decouping the transaction order of arrival from the transaction ordering in blocks
+
+* The Starknet OS (SNOS) has been modified to receive multiple blocks as inputs, amortizing costs over a larger number of blocks
+
+* Transactions with internal calls to an entry point called `+__execute__+` are now reverted
 
 .Additional resources
 
@@ -31,7 +37,7 @@ This version includes the following changes:
 
 Starknet v0.13.6 is live on Testnet and scheduled be live on Mainnet on July 8th.
 
-Starknet v0.13.6 is a configuration change done to support integration by the https://docs.starknet.io/stwo-book/[S-Two prover^], including:
+This version is a configuration change done to support integration by the https://docs.starknet.io/stwo-book/[S-Two prover^], including:
 
 * Introducing builtin tracking and temporarily disabling Cairo Native: The xref:architecture:os.adoc[Starknet OS] now tracks individual builtins usages, xref:chain-info.adoc#block_builtin_limits[capping the number of builtins that may fit inside each block]. Since https://github.com/lambdaclass/cairo_native[Cairo Native^] does currently not support this kind of tracking, its usage is temporarily disabled and will be enabled again once this capability is supported.
 +
