@@ -1,0 +1,346 @@
+= Staking
+
+[IMPORTANT]
+====
+The Starknet Improvement Proposal (SNIP) for Bitcoin staking on Starknet is now https://community.starknet.io/t/snip-31-bitcoin-staking-on-starknet/115696[live^]!
+
+Jump into the discussion and help shape the future of Starknet's decentralization 🌐
+====
+
+== Overview
+
+While Starknet is currently still centralized, it is xref:roadmap[gradually] moving towards employing a xref:protocol[staking protocol], handing over the responsibilities of producing, attesting, and proving blocks to validators. To facilitate this gradual implementation, the protocol's architecture is divided into several xref:components[components], ensuring maximum flexibility and ease of upgrades. However, anyone holding STRK in their wallets can already stake their tokens and earn rewards based on their level of participation by following xref:procedures[a few simple steps]. 
+
+[TIP]
+====
+If you are only interested in learning how to stake on Starknet, feel free to skip straight to xref:procedures[].
+====
+
+.Additional resources
+
+* Staking dashboards by https://www.aligned-stake.com/[AlignedStake^], https://dashboard.endur.fi/[Ednur^], https://www.stakingrewards.com/stake-app?input=starknet[Staking Rewards^], https://starkscan.co/staking[Starkscan^], and https://voyager.online/staking-dashboard[Voyager^]
+* https://www.starknet.io/staking[Staking^] on starknet.io
+* https://github.com/starkware-libs/starknet-staking/tree/%40staking/contracts-v1.0.1-dev.510[`starknet-staking`^] on GitHub (deployed tag)
+* https://www.starknet.io/blog/staking-phase-1/[Starknet launches phase 1 of its staking initiative on mainnet^] on the Starknet blog
+* https://community.starknet.io/t/snip-28-staking-v2-proposal/115250[SNIP 28: Staking V2 proposal^] on the Starknet community forum
+
+== Roadmap
+
+Naturally, handing over the responsibility for maintaining and securing Starknet to validators in one day is neither feasible nor desirable. Instead, the staking protocol is implemented in incremental phases, with each phase bringing additional requirements from validators until they fully maintain and secure the network. The protocol is currently in the second of four phases, illustrated in following figure:
+
+[IMPORTANT]
+====
+The staking protocol is currently in its second phase on both Sepolia and Mainnet.
+====
+
+image::staking-roadmap.png[]
+
+== Protocol
+
+The following sections describe the details of Starknet's staking protocol. The parameters used in the protocol are summarized in the following table:
+
+[%autowidth]
+|===
+| Parameter | Mainnet | Sepolia
+
+| Minimum stake for validators
+| 20K STRK
+| 1 STRK
+
+| Minting curve yearly inflation cap (stem:[C])
+| 1.6%
+| 1.6%
+
+| Withdrawal security lockup
+| 21 days
+| 5 minutes
+
+| Epoch length (stem:[E])
+| 120 blocks
+| 40 blocks
+
+| Epoch duration
+| 3600 seconds
+| 1200 seconds
+
+| Attestation window (stem:[W])	
+| 16 blocks
+| 16 blocks
+
+| Number of epochs used for latency (stem:[k])
+| 1 epoch
+| 1 epoch
+|===
+
+=== Roles
+
+Starknet's staking protocol features two options for participation:
+
+* Staking directly as validators: Staking a minimum of 20,000 STRK and earning rewards by handling any responsibilities the protocol requires
+
+* Staking indirectly as delegators: Delegating STRKs to validators who allow delegation and sharing in their rewards without handling any of their responsibilities
++
+[NOTE]
+====
+Validators can choose whether to allow delegation or not.
+====
+
+=== Addresses
+
+To reduce exposure to threats and enhance security, multiple addresses for defined for both validators and delegators:
+
+* Validator addresses:
+
+** Staking address: Used for staking, adding stake, and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.
+
+** Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.
+
+** Operational Address: Used for operational purposes, such as block attestations (starting from the protocol's second phase), block proposing (starting from the protocol's third phase), etc. This address is used frequently and doesn't handle large amounts of funds, and therefore is best kept by a hot wallet. Starting from the protocol's second phase, however, hacking the operational address can lead to a lose of yield for the validator and its delegators.
+
+* Delegator addresses:
+
+** Staking address: Used for delegating stake, adding stake and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.
+
+** Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.
+
+The protocol uses a hierarchical approach between the staking and rewards addresses, and both validators and delegator can also use their staking address whenever their rewards address is required.
+
+=== Epochs
+
+Starting from its second phase, the staking protocol introduces the notion of _epochs_ (similarly to many other protocols). Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch stem:[i] are applied in epoch stem:[i+k], where stem:[k] is a new latency parameter. For example, the following figure illustrates a scenario where in epoch stem:[i] validator stem:[A] has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch stem:[i+1] someone undelegates 30K STRK from stem:[A]: 
+
+image::epochs-example.png[]
+
+=== Responsibilities
+
+==== Running a full node
+
+The staking protocol requires validators to run one of the following full node implementations:
+
+[%autowidth]
+|===
+| Name | Hardware requirements | Integration guide
+
+| Juno
+| https://juno.nethermind.io/hardware-requirements[juno.nethermind.io/hardware-requirements^]
+| https://juno.nethermind.io/running-juno[juno.nethermind.io/running-juno^]
+
+| Madara
+| https://docs.madara.build/hardware[docs.madara.build/hardware^]
+| https://github.com/madara-alliance/madara/blob/main/README.md#%EF%B8%8F-installation[github.com/madara-alliance/madara/README.md^]
+
+| Pathfinder
+| https://eqlabs.github.io/pathfinder/getting-started/hardware-requirements[eqlabs.github.io/pathfinder/getting-started/hardware-requirements^]
+| https://eqlabs.github.io/pathfinder/getting-started/running-pathfinder[eqlabs.github.io/pathfinder/getting-started/running-pathfinder^]
+|===
+
+==== Block attestation
+
+Starting from its second phase, the staking protocol requires validators to attest to blocks, by running one of the following software:
+
+* https://github.com/NethermindEth/starknet-staking-v2/blob/main/README.md[Starknet Staking v2^] by Nethermind
+* https://github.com/eqlabs/starknet-validator-attestation/blob/main/README.md[Starknet Validator Attestation^] by Equilibrium
+
+.How does the block attestation mechanism work?
+
+In each epoch, each validator is assigned a single block whose relative number within the epoch is defined as follows:
+
+[stem]
+++++
+h(\text{staked amount},\text{epoch id},\text{validator address}) \mod (E-W)
+++++
+
+where:
+
+* stem:[E] is the number of blocks in an epoch, termed _epoch length_
+* stem:[W] is the number of blocks applicable for attestation submittal, termed _attestation window_
+
+During each epoch, validators have the opportunity to attest to their assigned block by submitting an `attest` transaction, which must be included within the attestation window. For example, if stem:[W = 20] and stem:[N] is the relative block number assigned to validator stem:[A], then stem:[A] must submit an `attest` transaction between the blocks whose relative number within the epoch are stem:[N+1] and stem:[N+20].
+
+[NOTE]
+====
+In the second phase of the protocol, each Validator is required to perform only one attestation per epoch.
+====
+
+The `attest` transaction includes the block hash of the attested block, ensuring validators actively use full nodes, as they need to continuously track block hashes. Additionally, the attestation is publicly verifiable, ensuring validators' reliability is publicly tested — a crucial prerequisite before handing them any core responsibilities.
+
+=== Rewards
+
+Rewards are distributed based on the amount staked and the commission policy constant stem:[CP] set by the validator, with yearly reward percentages calculated using the following formulas:
+
+* For delegators:
++
+[stem]
+++++
+\text{stake_delegated} \cdot (1 - CP) \cdot \frac{M}{S}
+++++
+
+* For validators:
++
+[stem]
+++++
+\left(\text{self_stake} + \text{total_stake_delegated} \cdot CP\right) \cdot \frac{M}{S}
+++++
+
+where stem:[M] and stem:[S] are defined by the xref:#minting_curve[].
+
+Starting from the second phase of the protocol, rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn't will get no rewards for the epoch's entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator's pool. Stakers that enter the protocol on epoch stem:[i] will start getting rewards only on epoch stem:[i+k], and stakers that signal an intent to exit the protocol on epoch stem:[i] will still get rewards until epoch stem:[i+k-1].
+
+
+
+[NOTE]
+====
+Starting from the second phase of the protocol, when a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is stem:[O(\text{#delegator's balance changes since last claim})] — and not stem:[O(\text{#epochs since last claim})] — which is assumed to be small enough to fit in one transaction in any real-world-scenario. This mechanism replaces the global reward index that was used prior to the protocol's second phase.
+====
+
+==== Minting curve
+
+The minting curve balances participation and inflation by adjusting rewards based on the total STRK locked in the protocol, and is defined by the following formula:
+
+[stem]
+++++
+M = \frac{C}{10} \times \sqrt{S}
+++++
+
+where:
+
+* stem:[S] is the staking rate as a percentage of the total token supply
+* stem:[M] is the annual minting rate as a percentage of the total token supply
+* stem:[C] is the maximum theoretical inflation percentage, set to 1.6%
+
+=== Latencies
+
+The following latencies are set in place:
+
+* To disincentivise sudden large withdrawals that could destabilize the network, funds are subject to a 21-day lockup after signaling an unstake intent, during which no rewards are earned and funds cannot be withdrawn. 
+
+* Starting from the second phase of the protocol, to prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch stem:[i] takes effect only on epoch stem:[i+1].
+
+=== Commissions
+
+Starting from its second phase, the staking protocol allows validators to increase their commission. To avoid an unexpected increase in commissions, validators must commit to a certain maximum commission stem:[M] and the last date (in epochs) that this commitment is relevant for. Until this date arrives, validators cannot increase their commission beyond stem:[M], but can freely change their commission in the range stem:[[0,M\]].
+
+== Components
+
+The implementation of Starknet's staking protocol is divided into several contracts, summarized in the following figure:
+
+image::staking-architecture.png[]
+
+This modular architecture allows for targeted upgrades and improvements without affecting the entire system. Access control mechanisms are also in place to ensure that only authorized parties can make critical changes, further enhancing the security of the staking process. The following table details the key components of the protocol:
+
+[cols="1,8"]
+|===
+| Contract | Description
+
+| Staking
+| The staking contract is the core of the staking system, managing the entire lifecycle of staking, from initial staking to claiming rewards and unstaking. 
+
+The staking contract also stores the `StakerInfo` data structure, which holds detailed information about each validator, including their staked amount, unclaimed rewards, delegation details, and operational parameters, and helps to ensure that validators' information is accurately tracked and updated.
+
+| Delegation pooling
+| All delegation interactions, such as entering or exiting a pool, are enabled through the delegation pooling contract, which tracks each delegator's contribution, calculates their rewards, and manages the delegation lifecycle.
+
+The delegation pooling contract also stores the `PoolMemberInfo` data structure, which holds information about each delegator's contributions, rewards, and status within the pool, and helps manage and calculate the delegation and reward distribution processes for pool members.
+
+| Reward Supplier
+| The reward supplier contract is responsible for calculating and supplying the staking rewards based on the minting curve, ensuring the rewards are distributed fairly and in accordance with the protocol's economic parameters.
+
+| Minting Curve
+| The minting curve contract defines the economic model that governs reward distribution, ensuring that the network's inflation is managed while incentivizing participation of stakers.
+
+| Attestation
+| The attestation contract manages the tracking of successful validator attestations, by verifying whether the validator has correctly attested to their assigned block within a designated attestation window.
+|===
+
+== Procedures
+
+The following tables detail the procedures enabled by the staking protocol for both xref:staking_as_validators[validators] and xref:staking_as_delegators[delegators], along with the instructions to perform them.
+
+To invoke onchain contracts, use https://foundry-rs.github.io/starknet-foundry/starknet/sncast-overview.html[Starknet Foundry's `sncast`^], xref:tools:overview.adoc[Starkli], or a xref:ecosystem:overview.adoc[block explorer]. To get the onchain addresses of the staking and STRK contracts, see xref:resources:chain-info.adoc#staking[Important addresses].
+
+=== Staking as validators
+
+[cols="1,2,2"]
+|===
+| Procedure | Instructions | Notes
+
+| Staking
+| Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#stake[`stake`^] function
+a| * You should make sure you are xref:responsibilities[running a full node and attesting to blocks] before staking
+* You must first approve the transfer of the amount of STRK tokens to be staked to the staking contract by invoking the STRK contract's `approve` function
+* `operational_address` should have sufficient funds to pay for attestation transactions
+* `amount` should be equal or greater than the xref:protocol[minimum stake for validators] and denominated in FRI (i.e., 1*10^18^ = 1 STRK)
+* `commission` should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)
+
+| Claiming rewards
+| Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards[`claim_rewards`^] function
+|
+
+| Increasing stake
+| Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#increase_stake[`increase_stake`^] function
+a| * `amount` should be denominated in FRI (i.e., 1*10^18^ = 1 STRK)
+* You must first approve the transfer of STRK tokens to the staking contract by invoking the STRK contract's `approve` function
+
+| Setting commission
+| Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission[`set_commission`^] function
+a| * `commission` should be entered as a percentage with precision, where 10,000 represents 100% (e.g., to set a 5% commission, you enter 500)
+* Commissions can be increased only after xref:commissions[setting a commission commitment] using https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_commission_commitment[`set_commission_commitment`^]
+
+| Changing reward address
+| Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address[`change_reward_address`^] function
+|
+
+| Changing operational address
+| Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#declare_operational_address[`declare_operational_address`^] and https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_operational_address[`change_operational_address`^] functions
+| `declare_operational_address` should be invoked by your new operational address and `change_operational_address` should be invoked by your staking address
+
+| Opening delegation
+| Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#set_open_for_delegation[`set_open_for_delegation`^] function
+| Opening delegation is necessary only if `pool_enabled` was set to `false` when invoking the staking contract's `stake` function
+
+| Unstaking
+| Invoke the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_intent[`unstake_intent`] and https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#unstake_action[`unstake_action`] functions
+a| * Once an unstake intent is signaled:
+** Funds are removed from the total balance and are no longer part of the staking protocol
+** The same staking address cannot be used to "restake" (i.e., `unstake_action` is *irreversible*)
+* `unstake_action` should be invoked only after the appropriate xref:latencies[waiting period] has ended
+
+|===
+
+=== Staking as delegators
+
+[IMPORTANT]
+====
+The following procedures are only intended for developers who are either interested (for whatever reason) in staking as delegators without using a xref:introduction[staking dashboard], or are building one.
+====
+
+[cols="1,2,2"]
+|===
+| Procedure | Instructions | Notes
+
+| Entering a delegation pool
+| Invoke the delegation pool contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#enter_delegation_pool[`enter_delegation_pool`^] function
+a| * `amount` should be denominated in FRI (i.e., 1*10^18^ = 1 STRK)
+* You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract's `approve` function
+
+| Claiming rewards
+| Invoke the delegation pool contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#claim_rewards-1[`claim_rewards`^] function
+|
+
+| Adding to a delegation pool
+| Invoke the delegation pool contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#add_to_delegation_pool[`add_to_delegation_pool`^] function
+a| * `amount` should be denominated in FRI (i.e., 1*10^18^ = 1 STRK)
+* You must first approve the transfer of STRK tokens to the delegation pool contract by invoking the STRK contract's `approve` function
+
+| Switching delegation pools
+| Invoke the delegation pool contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#switch_delegation_pool[`switch_delegation_pool`^] function
+|
+
+| Changing reward address
+| Invoke the delegation pool contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address-1[`change_reward_address`^] function
+|
+
+| Exiting a delegation pool
+| Invoke the delegation pool contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_intent[`exit_delegation_pool_intent`^] and https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#exit_delegation_pool_action[`exit_delegation_pool_action`^] function
+| `exit_delegation_pool_action` should be invoked only after the appropriate xref:latencies[waiting period] has ended
+|===

@@ -1,0 +1,132 @@
+= Staking STRK tokens
+
+[IMPORTANT]
+====
+For any questions or inquiries, reach out to us on https://t.me/+CLZl_F_Nj2RlNjU0[Telegram^].
+====
+
+== Overview
+
+Welcome to the second installment of the _Becoming a Starknet validator_ guide! ✅
+
+To become a validator, you must stake least the minimum required amount of STRK tokens by locking them into Starknet's Staking contract, subsequentially earning rewards based on your participation. This installment of the guide will therefore walk you through xref:approving_strk_transfer[approving a transfer of STRK tokens to the Staking contract], xref:locking_strk[locking them into it], and xref:verifying_stakes[verifying that the procedure was successful].
+
+[TIP]
+====
+The steps in this installment are demonstrated on Sepolia.
+
+For the equivalent addresses on Mainnet, see xref:resources:chain-info.adoc#important_addresses[Chain information]. 
+====
+
+== Approving STRK transfer 
+
+To lock STRK token into the Staking contract, you first need to approve the transfer of STRK tokens from your staking address to the Staking contract.
+
+[NOTE]
+====
+To understand the role of the staking address, read more about xref:architecture:staking.adoc#addresses[validator addresses in the staking protocol].
+====
+
+To do so, use your staking address to invoke the STRK token contract's `approve` function with the following parameters:
+
+. The Staking contract's address
+. The number of STRK tokens to stake
+
+[NOTE]
+====
+The number of STRK tokens to stake must be greater than or equal to xref:architecture:staking.adoc#protocol[the minimum stake for validators].
+====
+
+For example, the following can be used to approve the transfer of 1 STRK to the Staking contract on Sepolia: 
+
+[source,terminal]
+----
+sncast --account=staker invoke \
+    --contract-address=0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d \ <1>
+    --function=approve \
+    --arguments=0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1,1000000000000000000 \ <2>
+    --network=sepolia
+----
+<1> The STRK contract's address on Sepolia
+<2> The Staking contract's address on Sepolia and 1 STRK (STRK has 18 decimals)
+
+== Locking STRK
+
+Once the transfer is approved, you can lock your STRK tokens into the Staking contract by using your staking address to invoke the Staking contract's `stake` function with the following parameters:
+
+. The address to set as your rewards address
+. The address to set as your operational address
+. The number of STRK tokens to stake
+. `true` to enable delegation pooling and `false` otherwise
+. The commission rate to set for your delegation pool (if enabled), as a percentage with precision where 10,000 represents 100%
+
+[NOTE]
+====
+To understand the role of the rewards and operational addresses, read more about xref:architecture:staking.adoc#addresses[validator addresses in the staking protocol].
+
+The number of STRK tokens to stake must match the number specified in the `approve` function.
+====
+
+For example, the following can be used to stake 1 STRK with delegation pooling enabled and 1% commission on Sepolia:
+
+[source,terminal]
+----
+sncast --account=staker invoke \
+    --contract-address=0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
+    --function=stake \
+    --arguments=$REWARDS_ADDRESS,$OPERATIONAL_ADDRESS,1000000000000000000,true,100 \ <2>
+    --network=sepolia 
+----
+<1> The Staking contract's address on Sepolia
+<2> 1 staked STRK (STRK has 18 decimals), delegation pooling enabled, and 100/10,000 = 1% commission
+
+The `stake` function does the following:
+
+. Records your details in the staking contract
+. Locks the specified amount of STRK tokens into the staking contract
+. Deploys a new delegation pool contract associated with you (if pooling is enabled)
+. Begins accumulating your rewards
+
+== Verifying stakes
+
+To verify that your STRK token have been successfully staked, you can call the Staking contract's `get_staker_info_v1` function with your staking address as parameter.
+
+For example, the following can be used to verify your staking on Sepolia:
+
+[source,terminal]
+----
+sncast call \
+    --contract-address=0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
+    --function=get_staker_info_v1 \
+    --arguments=$STAKING_ADDRESS \
+    --network=sepolia
+----
+<1> The Staking contract's address on Sepolia
+
+If all goes well, the result should be similar to the following:
+
+[source,terminal]
+----
+response: [
+    0x0, <1>
+    0xdeadbeef1, <2>
+    0xdeadbeef2, <3>
+    0x1, <4>
+    0xde0b6b3a7640000, <5>
+    0x0, <6>
+    0x0, <7>
+    0x5aa0ca4c068a87f894e8d3918e16ea616df631c28f9c39eae040abfb4966881, <8>
+    0x0, <9>
+    0x64 <10>
+]
+----
+<1> Indicates successfully getting the staker's info
+<2> The validator's rewards address
+<3> The validator's operational address
+<4> The validator's stake
+<5> The validator's index
+<6> The validator's unclaimed rewards
+<7> Indicates successfully getting the delegation pool's info
+<8> The delegation pool's stake
+<9> The delegation pool's unclaimed rewards
+<10> The delegation pool's commission (stem:[64_{16}=100])
