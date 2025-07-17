@@ -53,45 +53,36 @@ const startIndexing = (currentBranch) => {
   const algoliaIndex = client.initIndex(
     `${algoliaIndexNamePrefix}-${currentBranch}`
   );
-  const commonPath = resolvePath("../", "components");
+  const commonPath = path.resolve("../", "modules");
 
   fs.readdir(commonPath, "utf8", (err, data) => {
     if (err) {
       console.error(err, "err");
       return;
     }
-    data.forEach((item) => {
-      const nextPath = path.join(commonPath, item, "modules");
-      fs.readdir(nextPath, "utf8", (errNext, dataNext) => {
-        if (errNext) {
-          console.error(errNext, "err_next");
+    data.forEach((listItem) => {
+      const pagePathFold = path.join(commonPath, listItem, "pages");
+      fs.readdir(pagePathFold, "utf8", (pageErr, pageData) => {
+        if (pageErr) {
+          console.error(pageErr, "pageErr");
           return;
         }
-        dataNext.forEach((listItem) => {
-          const pagePathFold = path.join(nextPath, listItem, "pages");
-          fs.readdir(pagePathFold, "utf8", (pageErr, pageData) => {
-            if (pageErr) {
-              console.error(pageErr, "pageErr");
-              return;
-            }
-            pageData.forEach((target) => {
-              const targetPath = path.join(pagePathFold, target);
-              const stat = fs.lstatSync(targetPath);
-              if (stat.isDirectory()) {
-                fs.readdir(targetPath, "utf-8", (fileErr, fileData) => {
-                  if (fileErr) {
-                    console.log(fileErr, "fileErr");
-                    return;
-                  }
-                  fileData.forEach((targetFile) => {
-                    const targetFilePath = path.join(targetPath, targetFile);
-                    beforeUpload(targetFilePath, targetFile, algoliaIndex);
-                  });
-                });
+        pageData.forEach((target) => {
+          const targetPath = path.join(pagePathFold, target);
+          const stat = fs.lstatSync(targetPath);
+          if (stat.isDirectory()) {
+            fs.readdir(targetPath, "utf-8", (fileErr, fileData) => {
+              if (fileErr) {
+                console.log(fileErr, "fileErr");
+                return;
               }
-              beforeUpload(targetPath, target, algoliaIndex);
+              fileData.forEach((targetFile) => {
+                const targetFilePath = path.join(targetPath, targetFile);
+                beforeUpload(targetFilePath, targetFile, algoliaIndex);
+              });
             });
-          });
+          }
+          beforeUpload(targetPath, target, algoliaIndex);
         });
       });
     });
