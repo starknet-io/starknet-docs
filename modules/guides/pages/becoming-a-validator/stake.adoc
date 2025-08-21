@@ -58,7 +58,6 @@ Once the transfer is approved, you can lock your STRK tokens into the Staking co
 . The address to set as your operational address
 . The number of STRK tokens to stake
 . `true` to enable delegation pooling and `false` otherwise
-. The commission rate to set for your delegation pool (if enabled), as a percentage with precision where 10,000 represents 100%
 
 [NOTE]
 ====
@@ -67,7 +66,7 @@ To understand the role of the rewards and operational addresses, read more about
 The number of STRK tokens to stake must match the number specified in the `approve` function.
 ====
 
-For example, the following can be used to stake 1 STRK with delegation pooling enabled and 1% commission on Sepolia:
+For example, the following can be used to stake 1 STRK on Sepolia:
 
 [source,terminal]
 ----
@@ -84,8 +83,50 @@ The `stake` function does the following:
 
 . Records your details in the staking contract
 . Locks the specified amount of STRK tokens into the staking contract
-. Deploys a new delegation pool contract associated with you (if pooling is enabled)
 . Begins accumulating your rewards
+
+== Setting commission
+
+Once your STRK tokens are locked, you can initalize your commission by using your staking address to invoke the Staking contract's `set_commission` function with the following parameters:
+
+. The commission rate to set for your delegation pool, as a percentage with precision where 10,000 represents 100%
+
+For example, the following can be initialize a 1% commission on Sepolia:
+
+[source,terminal]
+----
+sncast --account=staker invoke \
+    --contract-address=0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
+    --function=set_commission \
+    --arguments=100 \ <2>
+    --network=sepolia 
+----
+<1> The Staking contract's address on Sepolia
+<2> 100/10,000 = 1% commission
+
+== Opening a delegation pool
+
+Once your commission is initialized, you can open a delegation pool by using your staking address to invoke the Staking contract's `set_open_for_delegation` function with the following parameters:
+
+. The token address to set for your delegation pool
+
+[TIP]
+====
+To review the addresses of all BTC tokenizations ("BTC wrappers"), use the staking contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#get_active_tokens[`get_active_tokens`^] function.
+====
+
+For example, the following can be used to open an STRK delegation pool on Sepolia:
+
+[source,terminal]
+----
+sncast --account=staker invoke \
+    --contract-address=0x03745ab04a431fc02871a139be6b93d9260b0ff3e779ad9c8b377183b23109f1 \ <1>
+    --function=set_open_for_delegation \
+    --arguments=0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d \ <2>
+    --network=sepolia 
+----
+<1> The Staking contract's address on Sepolia
+<2> The STRK contract's address on Sepolia
 
 == Verifying stakes
 
