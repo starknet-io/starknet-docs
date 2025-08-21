@@ -81,12 +81,6 @@ The following sections describe the details of Starknet's staking protocol. The 
 | 0.25
 |===
 
-=== Bitcoin
-
-Starting ???, Starknet's staking protocol enables BTC holders to lock their assets on Starknet and earn staking rewards in STRK, by supporting a curated selection of tokenized BTC representations (“wrappers”) for direct BTC staking on Starknet.
-
-The protocol preserves STRK APR by slightly increasing its overall inflation rate, maintaining the protocol's original commitment to STRK stakers.
-
 === Roles
 
 Starknet's staking protocol features two options for participation:
@@ -100,66 +94,32 @@ Starknet's staking protocol features two options for participation:
 Validators can choose whether to allow delegation or not.
 ====
 
-=== Addresses
-
-To reduce exposure to threats and enhance security, multiple addresses are defined for both validators and delegators:
-
-* Validator addresses:
-
-** Staking address: Used for staking, adding stake, and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.
-
-** Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.
-
-** Operational Address: Used for operational purposes, such as block attestations (starting from the protocol's second phase), block proposing (starting from the protocol's third phase), etc. This address is used frequently and doesn't handle large amounts of funds, and therefore is best kept by a hot wallet. Starting from the protocol's second phase, however, hacking the operational address can lead to a lose of yield for the validator and its delegators.
-+
-[IMPORTANT]
-====
-If your operational address uses local signing, the account associated with it must be deployed and unprotected (e.g., no Ready Wallet Guardian or Braavos hardware signer).
-====
-
-* Delegator addresses:
-
-** Staking address: Used for delegating stake, adding stake and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.
-
-** Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.
-
-The protocol uses a hierarchical approach between the staking and rewards addresses, and both validators and delegator can also use their staking address whenever their rewards address is required.
-
 === Epochs
 
-Starting from its second phase, the staking protocol introduces the notion of _epochs_ (similarly to many other protocols). Epochs represent checkpoints where validators' stakes are set, such that changes made in epoch stem:[i] are applied in epoch stem:[i+k], where stem:[k] is a new latency parameter. For example, the following figure illustrates a scenario where in epoch stem:[i] validator stem:[A] has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch stem:[i+1] someone undelegates 30K STRK from stem:[A]: 
+Starting from its second phase, the staking protocol introduces the notion of _epochs_ (similarly to many other protocols). Epochs represent checkpoints, such that changes made in epoch stem:[i] are applied in epoch stem:[i+k], where stem:[k] is a new latency parameter. For example, the following figure illustrates a scenario where in epoch stem:[i] validator stem:[A] has 50K STRK staked and someone delegates an additional 10K STRK to them, and in epoch stem:[i+1] someone undelegates 30K STRK from stem:[A]: 
 
 image::epochs-example.png[]
 
-=== Responsibilities
+=== Validator power
 
-==== Running a full node
+The staking power of a validator staking stem:[s] amount of STRK and stem:[b] amount of BTC is defined as follows:
 
-The staking protocol requires validators to run one of the following full node implementations:
+[stem]
+++++
+(1 - \alpha) \cdot \frac{s}{S} + \alpha \cdot \frac{b}{B}
+++++
 
-[%autowidth]
-|===
-| Name | Hardware requirements | Integration guide
+where:
 
-| Juno
-| https://juno.nethermind.io/hardware-requirements[juno.nethermind.io/hardware-requirements^]
-| https://juno.nethermind.io/running-juno[juno.nethermind.io/running-juno^]
+* stem:[\alpha = 0.25] is a parameter determining BTC's weight in the staking power
+* stem:[S] and stem:[B] are the total STRK and BTC staked, respectively
 
-| Madara
-| https://docs.madara.build/hardware[docs.madara.build/hardware^]
-| https://github.com/madara-alliance/madara/blob/main/README.md#%EF%B8%8F-installation[github.com/madara-alliance/madara/README.md^]
+=== Validator responsibilities
 
-| Pathfinder
-| https://eqlabs.github.io/pathfinder/getting-started/hardware-requirements[eqlabs.github.io/pathfinder/getting-started/hardware-requirements^]
-| https://eqlabs.github.io/pathfinder/getting-started/running-pathfinder[eqlabs.github.io/pathfinder/getting-started/running-pathfinder^]
-|===
+Starting from its second phase, the staking protocol requires validators to attest to blocks by running one of the following softwares:
 
-==== Block attestation
-
-Starting from its second phase, the staking protocol requires validators to attest to blocks, by running one of the following software:
-
-* https://github.com/NethermindEth/starknet-staking-v2/blob/main/README.md[Starknet Staking v2^] by Nethermind
-* https://github.com/eqlabs/starknet-validator-attestation/blob/main/README.md[Starknet Validator Attestation^] by Equilibrium
+* The https://juno.nethermind.io/hardware-requirements[Juno^] full node with https://github.com/NethermindEth/starknet-staking-v2/blob/main/README.md[Nethermind's attestation tool^] 
+* The https://eqlabs.github.io/pathfinder/getting-started/hardware-requirements[Pathfinder^] full node with https://github.com/eqlabs/starknet-validator-attestation/blob/main/README.md[Equilibrium's attestation tool^] 
 
 .How does the block attestation mechanism work?
 
@@ -186,47 +146,41 @@ The `attest` transaction includes the block hash of the attested block, ensuring
 
 === Rewards
 
-Rewards are distributed based on the amount staked and the commission policy constant stem:[CP] set by the validator, with yearly reward percentages calculated using the following formulas:
-
-* For delegators:
-+
-[stem]
-++++
-\text{stake_delegated} \cdot (1 - CP) \cdot \frac{M}{S}
-++++
-
-* For validators:
-+
-[stem]
-++++
-\left(\text{self_stake} + \text{total_stake_delegated} \cdot CP\right) \cdot \frac{M}{S}
-++++
-
-where stem:[M] and stem:[S] are defined by the xref:#minting_curve[].
-
-Starting from the second phase of the protocol, rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn't will get no rewards for the epoch's entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator's pool. Stakers that enter the protocol on epoch stem:[i] will start getting rewards only on epoch stem:[i+k], and stakers that signal an intent to exit the protocol on epoch stem:[i] will still get rewards until epoch stem:[i+k-1].
-
-
-
-[NOTE]
-====
-Starting from the second phase of the protocol, when a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is stem:[O(\text{#delegator's balance changes since last claim})] — and not stem:[O(\text{#epochs since last claim})] — which is assumed to be small enough to fit in one transaction in any real-world-scenario. This mechanism replaces the global reward index that was used prior to the protocol's second phase.
-====
-
-==== Minting curve
-
-The minting curve balances participation and inflation by adjusting rewards based on the total STRK locked in the protocol, and is defined by the following formula:
+Staking rewards are issued in newly minted STRK tokens, based on a minting curve which balances participation and inflation by adjusting the distributed rewards according to the total STRK locked in the protocol. The total minting rate percentage ((stem:[M]) is defined as follows:
 
 [stem]
 ++++
-M = \frac{C}{10} \times \sqrt{S}
+M = \frac{1}{1-\alpha} \cdot \frac{C}{10} \cdot \sqrt{\sigma}
 ++++
 
 where:
 
-* stem:[S] is the staking rate as a percentage of the total token supply
-* stem:[M] is the annual minting rate as a percentage of the total token supply
-* stem:[C] is the maximum theoretical inflation percentage, set to 1.6%
+* stem:[\alpha] is xref:power[BTC's staking power weight]
+* stem:[\sigma] is the percentage of STRK staked out of total STRK supply
+* stem:[C] is a yearly inflation cap coefficient
+
+Annual reward percentages (APR) can therefore be calculated using the following formulas:
+
+* For STRK: stem:[\frac{M}{\sigma}]
+* For BTC: stem:[(\alpha \cdot T \cdot \frac{M}{100} \cdot \frac{\text{STRK price}}{\text{BTC price}}) / B]
++
+where:
++
+- stem:[B] is the total BTC staked
+- stem:[T] is the total STRK supply 
+
+Rewards are ultimately distributed to validators according to their staking power, and, after deducting the validator's commission, shared with delegators according to their share in the validator's delegation pool.
+
+[NOTE]
+====
+Starting from the second phase of the protocol:
+
+. Rewards are accumulated per epoch only for validators who performed their attestations in the epoch on an “all or nothing” basis — so validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn't will get no rewards for the epoch's entire duration. After performing the attestation, the rewards that go directly to the validator will accumulate in his account, and the rest will go to this validator's pool. Stakers that enter the protocol on epoch stem:[i] will start getting rewards only on epoch stem:[i+k], and stakers that signal an intent to exit the protocol on epoch stem:[i] will still get rewards until epoch stem:[i+k-1].
+
+. When a delegator claims his rewards, all rewards they received from all epochs since the last time they claimed rewards will be accumulated. The complexity of this operation is stem:[O(\text{#delegator's balance changes since last claim})] — and not stem:[O(\text{#epochs since last claim})] — which is assumed to be small enough to fit in one transaction in any real-world-scenario. This mechanism replaces the global reward index that was used prior to the protocol's second phase.
+
+. The staking protocol allows validators to increase their commission. To avoid an unexpected increase in commissions, validators must commit to a certain maximum commission stem:[M] and the last date (in epochs) that this commitment is relevant for. Until this date arrives, validators cannot increase their commission beyond stem:[M], but can freely change their commission in the range stem:[[0,M\]].
+====
 
 === Latencies
 
@@ -236,9 +190,36 @@ The following latencies are set in place:
 
 * Starting from the second phase of the protocol, to prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch stem:[i] takes effect only on epoch stem:[i+1].
 
-=== Commissions
+=== Addresses
 
-Starting from its second phase, the staking protocol allows validators to increase their commission. To avoid an unexpected increase in commissions, validators must commit to a certain maximum commission stem:[M] and the last date (in epochs) that this commitment is relevant for. Until this date arrives, validators cannot increase their commission beyond stem:[M], but can freely change their commission in the range stem:[[0,M\]].
+To reduce exposure to threats and enhance security, multiple addresses are defined for both validators and delegators:
+
+* Validator addresses:
+
+** Staking address: Used for staking, adding stake, and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.
+
+** Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.
+
+** Operational Address: Used for operational purposes, such as block attestations (starting from the protocol's second phase), block proposing (starting from the protocol's third phase), etc. This address is used frequently and doesn't handle large amounts of funds, and therefore is best kept by a hot wallet. Starting from the protocol's second phase, however, hacking the operational address can lead to a lose of yield for the validator and its delegators.
++
+[IMPORTANT]
+====
+If your operational address uses local signing, the account associated with it must be deployed and unprotected (e.g., no Ready Wallet Guardian or Braavos hardware signer).
+====
+
+* Delegator addresses:
+
+** Staking address: Used for delegating stake, adding stake and unstaking. This address is only needed when entering or exiting the protocol and handles large amounts of STRK, and therefore is best kept by a cold wallet with minimal activity.
+
+** Rewards Address: Used for receiving rewards. This address is only needed when receiving rewards, and therefore is best kept by a cold wallet.
+
+The protocol uses a hierarchical approach between the staking and rewards addresses, and both validators and delegator can also use their staking address whenever their rewards address is required.
+
+=== BTC
+
+Starting Q3 2025, Starknet's staking protocol enables BTC holders to lock their assets on Starknet and earn staking rewards in STRK, by supporting a curated selection of tokenized BTC representations (“wrappers”) for direct BTC staking on Starknet.
+
+The protocol preserves STRK APR by slightly increasing its overall inflation rate, maintaining the protocol's original commitment to STRK stakers.
 
 == Components
 
@@ -354,7 +335,7 @@ a| * `amount` should be denominated in FRI (i.e., 1*10^18^ = 1 STRK)
 
 | Switching delegation pools
 | Invoke the delegation pool contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#switch_delegation_pool[`switch_delegation_pool`^] function
-|
+| To prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch stem:[i] takes effect only on epoch stem:[i+1].
 
 | Changing reward address
 | Invoke the delegation pool contract's https://github.com/starkware-libs/starknet-staking/blob/main/docs/spec.md#change_reward_address-1[`change_reward_address`^] function
