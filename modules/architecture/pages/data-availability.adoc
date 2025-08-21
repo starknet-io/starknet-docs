@@ -129,17 +129,15 @@ In Starknet version 0.13.3, sending state diffs to Ethereum changed from sending
 The list of pointers can be packed to ~ 1/84 of the original list length since we only need 3 bits to indicate the bucket and we can fit 84 of those into a felt.
 ====
 
-. A list of repeating value pointers is constructed, by adding `(bucket_index, index_in_bucket)` for every repetition in the original data.
+. A list of repeating value pointers is constructed, by adding the corresponding index in a unique values list for every repetition in the original data.
 
 To illustrate the above, consider the following example: Let indices 0,1, …, 5 correspond to buckets 252, 125, …, 15, and let 6 denote a special bucket of repetitions. For the data list `[2^250, 10, 100, 2^63, 2^63+1, 10, 100]`, we construct the following:
 
 * Bucket 252: `[2^250]`
 * Bucket 83: `[2^63, 2^63+1]`
 * Bucket 15: `[10, 100]`
-
-The list of unique values is `[2^250, 2^63, 2^63 + 1, 10, 100]`. From this, we construct the last bucket of repeating value pointers: `[3, 4]`. (We have two repetitions: the first for 10, which is the fourth element in the unique values and the second for 100, which is the fifth element in the list.)
-
-Finally, the pointers list is `[0, 5, 5, 3, 3, 6, 6]`.
+* Pointers: `[0, 5, 5, 3, 3, 6, 6]`
+* Repeating value pointers: `[3, 4]` (The list of unique values is `[2^250, 2^63, 2^63 + 1, 10, 100]`, and we have two repetitions: the first for 10, which is the fourth unique element, and the second for 100, which is the fifth unique element)
 
 The final compressed list packs each bucket and each list individually and adds some necessary metadata. 
 
