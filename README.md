@@ -15,8 +15,9 @@
 
 ## 📖 About
 
-Welcome to the Starknet Docs repository, the official documentation hub for Starknet!
-The Starknet Docs provides comprehensive guides, references, and resources for all developers, validators, and users of Starknet.
+Welcome to the Starknet Docs repository!
+
+The Starknet Docs is the official documentation hub for Starknet, providing comprehensive guides, references, and resources for all developers, validators, and users of Starknet.
 
 ---
 
