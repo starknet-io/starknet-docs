@@ -86,7 +86,7 @@ Returns the class hash of a contract at a specific address.
 ### call_contract
 
 <Info>
-For safer contract calls, use the dispatcher pattern shown in [Calling other contracts](/quickstart/interacting/calling_other_contracts)
+For safer contract calls, use the dispatcher pattern shown in [Calling other contracts](./interacting/calling_other_contracts)
 </Info>
 
 ```rust
@@ -112,7 +112,7 @@ fn deploy_syscall(
 
 Deploys a new contract instance. Returns the deployed address and constructor result.
 
-The [Simple Factory](/quickstart/interacting/factory) uses the `deploy` syscall under the hood:
+The [Simple Factory](./interacting/factory) uses the `deploy` syscall under the hood:
 
 ```cairo
 // [!include ~/listings/quickstart/factory/src/simple_factory.cairo:deploy]
@@ -129,7 +129,7 @@ fn emit_event_syscall(
 
 Emits an event with indexed keys and data values.
 
-See the [Events](/quickstart/basics/events) section for more information:
+See the [Events](./basics/events) section for more information:
 
 ```cairo
 // [!include ~/listings/quickstart/events/src/counter.cairo:emit]
@@ -168,7 +168,7 @@ fn replace_class_syscall(
 
 Upgrades the contract's code by replacing its class hash.
 
-This syscall is used in [Upgradeable Contract](/applications/upgradeable_contract):
+This syscall is used in [Upgradeable Contract](../../applications/upgradeable_contract):
 
 ```cairo
 // [!include ~/listings/applications/upgradeable_contract/src/upgradeable_contract_v0.cairo:upgrade]
@@ -181,7 +181,7 @@ The new code only affects future calls. The current transaction continues with t
 ### storage_read
 
 :::warning
-Using this syscall directly is not recommended. Follow the [Storage](/quickstart/basics/storage) section for more information.
+Using this syscall directly is not recommended. Follow the [Storage](./basics/storage) section for more information.
 :::
 
 ```rust
@@ -196,7 +196,7 @@ Low-level storage read operation.
 ### storage_write
 
 :::warning
-Using this syscall directly is not recommended. Follow the [Storage](/quickstart/basics/storage) section for more information.
+Using this syscall directly is not recommended. Follow the [Storage](./basics/storage) section for more information.
 :::
 
 ```rust

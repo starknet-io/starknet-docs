@@ -167,7 +167,7 @@ fn test_event_emission() {
 ```
 
 <Info>
-For more details about events, visit the [Events](/quickstart/basics/events) section.
+For more details about events, visit the [Events](../basics/events) section.
 </Info>
 
 ## Testing Best Practices
