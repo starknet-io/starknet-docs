@@ -114,6 +114,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ by the Starknet community**
 
-[⭐ Star this repo](https://github.com/starknet-io/starknet-docs) • [🐦 Follow us](https://twitter.com/Starknet) • [💬 Join Discord](https://discord.gg/starknet-community)
+[⭐ Star this repo](https://github.com/starknet-io/starknet-docs) • [🦮 Follow us](https://x.com/Starknet) • [💬 Join Discord](https://discord.gg/starknet-community)
 
 </div>
