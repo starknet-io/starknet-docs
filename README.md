@@ -2,23 +2,18 @@
 
 <div align="center">
 
-[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](README.md#-license)
-[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen?style=for-the-badge)](README.md#-contributing)
 [![Built with Mintlify](https://img.shields.io/badge/built%20with-mintlify-00D4AA?style=for-the-badge)](https://mintlify.com)
+[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen?style=for-the-badge)](README.md#-contributing)
 
 [👀 View Website](https://docs.starknet.io) • [🐛 Report Bug](https://github.com/starknet-io/starknet-docs/issues) • [💡 Request Feature](https://github.com/starknet-io/starknet-docs/issues)
 
 </div>
-
----
 
 ## 📖 About
 
 Welcome to the Starknet Docs repository!
 
 The Starknet Docs is the official documentation hub for Starknet, providing comprehensive guides, references, and resources for all developers, validators, and users of Starknet.
-
----
 
 ## 🛠️ Setup
 
@@ -56,8 +51,6 @@ The Starknet Docs is the official documentation hub for Starknet, providing comp
 | Page loads as 404 | Ensure you're in the folder containing `docs.json` |
 | Port already in use | Use `mint dev --port 3001` to specify a different port |
 
----
-
 ## 🚀 Deployment
 
 Documentation is automatically deployed to production when changes are pushed to the main branch. The deployment is handled by Mintlify's GitHub integration.
@@ -67,8 +60,6 @@ Documentation is automatically deployed to production when changes are pushed to
 1. **Push** to main branch
 2. **Mintlify** automatically builds and deploys
 3. **Changes** are live at [docs.starknet.io](https://docs.starknet.io)
-
----
 
 ## 🤝 Contributing
 
@@ -100,19 +91,3 @@ Found a bug or have a suggestion? Please [open an issue](https://github.com/star
 - Follow the existing documentation structure
 - Test all code examples
 - Add images to enhance understanding
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-**Made with ❤️ by the Starknet community**
-
-[⭐ Star this repo](https://github.com/starknet-io/starknet-docs) • [🦮 Follow us](https://x.com/Starknet) • [💬 Join Discord](https://discord.gg/starknet-community)
-
-</div>
