@@ -2,10 +2,9 @@
 
 <div align="center">
 
-[![Website](https://img.shields.io/website?url=https%3A%2F%2Fdocs.starknet.io&style=for-the-badge&logo=firefox&logoColor=white)](https://docs.starknet.io)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen?style=for-the-badge)](CONTRIBUTING.md)
-[![Built with Mintlify](https://img.shields.io/badge/built%20with-mintlify-00D4AA?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K)](https://mintlify.com)
+[![Built with Mintlify](https://img.shields.io/badge/built%20with-mintlify-00D4AA?style=for-the-badge)](https://mintlify.com)
 
 [👀 View Website](https://docs.starknet.io) • [🐛 Report Bug](https://github.com/starknet-io/starknet-docs/issues) • [💡 Request Feature](https://github.com/starknet-io/starknet-docs/issues)
 
