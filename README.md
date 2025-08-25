@@ -7,7 +7,7 @@
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen?style=for-the-badge)](CONTRIBUTING.md)
 [![Built with Mintlify](https://img.shields.io/badge/built%20with-mintlify-00D4AA?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K)](https://mintlify.com)
 
-[🚀 View Documentation](https://docs.starknet.io) • [🐛 Report Bug](https://github.com/starknet-io/starknet-docs/issues) • [💡 Request Feature](https://github.com/starknet-io/starknet-docs/issues)
+[👀 View Documentation](https://docs.starknet.io) • [🐛 Report Bug](https://github.com/starknet-io/starknet-docs/issues) • [💡 Request Feature](https://github.com/starknet-io/starknet-docs/issues)
 
 </div>
 
@@ -32,7 +32,7 @@ This repository contains the official documentation for **Starknet**, a permissi
 - [Node.js](https://nodejs.org/) (v18 or higher)
 - [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
 
-### 🛠️ Local Development
+### Local Development
 
 1. **Install the Mintlify CLI**
    ```bash
@@ -53,7 +53,7 @@ This repository contains the official documentation for **Starknet**, a permissi
 4. **Open your browser**
    Navigate to `http://localhost:3000` to see the documentation locally.
 
-### 🔧 Troubleshooting
+### Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
@@ -79,7 +79,7 @@ Documentation is automatically deployed to production when changes are pushed to
 
 We welcome contributions from the community! Here's how you can help:
 
-### 📝 Content Contributions
+### Content Contributions
 
 1. **Fork** the repository
 2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
@@ -89,7 +89,7 @@ We welcome contributions from the community! Here's how you can help:
 6. **Push** to the branch (`git push origin feature/amazing-feature`)
 7. **Open** a Pull Request
 
-### 🐛 Reporting Issues
+### Reporting Issues
 
 Found a bug or have a suggestion? Please [open an issue](https://github.com/starknet-io/starknet-docs/issues) with:
 
@@ -98,7 +98,7 @@ Found a bug or have a suggestion? Please [open an issue](https://github.com/star
 - Expected vs actual behavior
 - Screenshots (if applicable)
 
-### 📋 Content Guidelines
+### Content Guidelines
 
 - Use clear, concise language
 - Include code examples where appropriate
