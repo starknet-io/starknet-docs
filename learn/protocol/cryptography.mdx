@@ -1,0 +1,106 @@
+---
+title: "Cryptography"
+---
+
+## Overview
+
+Starknet is built on advanced cryptographic primitives that enable scalable, trustless computation using STARK proofs. These include a custom [prime field](#the_stark_field) and [elliptic curve](#the_stark_curve) and multiple [hash functions](#hash_functions) optimized for zero-knowledge performance.
+
+## The STARK field
+
+The STARK field is the finite field $$\mathbb{F}_{P}$$, where:
+
+$$P$$ = $$2^{251} + 17 \cdot 2^{192} + 1$$ = 3618502788666131213697322783095070105623107215331596699973092056135872020481
+
+<Note>
+The `felt252` type in Cairo refers to elements of the STARK field.
+</Note>
+
+## The STARK curve
+
+The STARK curve is an elliptic curve defined over the STARK field by:
+
+$$y^{2} \equiv x^{3} + \alpha \cdot x + \beta \left(\right. mod P \left.\right)$$
+
+where:
+
+* $$\alpha$$ = 1
+
+* $$\beta$$ = 3141592653589793238462643383279502884197169399375105820974944592307816406665
+
+The curve's order is 3618502788666131213697322783095070105526743751716087489154079457884512865583, and the generator point $$G$$ in the Elliptic Curve Digital Signature Algorithm (ECDSA) implementation that is used in Cairo with respect to it is defined by:
+
+* $$G_{x}$$ = 874739451078007766457464989774322083649278607533249481151382481072868806602
+
+* $$G_{y}$$ = 152666792071518830868575557812948353041420400780739481342941381225525861407
+
+<Note>
+The STARK curve is commonly used in smart contracts, but is not distinguished by the Starknet protocol.
+</Note>
+
+## Hash functions
+
+There are three hash functions used throughout Starknet's specifications that map inputs to elements in the [STARK field](/learn/protocol/cryptography#the-stark-field).
+
+### Starknet Keccak
+
+Starknet's version of the Keccak hash function, commonly denoted by $$\text{sn}_\text{keccak}$$, is defined as the first 250 bits of Ethereum's [keccak256](https://github.com/ethereum/eth-hash).
+
+### Pedersen hash
+
+Starknet's version of the Pedersen hash function is then defined by:
+
+$$h \left(\right. a , b \left.\right) = \left(\left[\right. \text{shift}_\text{point} + a_{l o w} \cdot P_{0} + a_{h i g h} \cdot P 1 + b_{l o w} \cdot P 2 + b_{h i g h} \cdot P 3 \left]\right.\right)_{x}$$
+
+where:
+
+* $$a_{l o w}$$ and $$b_{l o w}$$ are the 248 low of $$a$$ and $$b$$, respectively
+
+* $$a_{h i g h}$$ and $$b_{h i g h}$$ are the 4 high bits of $$a$$ and $$b$$, respectively
+
+* The values of the constants $$\text{shift}_\text{point} , P_{0} , P_{1} , P_{2} , P_{3}$$ can be found in [fast\_pedersen\_hash.py](https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/crypto/signature/fast_pedersen_hash.py)
+
+* $$\left[\right. P \left]\right._{x}$$ denotes the $$x$$ coordinate of point $$P$$
+
+#### Array hashing
+
+Let $$h$$ denote the pedersen hash function, then given an array $$a_{1} , . . . , a_{n}$$ of $$n$$ field elements we define $$h \left(\right. a_{1} , . . . , a_{n} \left.\right)$$ to be:
+
+$$h \left(\right. . . . h \left(\right. h \left(\right. 0 , a_{1} \left.\right) , a_{2} \left.\right) , . . . , a_{n} \left.\right) , n \left.\right)$$
+
+### Poseidon hash
+
+<Tip>
+Poseidon is a family of hash functions designed to be very efficient as algebraic circuits. As such, they can be very useful in ZK-proving systems such as STARKs.
+</Tip>
+
+Starknet's version of the Poseidon hash function is based on a three-element state Hades permutation and defined of up to 2 elements by:
+
+$$\text{poseidon} \left(\right. x \left.\right) := \left(\left[\right. \text{hades}_\text{permutation} \left(\right. x , 0 , 1 \left.\right) \left]\right.\right)_{0}$$
+
+$$\text{poseidon} \left(\right. x , y \left.\right) := \left(\left[\right. \text{hades}_\text{permutation} \left(\right. x , y , 2 \left.\right) \left]\right.\right)_{0}$$
+
+Where $$\left[\right. \cdot \left]\right._{j}$$ denotes taking the $$j$$'th coordinate of a tuple.
+
+#### Array hashing
+
+Let $$\text{hades} : \mathbb{F}_{P}^{3} \rightarrow \mathbb{F}_{P}^{3}$$ denote the Hades permutation with Starknet's parameters, then given an array $$a_{1} , . . . , a_{n}$$ of $$n$$ field elements we define $$\text{poseidon} \left(\right. a_{1} , . . . , a_{n} \left.\right)$$ to be the first coordinate of $$H \left(\right. a_{1} , . . . , a_{n} ; 0 , 0 , 0 \left.\right)$$, where:
+
+$$
+H(a_1, \ldots, a_n; s_1, s_2, s_3) =
+\begin{cases}
+  H(a_3, \ldots, a_n; \text{hades}(s_1 + a_1, s_2 + a_2, s_3)) & \text{if } n \geq 2 \\
+  \text{hades}(s_1 + a_1, s_2 + 1, s_3) & \text{if } n = 1 \\
+  \text{hades}(s_1 + 1, s_2, s_3) & \text{if } n = 0
+\end{cases}
+$$
+
+<Tip>
+For reference implementations of the above see [poseidon\_hash.py](https://github.com/starkware-libs/cairo-lang/blob/12ca9e91bbdc8a423c63280949c7e34382792067/src/starkware/cairo/common/poseidon_hash.py#L46) and [poseidon.cairo](https://github.com/starkware-libs/cairo-lang/blob/12ca9e91bbdc8a423c63280949c7e34382792067/src/starkware/cairo/common/builtin_poseidon/poseidon.cairo#L28) in the cairo-lang GitHub repository.
+</Tip>
+
+#### Additional resources
+
+* [Parameters for defining the Poseidon permutation used in Starknet](https://github.com/starkware-industries/poseidon/blob/main/poseidon3.txt)
+
+* [Implementation in C and assembly by CryptoExperts](https://github.com/CryptoExperts/poseidon)

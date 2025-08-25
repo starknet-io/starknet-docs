@@ -1,0 +1,238 @@
+---
+title: "L1 ↔ L2 Token Bridge"
+---
+
+# L1 ↔ L2 Token Bridge
+
+In Starknet, it is possible to interact with Ethereum by using the L1 ↔ L2 messaging system.
+
+In this example, we will demonstrate the usage of this messaging system to send and receive messages from L1 to L2 for a token bridge.
+
+It will require creating two contracts, one on Starknet and one on Ethereum, that will communicate cross-chain, and notify each other
+how many tokens to mint and who to assign them to. We will also create very simple mock token implementations that will simply emit
+appropriate events on burning and minting. This will allow us to verify that the cross-chain communication actually succeeded.
+
+First, we create the `TokenBridge` contract on Starknet:
+
+```rust
+use starknet::{ContractAddress, EthAddress};
+
+/// Represents any time of token that can be minted/burned
+/// In a real contract this would probably be an ERC20 contract,
+/// but here it's represented as a generic token for simplicity.
+#[starknet::interface]
+pub trait IMintableToken<TContractState> {
+    fn mint(ref self: TContractState, account: ContractAddress, amount: u256);
+    fn burn(ref self: TContractState, account: ContractAddress, amount: u256);
+}
+
+#[starknet::interface]
+pub trait ITokenBridge<TContractState> {
+    fn bridge_to_l1(ref self: TContractState, l1_recipient: EthAddress, amount: u256);
+    fn set_l1_bridge(ref self: TContractState, l1_bridge_address: EthAddress);
+    fn set_token(ref self: TContractState, l2_token_address: ContractAddress);
+    fn governor(self: @TContractState) -> ContractAddress;
+    fn l1_bridge(self: @TContractState) -> felt252;
+    fn l2_token(self: @TContractState) -> ContractAddress;
+}
+
+#[starknet::contract]
+pub mod TokenBridge {
+    use core::num::traits::Zero;
+    use starknet::{ContractAddress, EthAddress, get_caller_address, syscalls, SyscallResultTrait};
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use super::{IMintableTokenDispatcher, IMintableTokenDispatcherTrait};
+
+    #[storage]
+    pub struct Storage {
+        // The address of the L2 governor of this contract. Only the governor can set the other
+        // storage variables.
+        pub governor: ContractAddress,
+        // The L1 bridge address. Zero when unset.
+        pub l1_bridge: felt252,
+        // The L2 token contract address. Zero when unset.
+        pub l2_token: ContractAddress,
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    pub enum Event {
+        WithdrawInitiated: WithdrawInitiated,
+        DepositHandled: DepositHandled,
+        L1BridgeSet: L1BridgeSet,
+        L2TokenSet: L2TokenSet,
+    }
+
+    // An event that is emitted when bridge_to_l1 is called.
+    // * l1_recipient is the l1 recipient address.
+    // * amount is the amount to withdraw.
+    // * caller_address is the address from which the call was made.
+    #[derive(Drop, starknet::Event)]
+    pub struct WithdrawInitiated {
+        pub l1_recipient: EthAddress,
+        pub amount: u256,
+        pub caller_address: ContractAddress,
+    }
+
+    // An event that is emitted when handle_deposit is called.
+    // * account is the recipient address.
+    // * amount is the amount to deposit.
+    #[derive(Drop, starknet::Event)]
+    pub struct DepositHandled {
+        pub account: ContractAddress,
+        pub amount: u256,
+    }
+
+    // An event that is emitted when set_l1_bridge is called.
+    // * l1_bridge_address is the new l1 bridge address.
+    #[derive(Drop, starknet::Event)]
+    struct L1BridgeSet {
+        l1_bridge_address: EthAddress,
+    }
+
+    // An event that is emitted when set_token is called.
+    // * l2_token_address is the new l2 token address.
+    #[derive(Drop, starknet::Event)]
+    struct L2TokenSet {
+        l2_token_address: ContractAddress,
+    }
+
+    pub mod Errors {
+        pub const EXPECTED_FROM_BRIDGE_ONLY: felt252 = 'Expected from bridge only';
+        pub const INVALID_ADDRESS: felt252 = 'Invalid address';
+        pub const INVALID_AMOUNT: felt252 = 'Invalid amount';
+        pub const UNAUTHORIZED: felt252 = 'Unauthorized';
+        pub const TOKEN_NOT_SET: felt252 = 'Token not set';
+        pub const L1_BRIDGE_NOT_SET: felt252 = 'L1 bridge address not set';
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, governor: ContractAddress) {
+        assert(governor.is_non_zero(), Errors::INVALID_ADDRESS);
+        self.governor.write(governor);
+    }
+
+    #[abi(embed_v0)]
+    impl TokenBridge of super::ITokenBridge<ContractState> {
+        /// Initiates a withdrawal of tokens on the L1 contract.
+        fn bridge_to_l1(ref self: ContractState, l1_recipient: EthAddress, amount: u256) {
+            assert(l1_recipient.is_non_zero(), Errors::INVALID_ADDRESS);
+            assert(amount.is_non_zero(), Errors::INVALID_AMOUNT);
+            self._assert_l1_bridge_set();
+            self._assert_token_set();
+
+            // burn tokens on L2
+            let caller_address = get_caller_address();
+            IMintableTokenDispatcher { contract_address: self.l2_token.read() }
+                .burn(caller_address, amount);
+
+            // Send the message to L1 to mint tokens there.
+            let mut payload: Array<felt252> = array![
+                l1_recipient.into(), amount.low.into(), amount.high.into(),
+            ];
+            syscalls::send_message_to_l1_syscall(self.l1_bridge.read(), payload.span())
+                .unwrap_syscall();
+
+            self.emit(WithdrawInitiated { l1_recipient, amount, caller_address });
+        }
+
+        fn set_l1_bridge(ref self: ContractState, l1_bridge_address: EthAddress) {
+            self._assert_only_governor();
+            assert(l1_bridge_address.is_non_zero(), Errors::INVALID_ADDRESS);
+
+            self.l1_bridge.write(l1_bridge_address.into());
+            self.emit(L1BridgeSet { l1_bridge_address });
+        }
+
+        fn set_token(ref self: ContractState, l2_token_address: ContractAddress) {
+            self._assert_only_governor();
+            assert(l2_token_address.is_non_zero(), Errors::INVALID_ADDRESS);
+
+            self.l2_token.write(l2_token_address);
+            self.emit(L2TokenSet { l2_token_address });
+        }
+
+        // Getters
+
+        fn governor(self: @ContractState) -> ContractAddress {
+            self.governor.read()
+        }
+
+        fn l1_bridge(self: @ContractState) -> felt252 {
+            self.l1_bridge.read()
+        }
+
+        fn l2_token(self: @ContractState) -> ContractAddress {
+            self.l2_token.read()
+        }
+    }
+
+    #[generate_trait]
+    impl Internal of InternalTrait {
+        fn _assert_only_governor(self: @ContractState) {
+            assert(get_caller_address() == self.governor.read(), Errors::UNAUTHORIZED);
+        }
+
+        fn _assert_token_set(self: @ContractState) {
+            assert(self.l2_token.read().is_non_zero(), Errors::TOKEN_NOT_SET);
+        }
+
+        fn _assert_l1_bridge_set(self: @ContractState) {
+            assert(self.l1_bridge.read().is_non_zero(), Errors::L1_BRIDGE_NOT_SET);
+        }
+    }
+
+    #[l1_handler]
+    pub fn handle_deposit(
+        ref self: ContractState, from_address: felt252, account: ContractAddress, amount: u256,
+    ) {
+        assert(from_address == self.l1_bridge.read(), Errors::EXPECTED_FROM_BRIDGE_ONLY);
+        assert(account.is_non_zero(), Errors::INVALID_ADDRESS);
+        assert(amount.is_non_zero(), Errors::INVALID_AMOUNT);
+        self._assert_token_set();
+
+        // Call mint on l2_token contract.
+        IMintableTokenDispatcher { contract_address: self.l2_token.read() }.mint(account, amount);
+
+        self.emit(Event::DepositHandled(DepositHandled { account, amount }));
+    }
+}
+```
+
+The `IMintableToken` interface represents any mintable/burnable token, and will allow our contract to perform these operations without
+regard for the actual token it's working with.
+
+Let's immediately create the mock token implementation that we'll use with the contract:
+
+```rust
+// [!include ~/listings/applications/l1_l2_token_bridge/src/mintable_token_mock.cairo]
+```
+
+Next, we'll implement the mock token on the Ethereum side, which behaves more or less the same as its Starknet counterpart.
+
+Let's just quickly define the interfaces we'll need:
+
+```solidity
+// [!include ~/listings/applications/l1_l2_token_bridge/solidity/src/IMintableTokenEvents.sol]
+```
+
+```solidity
+// [!include ~/listings/applications/l1_l2_token_bridge/solidity/src/IMintableToken.sol]
+```
+
+Now we can create a mock token implementation:
+
+```solidity
+// [!include ~/listings/applications/l1_l2_token_bridge/solidity/src/MintableTokenMock.sol]
+```
+
+Finally, we will implement the `TokenBridge` contract on Ethereum:
+
+```solidity
+// [!include ~/listings/applications/l1_l2_token_bridge/solidity/src/TokenBridge.sol]
+```
+
+> Note: Bridging tokens from Ethereum to Starknet usually takes a couple of minutes, and the `#[l1_handler]` function is automatically
+invoked by the Sequencer, minting tokens to our Starknet wallet address. On the other hand, for bridging transactions to be
+successfully sent from Starknet to Ethereum can take a couple of hours, and will require us to _manually consume the withdrawal_ in
+order for the tokens to be sent to our Ethereum wallet address. 

@@ -1,0 +1,210 @@
+---
+title: "State"
+---
+
+## Overview
+
+Starknet's state [is composed of contract classes and instances](#state_structure) and [tracks any changes to them](#state_transition). Its [commitment](#state_commitment) uses a cryptographic structure optimized for zero-knowledge proofs, enabling efficient proof generation of state updates and forming the backbone of Starknet's scalability and security.
+
+## State structure
+
+Starknet's state consists of:
+
+* A mapping between the hashes of contract classes and their definitions
+
+* A mapping between the addresses of contract instances and their [states](#contract_instance_state)
+
+### Contract instance state
+
+A contract instance state consists of:
+
+* A class hash, which defines the functionality of the contract
+
+* A key-value mapping (where the key and values are field elements), which comprises the contract's storage
+
+* A nonce, which tracks the number of transactions sent from this contract
+
+### Special addresses
+
+Starknet uses special contract addresses to provide distinct capabilities beyond regular contract deployment.
+
+Two such addresses are `0x0` and `0x1`. These addresses are reserved for specific purposes and are characterized by their unique behavior in comparison to traditional contract addresses.
+
+#### Address `0x0`
+
+Address `0x0` functions as the default `caller_address` for external calls, including interactions with the L1 handler or deprecated Deploy transactions. Unlike regular contracts, address `0x0` does not possess a storage structure and does not accommodate storage mapping.
+
+#### Address `0x1`
+
+Address `0x1` is another special contract address within Starknet's architecture. It functions as a storage space for mapping block numbers to their corresponding block hashes. The storage structure at this address is organized as follows:
+
+|                |                                                                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Keys           | Block numbers between $$\texttt{first\_v0\_12\_0\_block}$$ and $$\texttt{current\_block} - 10$$. |
+| Values         | Corresponding block hashes for the specified blocks.                                                                              |
+| Default Values | For all other block numbers, the values are set to `0`.                                                                           |
+
+The storage organization of address `0x1` supports the efficient retrieval of block hashes based on block numbers within a defined range and is also used by the [`get_block_hash`](https://book.cairo-lang.org/appendix-08-system-calls.html#get_block_hash) system call.
+
+## State transition
+
+A transaction $$t x$$ transitions the system from state $$S$$ to state $$S^{'}$$ if:
+
+* $$t x$$ is an `INVOKE` transaction, and the storage of $$S^{'}$$ is the result of executing the target contract code with respect to the previous state $$S$$. The arguments, contract instance's address, and the specific function entry point are part of the transaction.
+
+* $$t x$$ is a `DEPLOY_ACCOUNT` transaction, and $$S^{'}$$ contains the new contract instance's state at the contract instance's address. Additionally, the storage of $$S$$ is updated according to the execution of the contract instance's constructor.
+
+* $$t x$$ is a `DECLARE` transaction, and $$S^{'}$$ contains the class hash and definition in the contract class's mapping
+
+## State commitment
+
+The state commitment is a digest that represents the state.
+
+In Starknet, the state commitment combines the roots of two binary [Merkle-Patricia tries](#merkle_patricia_trie) of height 251 in the following manner:
+
+```txt
+state_commitment = hPos(
+    "STARKNET_STATE_V0",
+    contract_trie_root,
+    class_trie_root
+)
+```
+
+Where:
+
+* `hPos` is the [Poseidon](/learn/protocol/cryptography/#poseidon_hash) hash function.
+
+* `STARKNET_STATE_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
+
+* `contract_trie_root` is the root of the [*contract trie*](#contracts_trie), a Merkle-Patricia trie whose leaves are the contracts' states.
+
+* `class_trie_root` is the root of the [*class trie*](#classes_trie), a Merkle-Patricia trie whose leaves are the compiled class hashes.
+
+### The contract trie
+
+As with Ethereum, this trie is a two-level structure, whose leaves correspond to distinct contracts. The address of each contract determines the path from the trie's root to its corresponding leaf, whose content encodes the contract's state.
+
+The information stored in the leaf is as follows:
+
+```
+hPed(
+  hPed(
+    hPed(
+      class_hash,
+      storage_root
+    ),
+    nonce
+  ),
+  0
+)
+```
+
+Where:
+
+* `hPed` is the [Pedersen](/learn/protocol/cryptography/#hash-functions#pedersen_hash) hash function.
+
+* `class_hash` is the hash of [the contract's definition](https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html).
+
+* `storage_root` is the root of another Merkle-Patricia trie of height 251 that is constructed from the contract's storage.
+
+* `nonce` is the current nonce of the contract.
+
+### The class trie
+
+The class trie encodes the information about all existing [classes](https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html) in Starknet's state. This trie maps [class hashes](https://book.cairo-lang.org/ch100-01-contracts-classes-and-instances.html) to their compiled class hashes. The information stored in a leaf at a path corresponding to some class hash is as follows:
+
+```text
+hPos(
+    CONTRACT_CLASS_LEAF_V0,
+    compiled_class_hash
+)
+```
+
+Where:
+
+* `hPos` is the [Poseidon](/learn/protocol/cryptography/#poseidon_hash) hash function
+
+* `CONTRACT_CLASS_LEAF_V0` is a constant prefix string encoded in ASCII (and represented as a field element).
+
+* `compiled_class_hash` is the hash of the Cairo assembly resulting from compiling the given class via the Sierra-to-Casm compiler.
+
+<Note>
+  *Compiled class hash*
+  
+  The compiled class hash identifies the output of a specific Casm compilation as unique.
+  
+  Cairo classes that are part of the state commitment are defined with Sierra, an intermediate representation between Cairo and Cairo assembly (Casm). However, the prover only works with Casm.
+  
+  So in order to prevent needing to compile from Sierra to Casm in every block in which the class is used, the state commitment must have some information about the corresponding Cairo assembly. The compiled class hash provides this information.
+  
+  For more information, see [the Cairo Book](https://book.cairo-lang.org/appendix-09-sierra.html).
+  
+  The party that declares the contract signs the compiled class hash, which they obtain using an SDK, as part of the [`DECLARE`](/learn/protocol/transactions/#transaction_types) transaction. If the transaction is included in a block, then the compiled class hash becomes part of the state commitment.
+  
+  In the future, when Sierra-to-Casm compilation becomes part of the Starknet OS, this value might be updated via a proof of the Sierra-to-Casm compiler execution, showing that compiling the same class with a newer compiler version results in some new compiled class hash.
+</Note>
+
+### Merkle-Patricia trie
+
+The state commitment scheme uses a binary Merkle-Patricia trie with the Pedersen hash function.
+
+#### About nodes
+
+Each node in the trie is represented by a triplet $$\left(\right. l e n g t h , p a t h , v a l u e \left.\right)$$, where:
+
+|                 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $$l e n g t h$$ | is the length of the path, measured in nodes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| $$p a t h$$     | is the path from the current node to its unique non-empty subtrie.<br/><br/>$$p a t h$$ is an integer in the set $$\{0, \ldots, 2^{\mathit{length}} - 1\}$$, and the binary expansion of $$p a t h$$ indicates how to proceed along the trie, as follows:<br/><br/>1. Expand $$p a t h$$ to its binary representation.<br/><br/>2. Starting with the most significant bit, representing the root of the trie, traverse the tree node by node, where the bit values $$0$$ and $$1$$ indicate left and right, respectively. |
+| $$v a l u e$$   | is the value of the node, which can be either data, or the hash of two non-empty child nodes.                                                                                                                                                                                                                                                                                                                                                                                                                       |
+
+An empty node is one whose triplet values are $$\left(\right. 0 , 0 , 0 \left.\right)$$. Leaf nodes and internal nodes can be empty. A subtrie rooted at a node $$\left(\right. l e n g t h , p a t h , v a l u e \left.\right)$$ has a single non-empty subtrie, rooted at the node obtained by following the path specified by $$p a t h$$.
+
+<Note>
+  Length is specified, and cannot be deduced from $$p a t h$$, because the numbers in the triplet $$\left(\right. l e n g t h , p a t h , v a l u e \left.\right)$$ are field elements of fixed size, 251 bits each.For a node where $$l e n g t h > 0$$, $$p a t h$$ leads to the highest node whose left and right children are not empty.
+</Note>
+
+#### Trie construction
+
+The following rules specify how the trie is constructed from a given set of leaves:
+
+The hash of a node $$N = \left(\right. l e n g t h , p a t h , v a l u e \left.\right)$$, denoted by $$H \left(\right. N \left.\right)$$, is:
+
+$$
+H(N) = \begin{cases}
+\mathit{value}, & \text{if } \mathit{length} = 0 \\
+h_{\mathit{red}}(\mathit{value}, \mathit{path}) + \mathit{length}, & \text{otherwise}
+\end{cases}
+$$
+
+<Note>
+  All arithmetic operations in the above description of $$H$$ are done in the STARK field, as described in [The STARK field](/learn/protocol/cryptography/#stark-field).
+</Note>
+
+#### Mathematical definition of the nodes in the trie
+
+The triplet representing the parent of the nodes $$l e f t = \left(\right. ℓ_{L} , p_{L} , v_{L} \left.\right)$$, $$r i g h t = \left(\right. ℓ_{R} , p_{R} , v_{R} \left.\right)$$ is defined as follows:
+
+$$
+\mathit{parent} =
+\begin{cases}
+(0, 0, 0), & \text{if } \mathit{left} = \mathit{right} = (0, 0, 0) \\
+(\ell_L + 1, p_L, v_L), & \text{if } \mathit{right} = (0, 0, 0) \text{ and } \mathit{left} \neq (0, 0, 0) \\
+(\ell_R + 1, p_R + 2^{\ell_R}, v_R), & \text{if } \mathit{right} \neq (0, 0, 0) \text{ and } \mathit{left} = (0, 0, 0) \\
+(0, 0, h_{\mathit{red}}(H(\mathit{left}), H(\mathit{right}))), & \text{otherwise}
+\end{cases}
+$$
+
+#### Example trie
+
+The diagram [A three-level Merkle-Patricia trie](#3-level_trie) illustrates the construction of a three-level-high Merkle-Patricia trie from the leaves whose values are $$\left(\right. 0 , 0 , 1 , 0 , 0 , 1 , 0 , 0 \left.\right)$$:
+
+<Frame caption="Figure 1. A three-level Merkle-Patricia trie">
+  <img src="/assets/images/c38935ec-trie.png" />
+</Frame>
+
+Where $$r = h_{P e d} \left(\right. H \left(\right. 2 , 2 , 1 \left.\right) , H \left(\right. \left(\right. 2 , 1 , 1 \left.\right) \left.\right)$$. Notice that the example does not skip from the root, whose length is zero, so the final state commitment to the trie is $$H \left(\right. \left(\right. 0 , 0 , r \left.\right) \left.\right) = r$$.
+
+Suppose that you want to prove, with respect to the state commitment just computed, that the value of the leaf whose path is given by $$101$$ is $$1$$. In a standard Merkle trie, the proof would consist of data from three nodes, which are siblings along the path to the root.
+
+In a Merkle-Patricia trie, because the trie is sparse, you only need to send the two children of the root, which are $$\left(\right. 2 , 2 , 1 \left.\right)$$ and $$\left(\right. 2 , 1 , 1 \left.\right)$$. These two children are enough to reproduce the state commitment $$r$$, and because you know that the height of the trie is three, and that it is fixed, you know that the path $$01$$ of length $$2$$ specified by the right-hand child, $$\left(\right. 2 , 1 , 1 \left.\right)$$, leads to the desired leaf.

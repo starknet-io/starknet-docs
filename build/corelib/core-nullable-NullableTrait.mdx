@@ -1,0 +1,192 @@
+---
+title: "core::nullable::NullableTrait"
+---
+
+
+
+
+
+## Signature
+
+```rust
+pub trait NullableTrait
+```
+
+
+
+## Trait functions
+
+### deref
+
+
+
+Wrapper for `Deref::deref`. Prefer using `Deref::deref` directly.
+This function exists for backwards compatibility.
+
+#### Signature
+
+```rust
+fn deref(nullable: Nullable) -> T
+```
+
+
+
+#### Examples
+
+Preferred way:
+```rust
+let value: Nullable = NullableTrait::new(42);
+let unwrapped = value.deref();
+```
+
+This function method does the same thing:
+```rust
+use core::nullable::NullableTrait;
+let also_unwrapped = NullableTrait::deref(value);
+```
+
+
+
+
+
+### deref_or
+
+
+
+Returns the contained value if not null, or returns the provided default value.
+
+#### Signature
+
+```rust
+fn deref_or>(self: Nullable, default: T) -> T
+```
+
+
+
+#### Examples
+
+```rust
+let value: Nullable = NullableTrait::new(42);
+assert!(value.deref_or(0) == 42);
+
+let null_value: Nullable = Default::default();
+assert!(null_value.deref_or(0) == 0);
+```
+
+
+
+
+
+### deref_or_else
+
+
+
+Returns the contained value if not null, or computes it from a closure.
+
+#### Signature
+
+```rust
+fn deref_or_else, impl func: FnOnce, +Drop>(
+    self: Nullable, f: F,
+) -> T
+```
+
+
+
+#### Examples
+
+```rust
+let value: Nullable = NullableTrait::new(42);
+assert!(value.deref_or_else(|| 0) == 42);
+
+let null_value: Nullable = Default::default();
+assert!(null_value.deref_or_else(|| 0) == 0);
+```
+
+
+
+
+
+### new
+
+
+
+Creates a new non-null `Nullable` with the given value.
+
+#### Signature
+
+```rust
+fn new(value: T) -> Nullable
+```
+
+
+
+#### Examples
+
+```rust
+let value: Nullable = NullableTrait::new(42);
+assert!(!value.is_null());
+```
+
+
+
+
+
+### is_null
+
+
+
+Returns `true` if the value is null.
+
+#### Signature
+
+```rust
+fn is_null(self: @Nullable) -> bool
+```
+
+
+
+#### Examples
+
+```rust
+let value: Nullable = NullableTrait::new(42);
+assert!(!value.is_null());
+
+let null_value: Nullable = Default::default();
+assert!(null_value.is_null());
+```
+
+
+
+
+
+### as_snapshot
+
+
+
+Creates a new `Nullable` containing a snapshot of the value.
+This is useful when working with non-copyable types inside a `Nullable`.
+This allows you to keep using the original value while also having access to a
+snapshot of it, preventing the original value from being moved.
+
+#### Signature
+
+```rust
+fn as_snapshot(self: @Nullable) -> Nullable
+```
+
+
+
+
+#### Examples
+
+```rust
+let value: Nullable> = NullableTrait::new(array![1, 2, 3]);
+let res = (@value).as_snapshot();
+assert!(res.deref() == @array![1, 2, 3]);
+assert!(value.deref() == array![1, 2, 3]);
+```
+
+
+
+

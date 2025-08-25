@@ -1,0 +1,53 @@
+---
+title: "Overview of core::box"
+sidebarTitle: "Overview"
+---
+
+
+`Box` is a smart pointer that allows for:
+- Storing values of arbitrary size while maintaining a fixed-size pointer
+- Enabling recursive types that would otherwise have infinite size
+- Moving large data structures efficiently by passing pointers instead of copying values
+## Examples
+
+Creating a new box with `BoxTrait::new`:
+```rust
+let boxed = BoxTrait::new(42);
+let unboxed = boxed.unbox();
+```
+
+Working with larger structures:
+```rust
+let large_array = array![1, 2, 3, 4, 5];
+let boxed_array = BoxTrait::new(large_array);
+```
+
+Creating a recursive data structure:
+```rust
+#[derive(Copy, Drop, Debug)]
+enum BinaryTree {
+    Leaf: u32,
+    Node: (u32, Box, Box)
+}
+
+let leaf = BinaryTree::Leaf(1);
+let node = BinaryTree::Node((2, BoxTrait::new(leaf), BoxTrait::new(leaf)));
+println!("{:?}", node);
+```
+
+NOTE: A `Box` is a smart pointer type that provides a way to store a value of type `T` in
+Cairo VM's boxed segment, leaving only a pointer in the execution segment.
+
+
+
+## [Traits](./core-box-traits)
+
+| | |
+|:---|:---|
+| [BoxTrait](./core-box-BoxTrait) | — |
+
+## [Extern types](./core-box-extern_types)
+
+| | |
+|:---|:---|
+| [Box](./core-box-Box) | A `Box`  is a type that points to a wrapped value. It allows for cheap moving around of the value, as its size is small, and may wrap a large size. |

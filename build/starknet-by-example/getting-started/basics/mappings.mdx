@@ -1,0 +1,67 @@
+---
+title: "Mappings"
+---
+
+Maps are a fundamental key-value data structure in Cairo smart contracts that allow you to store and retrieve values using unique keys. The `Map` type in `starknet::storage` is specifically designed for contract storage for this purpose.
+
+Here's a simple example that demonstrates how to use a `Map`:
+
+```rust
+#[starknet::interface]
+trait IMappings<TContractState> {
+    fn set_value(ref self: TContractState, key: u32, value: u128);
+    fn get_value(self: @TContractState, key: u32) -> u128;
+}
+
+#[starknet::contract]
+mod Mappings {
+    use starknet::storage::{StorageMapReadAccess, StorageMapWriteAccess};
+
+    #[storage]
+    struct Storage {
+        // Simple mapping from u32 to u128
+        values: Map<u32, u128>,
+    }
+
+    #[abi(embed_v0)]
+    impl Mappings of super::IMappings<ContractState> {
+        fn set_value(ref self: ContractState, key: u32, value: u128) {
+            // Write a value to the map
+            self.values.write(key, value);
+        }
+
+        fn get_value(self: @ContractState, key: u32) -> u128 {
+            // Read a value from the map
+            self.values.read(key)
+        }
+    }
+}
+```
+
+Let's break down the key components:
+
+- **Declaration**: Maps are declared using `Map<KeyType, ValueType>` syntax
+- **Storage**: Maps must be declared inside the contract's `Storage` struct
+  - You need to import the `StorageMapReadAccess` and `StorageMapWriteAccess` traits from `starknet::storage`
+- **Operations**:
+  - `write(key, value)`: Stores a value for a given key
+  - `read(key)`: Retrieves the value associated with a key
+- Maps automatically initialize all values to zero
+- Keys and values must be of valid storage types, see [Storing Custom Types](/quickstart/basics/storing_custom_types)
+
+### Composite Keys
+
+For more complex scenarios, you can use composite keys by combining multiple values:
+
+```rust
+// Example: ERC20 allowance mapping
+Map<(ContractAddress, ContractAddress), felt252>  // (owner, spender) -> amount
+```
+
+### Storage Layout (advanced)
+
+Under the hood, Cairo maps use a deterministic storage layout:
+
+- Each key-value pair is stored at a unique address calculated using Pedersen hashes
+- The address formula is: $\text{h}(...\text{h}(\text{h}(\text{sn\_keccak}(name),k_1),k_2),...,k_n)$ mod $2^{251} - 256$
+- Learn more in the [Starknet Documentation](https://docs.starknet.io/architecture-and-learn/architecture/smart-contracts/contract-storage/#storage_variables)

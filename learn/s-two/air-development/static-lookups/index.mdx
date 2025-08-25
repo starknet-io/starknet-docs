@@ -1,0 +1,252 @@
+---
+title: "Static lookups"
+---
+
+In the previous section, we showed how to create a preprocessed trace.
+In this section, we will introduce the concept of _static lookups_, where we will create columns that look up values from a preprocessed trace.
+
+<Note>
+Readers who are unfamiliar with the concept of lookups can refer to the [Lookups](../../how-it-works/lookups.mdx) section for a quick introduction.
+</Note>
+Specifically, we will implement a **range-check**.
+A range-check is a technique used to check that a certain value is within a given range.
+This proves useful especially in proof systems like S-two that uses finite fields because it allows checking for underflow and overflow.
+
+A range-check checks that all values in a column are within a certain range.
+For example, as in Figure 1, we can check that all values in the lookup columns are between 0 and 3.
+We do this by creating a multiplicity column that counts the number of times each value in the preprocessed trace appears in the lookup columns.
+
+Then, we create two LogUp columns.
+The first column contains in each row a fraction where the nominator is the multiplicity and the denominator is the random linear combination of the value in the range-check column.
+For example, for row 1, the fraction should be $\dfrac{2}{X-0}$.
+Note that in Figure 1, the nominator is actually $-2$, i.e. we apply a negation to the multiplicity, because we want the sum of the first column to be equal to the sum of the second column.
+The second column contains fractions where the nominator is always 1 and the denominator is the random linear combination of the value in the lookup column.
+Note that a single row batches two lookup tables by adding two fractions together.
+
+<Frame caption="Figure 1: Range-check lookup">
+  <img src="/learn/s-two/air-development/static-lookups/range-check.png" />
+</Frame>
+
+If you stare at the LogUp columns hard enough, you'll notice that if we add all the fractions in the two columns together, we get 0.
+This is no coincidence!
+The prover will provide the sum of the LogUp columns and the verifier check in the open that this value is indeed 0.
+Now let's move on to the implementation.
+
+```rust
+struct RangeCheckColumn {
+    pub log_size: u32,
+}
+
+#[allow(dead_code)]
+impl RangeCheckColumn {
+    pub fn new(log_size: u32) -> Self {
+        Self { log_size }
+    }
+
+    pub fn gen_column(&self) -> CircleEvaluation<SimdBackend, M31, BitReversedOrder> {
+        let col = BaseColumn::from_iter((0..(1 << self.log_size)).map(|i| M31::from(i)));
+        CircleEvaluation::new(CanonicCoset::new(self.log_size).circle_domain(), col)
+    }
+
+    pub fn id(&self) -> PreProcessedColumnId {
+        PreProcessedColumnId {
+            id: format!("range_check_{}_bits", self.log_size),
+        }
+    }
+}
+```
+First, we need to create the range-check column as a preprocessed column.
+This should look familiar to the code from the previous section.
+
+```rust
+fn gen_trace(log_size: u32) -> Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> {
+    // Create a table with random values
+    let mut rng = rand::thread_rng();
+    let mut lookup_col_1 =
+        BaseColumn::from_iter((0..(1 << log_size)).map(|_| M31::from(rng.gen_range(0..16))));
+    let mut lookup_col_2 =
+        BaseColumn::from_iter((0..(1 << log_size)).map(|_| M31::from(rng.gen_range(0..16))));
+
+    let mut multiplicity_col = BaseColumn::zeros(1 << log_size);
+    lookup_col_1
+        .as_mut_slice()
+        .iter()
+        .chain(lookup_col_2.as_mut_slice().iter())
+        .for_each(|value| {
+            let index = value.0 as usize;
+            multiplicity_col.set(index, multiplicity_col.at(index) + M31::from(1));
+        });
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_size).circle_domain();
+    vec![
+        lookup_col_1.clone(),
+        lookup_col_2.clone(),
+        multiplicity_col.clone(),
+    ]
+    .into_iter()
+    .map(|col| CircleEvaluation::new(domain, col))
+    .collect()
+}
+```
+Next, we create the trace columns.
+The first two columns are random values in the range $[0, 15]$, and the third column contains the counts of the values in the range-check column.
+
+```rust
+relation!(LookupElements, 1);
+
+fn gen_logup_trace(
+    log_size: u32,
+    range_check_col: &BaseColumn,
+    lookup_col_1: &BaseColumn,
+    lookup_col_2: &BaseColumn,
+    multiplicity_col: &BaseColumn,
+    lookup_elements: &LookupElements,
+) -> (
+    Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>>,
+    SecureField,
+) {
+    let mut logup_gen = LogupTraceGenerator::new(log_size);
+
+    let mut col_gen = logup_gen.new_col();
+    for simd_row in 0..(1 << (log_size - LOG_N_LANES)) {
+        let numerator: PackedSecureField = PackedSecureField::from(multiplicity_col.data[simd_row]);
+        let denom: PackedSecureField = lookup_elements.combine(&[range_check_col.data[simd_row]]);
+        col_gen.write_frac(simd_row, -numerator, denom);
+    }
+    col_gen.finalize_col();
+
+    let mut col_gen = logup_gen.new_col();
+    for simd_row in 0..(1 << (log_size - LOG_N_LANES)) {
+        let lookup_col_1_val: PackedSecureField =
+            lookup_elements.combine(&[lookup_col_1.data[simd_row]]);
+        let lookup_col_2_val: PackedSecureField =
+            lookup_elements.combine(&[lookup_col_2.data[simd_row]]);
+        // 1 / denom1 + 1 / denom2 = (denom1 + denom2) / (denom1 * denom2)
+        let numerator = lookup_col_1_val + lookup_col_2_val;
+        let denom = lookup_col_1_val * lookup_col_2_val;
+        col_gen.write_frac(simd_row, numerator, denom);
+    }
+    col_gen.finalize_col();
+
+    logup_gen.finalize_last()
+}
+
+fn main() {
+    // ... (setup code)
+    
+    // Draw random elements to use when creating the random linear combination of lookup values in the LogUp columns
+    let lookup_elements = LookupElements::draw(channel);
+
+    // Create and commit to the LogUp columns
+    let (logup_cols, claimed_sum) = gen_logup_trace(
+        log_size,
+        &range_check_col,
+        &trace[0],
+        &trace[1],
+        &trace[2],
+        &lookup_elements,
+    );
+    
+    // ... (rest of main function)
+}
+```
+Now we need to create the LogUp columns.
+
+First, note that we are creating a `LookupElements` instance using the macro `relation!`.
+This macro creates an API for performing random linear combinations.
+Under the hood, it creates two random values $z, \alpha$ that can create a random linear combination of an arbitrary number of elements.
+In our case, we only need to combine one value (value in $[0,15]$), which is why we pass in `1` to the macro.
+
+Inside `gen_logup_trace`, we create a `LogupTraceGenerator` instance.
+This is a helper class that allows us to create LogUp columns.
+Every time we create a new column, we need to call `new_col()` on the `LogupTraceGenerator` instance.
+You may notice that we are iterating over `BaseColumn` in chunks of 16, or `1 << LOG_N_LANES` values.
+This is because we are using the `SimdBackend`, which runs 16 lanes simultaneously, so we need to preserve this structure.
+The `Packed` in `PackedSecureField` means that it packs 16 values into a single value.
+
+You may also notice that we are using a `SecureField` instead of just the `Field`.
+This is because the random value we created in `LookupElements` will be in the degree-4 extension field $\mathbb{F}_{p^4}$.
+Interested readers can refer to the [Mersenne Primes](../../how-it-works/mersenne-prime.mdx) section for more details.
+
+Once we set the fractions for each `simd_row`, we need to call `finalize_col()` to finalize the column.
+This process modifies the LogUp columns from individual fractions to cumulative sums of the fractions as shown in Figure 2.
+<Frame caption="Figure 2: Finalizing each LogUp column">
+  <img src="/learn/s-two/air-development/static-lookups/finalize-col.png" />
+</Frame>
+
+Finally, we need to call `finalize_last()` on the `LogupTraceGenerator` instance to finalize the LogUp columns, which will return the LogUp columns as well as the sum of the fractions in the LogUp columns.
+
+```rust
+struct TestEval {
+    range_check_id: PreProcessedColumnId,
+    log_size: u32,
+    lookup_elements: LookupElements,
+}
+
+impl FrameworkEval for TestEval {
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let range_check_col = eval.get_preprocessed_column(self.range_check_id.clone());
+
+        let lookup_col_1 = eval.next_trace_mask();
+        let lookup_col_2 = eval.next_trace_mask();
+        let multiplicity_col = eval.next_trace_mask();
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            -E::EF::from(multiplicity_col),
+            &[range_check_col],
+        ));
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            E::EF::one(),
+            &[lookup_col_1],
+        ));
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            E::EF::one(),
+            &[lookup_col_2],
+        ));
+
+        eval.finalize_logup_batched(&vec![0, 1, 1]);
+
+        eval
+    }
+}
+```
+
+The last piece of the puzzle is to create the constraints.
+We use the same `TestEval` struct as in the previous sections, but the `evaluate` function will look slightly different.
+Instead of calling `add_constraint` on the `EvalAtRow` instance, we will call `add_to_relation`, which recreates the fractions that we added in the LogUp columns using values in the range-check, lookup, and multiplicity columns.
+
+Once we add the fractions as constraints, we call the `finalize_logup_batched` function, which indicates how we want to batch the fractions.
+In our case, we added 3 fractions but want to create batches where the last two fractions are batched together, so we pass in `&vec![0, 1, 1]`.
+```rust
+// Verify
+assert_eq!(claimed_sum, SecureField::zero());
+
+let channel = &mut Blake2sChannel::default();
+let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+let sizes = component.trace_log_degree_bounds();
+
+commitment_scheme.commit(proof.commitments[0], &sizes[0], channel);
+channel.mix_u64(log_size as u64);
+commitment_scheme.commit(proof.commitments[1], &sizes[1], channel);
+commitment_scheme.commit(proof.commitments[2], &sizes[2], channel);
+
+verify(&[&component], channel, commitment_scheme, proof).unwrap();
+```
+
+When we verify the proof, as promised, we check that the `claimed_sum`, which is the sum of the fractions in the LogUp columns, is 0.
+And that's it!
+We have successfully created a static lookup for a range-check.

@@ -1,0 +1,93 @@
+---
+title: "core::ops::index::Index"
+---
+
+A trait for indexing operations (`container[index]`) where the input type is mutated.
+This trait should be implemented when you want to implement indexing operations on a type that's
+mutated by a read access. This is useful for any type depending on a [`Felt252Dict`](./core-dict-Felt252Dict), where
+dictionary accesses are modifying the data structure itself.
+`container[index]` is syntactic sugar for `container.index(index)`.
+
+## Signature
+
+```rust
+pub trait Index
+```
+
+
+
+## Examples
+
+The following example implements `Index` on a `Stack` type. This `Stack` is implemented based on
+a [`Felt252Dict`](./core-dict-Felt252Dict), where dictionary accesses are modifying the dictionary itself. As such, we
+must implement the `Index` trait instead of the `IndexView` trait.
+```rust
+use core::ops::Index;
+
+#[derive(Destruct, Default)]
+struct Stack {
+    items: Felt252Dict,
+    len: usize
+}
+
+#[generate_trait]
+impl StackImpl of StackTrait {
+    fn push(ref self: Stack, item: u128) {
+        self.items.insert(self.len.into(), item);
+        self.len += 1;
+    }
+}
+
+impl StackIndex of Index {
+     type Target = u128;
+
+     fn index(ref self: Stack, index: usize) -> Self::Target {
+         if index >= self.len {
+             panic!("Index out of bounds");
+         }
+         self.items.get(index.into())
+     }
+ }
+
+let mut stack: Stack = Default::default();
+stack.push(1);
+assert!(stack[0] == 1);
+```
+
+
+## Trait functions
+
+### index
+
+
+
+Performs the indexing (`container[index]`) operation.
+#### Panics
+
+May panic if the index is out of bounds.
+
+
+
+
+
+#### Signature
+
+```rust
+fn index(ref self: C, index: I) -> IndexTarget
+```
+
+
+## Trait types
+
+### Target
+
+The returned type after indexing.
+
+
+#### Signature
+
+```rust
+type Target;
+```
+
+

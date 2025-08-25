@@ -1,0 +1,132 @@
+---
+title: "core::circuit overview"
+sidebarTitle: "Overview"
+---
+
+
+Efficient modular arithmetic computations using arithmetic circuits.
+This module provides a type-safe way to perform modular arithmetic operations using
+arithmetic circuits. It is particularly useful for implementing cryptographic algorithms
+and other computations that require efficient modular arithmetic with large numbers.
+## Core Features
+
+- Modular arithmetic operations (add, subtract, multiply, inverse)
+- Support for numbers up to 384 bits
+- Type-safe circuit construction
+- Efficient evaluation of complex expressions
+## Examples
+## Basic Arithmetic
+
+Here's an example showing basic modular arithmetic operations:
+```rust
+use core::circuit::{
+   CircuitElement, EvalCircuitTrait, CircuitOutputsTrait, CircuitInput, CircuitModulus,
+   AddInputResultTrait, CircuitInputs, circuit_add, circuit_mul,
+};
+
+// Compute (a + b) * c mod p
+let a = CircuitElement::> {};
+let b = CircuitElement::> {};
+let c = CircuitElement::> {};
+
+let sum = circuit_add(a, b);
+let result = circuit_mul(sum, c);
+
+// Evaluate with inputs [3, 6, 2] modulo 7
+let modulus = TryInto::::try_into([7, 0, 0, 0]).unwrap();
+let outputs = (result,)
+    .new_inputs()
+    .next([3, 0, 0, 0])
+    .next([6, 0, 0, 0])
+    .next([2, 0, 0, 0])
+    .done()
+    .eval(modulus)
+    .unwrap();
+
+// Result: (3 + 6) * 2 mod 7 = 4
+assert!(outputs.get_output(result) == 4.into());
+```
+## How It Works
+
+The module uses a type-based approach to construct and evaluate arithmetic circuits:
+1. Circuit elements are created using `CircuitElement` where T defines their role (input or
+gate)
+2. Basic operations combine elements into more complex expressions (chaining gates to create a
+circuit)
+3. The final circuit is evaluated with specific input values and a modulus
+
+Operations are performed using a multi-limb representation for large numbers,
+with each number represented as four 96-bit limbs allowing for values up to 384 bits.
+## Performance Considerations
+
+- Circuit evaluation is optimized for large modular arithmetic operations
+- The multi-limb representation allows efficient handling of large numbers
+- Circuit construction has zero runtime overhead due to type-based approach
+#### Errors
+
+Circuit evaluation can fail in certain cases:
+- When computing multiplicative inverses of non-invertible elements
+- When the modulus is 0 or 1
+In that case the evaluation will return an Error.
+
+
+
+## [Free functions](./core-circuit-free_functions)
+
+| | |
+|:---|:---|
+| [circuit_add](./core-circuit-circuit_add) | Creates a new circuit element representing addition modulo p of two input circuits. This function combines two circuit elements using modular addition, creating a new circuit... |
+| [circuit_sub](./core-circuit-circuit_sub) | Creates a new circuit element representing subtraction modulo p of two input circuits. This function combines two circuit elements using modular subtraction, creating a new circuit... |
+| [circuit_inverse](./core-circuit-circuit_inverse) | Creates a new circuit element representing the multiplicative inverse modulo p of an input circuit. This function creates a new circuit element representing the multiplicative inverse of the input... |
+| [circuit_mul](./core-circuit-circuit_mul) | Creates a new circuit element representing multiplication modulo p of two input circuits. This function combines two circuit elements using modular multiplication, creating a new circuit... |
+
+## [Structs](./core-circuit-structs)
+
+| | |
+|:---|:---|
+| [u384](./core-circuit-u384) | A 384-bit unsigned integer, used for circuit values. |
+| [CircuitElement](./core-circuit-CircuitElement) | A wrapper for circuit elements, used to construct circuits. This type provides a generic wrapper around different circuit components (inputs, gates)... |
+
+## [Enums](./core-circuit-enums)
+
+| | |
+|:---|:---|
+| [AddInputResult](./core-circuit-AddInputResult) | The result of filling an input in the circuit instance's data. This enum represents the state of input filling process, indicating whether all inputs have been provided or more are needed. |
+
+## [Type aliases](./core-circuit-type_aliases)
+
+| | |
+|:---|:---|
+| [u96](./core-circuit-u96) | A 96-bit unsigned integer type used as the basic building block for multi-limb arithmetic. |
+| [ConstZero](./core-circuit-ConstZero) | Expose the const required by the libfunc to allow the compiler const reusage. |
+| [ConstOne](./core-circuit-ConstOne) | — |
+
+## [Traits](./core-circuit-traits)
+
+| | |
+|:---|:---|
+| [CircuitElementTrait](./core-circuit-CircuitElementTrait) | A marker trait for keeping track of which types are valid circuit elements. This trait is implemented for all valid circuit components including inputs and gates.... |
+| [CircuitDefinition](./core-circuit-CircuitDefinition) | A trait for defining a circuit's structure and behavior. This trait is used to define the structure of a circuit, including its inputs,... |
+| [CircuitOutputsTrait](./core-circuit-CircuitOutputsTrait) | A trait for retrieving output values from a circuit evaluation. This trait provides methods to access the output values of a circuit after successful evaluation.... |
+| [CircuitInputs](./core-circuit-CircuitInputs) | — |
+| [AddInputResultTrait](./core-circuit-AddInputResultTrait) | — |
+| [EvalCircuitTrait](./core-circuit-EvalCircuitTrait) | — |
+
+## [Impls](./core-circuit-impls)
+
+| | |
+|:---|:---|
+| [CircuitElementDrop](./core-circuit-CircuitElementDrop) | — |
+| [CircuitElementCopy](./core-circuit-CircuitElementCopy) | — |
+| [DestructFailureGuarantee](./core-circuit-DestructFailureGuarantee) | — |
+
+## [Extern types](./core-circuit-extern_types)
+
+| | |
+|:---|:---|
+| [RangeCheck96](./core-circuit-RangeCheck96) | Range check builtin for 96-bit operations. |
+| [AddMod](./core-circuit-AddMod) | Builtin for modular addition operations. |
+| [MulMod](./core-circuit-MulMod) | Builtin for modular multiplication operations. |
+| [CircuitModulus](./core-circuit-CircuitModulus) | A type that can be used as a circuit modulus (a u384 that is not zero or one). The modulus defines the finite field over which the circuit operates. It must be:... |
+| [Circuit](./core-circuit-Circuit) | A type that creates a circuit from a tuple of outputs. This type represents a complete circuit instance, constructed from its output gates. The type parameter `Outputs`... |
+| [CircuitInput](./core-circuit-CircuitInput) | Defines an input for a circuit. Represents an input signal in the circuit, indexed by `N` . Each input must be assigned a value before circuit evaluation. |

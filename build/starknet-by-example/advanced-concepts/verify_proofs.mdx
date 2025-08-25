@@ -1,0 +1,411 @@
+---
+title: "Verify ZK Proofs on Starknet"
+---
+
+# Verify ZK Proofs on Starknet
+
+This example shows how to verify SNARK proofs on Starknet using a practical example of a token minting system that requires proof of knowledge of a secret.
+
+## ZK-SNARKs
+
+**zk-SNARKs** (Zero-Knowledge Succinct Non-Interactive Arguments of Knowledge) are cryptographic proofs that enable one party (the *prover*) to demonstrate knowledge of specific information to another party (the *verifier*) without revealing the information itself.
+
+- **Zero-Knowledge (Privacy)**: Ensures computation inputs remain private while proving correctness. The proof only reveals the statement's validity, not the underlying data.
+- **Succinctness**: Proofs remain small regardless of statement complexity, with verification being computationally cheaper than proof generation. This enables efficient verification of large computations.
+- **Non-Interactivity**: Proofs require no further communication between prover and verifier after generation, ideal for decentralized environments.
+- **Integrity**: Guarantees computation correctness without requiring re-execution.
+
+### Common Use Cases
+
+- **Identity Verification**: Prove attributes (age, nationality, membership) without revealing actual details. Enables trustless verification without storing sensitive data.
+- **Scalable Rollups**: Bundle multiple transaction proofs into a single proof, eliminating the need for re-execution.
+- **Proof of Reserves**: Demonstrate sufficient funds for service eligibility without disclosing actual balances.
+
+## Example: Proof of Secret with Replay Attack Protection
+
+This example shows how to implement a token minting system where users can mint tokens by proving knowledge of a secret password without revealing it. The system includes protection against replay attacks, ensuring each proof is unique to its generator.
+
+We will use the following:
+- **Circom**: Domain-specific language for defining arithmetic circuits, the foundation of zk-SNARKs.
+- **Groth16**: A pairing-based zk-SNARK system that provides the mathematical framework for proof generation and verification.
+- **Snarkjs**: JavaScript library for generating and verifying zk-SNARK proofs.
+- **Garaga**: Enables efficient elliptic curve operations on Starknet, including Groth16 smart contract verifier generation.
+
+### 1. Circuit Definition
+
+Create a circuit that:
+- Takes 3 inputs:
+  - User address (public)
+  - Password hash (public)
+  - Password in plain text (private)
+- Computes the hash of the plain text password
+- Compares it with the public hash
+- Generates a user-specific proof to prevent replay attacks
+
+```solidity
+pragma circom 2.0.0;
+
+include "../node_modules/circomlib/circuits/poseidon.circom";
+
+template PasswordCheck() {
+  // Public inputs
+  signal input userAddress;
+  signal input pwdHash;
+  // Private input
+  signal input pwd;
+
+  // (Public) output
+  signal output uniqueToUser;
+
+  // Make sure password is the correct one by comparing its hash to the expected known hash
+  component hasher = Poseidon(1);
+  hasher.inputs[0] <== pwd;
+
+  hasher.out === pwdHash;
+
+  // Compute a number unique to user so that other users can't simply copy and use same proof
+  // but instead have to execute this circuit to generate a proof unique to them
+  component uniqueHasher = Poseidon(2);
+  uniqueHasher.inputs[0] <== pwdHash;
+  uniqueHasher.inputs[1] <== userAddress;
+
+  uniqueToUser <== uniqueHasher.out;
+}
+
+component main {public [userAddress, pwdHash]} = PasswordCheck();
+```
+
+### 2. Circuit Compilation
+
+The circuit computes the hash of the plain text password and compares the result to the publicly known hash of the password. This equality assertion is one of the constraints set by the circuit. The rest of the code is to generate a proof unique to the user to avoid replay attacks (more about it later).
+
+```bash [Terminal]
+mkdir target
+circom src/circuit/circuit.circom -l node_modules --r1cs --wasm --output target
+```
+
+### 3. Trusted Setup
+
+The **trusted setup** is a phase in the zk-SNARK protocol where cryptographic parameters, known as a *proving key* and a *verification key*, are generated. These keys are essential for the prover to create proofs and for the verifier to validate them.
+
+#### Phase 1: "Powers of Tau" Ceremony
+
+<Info>
+A trusted setup ceremony is a collaborative process where multiple participants contribute randomness to create the cryptographic parameters for a proof system (the proving and verification keys), with the goal to provide additional security. You can provide additional contributions if you wish to do so.
+</Info>
+
+- Initialize powers of tau ceremony:
+
+```bash [Terminal]
+mkdir target/ptau && cd target/ptau
+snarkjs powersoftau new bn128 12 pot12_0000.ptau -v
+```
+
+```bash [Terminal]
+snarkjs powersoftau contribute pot12_0000.ptau pot12.ptau --name="My contribution to part 1" -v -e="some random text for the contribution to part 1"
+```
+
+#### Phase 2: Circuit Dependent
+
+- Finalize ptau file:
+
+```bash [Terminal]
+snarkjs powersoftau prepare phase2 pot12.ptau pot12_final.ptau -v
+```
+
+- Generate a zkey file:
+
+```bash [Terminal]
+cd ..
+snarkjs groth16 setup circuit.r1cs ptau/pot12_final.ptau circuit_0000.zkey
+```
+
+- Contribute to Phase 2:
+
+```bash [Terminal]
+snarkjs zkey contribute circuit_0000.zkey circuit_0001.zkey --name="My contribution to part 2" -v -e="some random text for the contribution to part 2"
+```
+
+We now have our proving key (`circuit_0001.zkey{:md}`) that we will use, along with the compiled circuit and the input to the circuit, to generate proofs.
+
+- Export verification key:
+
+```bash [Terminal]
+snarkjs zkey export verificationkey circuit_0001.zkey circuit_verification_key.json
+```
+
+We have our verification key (`circuit_verification_key.json{:md}`) that we will use, along with the generated proof and its outputs, to verify proofs.
+
+### 4. Proof Generation
+
+#### Generate witness
+
+The **witness** refers to the private input and intermediate values that the prover knows and uses to generate the proof. The intermediate values correspond to the values computed during the circuit execution. These are also part of the witness and are necessary for proving the correctness of the computation. In short, the witness is a complete set of values that satisfies the constraints defined by the zk-SNARK circuit.
+
+```bash [Terminal]
+node circuit_js/generate_witness.js circuit_js/circuit.wasm ../src/circuit/input.json witness.wtns
+```
+
+#### Generate proof
+
+```bash [Terminal]
+snarkjs groth16 prove circuit_0001.zkey witness.wtns proof.json public.json
+```
+
+<Note>
+To generate a proof, 3 information are needed:
+- compiled circuit
+- circuit inputs
+- proving key
+
+To verify a proof, 3 information are also needed:
+- proof
+- circuit outputs (obtained when generating proof)
+- verification key
+</Note>
+
+### 5. Generate verifier contract
+
+```bash [Terminal]
+garaga gen --system groth16 --vk circuit_verification_key.json
+```
+
+This above command will generate a cairo project with the verifier contract, with the main endpoint `verify_groth16_proof_[curve_name]{:md}`.
+
+<Info>
+Garaga also provides some command utilities to deploy it on-chain. Else, you can deploy it like any other contract (using starkli or sncast for example).
+</Info>
+
+Here is the generated starknet contract:
+
+```rust
+use super::groth16_verifier_constants::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
+
+#[starknet::interface]
+trait IGroth16VerifierBN254<TContractState> {
+    fn verify_groth16_proof_bn254(
+        self: @TContractState, full_proof_with_hints: Span<felt252>,
+    ) -> Option<Span<u256>>;
+}
+
+#[starknet::contract]
+mod Groth16VerifierBN254 {
+    use starknet::SyscallResultTrait;
+    use garaga::definitions::{G1Point, G1G2Pair};
+    use garaga::groth16::{multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result};
+    use garaga::ec_ops::{G1PointTrait, ec_safe_add};
+    use garaga::ec_ops_g2::{G2PointTrait};
+    use garaga::utils::calldata::{deserialize_full_proof_with_hints_bn254};
+    use super::{N_PUBLIC_INPUTS, vk, ic, precomputed_lines};
+
+    const ECIP_OPS_CLASS_HASH: felt252 =
+        0x70c1d1c709c75e3cf51d79d19cf7c84a0d4521f3a2b8bf7bff5cb45ee0dd289;
+    use starknet::ContractAddress;
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl IGroth16VerifierBN254 of super::IGroth16VerifierBN254<ContractState> {
+        fn verify_groth16_proof_bn254(
+            self: @ContractState, full_proof_with_hints: Span<felt252>,
+        ) -> Option<Span<u256>> {
+            // DO NOT EDIT THIS FUNCTION UNLESS YOU KNOW WHAT YOU ARE DOING.
+            // This function returns an Option for the public inputs if the proof is valid.
+            // If the proof is invalid, the execution will either fail or return None.
+            // Read the documentation to learn how to generate the full_proof_with_hints array given
+            // a proof and a verifying key.
+            let fph = deserialize_full_proof_with_hints_bn254(full_proof_with_hints);
+            let groth16_proof = fph.groth16_proof;
+            let mpcheck_hint = fph.mpcheck_hint;
+            let small_Q = fph.small_Q;
+            let msm_hint = fph.msm_hint;
+
+            groth16_proof.a.assert_on_curve(0);
+            groth16_proof.b.assert_on_curve(0);
+            groth16_proof.c.assert_on_curve(0);
+
+            let ic = ic.span();
+
+            let vk_x: G1Point = match ic.len() {
+                0 => panic!("Malformed VK"),
+                1 => *ic.at(0),
+                _ => {
+                    // Start serialization with the hint array directly to avoid copying it.
+                    let mut msm_calldata: Array<felt252> = msm_hint;
+                    // Add the points from VK and public inputs to the proof.
+                    Serde::serialize(@ic.slice(1, N_PUBLIC_INPUTS), ref msm_calldata);
+                    Serde::serialize(@groth16_proof.public_inputs, ref msm_calldata);
+                    // Complete with the curve identifier (0 for BN254):
+                    msm_calldata.append(0);
+
+                    // Call the multi scalar multiplication endpoint on the Garaga ECIP ops contract
+                    // to obtain vk_x.
+                    let mut _vx_x_serialized = core::starknet::syscalls::library_call_syscall(
+                        ECIP_OPS_CLASS_HASH.try_into().unwrap(),
+                        selector!("msm_g1"),
+                        msm_calldata.span(),
+                    )
+                        .unwrap_syscall();
+
+                    ec_safe_add(
+                        Serde::<G1Point>::deserialize(ref _vx_x_serialized).unwrap(), *ic.at(0), 0,
+                    )
+                },
+            };
+            // Perform the pairing check.
+            let check = multi_pairing_check_bn254_3P_2F_with_extra_miller_loop_result(
+                G1G2Pair { p: vk_x, q: vk.gamma_g2 },
+                G1G2Pair { p: groth16_proof.c, q: vk.delta_g2 },
+                G1G2Pair { p: groth16_proof.a.negate(0), q: groth16_proof.b },
+                vk.alpha_beta_miller_loop_result,
+                precomputed_lines.span(),
+                mpcheck_hint,
+                small_Q,
+            );
+            if check == true {
+                return Option::Some(groth16_proof.public_inputs);
+            } else {
+                return Option::None;
+            }
+        }
+    }
+}
+```
+
+### 6. Generate calldata & call on-chain verifier contract
+
+This step is useful for generating calldata from the proof & circuit execution outputs, which can then be sent to the verifier contract to verify the proof on-chain. In this example, there is an intermediary contract, `ZkERC20Token`, which will itself call the verifier contract (more about it below).
+
+```bash [Terminal]
+garaga calldata --system groth16 --vk circuit_verification_key.json --proof proof.json --public-inputs public.json --format starkli | xargs starkli invoke --account ~/.starkli-wallets/deployer/account.json --keystore ~/.starkli-wallets/deployer/keystore.json --network sepolia --watch 0x00375cf5081763e1f2a7ed5e28d4253c6135243385f432492dda00861ec5e58f mint_with_proof
+```
+
+<Info>
+Garaga also provides some command utilities to call the verifier contract directly abstracting the calldata generation part, simplifying the above command.
+</Info>
+
+### 7. `ZkERC20Token` contract
+
+This contract allows anyone to mint free tokens if they know a secret password (`2468`). You can submit your proof calldata to this contract, which will itself call the generated verifier contract. If the proof verification passes and the proof is indeed unique to you (ie, you generated it yourself), you can receive the free tokens. Otherwise, the endpoint execution will revert. You can mint free tokens only once per user.
+
+Contract Address (Sepolia testnet): `0x00375cf5081763e1f2a7ed5e28d4253c6135243385f432492dda00861ec5e58f{:md}`
+
+```rust
+use starknet::ContractAddress;
+
+#[starknet::interface]
+trait IZkERC20Token<TContractState> {
+    fn mint_with_proof(ref self: TContractState, full_proof: Span<felt252>);
+    fn has_user_minted(self: @TContractState, address: ContractAddress) -> bool;
+}
+
+#[starknet::interface]
+trait IGroth16VerifierBN254<TContractState> {
+    fn verify_groth16_proof_bn254(
+        self: @TContractState, full_proof_with_hints: Span<felt252>,
+    ) -> Option<Span<u256>>;
+}
+
+mod errors {
+    pub const ALREADY_MINTED: felt252 = 'User has already minted tokens';
+    pub const PROOF_NOT_VERIFIED: felt252 = 'Proof is not correct';
+    pub const PROOF_ALREADY_USED: felt252 = 'Generate a proof unique to you';
+}
+
+#[starknet::contract]
+pub mod ZkERC20Token {
+    use openzeppelin_token::erc20::{ERC20Component, ERC20HooksEmptyImpl};
+    use starknet::{ContractAddress, get_caller_address};
+    use super::{errors, IGroth16VerifierBN254Dispatcher, IGroth16VerifierBN254DispatcherTrait};
+    use starknet::storage::{
+        Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry,
+    };
+
+    component!(path: ERC20Component, storage: erc20, event: ERC20Event);
+
+    #[abi(embed_v0)]
+    impl ERC20MixinImpl = ERC20Component::ERC20MixinImpl<ContractState>;
+
+    impl ERC20InternalImpl = ERC20Component::InternalImpl<ContractState>;
+
+    const MINT_WITH_PROOF_TOKEN_REWARD: u8 = 100;
+    // used in the front end to generate the proof
+    const PASSWORD_HASH: u256 =
+        16260938803047823847354854419633652218467975114284208787981985448019235110758;
+
+    #[storage]
+    struct Storage {
+        #[substorage(v0)]
+        erc20: ERC20Component::Storage,
+        verifier_contract: IGroth16VerifierBN254Dispatcher,
+        users_who_minted: Map<ContractAddress, bool>,
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        #[flat]
+        ERC20Event: ERC20Component::Event,
+    }
+
+    #[constructor]
+    fn constructor(
+        ref self: ContractState,
+        initial_supply: u256,
+        recipient: ContractAddress,
+        name: ByteArray,
+        symbol: ByteArray,
+        proof_verifier_address: ContractAddress,
+    ) {
+        self.erc20.initializer(name, symbol);
+        self.erc20.mint(recipient, initial_supply);
+
+        self
+            .verifier_contract
+            .write(IGroth16VerifierBN254Dispatcher { contract_address: proof_verifier_address });
+    }
+
+    #[abi(embed_v0)]
+    impl ZkERC20TokenImpl of super::IZkERC20Token<ContractState> {
+        fn mint_with_proof(ref self: ContractState, full_proof: Span<felt252>) {
+            let caller = get_caller_address();
+            // Prevent a user from receiving tokens twice
+            assert(!self.users_who_minted.entry(caller).read(), errors::ALREADY_MINTED);
+
+            // Verify the correctness of the proof by calling the verifier contract
+            // If incorrect, execution of the verifier will fail or return an Option::None
+            let proof_public_inputs = self
+                .verifier_contract
+                .read()
+                .verify_groth16_proof_bn254(full_proof);
+            assert(
+                proof_public_inputs.is_some() && proof_public_inputs.unwrap().len() == 3,
+                errors::PROOF_NOT_VERIFIED,
+            );
+
+            // Verify the proof has been generated by the user calling this smart contract
+            let user_address_dec: u256 = *proof_public_inputs.unwrap().at(1);
+            let address_felt252: felt252 = caller.into();
+            assert(address_felt252.into() == user_address_dec, errors::PROOF_ALREADY_USED);
+
+            // Mint tokens only if the proof is valid and has been generated by the user
+            self.erc20.mint(caller, MINT_WITH_PROOF_TOKEN_REWARD.into());
+
+            self.users_who_minted.entry(caller).write(true);
+        }
+
+        fn has_user_minted(self: @TContractState, address: ContractAddress) -> bool {
+            self.users_who_minted.entry(address).read()
+        }
+    }
+}
+```
+
+<Info>
+For more detailed information about the technologies used, refer to:
+- [Circom Documentation](https://docs.circom.io/)
+- [Snarkjs GitHub](https://github.com/iden3/snarkjs)
+- [Garaga Documentation](https://garaga.gitbook.io/garaga)
+</Info>
+

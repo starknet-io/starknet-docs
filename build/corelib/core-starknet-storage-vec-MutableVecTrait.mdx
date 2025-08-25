@@ -1,0 +1,305 @@
+---
+title: "core::starknet::storage::vec::MutableVecTrait"
+---
+
+Provides mutable access to elements in a storage [`Vec`](./core-starknet-storage-vec-Vec).
+This trait extends the read functionality with methods to append new elements
+and modify existing ones.
+
+
+
+## Signature
+
+```rust
+pub trait MutableVecTrait
+```
+
+
+
+## Trait functions
+
+### get
+
+
+
+Returns a mutable storage path to the element at the specified index, or `None` if out of
+bounds.
+
+#### Signature
+
+```rust
+fn get(self: T, index: u64) -> OptionElementType>>>
+```
+
+
+
+#### Examples
+
+```rust
+use starknet::storage::{Vec, MutableVecTrait, StoragePointerWriteAccess};
+
+#[storage]
+struct Storage {
+    numbers: Vec,
+}
+
+fn set_number(ref self: ContractState, index: u64, number: u256) -> bool {
+    if let Some(ptr) = self.numbers.get(index) {
+        ptr.write(number);
+        true
+    } else {
+        false
+    }
+}
+```
+
+
+
+
+
+### at
+
+
+
+Returns a mutable storage path to the element at the specified index.
+#### Panics
+
+Panics if the index is out of bounds.
+#### Examples
+
+```rust
+use starknet::storage::{Vec, MutableVecTrait, StoragePointerWriteAccess};
+
+#[storage]
+struct Storage {
+    numbers: Vec,
+}
+
+fn set_number(ref self: ContractState, index: u64, number: u256) {
+    self.numbers.at(index).write(number);
+}
+```
+
+
+
+
+
+#### Signature
+
+```rust
+fn at(self: T, index: u64) -> StoragePathElementType>>
+```
+
+
+### len
+
+
+
+Returns the number of elements in the vector.
+The length is stored at the vector's base storage address and is automatically
+updated when elements are appended.
+
+#### Signature
+
+```rust
+fn len(self: T) -> u64
+```
+
+
+
+#### Examples
+
+```rust
+use starknet::storage::{Vec, MutableVecTrait};
+
+#[storage]
+struct Storage {
+    numbers: Vec,
+}
+
+fn is_empty(self: @ContractState) -> bool {
+    self.numbers.len() == 0
+}
+```
+
+
+
+
+
+### append
+
+
+
+Returns a mutable storage path to write a new element at the end of the vector.
+This operation:
+1. Increments the vector's length
+2. Returns a storage path to write the new element
+
+#### Signature
+
+```rust
+fn append(self: T) -> StoragePathElementType>>
+```
+
+
+
+#### Examples
+
+```rust
+use starknet::storage::{Vec, MutableVecTrait, StoragePointerWriteAccess};
+
+#[storage]
+struct Storage {
+    numbers: Vec,
+}
+
+fn push_number(ref self: ContractState, number: u256) {
+    self.numbers.append().write(number);
+}
+```
+
+
+
+
+
+### allocate
+
+
+
+Allocates space for a new element at the end of the vector, returning a mutable storage path
+to write the element.
+This function is a replacement for the deprecated `append` function, which allowed
+appending new elements to a vector.
+Unlike `push`, which gets an object to write to the vector, `allocate` is specifically
+useful when you need to prepare space for elements of unknown or dynamic size (e.g.,
+appending another vector).
+#### Use Case
+
+`allocate` is essential when pushing a vector into another vector, as the size of the
+nested vector is unknown at compile time. It allows the caller to allocate the required
+space first, then write the nested vector into the allocated space using `.write()`.
+This is necessary because pushing directly (e.g., `vec.push(nested_vec)`) is not supported
+due to `Vec` being only a storage abstraction.
+#### Deprecation Note
+
+The `append` function is now deprecated. Use `allocate` to achieve the same functionality
+with improved clarity and flexibility.
+#### Examples
+
+```rust
+use starknet::storage::{Vec, MutableVecTrait, StoragePointerWriteAccess};
+
+#[storage]
+struct Storage {
+    numbers: Vec>,
+}
+
+fn append_nested_vector(ref self: ContractState, elements: Array) {
+    // Allocate space for the nested vector in the outer vector.
+    let new_vec_storage_path = self.numbers.allocate();
+    for element in elements {
+        new_vec_storage_path.push(element)
+    }
+}
+```
+
+
+
+
+
+#### Signature
+
+```rust
+fn allocate(self: T) -> StoragePathElementType>>
+```
+
+
+### push
+
+
+
+Pushes a new value onto the vector.
+This operation:
+1. Increments the vector's length.
+2. Writes the provided value to the new storage location at the end of the vector.
+#### Note
+
+If you need to allocate storage without writing a value (e.g., when appending another
+vector), consider using `allocate` instead.
+#### Examples
+
+```rust
+use starknet::storage::{Vec, MutableVecTrait};
+
+#[storage]
+struct Storage {
+    numbers: Vec,
+}
+
+fn push_number(ref self: ContractState, number: u256) {
+    self.numbers.push(number);
+}
+```
+
+
+
+
+
+#### Signature
+
+```rust
+fn push, +starknet::Store>(
+    self: T, value: Self::ElementType,
+)
+```
+
+
+### pop
+
+
+
+Pops the last value off the vector.
+This operation:
+1. Retrieves the value stored at the last position in the vector.
+2. Decrements the vector's length.
+3. Returns the retrieved value or `None` if the vector is empty.
+
+#### Signature
+
+```rust
+fn pop, +starknet::Store>(self: T) -> OptionElementType>
+```
+
+
+
+#### Examples
+
+```rust
+use starknet::storage::{Vec, MutableVecTrait};
+
+#[storage]
+struct Storage {
+    numbers: Vec,
+}
+
+fn pop_number(ref self: ContractState) -> Option {
+    self.numbers.pop()
+}
+```
+
+
+
+
+
+## Trait types
+
+### ElementType
+
+
+#### Signature
+
+```rust
+type ElementType;
+```
+
+

@@ -1,0 +1,99 @@
+---
+title: "SNOS"
+---
+
+## Overview
+
+As an L2 validity rollup, Starknet's state on Ethereum can't be updated without proving that all the blocks between the current state and the new state are valid. SNOS (**S**tark**N**et **O**perating **S**ystem) is [the key element in Starknet's architecture](#what_is_snos?) that [verifies the validity of Starknet blocks](#how_does_snos_work?) and is required for [updating Starknet's state](#using_snos_to_update_starknets_state). SNOS has two [implementations](#implementations), a fully-open source one in Rust and a partially open-source one in Python.
+
+<Note>
+  SNOS is a key element in Starknet's architecture, but also one of its more complicated components. Some parts may require reading more than once, but don't hesitate to [reach out](https://github.com/starknet-io/starknet-docs/issues/new?assignees=landauraz\&title=Feedback%20for%20%22The%20Starknet%20operating%20system%22) if you feel further clarification is needed.
+</Note>
+
+## What is SNOS?
+
+In Cairo, only statements of the form *"a specific Cairo program with specific inputs and produced specific outputs"* can be proven, which means that the statement *"A Starknet block is valid"* needs to expressed in the form of a Cairo program, inputs, and outputs.
+
+This is where SNOS comes in: it is a Cairo Zero program that verifies the validity of blocks by getting an initial state and a list of transactions as input and outputting the state that is the result of applying these transactions on the initial state.
+
+SNOS is the program required for updating Starknet's state on Ethereum ([up to some caveats](#os-and-core-contract)). As such, is it also the final arbiter on what does it mean for a transaction to execute correctly. For example, while a malicious sequencer can deviate from [the `INVOKE` transaction's behavior](/learn/protocol/transactions/#transaction_flow) by skipping the execution of `__validate__` before `__execute__` in the calling account contract, this specification is [enforced by SNOS](https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_transactions.cairo#L390) and therefore this sequencer will not be able to produce the proof for the block in which this transaction was included.
+
+## How does SNOS work?
+
+### High-level overview
+
+The following is a rough sketch of the SNOS program, starting at [os.cairo](https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/os.cairo#L38)'s `main` function:
+
+<Frame>
+  <img src="/assets/images/80375497-os_flow_copy.png" />
+</Frame>
+
+In broad strokes, SNOS's execution consists of the following steps:
+
+1. Preprocessing: preparing the SNOS's inputs, which include the various hints that will be needed throughout the execution (for example, the Merkle path of every accessed storage slot and the code of every accessed contract)
+
+2. Running the transactions: the bulk of SNOS's execution, where transactions are executed sequentially such that for each transaction:
+
+   * The associated account contract is loaded into the memory and called
+
+   * Inner contracts are called, such that [the entry `(contract_address, class_hash)` is added to a global state updates dictionary](https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L149) for each loaded contract (which is needed to assert that the loaded code corresponds to the class hash that is part of the state commitment)
+
+   <Note>
+      Contract calls are in fact done non-deterministically, i.e. the contract's response are guessed and verified later. For more details, see [Syscall mechanism](#syscall-mechanism).
+   </Note>
+
+   * State updates are accumulated in the global state updates dictionary
+
+3. Verifying that the new commitment corresponds to applying the updates accumulated in the global state updates dictionary to the old commitment (for more details, see the [`state_update` function in `state.cairo`](https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/state/state.cairo#L40)).
+
+4. Encoding the state diff and adding it to the output segment for [data availability](/learn/protocol/data-availability/) purposes (for more details, see the [`serialize_os_output` function in `output.cairo`](https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/output.cairo#L71))
+
+### Syscall mechanism
+
+A contract can invoke [system calls](https://book.cairo-lang.org/appendix-08-system-calls.html) throughout its execution, which pass the control from the currently executing contract to SNOS itself. Such operations are required when a contract needs information that does not exist within its code, e.g. accessing the Starknet state to read a storage value or to call another contract.
+
+SNOS's code heavily relies on non-determinism to handle system calls. Whenever a contract invokes some syscall, the request, alongside the guessed response, is recorded in a syscalls array. At the end of every entry point execution, we go over the syscalls array and verify that the responses were correct (for more details, see the [`execute_entry_point` function in `execute_transactions.cairo`](https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os/execution/execute_entry_point.cairo#L286)).
+
+For syscalls such as [`get_execution_info`](https://book.cairo-lang.org/appendix-08-system-calls.html#get_execution_info), which returns the block hash and number, correctness means consistency with the value given to SNOS as input. For contract calls, however, one needs to execute the called contract and verify that the actual response and the guessed response are identical. But how can we guess the responses to all the contract calls before executing them? For that, it is important to distinguish two different styles-of-execution that a Starknet block goes through:
+
+* The first one is done by a sequencer, when constructing the block from incoming transactions
+
+* The second one is done by a prover, when executing SNOS in order to generate a proof for the (already finalized) block
+
+Therefore, when running the OS, we already know what is going to happen: the block has already been executed by the sequencer, and so we know exactly what contracts and storage slots will be accessed, what each internal call will return, and so on.
+
+It's worth noting that in the first execution, the sequencer can run in whatever way he chooses. In fact, he doesn't even have to run through the Cairo VM at all, but rather [precompile contracts to machine code and run them natively](https://github.com/lambdaclass/cairo_native). Moreover, sequencers can also impose restrictions that are not enforced by SNOS. Such discrepancy between the two executions may seem like a bug, but as long as these restrictions only protect the sequencers themselves, rather than the correctness of execution, there is no reason for SNOS to enforce them. A good example for such restriction is the [limits on validation functions](/learn/protocol/accounts/#limitations_of_validation) that protect the sequencer from DoS attacks. It is crucial, however, that both executions agree on the execution semantics, since, as mentioned in [What is SNOS?](#what_is_snos), SNOS is the final arbiter and if it disagrees on the validity of the block, the sequencer will not be able to produce a proof for that block (and the only way forward would be a reorg on Starknet).
+
+### Multiblock input
+
+Starting from Starknet version 0.14.0, block times on Starknet will be substantially shorter, leading to more frequent but also smaller blocks. As every run of SNOS on a single block incurs a fixed cost which is independent of the size of the block, producing e.g. twice as many blocks also doubles this fixed cost.
+
+To mitigate this, SNOS will be modified in version 0.14.0 to receive multiple blocks as inputs. This also amortizes other non-negligible costs over a larger number of blocks: For example, if both block 10 and 11 use the same contract, SNOS loads and hashes its code only once instead of twice.
+
+## Using SNOS to update Starknet's state
+
+The Starknet Core contract is the contract responsible for storing and updating Starknet's state on Ethereum. As of Starknet v0.13.2 and as part of [SHARP's applicative recursion feature](https://community.starknet.io/t/starknet-v0-13-2-pre-release-notes/114223#starknet-applicative-recursion-3), proofs of SNOS's execution are not enough to update the Starknet Core contract. Instead, it is required to submit an "applicative proof" of a different program called [the applicative bootloader](https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/cairo/bootloaders/applicative_bootloader/applicative_bootloader.cairo#L15).
+
+The way the applicative bootloader works is by verifying a proof of one or more executions of a base program $$B$$ and then using their outputs as input to an aggregator program $$A$$. In the case of Starknet, $$B$$ is the SNOS program and $$A$$ is a new cairo program that squashes the state diffs of several blocks (the code of which can be found in the [cairo-lang GitHub repository](https://github.com/starkware-libs/cairo-lang/blob/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/aggregator/main.cairo#L8)). This way, individual executions of SNOS for some block range can be "squashed" into a single program whose valid execution attests to the validity of all blocks within that range and whose output is the squashed state diff of these blocks.
+
+In order to verify that an "applicative proof" used the correct SNOS and aggregator programs, their program hashes must be stored in the Starknet Core contract. As each Starknet version is associated with a given SNOS program, this means that breaking protocol changes must be accompanied by an update to SNOS's (and possibly the aggregator's) program hash registered in the Starknet Core contract.
+
+<Tip>
+  You can read the program hashes currently registered in the Starknet Core contract by using its [`programHash`](https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F13) (for SNOS's program hash) and [`aggregatorProgramHash`](https://etherscan.io/address/0xc662c410c0ecf747543f5ba90660f6abebd9c8c4#readProxyContract#F1) (for the aggregator's program hash) functions.
+</Tip>
+
+Finally, the Starknet Core contract is also responsible for verifying the few things that SNOS can't, including:
+
+* Verifying that the state given to SNOS as input is Starknet's current state on Ethereum
+
+* Verifying that all [L1→L2 messages](/learn/protocol/messaging/#l1-l2-messages) were sent on Ethereum
+
+## Implementations
+
+The Cairo code of SNOS is available in the [cairo-lang GitHub repository](https://github.com/starkware-libs/cairo-lang/tree/8e11b8cc65ae1d0959328b1b4a40b92df8b58595/src/starkware/starknet/core/os). However, this repository does not include all the hints implementation, which are necessary to locally run SNOS. The current implementation of these hints in Python is now deprecated, and will no longer be maintained in future Starknet versions.
+
+<Warning>
+  As part of the transition of Starknet's infrastructure to Rust, SNOS's Pythonic hints implementation is deprecated, and will no longer be maintained in future Starknet versions.
+</Warning>
+
+Instead, a new Rust implementation of the hints, including initializing all inputs of SNOS via a Starknet full node connection, is available in the [SNOS GitHub repository](https://github.com/keep-starknet-strange/snos/tree/cb2a6d26faeb658492756fe100bbdf5b1600c768). At the time of writing, this codebase supports the execution of SNOS for Starknet version 0.13.2.

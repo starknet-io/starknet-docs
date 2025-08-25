@@ -1,0 +1,159 @@
+---
+title: "Blocks"
+---
+
+## Overview
+
+A Starknet block is a list of transactions and a block header that contains [multiple fields](/learn/protocol/blocks#block-header-fields), including the [hash of the previous block](/learn/protocol/blocks#block-hash) and a [commitment to their state diff](/learn/protocol/blocks#state-diff-commitment), as well as [commitments to the transactions, events, and receipts](/learn/protocol/blocks#transactions%2C-events%2C-and-receipts-commitments) it includes.
+
+## Block header fields
+
+| Name                      | Type              | Description                                                                                                                                                                               |
+| ------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `block_number`            | `u64`             | The number of this block (i.e., its height)                                                                                                                                               |
+| `parent_block_hash`       | `felt252`         | The [hash](/learn/protocol/blocks#block-hash) of the block's parent                                                                                                                                             |
+| `global_state_root`       | `felt252`         | A [commitment](/learn/protocol/state#state-commitment) to the new state                                                                                                                               |
+| `sequencer_address`       | `ContractAddress` | The Starknet address of the sequencer that created the block                                                                                                                              |
+| `block_timestamp`         | `Timestamp`       | The time at which the sequencer began building the block, in seconds since the Unix epoch                                                                                                 |
+| `transaction_count`       | `u32`             | The number of transactions in the block                                                                                                                                                   |
+| `events_count`            | `u32`             | The number of events in the block.                                                                                                                                                        |
+| `state_diff_length`       | `u32`             | The total amount of storage diffs, nonce updates, deployed contracts, and declared classes                                                                                                |
+| `state_diff_commitment`   | `felt252`         | A [commitment](/learn/protocol/blocks#state-diff-hash) to the state diff of the block                                                                                                                           |
+| `transactions_commitment` | `felt252`         | A [commitment](/learn/protocol/blocks#transactions%2C-events%2C-and-receipts-commitments) to the transactions included in the block                                                                                       |
+| `events_commitment`       | `felt252`         | A [commitment](/learn/protocol/blocks#transactions%2C-events%2C-and-receipts-commitments) to the events included in the block                                                                                             |
+| `receipts_commitment`     | `felt252`         | A [commitment](/learn/protocol/blocks#transactions%2C-events%2C-and-receipts-commitments) to the receipts of the transactions included in the block                                                                       |
+| `l1_gas_price`            | `(u128, u128)`    | The price of L1 gas that was used while constructing the block, where the first value is the price in wei and the second is the price in fri (see [Fees](/learn/protocol/fees/) for more details)      |
+| `l1_data_gas_price`       | `(u128, u128)`    | The price of L1 blob gas that was used while constructing the block, where the first value is the price in wei and the second is the price in fri (see [Fees](/learn/protocol/fees/) for more details) |
+| `l2_gas_price`            | `(u128, u128)`    | The price of L2 gas that was used while constructing the block, where the first value is the price in wei and the second is the price in fri (see [Fees](/learn/protocol/fees/) for more details)      |
+| `l1_da_mode`              | `String`          | `CALLDATA` or `BLOB`, depending on how Starknet state diffs are sent to L1                                                                                                                |
+| `protocol_version`        | `String`          | The version of the Starknet protocol used when creating the block                                                                                                                         |
+
+## Block hash
+
+A block hash is defined by:
+
+```
+h(
+    "STARKNET_BLOCK_HASH1",
+    block_number,
+    global_state_root,
+    sequencer_address,
+    block_timestamp,
+    transaction_count || event_count || state_diff_length || l1_da_mode,
+    state_diff_commitment,
+    transactions_commitment
+    events_commitment,
+    receipts_commitment,
+    gas_prices_hash,
+    protocol_version,
+    0,
+    parent_block_hash
+)
+```
+
+Where:
+
+* `h` is the [Poseidon hash function](/learn/protocol/cryptography#poseidon-hash)
+
+* `transaction_count || event_count || state_diff_length || l1_da_mode` is the concatenation of the 64-bit representations of `transaction_count`, `event_count`, and `state_diff_length` with 0 if `l1_da_mode` is `CALLDATA` and 1 if `l1_da_mode` is `BLOB`
+
+* `gas_prices_hash` is defined by:
+
+  ```
+  h(
+      "STARKNET_GAS_PRICES0",
+      l1_gas_price_wei,
+      l1_gas_price_fri,
+      l1_data_gas_price_wei,
+      l1_data_gas_price_fri,
+      l2_gas_price_wei,
+      l2_gas_price_fri
+  )
+  ```
+
+  where `h` is the [Poseidon hash function](/learn/protocol/cryptography#poseidon-hash) and `l1_gas_price_wei`, `l1_gas_price_fri`, `l1_data_gas_price_wei`, `l1_data_gas_price_fri`, `l2_gas_price_wei`, and `l2_gas_price_fri` are the wei and fri denominated prices for the three resource types.
+
+<Tip>
+For a reference implementation, see [`block_hash_calculator.rs`](https://github.com/starkware-libs/sequencer/blob/bb361ec67396660d5468fd088171913e11482708/crates/starknet_api/src/block_hash/block_hash_calculator.rs#L68) in the Starknet sequencer's GitHub repository
+</Tip>
+
+## State diff commitment
+
+The state diff commitment is defined by:
+
+```
+h(
+    "STARKNET_STATE_DIFF0",
+    s + r,
+    deployed_address1, deployed_class_hash1, ... , deployed_addresss, deployed_class_hashs,
+    replaced_contract_address1, new_class_hash1, ... , replaced_contract_addressr, new_class_hashr,
+    d,
+    declared_class_hash1, declared_compiled_class_hash1, ... , declared_class_hashd, declared_compiled_class_hashd,
+    1,
+    0,
+    n,
+    c1, k1,1, v1,1, ... ,k1,m1, v1,m1, ... ,cn, kn,1, vn,1, ... ,kn,mn, vn,mn,
+    k,
+    account1, new_nonce1, ... ,accountk, new_noncek
+)
+```
+
+Where:
+
+* `h` is the Poseidon hash function
+
+* `1` and `0` are placeholders that may be used in the future
+
+* `ci,ki,1, vi,1, … , ki,mi,vi,mi` are `mi` updates `(ki,1, vi,1), … ,(ki,mi, vi,mi)` to contract addresses `ci`
+
+## Transactions, events, and receipts commitments
+
+The commitment to transactions, the commitment to events and the commitment to receipts are all roots of height-64 binary Merkle Patricia tries where the leaf at index `i` corresponds to:
+
+* For transactions: `h(transaction_hash, signature)` for the `i`'th transaction included in the block, where `h` is the [Poseidon hash function](/learn/protocol/cryptography#poseidon-hash). Note that the signature is itself a (possibly empty) array of field elements.
+
+* For events: The [event hash](/learn/protocol/blocks#event-hash) of the `i`'th emitted event included in the block
+
+* For receipts: The [receipt hash](/learn/protocol/blocks#receipt-hash) of the `i`'th transaction receipt included in the block
+
+### Event hash
+
+The hash of an [event](https://book.cairo-lang.org/ch101-03-contract-events.html) emitted by a contract whose address is `emitter_address` and a transaction whose hash is `tx_hash` is defined by:
+
+```
+h(
+    emitter_address,
+    tx_hash,
+    h(keys),
+    h(data)
+)
+```
+
+Where `h` is the [Poseidon hash function](/learn/protocol/cryptography#poseidon-hash).
+
+### Receipt hash
+
+The hash of a [transaction receipt](/learn/protocol/transactions#transaction-receipt) is defined by:
+
+```
+h(
+    transaction_hash,
+    actual_fee,
+    h(messages),
+    sn_keccak(revert_reason),
+    h(l2_gas_consumed, l1_gas_consumed, l1_data_gas_consumed)
+)
+```
+
+Where:
+
+* `h` is the [Poseidon hash function](/learn/protocol/cryptography#poseidon-hash)
+
+* `h(messages)` for `messages = (from1, to1, payload1), … , (fromn, ton, payloadn)` is defined by:
+
+  ```
+  h(
+      n,
+      from1, to1, h(len(payload1) || payload1), ... , fromn, ton, h(len(payloadn) || payloadn)
+  )
+  ```

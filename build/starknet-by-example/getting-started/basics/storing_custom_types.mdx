@@ -1,0 +1,88 @@
+---
+title: "Storing Custom Types"
+---
+
+In Starknet contracts, storing custom types in contract storage requires implementing the `Store` trait. While native types (like `felt252`, `u128`, etc.) can be stored directly, custom types need this additional step to generate the necessary implementation on how to handle their storage.
+
+To make a custom type storable:
+
+1. Derive the `starknet::Store` trait for your struct
+2. Add any other necessary traits like `Drop`, `Serde`, and `Copy`
+3. Define your storage variables using the custom type
+
+Here's an example showing how to store a custom `Person` struct:
+
+```rust
+#[derive(Drop, starknet::Store)]
+struct Person {
+    name: felt252,
+    age: u8,
+    is_active: bool,
+}
+
+#[starknet::interface]
+trait ICustomTypes<TContractState> {
+    fn set_person(ref self: TContractState, person: Person);
+    fn get_person(self: @TContractState) -> Person;
+}
+
+#[starknet::contract]
+mod CustomTypes {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+    #[storage]
+    struct Storage {
+        person: Person,
+    }
+
+    #[abi(embed_v0)]
+    impl CustomTypes of super::ICustomTypes<ContractState> {
+        fn set_person(ref self: ContractState, person: Person) {
+            self.person.write(person);
+        }
+
+        fn get_person(self: @ContractState) -> Person {
+            self.person.read()
+        }
+    }
+}
+```
+
+<Note>
+For more complex types, you might need to implement the `Store` trait manually instead of deriving it.
+</Note>
+
+## Accessing Struct Members
+
+When you derive the `Store` trait, Cairo automatically generates the necessary storage pointers for each struct member. This allows you to access and modify individual fields of your stored struct directly:
+
+```rust
+#[starknet::interface]
+trait ICustomTypesAccess<TContractState> {
+    fn set_name(ref self: TContractState, name: felt252);
+    fn get_name(self: @TContractState) -> felt252;
+}
+
+#[starknet::contract]
+mod CustomTypesAccess {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+    #[storage]
+    struct Storage {
+        person: Person,
+    }
+
+    #[abi(embed_v0)]
+    impl CustomTypesAccess of super::ICustomTypesAccess<ContractState> {
+        fn set_name(ref self: ContractState, name: felt252) {
+            // Access individual struct member
+            self.person.name.write(name);
+        }
+
+        fn get_name(self: @ContractState) -> felt252 {
+            // Read individual struct member
+            self.person.name.read()
+        }
+    }
+}
+```

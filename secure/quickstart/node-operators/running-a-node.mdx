@@ -1,0 +1,134 @@
+---
+title: "Running a full node"
+---
+## Overview
+
+Welcome to the first installment of the *Help secure Starknet* guide! 🛡️
+
+By operating your own full node, you become part of the distributed network that validates transactions, preserves blockchain history, and ensures Starknet remains decentralized and censorship-resistant.
+
+This installment of the series will thereforewalk you though [downloading a data snapshot](#downloading-a-snapshot) and [using it](#using-the-snapshot) to run your own [Pathfinder node](https://equilibrium.co/projects/pathfinder).
+
+<Note>
+To run a [Juno node](https://github.com/NethermindEth/juno), see [the Juno documentation](https://juno.nethermind.io/).
+</Note>
+
+## Prerequisites
+
+### Installing docker
+
+The easiest option to run a Starknet full node is using Docker. To install Docker, simply visit [docs.docker.com/get-started/get-docker](https://docs.docker.com/get-started/get-docker/) and choose whatever OS you're using.
+
+### Exporting an Ethereum URL
+
+Running a Starknet full node requires an Ethereum websocket RPC URL. You can get your free Ethereum websocket RPC URL by creating an account with [Alchemy](https://www.alchemy.com/), [Infura](https://www.infura.io/), or [Quicknode](https://www.quicknode.com/). Afterwhich, you can export it by running:
+
+```shell
+export ETHEREUM_URL=<YOUR_URL>
+
+```
+
+## Downloading a snapshot
+
+Running a full node involves using your local machine's storage to maintain a full database of the blockchain, all the way from the genesis block.
+
+Database snapshots let you quickly start your node without having to download all blocks from the very beginning, and instead use a pre-made version of the database that's already in sync up to a certain block.
+
+To download Pathfinder's snapshot, you first need to download the [rclone](https://rclone.org/) file manager by running:
+
+```shell
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+
+```
+
+<Note>
+This installation script can be used to install rclone on Linux/macOS/BSD systems. For other installation methods, see [rclone.org/install](https://rclone.org/install/).
+</Note>
+
+Once rclone is downloaded, create a new rclone configuration file:
+
+```shell
+touch $HOME/.config/rclone/rclone.conf
+
+```
+
+and add the following content:
+
+```shell
+[pathfinder-snapshots]
+type = s3
+provider = Cloudflare
+env_auth = false
+access_key_id = 7635ce5752c94f802d97a28186e0c96d
+secret_access_key = 529f8db483aae4df4e2a781b9db0c8a3a7c75c82ff70787ba2620310791c7821
+endpoint = https://cbf011119e7864a873158d83f3304e27.r2.cloudflarestorage.com
+acl = private
+
+```
+
+Next, create a new `$HOME/pathfinder` directory, navigate into it, and use rclone to copy [Pathfinder's latest database snapshot](https://rpc.pathfinder.equilibrium.co/snapshots/latest) to your local directory by running:
+
+```shell
+mkdir $HOME/pathfinder
+cd $HOME/pathfinder
+rclone copy -P pathfinder-snapshots:pathfinder-snapshots/<FILENAME> snapshot.sqlite.zst
+
+```
+
+Once the database snapshot is downloaded, compare the file's checksum value with the one shown at [rpc.pathfinder.equilibrium.co/snapshots/latest](https://rpc.pathfinder.equilibrium.co/snapshots/latest) by running:
+
+```shell
+sha256sum snapshot.sqlite.zst
+
+```
+
+If the checksum values match, extract the downloaded database snapshot by running:
+
+```shell
+zstd -T0 -d snapshot.sqlite.zst -o snapshot.sqlite
+
+```
+
+## Using the snapshot
+
+Now that the database snapshot is extracted, you can start your node by running:
+
+```shell
+docker run \
+  --name pathfinder \
+  --restart unless-stopped \
+  --detach \
+  -p 9545:9545 \
+  --user "$(id -u):$(id -g)" \
+  -e RUST_LOG=info \
+  -e PATHFINDER_ETHEREUM_API_URL=$ETHEREUM_URL \
+  -v $HOME/pathfinder:/usr/share/pathfinder/data \
+  eqlabs/pathfinder
+
+```
+
+Once the docker container is up and running, you can check the docker image's logs by running:
+
+```shell
+docker logs -f pathfinder
+
+```
+
+If successful, the result should resemble the following:
+
+```shell
+2025-05-12T18:29:45  INFO Downloading block 766533
+2025-05-12T18:30:36  INFO Updated Starknet state with block 766534
+2025-05-12T18:31:07  INFO Updated Starknet state with block 766535
+2025-05-12T18:31:35  INFO Updated Starknet state with block 766536
+2025-05-12T18:32:12  INFO Downloading block 766537
+
+```
+
+<Note>
+To stop the node's execution, run:
+
+```shell
+docker stop pathfinder
+```
+</Note>

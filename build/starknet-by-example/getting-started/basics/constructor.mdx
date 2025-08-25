@@ -1,0 +1,74 @@
+---
+title: "Constructor"
+---
+
+A constructor is a special function that initializes a contract's state during deployment. It has several key characteristics:
+
+- Runs exactly once when the contract is deployed
+- Must be annotated with `#[constructor]`
+- Up to one constructor per contract
+- Function is conventionally named `constructor`
+
+Here's an example that shows how to initialize storage variables during contract deployment:
+
+```rust
+#[starknet::interface]
+trait IConstructorExample<TContractState> {
+    fn get_a(self: @TContractState) -> u128;
+    fn get_b(self: @TContractState) -> u8;
+    fn get_c(self: @TContractState) -> u256;
+}
+
+#[starknet::contract]
+mod ConstructorExample {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+    #[storage]
+    struct Storage {
+        a: u128,
+        b: u8,
+        c: u256,
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, a: u128, b: u8, c: u256) {
+        // Initialize storage variables with constructor parameters
+        self.a.write(a);
+        self.b.write(b);
+        self.c.write(c);
+    }
+
+    #[abi(embed_v0)]
+    impl ConstructorExample of super::IConstructorExample<ContractState> {
+        fn get_a(self: @ContractState) -> u128 {
+            self.a.read()
+        }
+
+        fn get_b(self: @ContractState) -> u8 {
+            self.b.read()
+        }
+
+        fn get_c(self: @ContractState) -> u256 {
+            self.c.read()
+        }
+    }
+}
+```
+
+In this example:
+
+- The constructor takes three parameters: `a`, `b`, and `c`
+- Each parameter corresponds to a storage variable of the same name, but you can specify any argument variable name
+- The values are written to storage using the `write()` method. You need to import the `StoragePointerWriteAccess` trait to be able to write to a specific storage pointer
+
+<Tip>
+Constructors are ideal for:
+
+- Setting initial contract state
+- Storing deployment-time parameters
+- Initializing access control (e.g., setting an owner)
+</Tip>
+
+<Warning>
+**Constructor values cannot be changed after deployment unless you specifically implement functions to modify them.**
+</Warning>

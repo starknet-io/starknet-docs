@@ -1,0 +1,136 @@
+---
+title: "Local row constraints"
+---
+
+Until now, we have only considered constraints that apply over values in a single row.
+But what if we want to express constraints over multiple rows?
+For example, we may want to ensure that the difference between the values in two adjacent rows is always the same.
+
+Turns out we can implement this as an AIR constraint, as long as the same constraints are applied to all rows.
+In this section, we will see how to implement this.
+We will build upon the example in the previous section, where we created a two columns and proved that they are permutations of each other by asserting that the second column looks up all values in the first column exactly once.
+
+Here, we will create two columns and prove that not only are they permutations of each other, but also that the second row is a sorted version of the first row.
+
+More specifically, the sorted column will contain in order the values $[0,num\_rows)$, which means that the difference between every current row and the previous row should be $1$.
+We will go through three iterations, fixing an issue in each iteration.
+
+## First Try
+
+```rust
+fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+    let unsorted_col = eval.next_trace_mask();
+    let [sorted_col_prev_row, sorted_col_curr_row] =
+        eval.next_interaction_mask(ORIGINAL_TRACE_IDX, [-1, 0]);
+
+    // New constraint
+    eval.add_constraint(
+        E::F::one() - (sorted_col_curr_row.clone() - sorted_col_prev_row.clone()),
+    );
+
+    eval.add_to_relation(RelationEntry::new(
+        &self.lookup_elements,
+        E::EF::one(),
+        &[unsorted_col],
+    ));
+
+    eval.add_to_relation(RelationEntry::new(
+        &self.lookup_elements,
+        -E::EF::one(),
+        &[sorted_col_curr_row],
+    ));
+
+    eval.finalize_logup_in_pairs();
+
+    eval
+}
+```
+
+Basically, the same logic for creating the trace and LogUp columns are equal to the previous section, so we omit them for brevity.
+
+What does change is the `evaluate` function, where we call `next_interaction_mask` on the `EvalAtRow` instance.
+This function can retrieve values from arbitrary row offsets, which means we can access the previous row value using `-1`.
+Since we call this function with offsets `[-1, 0]`, we will retrieve the values for the previous and current rows.
+Once we have these values, we can now assert that the difference between the current and previous row is always `1` with the constraint: `E::F::one() - (sorted_col_curr_row.clone() - sorted_col_prev_row.clone())`.
+
+But this will fail with a `ConstraintsNotSatisfied` error, can you see why?
+(You can try running it yourself [here](https://github.com/zksecurity/stwo/blob/main/stwo-examples/examples/local_row_constraints_fails_1.rs))
+
+## Second Try
+The issue was that when calling `evaluate` on the first row of our trace, the previous row value wraps around to the last row because there are no negative indices.
+
+This means that in our example, we are expecting the `0 - 15 = 1` constraint to hold, which is clearly not true.
+
+To fix this, we can use the `IsFirstColumn` preprocessed column that we created in the [Preprocessed Trace](../preprocessed-trace/index.mdx) section.
+So we will copy over the same code for creating the preprocessed column and modify our new constraint as follows:
+```rust
+eval.add_constraint(
+    (E::F::one() - is_first_col.clone())
+        * (E::F::one() - (sorted_col_curr_row.clone() - sorted_col_prev_row.clone())),
+);
+```
+
+Now, we have a constraint that is disabled for the first row, which is exactly what we want.
+Still, however, this will fail with the same `ConstraintsNotSatisfied` error.
+(You can run it [here](https://github.com/zksecurity/stwo/blob/main/stwo-examples/examples/local_row_constraints_fails_2.rs))
+
+## Third Try
+
+So when we were creating `CircleEvaluation` instances from our `BaseColumn` instances, the order of the elements that we were creating it with was actually not the order that S-two understands it to be.
+Instead, it assumes that the values are in the bit-reversed, circle domain order.
+It's not important to understand what this order is, specifically, but this does mean that when S-two tries to find the `-1` offset when calling `evaluate`, it will find the previous value assuming that it's in a different order.
+This means that when we create a `CircleEvaluation` instance, we need to convert it to a bit-reversed circle domain order.
+Thus, every time we create a `CircleEvaluation` instance, we need to convert the order of the values in the `BaseColumn` beforehand.
+
+```rust
+impl IsFirstColumn {
+    pub fn new(log_size: u32) -> Self {
+        Self { log_size }
+    }
+
+    pub fn gen_column(&self) -> CircleEvaluation<SimdBackend, M31, BitReversedOrder> {
+        let mut col = BaseColumn::zeros(1 << self.log_size);
+        col.set(0, M31::from(1));
+
+        //////////////////////////////////////////////////////////////
+        // Convert the columns to bit-reversed circle domain order
+        bit_reverse_coset_to_circle_domain_order(col.as_mut_slice());
+        //////////////////////////////////////////////////////////////
+
+        CircleEvaluation::new(CanonicCoset::new(self.log_size).circle_domain(), col)
+    }
+
+    pub fn id(&self) -> PreProcessedColumnId {
+        PreProcessedColumnId {
+            id: format!("is_first_{}", self.log_size),
+        }
+    }
+}
+
+fn gen_trace(log_size: u32) -> Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> {
+    // Create a table with random values
+    let mut rng = rand::thread_rng();
+    let sorted_values = (0..(1 << log_size)).map(|i| i).collect::<Vec<_>>();
+    let mut unsorted_values = sorted_values.clone();
+    unsorted_values.shuffle(&mut rng);
+
+    let mut unsorted_col = BaseColumn::from_iter(unsorted_values.iter().map(|v| M31::from(*v)));
+    let mut sorted_col = BaseColumn::from_iter(sorted_values.iter().map(|v| M31::from(*v)));
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_size).circle_domain();
+
+    ////////////////////////////////////////////////////////////////////
+    // Convert the columns to bit-reversed circle domain order
+    bit_reverse_coset_to_circle_domain_order(unsorted_col.as_mut_slice());
+    bit_reverse_coset_to_circle_domain_order(sorted_col.as_mut_slice());
+    ////////////////////////////////////////////////////////////////////
+
+    vec![unsorted_col, sorted_col]
+        .into_iter()
+        .map(|col| CircleEvaluation::new(domain, col))
+        .collect()
+}
+```
+And voilà, we have successfully implemented the constraint.
+You can run it [here](https://github.com/zksecurity/stwo/blob/main/stwo-examples/examples/local_row_constraints.rs).

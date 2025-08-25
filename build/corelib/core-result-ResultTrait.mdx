@@ -1,0 +1,662 @@
+---
+title: "core::result::ResultTrait"
+---
+
+
+
+
+
+## Signature
+
+```rust
+pub trait ResultTrait
+```
+
+
+
+## Trait functions
+
+### expect
+
+
+
+Returns the contained `Ok` value, consuming the `self` value.
+#### Panics
+
+Panics if the value is an `Err`, with the provided `felt252` panic message.
+#### Examples
+
+```rust
+let result: Result = Ok(123);
+assert!(result.expect('no value') == 123);
+```
+
+
+
+
+
+#### Signature
+
+```rust
+fn expect>(self: Result, err: felt252) -> T
+```
+
+
+### unwrap
+
+
+
+Returns the contained `Ok` value, consuming the `self` value.
+#### Panics
+
+Panics if the value is an `Err`, with a standard `Result::unwrap failed` panic message.
+#### Examples
+
+```rust
+let result: Result = Ok(123);
+assert!(result.unwrap() == 123);
+```
+
+
+
+
+
+#### Signature
+
+```rust
+fn unwrap>(self: Result) -> T
+```
+
+
+### unwrap_or
+
+
+
+Returns the contained `Ok` value or a provided default.
+
+#### Signature
+
+```rust
+fn unwrap_or, +Destruct>(self: Result, default: T) -> T
+```
+
+
+
+#### Examples
+
+```rust
+let result: Result = Ok(123);
+assert!(result.unwrap_or(456) == 123);
+
+let result: Result = Err('no value');
+assert!(result.unwrap_or(456) == 456);
+```
+
+
+
+
+
+### unwrap_or_default
+
+
+
+Returns the contained `Ok` value or `Default::::default()`.
+
+#### Signature
+
+```rust
+fn unwrap_or_default, +Default>(self: Result) -> T
+```
+
+
+
+#### Examples
+
+```rust
+let result: Result = Ok(123);
+assert!(result.unwrap_or_default() == 123);
+
+let result: Result = Err('no value');
+assert!(result.unwrap_or_default() == 0);
+```
+
+
+
+
+
+### unwrap_or_else
+
+
+
+Returns the contained [`Ok`](./core-result#ok) value or computes it from a closure.
+
+#### Signature
+
+```rust
+fn unwrap_or_else, +Drop, +core::ops::FnOnce[Output: T]>(
+    self: Result, f: F,
+) -> T
+```
+
+
+
+#### Examples
+
+```rust
+assert!(Ok(2).unwrap_or_else(|e: ByteArray| e.len()) == 2);
+assert!(Err("foo").unwrap_or_else(|e: ByteArray| e.len()) == 3);
+```
+
+
+
+
+
+### and
+
+
+
+Returns `other` if the result is `Ok`, otherwise returns the `Err` value of `self`.
+
+#### Signature
+
+```rust
+fn and, +Drop, +Drop>(
+    self: Result, other: Result,
+) -> Result
+```
+
+
+
+#### Examples
+
+```rust
+let x: Result = Ok(2);
+let y: Result = Err("late error");
+assert!(x.and(y) == Err("late error"));
+
+let x: Result = Err("early error");
+let y: Result = Ok("foo");
+assert!(x.and(y) == Err("early error"));
+
+let x: Result = Err("not a 2");
+let y: Result = Err("late error");
+assert!(x.and(y) == Err("not a 2"));
+
+let x: Result = Ok(2);
+let y: Result = Ok("different result type");
+assert!(x.and(y) == Ok("different result type"));
+```
+
+
+
+
+
+### and_then
+
+
+
+Calls `op` if the result is `Ok`, otherwise returns the `Err` value of `self`.
+This function can be used for control flow based on `Result` values.
+
+#### Signature
+
+```rust
+fn and_then, +core::ops::FnOnce[Output: Result]>(
+    self: Result, op: F,
+) -> Result
+```
+
+
+
+#### Examples
+
+```rust
+use core::num::traits::CheckedMul;
+
+fn sq_then_string(x: u32) -> Result {
+    let res = x.checked_mul(x).ok_or("overflowed");
+    res.and_then(|v| Ok(format!("{}", v)))
+}
+
+let x = sq_then_string(4);
+assert!(x == Ok("16"));
+
+let y = sq_then_string(65536);
+assert!(y == Err("overflowed"));
+```
+
+
+
+
+
+### or
+
+
+
+Returns `other` if the result is `Err`, otherwise returns the `Ok` value of `self`.
+
+#### Signature
+
+```rust
+fn or, +Drop, +Destruct>(
+    self: Result, other: Result,
+) -> Result
+```
+
+
+
+#### Examples
+
+```rust
+let x: Result = Ok(2);
+let y: Result = Err("late error");
+assert!(x.or(y) == Ok(2));
+
+let x: Result = Err("early error");
+let y: Result = Ok(2);
+assert!(x.or(y) == Ok(2));
+
+let x: Result = Err("not a 2");
+let y: Result = Err("late error");
+assert!(x.or(y) == Err("late error"));
+
+let x: Result = Ok(2);
+let y: Result = Ok(100);
+assert!(x.or(y) == Ok(2));
+```
+
+
+
+
+
+### or_else
+
+
+
+Calls `op` if the result is `Err`, otherwise returns the `Ok` value of `self`.
+This function can be used for control flow based on result values.
+
+#### Signature
+
+```rust
+fn or_else, +core::ops::FnOnce[Output: Result]>(
+    self: Result, op: O,
+) -> Result
+```
+
+
+
+#### Examples
+
+```rust
+let x: Result:: = Result::::Err("bad input")
+    .or_else(|_e| Ok(42));
+assert!(x == Ok(42));
+
+let y: Result:: = Result::::Err("bad input")
+    .or_else(|_e| Err("not 42"));
+assert!(y == Err("not 42"));
+
+let z: Result:: = Result::::Ok(100)
+    .or_else(|_e| Ok(42));
+assert!(z == Ok(100));
+```
+
+
+
+
+
+### expect_err
+
+
+
+Returns the contained `Err` value, consuming the `self` value.
+#### Panics
+
+Panics if the value is an `Ok`, with the provided `felt252` panic message.
+#### Examples
+
+```rust
+let result: Result = Err('no value');
+assert!(result.expect_err('result is ok') == 'no value');
+```
+
+
+
+
+
+#### Signature
+
+```rust
+fn expect_err>(self: Result, err: felt252) -> E
+```
+
+
+### unwrap_err
+
+
+
+Returns the contained `Err` value, consuming the `self` value.
+#### Panics
+
+Panics if the value is an `Ok`, with a standard `Result::unwrap_err failed.` panic message.
+#### Examples
+
+```rust
+let result: Result = Err('no value');
+assert!(result.unwrap_err() == 'no value');
+```
+
+
+
+
+
+#### Signature
+
+```rust
+fn unwrap_err>(self: Result) -> E
+```
+
+
+### is_ok
+
+
+
+Returns `true` if the `Result` is `Ok`.
+
+#### Signature
+
+```rust
+fn is_ok(self: @Result) -> bool
+```
+
+
+
+#### Examples
+
+```rust
+let result: Result = Ok(123);
+assert!(result.is_ok());
+```
+
+
+
+
+
+### is_err
+
+
+
+Returns `true` if the `Result` is `Err`.
+
+#### Signature
+
+```rust
+fn is_err(self: @Result) -> bool
+```
+
+
+
+#### Examples
+
+```rust
+let result: Result = Ok(123);
+assert!(!result.is_err());
+```
+
+
+
+
+
+### into_is_ok
+
+
+
+Returns `true` if the `Result` is `Ok`, and consumes the value.
+
+#### Signature
+
+```rust
+fn into_is_ok, +Destruct>(self: Result) -> bool
+```
+
+
+
+#### Examples
+
+```rust
+let result: Result = Ok(123);
+assert!(result.into_is_ok());
+```
+
+
+
+
+
+### into_is_err
+
+
+
+Returns `true` if the `Result` is `Err`, and consumes the value.
+
+#### Signature
+
+```rust
+fn into_is_err, +Destruct>(self: Result) -> bool
+```
+
+
+
+#### Examples
+
+```rust
+let result: Result = Ok(123);
+assert!(!result.into_is_err());
+```
+
+
+
+
+
+### ok
+
+
+
+Converts from `Result` to `Option`.
+Converts `self` into an `Option`, consuming `self`,
+and discarding the error, if any.
+
+#### Signature
+
+```rust
+fn ok, +Destruct>(self: Result) -> Option
+```
+
+
+
+#### Examples
+
+```rust
+let x: Result = Ok(2);
+assert!(x.ok() == Some(2));
+
+let x: Result = Err("Nothing here");
+assert!(x.ok().is_none());
+```
+
+
+
+
+
+### err
+
+
+
+Converts from `Result` to `Option`.
+Converts `self` into an `Option`, consuming `self`,
+and discarding the success value, if any.
+
+#### Signature
+
+```rust
+fn err, +Destruct>(self: Result) -> Option
+```
+
+
+
+#### Examples
+
+```rust
+let x: Result = Err("Nothing here");
+assert!(x.err() == Some("Nothing here"));
+
+let x: Result = Ok(2);
+assert!(x.err().is_none());
+```
+
+
+
+
+
+### map
+
+
+
+Maps a `Result` to `Result` by applying a function to a
+contained [`Ok`](./core-result#ok) value, leaving an [`Err`](./core-result#err) value untouched.
+This function can be used to compose the results of two functions.
+
+#### Signature
+
+```rust
+fn map, +core::ops::FnOnce[Output: U]>(
+    self: Result, f: F,
+) -> Result
+```
+
+
+
+#### Examples
+
+Print the square of the number contained in the `Result`, otherwise print the error.
+```rust
+let inputs: Array> = array![
+    Ok(1), Err("error"), Ok(3), Ok(4),
+];
+for i in inputs {
+    match i.map(|i| i * 2) {
+        Ok(x) => println!("{x}"),
+        Err(e) => println!("{e}"),
+    }
+}
+```
+
+
+
+
+
+### map_or
+
+
+
+Returns the provided default (if [`Err`](./core-result#err)), or
+applies a function to the contained value (if [`Ok`](./core-result#ok)).
+
+#### Signature
+
+```rust
+fn map_or, +Destruct, +Drop, +core::ops::FnOnce[Output: U],
+>(
+    self: Result, default: U, f: F,
+) -> U
+```
+
+
+
+#### Examples
+
+```rust
+let x: Result = Ok("foo");
+assert!(x.map_or(42, |v: ByteArray| v.len()) == 3);
+
+let x: Result = Err("bar");
+assert!(x.map_or(42, |v: ByteArray| v.len()) == 42);
+```
+
+
+
+
+
+### map_or_else
+
+
+
+Maps a `Result` to `U` by applying fallback function `default` to
+a contained [`Err`](./core-result#err) value, or function `f` to a contained [`Ok`](./core-result#ok) value.
+This function can be used to unpack a successful result
+while handling an error.
+
+#### Signature
+
+```rust
+fn map_or_else,
+    +Drop,
+    +core::ops::FnOnce[Output: U],
+    +core::ops::FnOnce[Output: U],
+>(
+    self: Result, default: D, f: F,
+) -> U
+```
+
+
+
+#### Examples
+
+```rust
+let k = 21;
+
+let x: Result = Ok("foo");
+assert!(x.map_or_else(|_e: ByteArray| k * 2, |v: ByteArray| v.len()) == 3);
+
+let x: Result = Err("bar");
+assert!(x.map_or_else(|_e: ByteArray| k * 2, |v: ByteArray| v.len()) == 42);
+```
+
+
+
+
+
+### map_err
+
+
+
+Maps a `Result` to `Result` by applying a function to a
+contained [`Err`](./core-result#err) value, leaving an [`Ok`](./core-result#ok) value untouched.
+This function can be used to pass through a successful result while handling
+an error.
+
+#### Signature
+
+```rust
+fn map_err, +core::ops::FnOnce[Output: F]>(
+    self: Result, op: O,
+) -> Result
+```
+
+
+
+
+#### Examples
+
+```rust
+let stringify  = |x: u32| -> ByteArray { format!("error code: {x}") };
+let x: Result = Ok(2);
+assert!(x.map_err(stringify) == Result::::Ok(2));
+
+let x: Result = Err(13);
+assert!(x.map_err(stringify) == Err("error code: 13"));
+```
+
+
+
+
