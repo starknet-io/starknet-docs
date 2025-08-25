@@ -17,15 +17,9 @@
 
 This repository contains the official documentation for **Starknet**, a permissionless decentralized validity rollup (often referred to as a "zk-rollup") that operates as an L2 network over Ethereum. Our documentation provides comprehensive guides, references, and resources for developers, validators, and users.
 
-### 🎯 What You'll Find Here
-
-- **🏗️ Build**: Find everything you need to build Starknet's next killer app
-- **🛡️ Secure**: Help secure Starknet by running a node and becoming a validator
-- **🎓 Learn**: Dive into Starknet's architecture, S-two prover, and more
-
 ---
 
-## 🌱 Getting Started
+## 🛠️ Setup
 
 ### Prerequisites
 
