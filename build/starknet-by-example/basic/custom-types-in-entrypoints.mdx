@@ -1,0 +1,57 @@
+---
+title: "Custom types in entrypoints"
+---
+
+When using custom types in Starknet contract entrypoints, you need to handle serialization and deserialization of data. This is because:
+
+1. Input parameters are sent to entrypoints as arrays of `felt252`
+2. Return values must be converted back to arrays of `felt252`
+3. Custom types need to be converted between these formats automatically
+
+## Using the Serde Trait
+
+The `Serde` trait provides the necessary serialization and deserialization capabilities for your custom types. For most simple types, you can derive this trait automatically:
+
+```rust
+#[derive(Drop, starknet::Serde)]
+struct Person {
+    name: felt252,
+    age: u8,
+    is_active: bool,
+}
+
+#[starknet::interface]
+trait ICustomTypeEntrypoints<TContractState> {
+    fn set_person(ref self: TContractState, person: Person);
+    fn get_person(self: @TContractState) -> Person;
+}
+
+#[starknet::contract]
+mod CustomTypeEntrypoints {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+    #[storage]
+    struct Storage {
+        person: Person,
+    }
+
+    #[abi(embed_v0)]
+    impl CustomTypeEntrypoints of super::ICustomTypeEntrypoints<ContractState> {
+        fn set_person(ref self: ContractState, person: Person) {
+            // The Serde trait automatically handles serialization of the Person struct
+            self.person.write(person);
+        }
+
+        fn get_person(self: @ContractState) -> Person {
+            // The Serde trait automatically handles deserialization of the Person struct
+            self.person.read()
+        }
+    }
+}
+```
+
+<Note>
+For some complex types, you might need to implement the `Serde` trait manually. This gives you control over how your type is serialized and deserialized.
+
+The `Serde` trait is distinct from the `Store` trait - `Serde` is for passing data in and out of entrypoints, while `Store` is for persisting data in contract storage.
+</Note>

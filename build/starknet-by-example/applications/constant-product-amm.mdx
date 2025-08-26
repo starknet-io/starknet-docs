@@ -1,8 +1,6 @@
 ---
-title: "Constant Product AMM"
+title: "Constant product AMM"
 ---
-
-# Constant Product AMM
 
 This is the Cairo adaptation of the 
 [Solidity by Example - Constant Product AMM](https://solidity-by-example.org/defi/constant-product-amm/).
@@ -98,7 +96,7 @@ pub mod ConstantProductAmm {
             assert(
                 token == self.token0.read().contract_address
                     || token == self.token1.read().contract_address,
-                'invalid token',
+                "invalid token",
             );
             token == self.token0.read().contract_address
         }
@@ -116,7 +114,7 @@ pub mod ConstantProductAmm {
     #[abi(embed_v0)]
     impl ConstantProductAmm of super::IConstantProductAmm<ContractState> {
         fn swap(ref self: ContractState, token_in: ContractAddress, amount_in: u256) -> u256 {
-            assert(amount_in > 0, 'amount in = 0');
+            assert(amount_in > 0, "amount in = 0");
             let is_token0: bool = self.select_token(token_in);
 
             let (token0, token1): (IERC20Dispatcher, IERC20Dispatcher) = (
@@ -180,7 +178,7 @@ pub mod ConstantProductAmm {
 
             let (reserve0, reserve1): (u256, u256) = (self.reserve0.read(), self.reserve1.read());
             if (reserve0 > 0 || reserve1 > 0) {
-                assert(reserve0 * amount1 == reserve1 * amount0, 'x / y != dx / dy');
+                assert(reserve0 * amount1 == reserve1 * amount0, "x / y != dx / dy");
             }
 
             // How many shares to mint?
@@ -236,7 +234,7 @@ pub mod ConstantProductAmm {
                     amount0 * total_supply / reserve0, amount1 * total_supply / reserve1,
                 )
             };
-            assert(shares > 0, 'shares = 0');
+            assert(shares > 0, "shares = 0");
             self._mint(caller, shares);
 
             self._update(self.token0.read().balance_of(this), self.token1.read().balance_of(this));
@@ -290,7 +288,7 @@ pub mod ConstantProductAmm {
             let (amount0, amount1): (u256, u256) = (
                 (shares * bal0) / total_supply, (shares * bal1) / total_supply,
             );
-            assert(amount0 > 0 && amount1 > 0, 'amount0 or amount1 = 0');
+            assert(amount0 > 0 && amount1 > 0, "amount0 or amount1 = 0");
 
             self._burn(caller, shares);
             self._update(bal0 - amount0, bal1 - amount1);

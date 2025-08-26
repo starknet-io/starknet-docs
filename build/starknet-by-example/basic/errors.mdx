@@ -1,0 +1,180 @@
+---
+title: "Error handling"
+---
+
+Cairo provides robust error handling mechanisms for smart contracts. When an error occurs during contract execution, the transaction is immediately reverted and all state changes are undone.
+
+## Basic Error Functions
+
+Cairo offers two main functions for error handling:
+
+### 1. `assert`
+
+- Used for condition validation (similar to Solidity's `require`)
+- Stops execution if the condition is false
+- Supports two formats:
+
+  ```rust
+  assert(condition, 'error message');           // Basic assertion
+  assert!(condition, "formatted error: {}", x); // Formatted string error
+  ```
+
+### 2. `panic`
+
+- Used for immediate execution halt (similar to Solidity's `revert`)
+- Best for complex conditions or internal errors
+- Supports multiple formats:
+
+  ```rust
+  panic_with_felt252('error message');           // Basic panic
+  panic!("formatted error: value={}", value);    // Formatted string error
+  ```
+
+<Warning>
+While Cairo provides assertion macros like `assert_eq!` and `assert_ne!`, these are **only for testing**. In contract code, always use the standard `assert` function.
+</Warning>
+
+## Simple Example
+
+Here's a basic example demonstrating both error handling approaches:
+
+```rust
+#[starknet::interface]
+trait ISimpleErrors<TContractState> {
+    fn check_positive(self: @TContractState, value: u128) -> bool;
+    fn set_value(ref self: TContractState, value: u128);
+}
+
+#[starknet::contract]
+mod SimpleErrors {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+    #[storage]
+    struct Storage {
+        value: u128,
+    }
+
+    #[abi(embed_v0)]
+    impl SimpleErrors of super::ISimpleErrors<ContractState> {
+        fn check_positive(self: @ContractState, value: u128) -> bool {
+            // Using assert for validation
+            assert(value > 0, 'Value must be positive');
+            true
+        }
+
+        fn set_value(ref self: ContractState, value: u128) {
+            // Using panic for immediate halt
+            if value == 0 {
+                panic_with_felt252('Value cannot be zero');
+            }
+            self.value.write(value);
+        }
+    }
+}
+```
+
+## Custom Error Codes
+
+For better organization and consistency, you can define error messages in a dedicated module:
+
+```rust
+mod Errors {
+    const INSUFFICIENT_BALANCE: felt252 = "Insufficient balance";
+    const INVALID_AMOUNT: felt252 = "Invalid amount";
+    const ACCESS_DENIED: felt252 = "Access denied";
+}
+
+#[starknet::interface]
+trait ICustomErrors<TContractState> {
+    fn withdraw(ref self: TContractState, amount: u128);
+}
+
+#[starknet::contract]
+mod CustomErrors {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use super::Errors;
+
+    #[storage]
+    struct Storage {
+        balance: u128,
+    }
+
+    #[abi(embed_v0)]
+    impl CustomErrors of super::ICustomErrors<ContractState> {
+        fn withdraw(ref self: ContractState, amount: u128) {
+            // Using custom error constants
+            assert(amount > 0, Errors::INVALID_AMOUNT);
+            assert(self.balance.read() >= amount, Errors::INSUFFICIENT_BALANCE);
+            
+            let new_balance = self.balance.read() - amount;
+            self.balance.write(new_balance);
+        }
+    }
+}
+```
+
+## Real-World Example: Vault Contract
+
+Here's a practical example showing error handling in a vault contract that manages deposits and withdrawals:
+
+```rust
+mod Errors {
+    const INSUFFICIENT_BALANCE: felt252 = "Insufficient balance";
+    const INVALID_AMOUNT: felt252 = "Invalid amount";
+    const ACCESS_DENIED: felt252 = "Access denied";
+}
+
+#[starknet::interface]
+trait IVaultErrors<TContractState> {
+    fn deposit(ref self: TContractState, amount: u128);
+    fn withdraw(ref self: TContractState, amount: u128);
+    fn get_balance(self: @TContractState) -> u128;
+}
+
+#[starknet::contract]
+mod VaultErrors {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use super::Errors;
+
+    #[storage]
+    struct Storage {
+        balance: u128,
+        owner: ContractAddress,
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, owner: ContractAddress) {
+        self.owner.write(owner);
+    }
+
+    #[abi(embed_v0)]
+    impl VaultErrors of super::IVaultErrors<ContractState> {
+        fn deposit(ref self: ContractState, amount: u128) {
+            assert(amount > 0, Errors::INVALID_AMOUNT);
+            let current_balance = self.balance.read();
+            self.balance.write(current_balance + amount);
+        }
+
+        fn withdraw(ref self: ContractState, amount: u128) {
+            assert(amount > 0, Errors::INVALID_AMOUNT);
+            let current_balance = self.balance.read();
+            
+            if current_balance < amount {
+                panic_with_felt252(Errors::INSUFFICIENT_BALANCE);
+            }
+            
+            self.balance.write(current_balance - amount);
+        }
+
+        fn get_balance(self: @ContractState) -> u128 {
+            self.balance.read()
+        }
+    }
+}
+```
+
+In this example:
+
+1. Custom errors are defined in a separate module
+2. The `withdraw` function demonstrates both `assert` and `panic` approaches
+3. Balance checks protect against underflow conditions
