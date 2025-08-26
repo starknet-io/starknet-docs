@@ -1,0 +1,229 @@
+---
+title: "Deploy your first Starknet contract guide appendix"
+sidebarTitle: "Appendix"
+---
+
+## Setting up your environment manually on MacOS and Linux
+
+### Installing WSL and Ubuntu
+
+Setting up Scarb and Starknet Foundry on Windows requires configuring the Windows Subsystem for Linux (WSL) and installing the tools inside a Linux distribution such as Ubuntu:
+
+1. Open PowerShell as administrator and run:
+
+   ```bash
+   wsl --install
+   ```
+
+   This command installs WSL along with the default Ubuntu distribution.
+   If WSL or virtualization is not yet enabled, reboot and re-run the command as needed.
+
+   <Note>
+   If `wsl --install` does not work, enable WSL manually by running:
+
+   ```bash
+   dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+   dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+   ```
+
+   and installing Ubuntu from the [Microsoft Store](https://aka.ms/wslstore).
+   </Note>
+
+2. Restart your computer when prompted.
+
+3. After reboot, launch Ubuntu from the Start menu.
+   On the first launch, create a UNIX username and password when prompted.
+
+4. Open the Ubuntu terminal and run:
+
+   ```bash
+   sudo apt update
+   sudo apt install -y curl git build-essential
+   ```
+
+### Installing Homebrew
+
+1. Run the Homebrew install script:
+
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+
+2. Add Homebrew to your shell environment:
+
+   ```bash
+   echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.profile
+   source ~/.profile
+   ```
+
+3. Verify that Homebrew was installed correctly:
+
+   ```bash
+   brew --version
+   ```
+
+### Installing `asdf`
+
+<Info>
+Using `asdf` allows you to easily switch between versions of Scarb, Starknet Foundry, and Starknet Devnet globally or per project.
+</Info>
+
+1. Install `asdf` using Homebrew:
+
+   ```bash
+   brew install asdf
+   ```
+
+2. Add `asdf` to your shell:
+
+   ```bash
+   echo '. "$(brew --prefix asdf)/libexec/asdf.sh"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+3. Verify that `asdf` is installed correctly:
+
+   ```bash
+   asdf --version
+   ```
+
+### Installing Scarb, Starknet Foundry, and Starknet Devnet
+
+1. Add the Scarb plugin and install the latest Scarb version:
+
+   ```bash
+   asdf plugin add scarb
+   asdf install scarb latest
+   asdf set -u scarb latest
+   ```
+
+2. Add the Starknet Foundry plugin and install the latest Starknet Foundry version:
+
+   ```bash
+   asdf plugin add starknet-foundry
+   asdf install starknet-foundry latest
+   asdf set -u starknet-foundry latest
+   ```
+
+3. Add the Starknet Devnet plugin and install the latest Starknet Devnet version:
+
+   ```bash
+   asdf plugin add starknet-devnet
+   asdf install starknet-devnet latest
+   asdf set -u starknet-devnet latest
+   ```
+
+4. Restart your terminal and verify that Scarb, Starknet Foundry, and Starknet Devnet were installed correctly:
+
+   ```bash
+   scarb --version
+   snforge --version && sncast --version
+   starknet-devnet --version
+   ```
+
+   <Note>
+   If `scarb`, `snforge`, or `starknet-devnet` are not recognized, try running `source ~/.bashrc` or restarting your terminal.
+   </Note>
+
+## Fetching a predeployed Sepolia account
+
+**Procedure:**
+
+1. Export the private key from your wallet by:
+   * For Ready wallets: navigating to `Settings` -> `<YOUR_ACCOUNT>` -> `Export Private Key`.
+   * For Braavos wallets: navigating to `Settings` -> `Privacy and Security` -> `Export Private Key`.
+
+2. Create a keystore file by running:
+
+```terminal
+starkli signer keystore from-key keystore.json
+```
+
+and entering the private key of your smart wallet, along with a password that will be used to encrypt it.
+
+3. Fetch the account by running:
+
+```terminal
+starkli account fetch \
+    <SMART_WALLET_ADDRESS> \
+    --output account.json \
+    --network=sepolia
+```
+
+
+## Troubleshooting
+
+### Starkli unable to detect shell
+
+**Procedure:**
+
+1. Detect whether your shell is `zsh` or `bash`:
+
+```terminal
+echo $SHELL
+```
+
+2. Add:
+
+```terminal
+. /Users/<NAME>/.starkli/env
+```
+
+to either `~/.zshrc` or `~/.bashrc`.
+
+3. Restart the terminal, and run either:
+
+```terminal
+source ~/.zshrc
+```
+
+or:
+
+```terminal
+source ~/.bashrc
+```
+
+### `scarb build` fails to run version command for Rust
+
+Starting from Scarb version 2.10 and Starknet Foundry version 0.37.0, Rust is longer required for projects with the following line in their `Scarb.toml` file:
+
+```cairo
+[tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]
+```
+
+If not all three conditions are met and Rust is not installed, running `scarb build` (and `scarb test`) will result in a compilation error. To resolve this, either update Scarb, Starknet Foundry, and your `Scarb.toml` file accordingly or [install Rust](https://www.rust-lang.org/tools/install).
+
+### `starkli declare` unable to identify compiler version
+
+When using `starkli declare`, Starkli will do its best to identify the compiler version of the declared class. In case it fails, the `--compiler-version` flag can be used to specify the version of the compiler.
+
+**Procedure:**
+
+1. Find the compiler versions supported by Starkli by running:
+
+```terminal
+starkli declare --help 
+```
+
+and looking for the possible values of the `--compiler-version` flag.
+
+2. Find the current Scarb version in use:
+
+```terminal
+scarb --version
+```
+
+3. In case a different compiler version is required, switch to a different Scarb version using `asdf`:
+
+   a. Install the desired Scarb version:
+
+   ```terminal
+   asdf install scarb <VERSION>
+   ```
+
+   b. Select the desired Scarb version as the local version for the project:
+
+   ```terminal
+   asdf set scarb <VERSION>
+   ```
