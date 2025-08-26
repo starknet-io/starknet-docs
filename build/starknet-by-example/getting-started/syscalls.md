@@ -168,7 +168,7 @@ fn replace_class_syscall(
 
 Upgrades the contract's code by replacing its class hash.
 
-This syscall is used in [Upgradeable Contract](../../applications/upgradeable_contract):
+This syscall is used in [Upgradeable Contract](../applications/upgradeable_contract):
 
 ```cairo
 // [!include ~/listings/applications/upgradeable_contract/src/upgradeable_contract_v0.cairo:upgrade]
