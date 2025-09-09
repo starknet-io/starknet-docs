@@ -1,0 +1,311 @@
+---
+title: "New file"
+description: "Description of your new file."
+---
+
+[**@starkgate/sdk**](../README.md)
+
+***
+
+[@starkgate/sdk](../README.md) / EthereumBridgeSDK
+
+# Class: EthereumBridgeSDK
+
+Defined in: [src/ethereum/EthereumBridgeSDK.ts:24](https://github.com/starkware-industries/starkgate-sdk/blob/2aed0db362523647b064349b005ce0be78456997/src/ethereum/EthereumBridgeSDK.ts#L24)
+
+SDK for interacting with Ethereum-side StarkGate bridge operations.
+Provides functionality for depositing tokens from Ethereum L1 to StarkNet L2.
+
+## Constructors
+
+### Constructor
+
+> **new EthereumBridgeSDK**(`params`): `EthereumBridgeSDK`
+
+Defined in: [src/ethereum/EthereumBridgeSDK.ts:35](https://github.com/starkware-industries/starkgate-sdk/blob/2aed0db362523647b064349b005ce0be78456997/src/ethereum/EthereumBridgeSDK.ts#L35)
+
+Creates a new EthereumBridgeSDK instance.
+
+#### Parameters
+
+##### params
+
+Configuration parameters
+
+###### ethereumProvider
+
+[`EIP1193Provider`](../type-aliases/EIP1193Provider.md)
+
+EIP-1193 compatible Ethereum provider (e.g., MetaMask, WalletConnect)
+
+###### network
+
+`"mainnet"` \| `"sepolia"`
+
+Network to connect to
+
+###### starknetProvider
+
+`RpcProvider`
+
+Starknet provider instance
+
+#### Returns
+
+`EthereumBridgeSDK`
+
+## Methods
+
+### createClaimWithdrawalTransaction()
+
+> **createClaimWithdrawalTransaction**(`params`): `Promise`\<`TransactionRequest`\>
+
+Defined in: [src/ethereum/EthereumBridgeSDK.ts:292](https://github.com/starkware-industries/starkgate-sdk/blob/2aed0db362523647b064349b005ce0be78456997/src/ethereum/EthereumBridgeSDK.ts#L292)
+
+Creates a transaction to claim a withdrawal of tokens from L2 to L1 after the L2 withdrawal transaction has been settled on L1
+see createInitiateWithdrawTransaction for the initial withdrawal transaction
+
+#### Parameters
+
+##### params
+
+Parameters for the withdrawal transaction
+
+###### amount
+
+`bigint`
+
+Amount of tokens to withdraw (in the token's smallest unit)
+
+###### l1Recipient?
+
+`` `0x${string}` ``
+
+L1 recipient address as a bigint
+
+###### token
+
+[`TokenInfo`](../interfaces/TokenInfo.md)
+
+Token information including L1/L2 addresses and bridge address
+
+#### Returns
+
+`Promise`\<`TransactionRequest`\>
+
+Promise resolving to an L1 transaction request to claim the withdrawal
+
+#### Example
+
+```typescript
+const sdk = new EthereumBridgeSDK({ provider });
+const transaction = await sdk.createClaimWithdrawalTransaction({ token: ethTokenInfo, amount: parseEther("1.0"), l1Recipient: "0x1234567890abcdefn" });
+// Send transaction using your preferred method
+```
+
+***
+
+### createDepositTransactions()
+
+> **createDepositTransactions**(`params`): `Promise`\<`TransactionRequest`[]\>
+
+Defined in: [src/ethereum/EthereumBridgeSDK.ts:124](https://github.com/starkware-industries/starkgate-sdk/blob/2aed0db362523647b064349b005ce0be78456997/src/ethereum/EthereumBridgeSDK.ts#L124)
+
+Prepares the transactions required to deposit tokens from L1 to L2 via the StarkGate bridge.
+Calculates the necessary ETH value for the deposit, and includes an ERC-20 approval transaction if needed.
+
+#### Parameters
+
+##### params
+
+Parameters for the deposit transaction
+
+###### amount
+
+`bigint`
+
+Amount of tokens to deposit (in the token's smallest unit)
+
+###### l2Recipient
+
+`bigint`
+
+L2 recipient address as a bigint
+
+###### sender
+
+`` `0x${string}` ``
+
+The address initiating the deposit (used for allowance checks)
+
+###### token
+
+[`TokenInfo`](../interfaces/TokenInfo.md)
+
+Token information, including L1/L2 addresses and bridge address
+
+#### Returns
+
+`Promise`\<`TransactionRequest`[]\>
+
+Promise resolving to an array of prepared transaction requests (approval first if required, then deposit)
+
+#### Example
+
+```typescript
+const sdk = new EthereumBridgeSDK({ provider });
+const transactions = await sdk.createDepositTransactions({
+  token: ethTokenInfo,
+  amount: parseEther("1.0"), // 1 ETH
+  l2Recipient: 0x1234567890abcdefn, // L2 address as bigint
+  sender: "0xYourAddress"
+});
+// Send transactions using your preferred method
+```
+
+***
+
+### createDepositWithMessageTransactions()
+
+> **createDepositWithMessageTransactions**(`__namedParameters`): `Promise`\<`TransactionRequest`[]\>
+
+Defined in: [src/ethereum/EthereumBridgeSDK.ts:165](https://github.com/starkware-industries/starkgate-sdk/blob/2aed0db362523647b064349b005ce0be78456997/src/ethereum/EthereumBridgeSDK.ts#L165)
+
+#### Parameters
+
+##### \_\_namedParameters
+
+###### amount
+
+`bigint`
+
+###### l2Recipient
+
+`bigint`
+
+###### message
+
+`RawCalldata`
+
+###### sender
+
+`` `0x${string}` ``
+
+###### token
+
+[`TokenInfo`](../interfaces/TokenInfo.md)
+
+#### Returns
+
+`Promise`\<`TransactionRequest`[]\>
+
+***
+
+### createInitiateWithdrawTransactions()
+
+> **createInitiateWithdrawTransactions**(`params`): `Promise`\<`Call`[]\>
+
+Defined in: [src/ethereum/EthereumBridgeSDK.ts:231](https://github.com/starkware-industries/starkgate-sdk/blob/2aed0db362523647b064349b005ce0be78456997/src/ethereum/EthereumBridgeSDK.ts#L231)
+
+Creates a transaction to initiate a withdrawal of tokens from L2 to L1 via the StarkGate bridge.
+To finalize the withdrawal after this transaction has been processed on L2 and settled on L1, either manally use [createClaimWithdrawalTransaction](#createclaimwithdrawaltransaction)
+or set autoWithdraw to true to additionally pay a small fee to a relayer (SpaceShard) service to automatically withdraw the tokens to the L1 recipient address once the withdrawal has been processed on L2 and settled on L1
+Note: for autowithdraw to work, you must have both Calls returned by this function in the same multi-call transaction, for an example see [https://github.com/0xSpaceShard/multicall-example/](https://github.com/0xSpaceShard/multicall-example/)
+
+#### Parameters
+
+##### params
+
+Parameters for the withdrawal transaction
+
+###### amount
+
+`bigint`
+
+Amount of tokens to withdraw (in the token's smallest unit)
+
+###### autoWithdraw?
+
+`boolean`
+
+###### autoWithdrawConfig?
+
+\{ `preferedFeeToken`: [`TokenInfo`](../interfaces/TokenInfo.md); \}
+
+###### autoWithdrawConfig.preferedFeeToken
+
+[`TokenInfo`](../interfaces/TokenInfo.md)
+
+###### l1Recipient
+
+`` `0x${string}` ``
+
+L1 recipient address as a bigint
+
+###### token
+
+[`TokenInfo`](../interfaces/TokenInfo.md)
+
+Token information including L1/L2 addresses and bridge address
+
+#### Returns
+
+`Promise`\<`Call`[]\>
+
+Promise resolving to an array of starknet transaction calls to initiate the withdrawal
+
+#### Params
+
+params.autoWithdraw - Whether to pay a relayer (SpaceShard) service to auto withdraw the tokens to the L1 recipient address
+
+#### Params
+
+params.autoWithdrawConfig - Configuration for auto withdrawal
+
+#### Params
+
+params.autoWithdrawConfig.preferedFeeToken - The L2 token to use for the relayer fee (ETH or STRK)
+
+#### Example
+
+```typescript
+const sdk = new EthereumBridgeSDK({ starknetProvider });
+const transaction = await sdk.createInitiateWithdrawTransaction({ token: ethTokenInfo, amount: parseEther("1.0"), l1Recipient: "0x1234567890abcdefn", autoWithdraw: true, autoWithdrawConfig: { preferedFeeToken: CommonEthereumMainnetTokens.ETH } });
+// Send transaction using your preferred method
+```
+
+***
+
+### estimateDepositFees()
+
+> **estimateDepositFees**(`params`): `Promise`\<\{ `amount`: `bigint`; `token`: [`TokenInfo`](../interfaces/TokenInfo.md); \}\>
+
+Defined in: [src/ethereum/EthereumBridgeSDK.ts:63](https://github.com/starkware-industries/starkgate-sdk/blob/2aed0db362523647b064349b005ce0be78456997/src/ethereum/EthereumBridgeSDK.ts#L63)
+
+Estimates the deposit fees required for bridging a token from L1 to L2.
+
+#### Parameters
+
+##### params
+
+Parameters for fee estimation
+
+###### token
+
+[`TokenInfo`](../interfaces/TokenInfo.md)
+
+Token information including bridge addresses
+
+#### Returns
+
+`Promise`\<\{ `amount`: `bigint`; `token`: [`TokenInfo`](../interfaces/TokenInfo.md); \}\>
+
+Promise resolving to fee estimation with amount in wei and token symbol
+
+#### Example
+
+```typescript
+const sdk = new EthereumBridgeSDK({ provider });
+const fees = await sdk.estimateDepositFees({ token: ethTokenInfo });
+console.log(`Fee: ${fees.amount} wei for ${fees.tokenSymbol}`);
+```
