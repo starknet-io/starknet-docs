@@ -6,6 +6,21 @@ title: "Version notes"
 You can get the latest updates delivered to your inbox by subscribing to the [Starknet Devs Newsletter](https://www.starknet.io/starknet-devs-newsletter/).
 </Tip>
 
+<Update label="Starknet v0.14.1 (TBD)">
+  Starknet v0.14.1 is scheduled to arrive on Testnet in TBD
+  
+  This version includes the following changes:
+
+  - Prover optimization: compiled class hashes will now be computed with the Blake hash function rather than Poseidon.
+    - Declare transactions will now expect `compiled_class_hash` to be [computed](https://github.com/starkware-libs/sequencer/blob/8b140e199e21e87d0480d1c0a8f34b419801c1af/crates/starknet_api/src/contract_class/compiled_class_hash.rs#L150) with the new hash function, and will be rejected otherwise
+    - Gradually, existing classes in the [state commitment](https://docs.starknet.io/learn/protocol/state#state-commitment) will migrate to the new computation. 
+    For every successful (i.e. non-reverted) transaction, the classes used throughout the transaction will be updated in the `class_hash` → `compiled_class_hash` trie.
+    - The changes in compiled class hashes will be applied at the end of the block. Note that the execution environment is unaware of compiled class hashes (system calls only specify class hash, never compiled class hash), thus these changes 
+    will not affect execution, only the resulting state root.
+    - The feeder gateway will add such classes whose compiled class hash was updated to the `declared_classes` list in the state update response.
+
+</Update>
+
 <Update label="Starknet v0.14.0 (September 1, '25)">
   Starknet v0.14.0 is live on Testnet and scheduled to be live on Mainnet on September 1st.
 
