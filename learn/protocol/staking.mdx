@@ -45,12 +45,12 @@ The following sections describe the details of Starknet's staking protocol. The 
 | ------------------------------------------- | ------------ | ------------ |
 | Minimum stake for validators                | 20K STRK     | 1 STRK       |
 | Effective inflation coefficient ($\hat{C}$) | 1.6%         | 1.6%         |
-| Withdrawal security lockup                  | 21 days      | 5 minutes    |
+| Withdrawal security lockup                  | 7 days       | 5 minutes    |
 | Epoch length ($E$)                          | 120 blocks   | 231 blocks   |
 | Epoch duration                              | 3600 seconds | 1200 seconds |
 | Attestation window ($W$)                    | 30 blocks    | 30 blocks    |
 | Number of epochs used for latency ($k$)     | 1 epoch      | 1 epoch      |
-| Weight of BTC in staking power ($\alpha$)   | N/A          | 0.25         |
+| Weight of BTC in staking power ($\alpha$)   | 0.25         | 0.25         |
 
 ### Roles
 
@@ -123,11 +123,11 @@ $$
 where:
 
 - $\hat{C}$ is the effective inflation coefficient
-- $\sigma$ is the percentage of STRK staked out of total STRK supply
+- $\sigma$ is the percentage of STRK staked out of the total STRK supply
 
 Annual reward percentages (APR) can therefore be calculated using the following formulas:
 
-- For STRK: $100 \cdot \frac{M}{\sigma}$
+- For STRK: $100 \cdot \frac{M}{\sigma} \cdot (1-\alpha)$
 - For BTC: $(\alpha \cdot T \cdot \frac{M}{100} \cdot \frac{\text{STRK price}}{\text{BTC price}}) / B$
 
 where:
@@ -138,7 +138,7 @@ where:
 Rewards are distributed per epoch to validators in proportion to their staking power only if they performed their attestations in the epoch, on an "all or nothing" basis (i.e., validators that submitted a transaction during the epoch that proves they tracked the network will receive all the rewards for the epoch based on their staked amount, while validators that didn't will get no rewards for the epoch's entire duration). Rewards that go directly to the validator will accumulate in their account, and the rest will accumulate for delegators according to their share in the pool.
 
 <Note>
-  [As previously described](#epochs), stakers that enter the protocol on epoch $i$ will start getting rewards only on epoch $i+k$, and stakers that signal an intent to exit the protocol on epoch $i$ will still get rewards until epoch $i+k-1$.
+  [As previously described](#epochs), stakers that enter the protocol on epoch $i$ will start getting rewards only on epoch $i+k$, and stakers that signal an intent to exit the protocol on epoch $i$ will still get rewards until epoch $i$.
 </Note>
 
 ### Commissions
@@ -151,7 +151,7 @@ Starting from its second phase, the staking protocol allows validators to increa
 
 The following latencies are set in place:
 
-- To disincentivise sudden large withdrawals that could destabilize the network, funds are subject to a 21-day lockup after signaling an unstake intent, during which no rewards are earned and funds cannot be withdrawn.
+- To disincentivise sudden large withdrawals that could destabilize the network, funds are subject to a 7-day lockup after signaling an unstake intent, during which no rewards are earned and funds cannot be withdrawn.
 - Starting from the second phase of the protocol, to prevent delegator from switching too quickly between validators while still promoting a competitive delegation market, a switch intent that is signaled on epoch $i$ takes effect only on epoch $i+1$.
 
 ### Addresses
