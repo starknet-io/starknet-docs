@@ -1,0 +1,35 @@
+---
+title: "Technical Overview"
+---
+
+# Technical Overview
+
+As shown in an earlier section (refer to [Components](../../air-development/components/index)), Stwo represents the trace using multiple tables where each table is referred to as a _component_. An AIR in Stwo is a collection of multiple components. Components can interact with one another, and the consistency of these interactions is verified using [_logUp_](https://eprint.iacr.org/2022/1530.pdf). 
+
+For example, in the [hash function example](../../air-development/components/index.mdx#hash-function-example), the scheduling component and computing component interact with each other, where both the components lookup the input and output pair. The consistency of this interaction is then verified by adding logUp constraints to each component.
+
+Each component consists of a trace table of a specific height along with a set of constraints. These constraints include computation constraints as well as lookup constraints (refer to [Lookups](../lookups)).
+
+This section provides an overview of how these components are converted into a composition polynomial. This composition polynomial is then used by a polynomial commitment scheme to commit and generate evaluation proofs.
+
+## AIR to Composition Polynomial
+
+This section explains how a composition polynomial is computed using an example.
+
+Consider an AIR composed of two components with trace tables: $\mathscr{T}_0$ and $\mathscr{T}_1$. The component table $\mathscr{T}_0$ is defined over the trace domain $D_{n_0}$, which is a [canonic coset](../circle-group.mdx#canonic-coset) of size $N_0 = 2^{n_0}$. Similarly, component table $\mathscr{T}_1$ is defined over the trace domain $D_{n_1}$ of size $N_1 = 2^{n_1}$.
+
+The prover interpolates the trace polynomials for each component and then evaluates the trace polynomials over an evaluation domain that is a blowup factor $B = 2^\beta$ times larger than the trace domain. Thus, the evaluation domain for component table $\mathscr{T}_0$ is $D_{n_0 + \beta}$ of size $2^{n_0 + \beta}$. Similarly, the evaluation domain for component table $\mathscr{T}_1$ is $D_{n_1 + \beta}$ of size $2^{n_1 + \beta}$. Both interpolation and evaluation use [circle FFT](../circle-fft/index). The prover then commits to the evaluations of trace polynomials from all components using a single [Merkle tree](../vcs/index).
+
+Both component tables define computation constraints and lookup constraints for their specific component. The component constraints are proven table-wise, each with its separate domain quotient, which are then combined into a single cross-domain composition polynomial. Suppose the component tables $\mathscr{T}_0$ and $\mathscr{T}_1$ have a total of $c_0$ and $c_1$ constraints, respectively.
+
+The verifier sends $\gamma \in \mathsf{QM31}$ to the prover. We use the same $\gamma$ to combine all constraints across different component tables. First, $\gamma$ is used to compute the random linear combination of all constraints on component $\mathscr{T}_0$ to obtain the component-level composition polynomial $p_0$. Then, the prover uses the same $\gamma$ to compute the component-level composition polynomial $p_1$ for component $\mathscr{T}_1$.
+
+The prover then computes the quotient for component table $\mathscr{T}_0$ as $q_0 = p_0 / v_{n_0}$, where $v_{n_0}$ is the vanishing polynomial for trace domain $D_{n_0}$. Similarly, the prover computes the quotient for component table $\mathscr{T}_1$ as $q_1 = p_1 / v_{n_1}$.
+
+Finally, the prover computes the cross-domain composition polynomial as
+$$
+q = q_0 + \gamma^{c_0} \cdot q_1
+$$
+where $c_0$ is the total number of constraints of the component table $\mathscr{T}_0$.
+
+The next section examines how these concepts are implemented.

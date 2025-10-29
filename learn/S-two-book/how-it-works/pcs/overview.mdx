@@ -1,0 +1,80 @@
+---
+title: "Technical Overview"
+---
+
+# Technical Overview
+
+
+In this section, we describe a polynomial commitment scheme using the FRI protocol covered in the previous section.
+
+## Polynomial Commitment Scheme
+
+
+A polynomial commitment scheme (PCS) allows a prover to commit to a polynomial and later prove its evaluations at points chosen by the verifier. The verifier can then check that the evaluations are consistent with the committed polynomial. It consists of the following three algorithms:
+
+
+- $setup(d) \rightarrow pp$: Given an upper bound $d$ on the degree, it outputs public parameters $pp$ used to commit to polynomials of degree less than $d$. For STARKs, the public parameters include the hash functions used for the Merkle commitment scheme and the FRI protocol parameters.
+
+
+- $commit(pp, f) \rightarrow com_f$: Takes public parameters $pp$ and a polynomial $f$ of degree $< d$, and outputs a commitment $com_f$ to the polynomial. For STARKs, $com_f$ is the root of the Merkle tree which commits to the evaluations of the polynomial $f$ on the evaluation domain.
+
+  
+- $open(\mathcal{P}, \mathcal{V}) \rightarrow 0/1$: An interactive protocol where the prover $\mathcal{P}$ convinces the verifier $\mathcal{V}$ that $f(u) = v$. The verifier outputs 1 (accept) or 0 (reject). For STARKs, this protocol is based on FRI. The verifier will ask the prover to open the polynomial $f$ (committed using the Merkle tree) at point $u$. The prover will send the opening $v$ and define the quotient:
+$$
+q(x) = \frac{f(x) - v}{x - u}
+$$
+
+If the prover sends the correct opening, then $q$ will be a polynomial of bounded degree. The prover then uses the FRI protocol to convince the verifier that $q$ is "close" to some polynomial with a pre-specified degree bound.
+
+
+For Stwo, we have already described the $commit$ protocol, which evaluates the circle polynomial over a canonical coset and commits to those evaluations using a Merkle tree. The $open$ protocol follows the same idea as the univariate case discussed above, but it is slightly different, as described next.
+
+
+In Stwo, instead of using the single-point opening as described above, we have two-point openings for the values at point $Q$ and its conjugate $\overline{Q}$. The protocol proceeds as follows:
+
+1. The verifier first receives a Merkle commitment to the evaluations of the original polynomial $f$.
+2. The verifier samples a circle point $Q \in C(\mathsf{QM31}) \setminus C(\mathsf{M31})$ and requests the evaluation $f(Q)$ from the prover.
+3. The prover sends the purported value $V$, and then both prover and verifier engage in the FRI protocol on the quotient:
+
+    $$
+    q(x, y) = \frac{f(x, y) - l_{Q,V}(x, y)}{v_Q(x, y)}
+    $$
+
+    Here, $l_{Q,V}(x, y)$ is the linear polynomial interpolating $(Q, V)$ and $(\overline{Q}, \overline{V})$, while $v_Q(x, y)$ vanishes at $Q$ and its conjugate $\overline{Q}$. As in the univariate case, if $q(x, y)$ is "close" to a polynomial, then the verifier is convinced that the evaluation claim is correct, i.e., that $f(Q) = V$.
+
+
+In the above protocol, we are opening the polynomial at a single point $Q$. To open the polynomial at multiple points, we batch the quotients of each point using a random linear combination and then apply the FRI protocol to a single batched quotient.
+
+
+One key property of a polynomial commitment scheme is binding. Informally, the binding property states that once the prover commits to a polynomial, they cannot open some other polynomial which outputs a different evaluation. For STARKs, the binding property is closely related to out-of-domain sampling, which we will describe next.
+
+## Out of Domain Sampling
+
+
+Out-of-domain sampling relates to the notion of "closeness" described in the [FRI section](../circle-fri/overview.mdx#introduction). Informally, the FRI protocol tests whether a function provided by the prover is "close" to some bounded degree polynomial. There are two notions of "closeness":
+
+1. **Unique Decoding Regime**: We operate in this regime if there is at most a single polynomial which is "close" to the function provided by the prover. If the function is "close" to a single polynomial, then we can infer that the function represents that _unique_ polynomial.
+2. **List Decoding Regime**: We operate in this regime if there is a list of polynomials which are "close" to the function provided by the prover. In this case, since the function can be "close" to a _list_ of polynomials, we cannot be sure that it represents a unique polynomial.
+
+
+In practice, we are usually operate in the list decoding regime. So there can be multiple polynomials which are "close" to the function provided by the prover. This affects the binding property of the polynomial commitment scheme, since the function sent by the prover represents a list of polynomials rather than some unique polynomial.
+
+
+To bind the prover to a unique polynomial from the list, we ask the prover to open the polynomial at an out-of-domain point. This is also referred to as _Domain Extension for Eliminating Pretenders_ (or the _DEEP method_). This is the informal motivation for out-of-domain sampling. For more details, please refer to ["A summary on the FRI low degree test"](https://eprint.iacr.org/2022/1216.pdf).
+
+
+As we have seen in the [Security Analysis section](../circle-fri/overview.mdx#security-analysis), we can improve security by increasing the number of verifier queries. But this will lead to more prover work, because the prover will have to send a Merkle decommitment for each verifier query and also increase the proof size. We will now see a method to increase the security of our protocol without significantly increasing the prover's work.
+
+## Proof of Work
+
+
+The key idea is that rather than increasing the number of verifier queries, we can increase the cost of generating a false proof by a malicious prover by using _proof of work_ or _grinding_.
+
+
+We add an additional requirement to the FRI protocol: following all the commitments made by the prover, the prover must find a 64-bit nonce that, when hashed together with the state of the hash chain, results in a required number of leading zeros. The number of leading zeros defines a certain amount of work that the prover must perform before generating the randomness representing the queries. As a result, a malicious prover that attempts to generate favorable queries will need to repeat the grinding process every time a commitment is changed. On the other hand, an honest prover only needs to perform the grinding process once.
+
+
+This is similar to the grinding performed on many blockchains. The nonce found by the prover is sent to the verifier as part of the proof, and in turn the verifier checks its consistency with the state of the hash chain by running the hash function once. The required number of leading zeros is configured by the `pow_bits` parameter.
+
+
+This effectively reduces the computational power of the cheating prover while only slightly increasing the running time of the honest prover. This is because the honest prover needs to solve the proof-of-work once, while a cheating prover, during the long process of trying to find a false proof, would need to solve many different instances of the proof-of-work.

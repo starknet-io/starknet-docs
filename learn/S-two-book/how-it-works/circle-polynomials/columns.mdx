@@ -1,0 +1,79 @@
+---
+title: "Columns"
+---
+
+# Columns
+
+In Stwo, the computation trace is represented using multiple columns, each containing elements from the Mersenne prime field $\mathsf{M31}$. The columns are defined via the `Column<T>` trait, where `T` is typically `BaseField` (an alias for `M31`).
+
+```rust
+pub trait Column<T>: Clone + Debug + FromIterator<T> {
+    /// Creates a new column of zeros with the given length.
+    fn zeros(len: usize) -> Self;
+    /// Creates a new column of uninitialized values with the given length.
+    /// # Safety
+    /// The caller must ensure that the column is populated before being used.
+    unsafe fn uninitialized(len: usize) -> Self;
+    /// Returns a cpu vector of the column.
+    fn to_cpu(&self) -> Vec<T>;
+    /// Returns the length of the column.
+    fn len(&self) -> usize;
+    /// Returns true if the column is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    /// Retrieves the element at the given index.
+    fn at(&self, index: usize) -> T;
+    /// Sets the element at the given index.
+    fn set(&mut self, index: usize, value: T);
+}
+```
+
+The operations over a column such as bit reversal of elements is provided using the `ColumnOps<T>` trait, which also implements the type alias `Col<B, T>` to conveniently represent a column.
+
+```rust
+pub trait ColumnOps<T> {
+    type Column: Column<T>;
+    fn bit_reverse_column(column: &mut Self::Column);
+}
+
+pub type Col<B, T> = <B as ColumnOps<T>>::Column;
+```
+
+<Callout type="info">
+Stwo defines a `Backend` trait, with two main implementations: `CpuBackend` and `SimdBackend`. The `SimdBackend` offers optimized routines for hardware supporting SIMD instructions, while `CpuBackend` provides a straightforward reference implementation.
+
+Each backend implements the `ColumnOps` trait. Here and in the following sections, we will describe the trait implementations for the `CpuBackend`.
+</Callout>
+
+The `ColumnOps<T>` trait is implemented for the `CpuBackend` as follows:
+```rust
+impl<T: Debug + Clone + Default> ColumnOps<T> for CpuBackend {
+    type Column = Vec<T>;
+
+    fn bit_reverse_column(column: &mut Self::Column) {
+        bit_reverse(column)
+    }
+}
+```
+Here, `bit_reverse` performs a naive bit-reversal permutation on the `column`.
+
+## Secure Field Columns
+
+An element of the secure field (`SecureField` = `QM31`) cannot be stored in a single `BaseField` column because it is a quartic extension of `M31`. Instead, each secure field element is represented by four base field coordinates and stored in four consecutive columns.
+
+```rust
+pub struct SecureColumnByCoords<B: ColumnOps<BaseField>> {
+    pub columns: [Col<B, BaseField>; SECURE_EXTENSION_DEGREE],
+}
+```
+
+Here, `SECURE_EXTENSION_DEGREE` is the extension degree of `QM31` i.e. 4. You can think of each row of the 4 columns containing a single element of the `SecureField`. Thus accessing an element by index reconstructs it from its base field coordinates, implemented as follows:
+
+```rust
+    pub fn at(&self, index: usize) -> SecureField {
+        SecureField::from_m31_array(std::array::from_fn(|i| self.columns[i].at(index)))
+    }
+```
+
+Now that we know how columns are represented, we can explore their use in storing evaluations over the circle domain and in interpolating polynomials.

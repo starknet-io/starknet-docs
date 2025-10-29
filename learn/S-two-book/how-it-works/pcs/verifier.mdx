@@ -1,0 +1,153 @@
+---
+title: "Polynomial Commitment Scheme Verifier"
+---
+
+# Polynomial Commitment Scheme Verifier
+
+
+In this section, we describe the implementation of the polynomial commitment scheme verifier.
+
+## Commitment Scheme Verifier
+
+
+The `CommitmentSchemeVerifier` struct manages the verification process for the polynomial commitment scheme. It maintains a collection of [Merkle verifiers](../vcs/merkle_verifier) (one for each commitment tree) and the protocol configuration.
+```rust
+pub struct CommitmentSchemeVerifier<MC: MerkleChannel> {
+    pub trees: TreeVec<MerkleVerifier<MC::H>>,
+    pub config: PcsConfig,
+}
+```
+
+
+We will now see some key functions defined for the `CommitmentSchemeVerifier` struct.
+
+### Read Commitments
+
+The `commit` function reads a Merkle root from the prover and initializes a `MerkleVerifier` for the committed columns. It is implemented as follows:
+```rust
+    pub fn commit(
+        &mut self,
+        commitment: <MC::H as MerkleHasher>::Hash,
+        log_sizes: &[u32],
+        channel: &mut MC::C,
+    ) {
+        MC::mix_root(channel, commitment);
+        let extended_log_sizes = log_sizes
+            .iter()
+            .map(|&log_size| log_size + self.config.fri_config.log_blowup_factor)
+            .collect();
+        let verifier = MerkleVerifier::new(commitment, extended_log_sizes);
+        self.trees.push(verifier);
+    }
+```
+
+### Verify
+
+
+The `verify_values` function is the core of the verification protocol. It checks that the prover's openings at the sampled points are consistent with the commitments and that the committed polynomials are of low degree via the FRI protocol. It is implemented as follows:
+```rust
+    pub fn verify_values(
+        &self,
+        sampled_points: TreeVec<ColumnVec<Vec<CirclePoint<SecureField>>>>,
+        proof: CommitmentSchemeProof<MC::H>,
+        channel: &mut MC::C,
+    ) -> Result<(), VerificationError> {
+        channel.mix_felts(&proof.sampled_values.clone().flatten_cols());
+        let random_coeff = channel.draw_secure_felt();
+
+        let bounds = self
+            .column_log_sizes()
+            .flatten()
+            .into_iter()
+            .sorted()
+            .rev()
+            .dedup()
+            .map(|log_size| {
+                CirclePolyDegreeBound::new(log_size - self.config.fri_config.log_blowup_factor)
+            })
+            .collect_vec();
+
+        // FRI commitment phase on OODS quotients.
+        let mut fri_verifier =
+            FriVerifier::<MC>::commit(channel, self.config.fri_config, proof.fri_proof, bounds)?;
+
+        // Verify proof of work.
+        channel.mix_u64(proof.proof_of_work);
+        if channel.trailing_zeros() < self.config.pow_bits {
+            return Err(VerificationError::ProofOfWork);
+        }
+
+        // Get FRI query positions.
+        let query_positions_per_log_size = fri_verifier.sample_query_positions(channel);
+
+        // Verify merkle decommitments.
+        self.trees
+            .as_ref()
+            .zip_eq(proof.decommitments)
+            .zip_eq(proof.queried_values.clone())
+            .map(|((tree, decommitment), queried_values)| {
+                tree.verify(&query_positions_per_log_size, queried_values, decommitment)
+            })
+            .0
+            .into_iter()
+            .collect::<Result<(), _>>()?;
+
+        // Answer FRI queries.
+        let samples = sampled_points.zip_cols(proof.sampled_values).map_cols(
+            |(sampled_points, sampled_values)| {
+                zip(sampled_points, sampled_values)
+                    .map(|(point, value)| PointSample { point, value })
+                    .collect_vec()
+            },
+        );
+
+        let n_columns_per_log_size = self.trees.as_ref().map(|tree| &tree.n_columns_per_log_size);
+
+        let fri_answers = fri_answers(
+            self.column_log_sizes(),
+            samples,
+            random_coeff,
+            &query_positions_per_log_size,
+            proof.queried_values,
+            n_columns_per_log_size,
+        )?;
+
+        fri_verifier.decommit(fri_answers)?;
+
+        Ok(())
+    }
+```
+
+
+
+Here is a detailed breakdown:
+
+1. **Mix Sampled Values into the Fiat-Shamir Channel**:
+   - The verifier mixes the `sampled_values` (openings at the queried points) into the Fiat-Shamir channel, ensuring that all subsequent randomness is bound to these values.
+
+2. **Draw Random Coefficient**:
+   - The verifier draws a `random_coeff` from the channel, which is used to combine the quotient polynomials in the FRI protocol.
+
+3. **Determine Degree Bounds**:
+   - The verifier computes the degree `bounds` for each column, based on the log sizes and the protocol's blowup factor. These bounds are used to configure the FRI verifier.
+
+4. **FRI Commitment Phase**:
+   - The verifier initializes the `fri_verifier` with the FRI protocol configuration, the FRI proof from the prover, and the degree bounds.
+
+5. **Verify Proof of Work**:
+   - The verifier checks the `proof_of_work` value provided by the prover using the `pow_bits` in the PCS config.
+
+6. **Sample FRI Query Positions**:
+   - The verifier uses the channel to generate random `query_positions_per_log_size` for the FRI protocol.
+
+7. **Verify Merkle Decommitments**:
+   - For each commitment tree, the verifier checks that the Merkle decommitments at the queried positions are valid and that the opened values match the commitments.
+
+8. **Prepare FRI Query Answers**:
+   - The verifier assembles the answers to the FRI queries by matching the sampled points and values, and prepares them for the FRI verifier.
+
+9. **FRI Decommitment Phase**:
+   - The verifier provides the FRI query answers to the FRI verifier, which checks that the quotient polynomials are of low degree.
+
+10. **Return Verification Result**:
+   - If all checks pass, the function returns `Ok(())`. If any check fails (e.g., Merkle decommitment, proof of work, or FRI check), it returns an appropriate error.

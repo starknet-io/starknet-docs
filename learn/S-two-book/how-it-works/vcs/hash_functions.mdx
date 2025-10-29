@@ -1,0 +1,115 @@
+---
+title: "Hash Functions"
+---
+
+
+# Hash Functions
+
+This section describes the traits and implementations of hash functions used in the Merkle commitment scheme. Stwo supports two hash functions: **BLAKE2s-256** and **Poseidon252**. Here, we focus on the implementation for BLAKE2s-256; Poseidon252 is implemented similarly (see [Poseidon reference](https://docs.starknet.io/learn/protocol/cryptography#poseidon-hash)).
+
+
+## MerkleHasher Trait
+
+The `MerkleHasher` trait defines the interface for hash functions used in Merkle trees. Its main function, `hash_node`, computes the hash of a node from its children and (optionally) column values:
+
+```rust
+pub trait MerkleHasher: Debug + Default + Clone {
+    type Hash: Hash;
+    /// Hashes a single Merkle node. See [MerkleHasher] for more details.
+    fn hash_node(
+        children_hashes: Option<(Self::Hash, Self::Hash)>,
+        column_values: &[BaseField],
+    ) -> Self::Hash;
+}
+```
+
+### Implementation for BLAKE2s-256 
+
+The `MerkleHasher` implementation for BLAKE2s-256 uses a wrapper struct `Blake2sHash`:
+
+```rust
+pub struct Blake2sHash(pub [u8; 32]);
+```
+
+The trait implementation is provided by `Blake2sMerkleHasher`:
+
+```rust
+pub struct Blake2sMerkleHasher;
+impl MerkleHasher for Blake2sMerkleHasher {
+    type Hash = Blake2sHash;
+
+    fn hash_node(
+        children_hashes: Option<(Self::Hash, Self::Hash)>,
+        column_values: &[BaseField],
+    ) -> Self::Hash {
+        let mut hasher = Blake2s256::new();
+
+        if let Some((left_child, right_child)) = children_hashes {
+            hasher.update(left_child);
+            hasher.update(right_child);
+        }
+
+        for value in column_values {
+            hasher.update(value.0.to_le_bytes());
+        }
+
+        Blake2sHash(hasher.finalize().into())
+    }
+}
+```
+
+In this Merkle tree implementation, node hashes are computed using both the children hashes and the column values. This differs from standard Merkle trees, where node hashes typically depend only on the children. More details are discussed in the next sections.
+
+## MerkleOps Trait
+
+The `MerkleOps` trait defines Merkle tree operations for a commitment scheme, parameterized by a `MerkleHasher`. Its main function, `commit_on_layer`, takes the previous layer's hashes and the current layer's column values to generate the hashes for the next layer:
+
+```rust
+pub trait MerkleOps<H: MerkleHasher>:
+    ColumnOps<BaseField> + ColumnOps<H::Hash> + for<'de> Deserialize<'de> + Serialize
+{
+    /// Commits on an entire layer of the Merkle tree.
+    /// See [MerkleHasher] for more details.
+    ///
+    /// The layer has 2^`log_size` nodes that need to be hashed. The topmost layer has 1 node,
+    /// which is a hash of 2 children and some columns.
+    ///
+    /// `prev_layer` is the previous layer of the Merkle tree, if this is not the leaf layer.
+    /// That layer is assumed to have 2^(`log_size`+1) nodes.
+    ///
+    /// `columns` are the extra columns that need to be hashed in each node.
+    /// They are assumed to be of size 2^`log_size`.
+    ///
+    /// Returns the next Merkle layer hashes.
+    fn commit_on_layer(
+        log_size: u32,
+        prev_layer: Option<&Col<Self, H::Hash>>,
+        columns: &[&Col<Self, BaseField>],
+    ) -> Col<Self, H::Hash>;
+}
+```
+
+### Implementation for BLAKE2s-256
+
+The `MerkleOps<Blake2sMerkleHasher>` trait implementation for the `CpuBackend` is as follows:
+
+```rust
+impl MerkleOps<Blake2sMerkleHasher> for CpuBackend {
+    fn commit_on_layer(
+        log_size: u32,
+        prev_layer: Option<&Vec<Blake2sHash>>,
+        columns: &[&Vec<BaseField>],
+    ) -> Vec<Blake2sHash> {
+        (0..(1 << log_size))
+            .map(|i| {
+                Blake2sMerkleHasher::hash_node(
+                    prev_layer.map(|prev_layer| (prev_layer[2 * i], prev_layer[2 * i + 1])),
+                    &columns.iter().map(|column| column[i]).collect_vec(),
+                )
+            })
+            .collect()
+    }
+}
+```
+
+In the next section, we will use these hash function implementations to describe the prover of the Merkle commitment scheme.

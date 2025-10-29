@@ -1,0 +1,127 @@
+---
+title: "Technical Overview"
+---
+
+# Technical Overview
+
+
+In this section, we describe a multi-table variant of the _circle FRI_ low degree test. This variant supports domains of different sizes, thereby avoiding excessive padding overhead.
+
+This section does not provide a detailed analysis of how FRI works, but instead focuses on the protocol as implemented in Stwo. Analyzing soundness and explaining why FRI works is out of scope. Interested readers are advised to consult ["A summary on the FRI low degree test"](https://eprint.iacr.org/2022/1216.pdf).
+
+## Introduction
+
+
+Circle FRI tests the proximity of a function $f \in F^D$ over a [canonical coset](../circle-group.mdx#canonic-coset) $D$ of size $|D|=2^{n + \beta}$ to some polynomial $p(x, y)$ from the [polynomial space](../circle-fft/basis.mdx#dimension-gap) $L'_n(F)$. The function $f \in F^D$ is represented as a vector of evaluations over the domain $D$.
+
+Here:
+- $F$ is a field extension of $\mathsf{M31}$
+- $\beta$ is the log of blowup $B = 2^\beta$
+- $L'_n(F)$ is the space of polynomials interpolated by circle FFT, defined as follows:
+$$
+L'_n(F) = F[x]^{< 2^{n-1}} + y \cdot F[x]^{< 2^{n-1}}
+$$
+Let $\mathcal{L}_{n-1}(F) = F[x]^{< 2^{n-1}}$, then we can represent $L'_n(F)$ as:
+$$
+L'_n(F) = \mathcal{L}_{n-1}(F) + y \cdot \mathcal{L}_{n-1}(F)
+$$
+
+> **Why check proximity to a polynomial?**
+>
+> The prover sends evaluations of a function to the verifier. However, the verifier does not know if this function is a polynomial, or if it satisfies a pre-specified degree bound. FRI allows the verifier to check that the evaluations sent by the prover are indeed "close" to some polynomial of bounded degree. Here, the verifier only checks for proximity; that is, the verifier accepts even if the evaluations sent by the prover are "close enough" to those of a polynomial of bounded degree. Thus, the evaluations sent by the prover need not be exactly equal to evaluations of some polynomial of bounded degree.
+
+In Stwo, we can represent the trace over multiple tables, with each trace table defined for a domain of different size. Thus, we are interested in circle FRI for the multi-table setting. We will now see an adaptation of circle FRI for the multi-table setting using an example. Consider three functions: $h_{0}$ defined over the domain $H_0$, $h_{1}$ defined over the domain $H_1$, and $h_{2}$ defined over the domain $H_2$:
+$$
+h_{0} \in F^{H_0} \quad, \quad h_{1} \in F^{H_1} \quad, \quad h_{2} \in F^{H_2}
+$$
+
+The domains $H_0, H_1$, and $H_2$ are canonical cosets which form a chain using the squaring map $\pi$:
+$$
+H_0 \xrightarrow{\pi} H_1 \xrightarrow{\pi} H_2
+$$
+Suppose for the sake of our example, for $i$ in $\{0,1,2\}$ the domain $H_i = D_{3-i + \beta}$, where $D_{3-i + \beta}$ is a canonical coset of size $2^{3-i + \beta}$. For each $i$ in $\{0,1,2\}$, we need to check that the functions $h_{i} \in F^{H_i}$ are "close" to the polynomial space $L'_{3-i}(F)$. For example, for $i=0$, we need to check that the function $h_{0}$ defined over $H_0 = D_{3 + \beta}$ is close to the polynomial space $L'_{3}(F)$.
+
+Circle FRI follows a similar divide-and-conquer strategy as the [Circle FFT](../circle-fft/algorithm) algorithm. The prover recursively decomposes the functions and folds the odd and even parts using randomness sent by the verifier. This reduction continues until the proximity test of the folded function to the polynomial space is small enough for the verifier to check directly; in this case, the prover sends the folded function directly to the verifier.
+
+We reduce the functions up to folded functions evaluated over a domain $H_r$. For the sake of our example, consider $r=2$. Then the sequence of domains for circle FRI in the multi-domain setting is as follows:
+<div style={{ textAlign: 'center' }}>
+    ![](../figures/fri-domains.svg)
+
+*Figure 1: Sequence of domains for Circle FRI*
+</div>
+
+As shown in the above diagram, we use two different maps, as in the circle FFT algorithm: the projection map $\pi_x$ and the squaring map $\pi$. Here, $I_i$ is the "line" domain; for every $i$ in $\{0,1,2\}$, $I_i = S_{3-i}$, where $S_{3-i}$ is the "line" domain of size $|S_{3-i}| = |D_{3-i}| / 2 = 2^{2-i+\beta}$.
+
+Using circle FRI, the prover will prove proximity of functions $h_{0}$ to polynomial space $L'_3(F)$, $h_{1}$ to space $L'_2(F)$, and $h_{2}$ to space $L'_1(F)$ by reducing these three checks into a single check i.e. checking proximity of function $g_2$ to the polynomial space $\mathcal{L}_0(F)$. The verifier will have oracle access to the evaluations $h_{0} \in F^{H_0}$, $h_{1} \in F^{H_1}$, $h_{2} \in F^{H_2}$. The protocol proceeds as follows.
+
+## Protocol
+
+1. _Commit phase_: Consists of $r+1 = 3$ rounds.
+    - **Round 0**: The prover will decompose the function $h_0$ over the domain $H_0$ into two functions $h_{0,0}\;,\; h_{0,1}$ over the domain $I_0$ as follows
+    $$
+    h_0(x, y) = h_{0,0}(x) + y \cdot h_{0,1}(x)
+    $$
+    The prover will find the evaluations of functions $h_{0,0}\;,\; h_{0,1}$ over the domain $I_0$ using the evaluations of $h_0$ over domain $H_0$ as follows:
+    $$
+    h_{0,0}(x) = \frac{h_0(x,y)+h_0(x,-y)}{2} \quad, \quad h_{0,1}(x) = \frac{h_0(x,y)-h_0(x,-y)}{2y}.
+    $$
+    Note that this decomposition and the process of finding evaluations of the decomposed functions is very similar to the circle FFT algorithm. Now the prover will fold the evaluations of $h_{0,0}$ and $h_{0,1}$ over the domain $I_0$ using the randomness $\lambda_0 \xleftarrow{\$} F$ from the verifier as follows:
+    $$
+    g_0(x) = {\lambda_0}^2 \cdot (h_{0,0}(x) + \lambda_0 \cdot h_{0, 1}(x))
+    $$
+    The prover commits and gives the verifier oracle access to the evaluations $g_0 \in F^{I_0}$.
+    - **Round 1**: The prover will decompose the function $h_1$ over the domain $H_1$ into two functions $h_{1,0}\;,\; h_{1,1}$ over the domain $I_1$, same as the decomposition of $h_0$ in **Round 0**. The prover will also decompose the function $g_0$ over domain $I_0$ into two functions $g_{0,0}$ and $g_{0,1}$ over the domain $I_1$ as follows:
+    $$
+    g_0(x) = g_{0,0}(2x^2 - 1) + x \cdot g_{0,1}(2x^2 - 1)
+    $$
+    The prover will find the evaluations of functions $g_{0,0}$ and $g_{0,1}$ over the domain $I_1$ using the evaluations of $g_0$ over domain $I_0$ as follows:
+    $$
+    g_{0,0}(2x^2 - 1) = \frac{g_0(x)+g_0(-x)}{2} \quad, \quad g_{0,1}(2x^2 - 1) = \frac{g_0(x)-g_0(-x)}{2x}.
+    $$
+    Now the prover will fold the evaluations of $h_{1,0}$, $h_{1,1}$, $g_{0,0}$, and $g_{0,1}$ over the domain $I_1$ using the randomness $\lambda_1 \xleftarrow{\$} F$ from the verifier as follows:
+    $$
+    g_1(x) = g_{0,0}(x) + \lambda_1 \cdot g_{0, 1}(x) + \lambda_1^2 \cdot (h_{1,0}(x) + \lambda_1 \cdot h_{1,1}(x))
+    $$
+    The prover commits and gives the verifier oracle access to the evaluations $g_1 \in F^{I_1}$.
+    - **Round 2**: This round is very similar to **Round 1**. The prover will decompose $h_2$ into $h_{2,0}$ and $h_{2,1}$, then decompose the function $g_1$ into $g_{1,0}$ and $g_{1,1}$. Then fold all their evaluations as follows:
+    $$
+    g_2(x) = g_{1,0}(x) + \lambda_2 \cdot g_{1, 1}(x) + \lambda_2^2 \cdot (h_{2,0}(x) + \lambda_2 \cdot h_{2,1}(x))
+    $$
+    This is the final round, so the prover will send $g_2(x) \in F^{I_2}$ to the verifier in plain.
+
+    Let us describe the protocol for the general case. In each round $i = \{0, \dots, r\}$, the prover has previous evaluations $g_{i-1} \in F^{I_{i-1}}$ (for round $i = 0$ we take $g_{-1} = 0$). The verifier sends $\lambda_i \xleftarrow{\$} F$ and the prover commits to $g_i \in F^{I_i}$, defined as follows:
+
+    $$
+    g_i = g_{i-1,0} + \lambda_i \cdot g_{i-1,1} + \lambda_i^2 \cdot (h_{i,0} + \lambda_i \cdot h_{i,1})
+    $$
+
+    where $g_{i-1,0}, g_{i-1,1} \in F^{I_i}$ are the decomposition of $g_{i-1} \in F^{I_{i-1}}$ and $h_{i,0}, h_{i,1} \in F^{I_i}$ are the decompositions of $h_i \in F^{H_i}$. The prover gives the verifier oracle access to $g_i$, and in the final round $g_r$ is sent in plain.
+
+
+2. _Query Phase_: In the query phase, the verifier checks that the prover computed the folding correctly using the oracles sent by the prover. It consists of $s \geq 1$ rounds. In each round, the verifier samples $P_0 = (x_0,y_0) \in H_0$, and queries the oracles for their values to spot-check the folding identities along the projection trace $P_i = (x_i,y_i) = \pi^i(x_0,y_0)$. That is, for all $i = \{0, 1, 2\}$ the verifier checks that:
+
+    $$
+    \begin{aligned}
+        g_i(x_i) &= 
+        \frac{g_{i-1}(x_{i-1}) + g_{i-1}(-x_{i-1})}{2}
+        + \lambda_i \cdot 
+        \frac{g_{i-1}(x_{i-1}) - g_{i-1}(-x_{i-1})}{2 \cdot x_{i-1}} \\
+        &\quad + \lambda_i^2 \cdot 
+        \left(
+        \frac{h_i(x_i,y_i) + h_i(x_i,-y_i)}{2}
+        + \lambda_i \cdot 
+        \frac{h_i(x_i,y_i) - h_i(x_i,-y_i)}{2 \cdot y_i}
+        \right)
+    \end{aligned}
+    $$
+
+
+
+    If in each of the query rounds all spot-checks hold, and if $g_2 \in F^{I_2}$ is "close" to the polynomial space $\mathcal{L}_0$, then the verifier accepts. Otherwise, it rejects.
+
+
+## Security Analysis
+In this section, we analyze the security of the FRI protocol at a high level. There are roughly two ways a prover can cheat:
+- The functions $h_{i} \in F^{H_i}$ are "far" from the polynomial space $L'_{3-i}(F)$ but somehow the prover gets lucky and ends up with $g_2 \in \mathcal{L}_0$. The [proximity gaps paper](https://eprint.iacr.org/2020/654.pdf) analyzes that this happens with negligible probability. That is, if even one of the functions $h_{i} \in F^{H_i}$ is "far" from the polynomial space $L'_{3-i}(F)$, then the function $g_2$ will be "far" from $\mathcal{L}_0$ with high probability.
+- Now suppose $h_{i} \in F^{H_i}$ are "far" from the polynomial space $L'_{3-i}(F)$, then the function $g_2$ will be "far" from $\mathcal{L}_0$, but to cheat the verifier, the prover cheats in the folding rounds and sends some valid $g_2 \in \mathcal{L}_0$. Now the verifier must ensure that the prover has performed the folding correctly in each round using the oracles sent by the prover. This is exactly what the verifier checks in the query phase. From the "Toy Problem Conjecture" ([ethSTARK, Section 5.9](https://eprint.iacr.org/2021/582.pdf)), each query done by the verifier gives $\beta$ (i.e. log of blowup $B$) bits of security. Thus, for $s$ queries, the security is $s \cdot \beta$ bits.
+

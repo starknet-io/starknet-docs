@@ -1,0 +1,119 @@
+---
+title: "STARK Verifier"
+---
+
+# STARK Verifier
+
+This section provides an overview of the `verify` function, the key function that verifies the STARK proof. It is implemented as follows:
+```rust
+pub fn verify<MC: MerkleChannel>(
+    components: &[&dyn Component],
+    channel: &mut MC::C,
+    commitment_scheme: &mut CommitmentSchemeVerifier<MC>,
+    proof: StarkProof<MC::H>,
+) -> Result<(), VerificationError> {
+    let n_preprocessed_columns = commitment_scheme.trees[PREPROCESSED_TRACE_IDX]
+        .column_log_sizes
+        .len();
+
+    let components = Components {
+        components: components.to_vec(),
+        n_preprocessed_columns,
+    };
+    tracing::info!(
+        "Composition polynomial log degree bound: {}",
+        components.composition_log_degree_bound()
+    );
+    let random_coeff = channel.draw_secure_felt();
+
+    // Read composition polynomial commitment.
+    commitment_scheme.commit(
+        *proof.commitments.last().unwrap(),
+        &[components.composition_log_degree_bound(); SECURE_EXTENSION_DEGREE],
+        channel,
+    );
+
+    // Draw OODS point.
+    let oods_point = CirclePoint::<SecureField>::get_random_point(channel);
+
+    // Get mask sample points relative to oods point.
+    let mut sample_points = components.mask_points(oods_point);
+    // Add the composition polynomial mask points.
+    sample_points.push(vec![vec![oods_point]; SECURE_EXTENSION_DEGREE]);
+
+    let sample_points_by_column = sample_points.as_cols_ref().flatten();
+    tracing::info!("Sampling {} columns.", sample_points_by_column.len());
+    tracing::info!(
+        "Total sample points: {}.",
+        sample_points_by_column.into_iter().flatten().count()
+    );
+
+    let composition_oods_eval =
+        proof
+            .extract_composition_oods_eval()
+            .ok_or(VerificationError::InvalidStructure(
+                std_shims::ToString::to_string(&"Unexpected sampled_values structure"),
+            ))?;
+
+    if composition_oods_eval
+        != components.eval_composition_polynomial_at_point(
+            oods_point,
+            &proof.sampled_values,
+            random_coeff,
+        )
+    {
+        return Err(VerificationError::OodsNotMatching);
+    }
+
+    commitment_scheme.verify_values(sample_points, proof.0, channel)
+}
+```
+
+
+Let us go through the function in detail.
+
+## Input and Output
+
+
+The `verify` function is the entry point for verifying a STARK proof. It takes as input:
+- `components`: A list of AIR components. For more details, refer to the [Components](../air/components) section.
+- `channel`: A Fiat-Shamir channel for non-interactive randomness.
+- `commitment_scheme`: A `CommitmentSchemeVerifier` for verifying Merkle commitments and FRI proofs. For more details, refer to the [PCS Verifier section](../pcs/verifier).
+- `proof`: The `StarkProof` object to be verified.
+
+
+It returns `Ok(())` if the proof is valid, or a `VerificationError` if any check fails.
+
+## Step-by-Step Breakdown
+
+
+1. **Determine Preprocessed Columns**
+   - The function determines the number of preprocessed columns, `n_preprocessed_columns`, from the `commitment_scheme`, which is used to initialize the `Components` struct.
+
+
+2. **Initialize Components**
+   - The `Components` structure is created, encapsulating all AIR components and the number of preprocessed columns.
+
+
+3. **Read Composition Polynomial Commitment**
+   - The verifier reads the Merkle root of the composition polynomial from the `proof` and registers it with the commitment scheme verifier, along with the degree bounds for each coordinate polynomial.
+
+
+4. **Out-of-Domain Sampling (OODS)**
+   - An `oods_point` is drawn randomly from the channel. This point is used to bind the prover to a unique low-degree polynomial and prevent ambiguity in the list decoding regime.
+
+
+5. **Determine Sample Points**
+   - The function computes all `sample_points` required to verify constraints at the OODS point, using the `mask_points` function. This includes all necessary offsets for each constraint and the OODS points for the composition polynomial.
+
+
+6. **Sanity Check: Composition Polynomial Evaluation**
+   - The function checks that the composition polynomial evaluated at the OODS point (as provided in the proof) matches the value reconstructed from the sampled trace values. If not, it returns an `OodsNotMatching` error.
+
+
+7. **Invoke Commitment Scheme Verifier**
+   - The function calls `verify_values` on the commitment scheme verifier, passing the `sample_points`, the `proof`, and the `channel`. This step checks all Merkle decommitments, FRI low-degree proofs, and protocol soundness.
+
+
+8. **Return Verification Result**
+   - If all checks pass, the function returns `Ok(())`. If any check fails (e.g., Merkle decommitment, FRI check, or OODS mismatch), it returns an appropriate `VerificationError`.

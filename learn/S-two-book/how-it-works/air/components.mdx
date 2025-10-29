@@ -1,0 +1,130 @@
+---
+title: "Components"
+---
+
+# Components
+
+This section examines how the components are implemented and covers some important functions defined on them, without diving into AIR-specific details since they are already covered in the [earlier sections](../../air-development/index).
+
+The `Components` struct is a collection of components, implemented as follows:
+```rust
+pub struct Components<'a> {
+    pub components: Vec<&'a dyn Component>,
+    pub n_preprocessed_columns: usize,
+}
+```
+
+Here, `components` is a collection of objects that implement the `Component` trait, and `n_preprocessed_columns` is the total number of preprocessed columns used across all components (refer to [Preprocessed Trace](../../air-development/preprocessed-trace/index)).
+
+
+The `Component` trait represents a trace table along with a set of constraints. It implements the following functions:
+```rust
+pub trait Component {
+    fn n_constraints(&self) -> usize;
+
+    fn max_constraint_log_degree_bound(&self) -> u32;
+
+    /// Returns the degree bounds of each trace column. The returned TreeVec should be of size
+    /// `n_interaction_phases`.
+    fn trace_log_degree_bounds(&self) -> TreeVec<ColumnVec<u32>>;
+
+    /// Returns the mask points for each trace column. The returned TreeVec should be of size
+    /// `n_interaction_phases`.
+    fn mask_points(
+        &self,
+        point: CirclePoint<SecureField>,
+    ) -> TreeVec<ColumnVec<Vec<CirclePoint<SecureField>>>>;
+
+    fn preproccessed_column_indices(&self) -> ColumnVec<usize>;
+
+    /// Evaluates the constraint quotients combination of the component at a point.
+    fn evaluate_constraint_quotients_at_point(
+        &self,
+        point: CirclePoint<SecureField>,
+        mask: &TreeVec<ColumnVec<Vec<SecureField>>>,
+        evaluation_accumulator: &mut PointEvaluationAccumulator,
+    );
+}
+```
+This section will not examine each of these functions in detail but will explain them wherever they are used to implement various functions for the `Components` struct. The following are some important functions implemented for the `Components` struct.
+
+## Composition Polynomial Degree Bound
+The `composition_log_degree_bound` function determines the log of the degree of the composition polynomial.
+```rust
+    pub fn composition_log_degree_bound(&self) -> u32 {
+        self.components
+            .iter()
+            .map(|component| component.max_constraint_log_degree_bound())
+            .max()
+            .unwrap()
+    }
+```
+
+For each component, this calls the `max_constraint_log_degree_bound()` function, which returns the log of the highest polynomial degree among all constraints in that component. It then takes the maximum value across all components. For the [example AIR containing two components](./overview.mdx#air-to-composition-polynomial), this function returns $\max({\log{(\deg{(p_0)})}, \log{(\deg{(p_1)})}})$.
+
+## Mask Points
+The `mask_points` function determines all evaluation points needed to verify constraints at a given point
+```rust
+    pub fn mask_points(
+        &self,
+        point: CirclePoint<SecureField>,
+    ) -> TreeVec<ColumnVec<Vec<CirclePoint<SecureField>>>> {
+        let mut mask_points = TreeVec::concat_cols(
+            self.components
+                .iter()
+                .map(|component| component.mask_points(point)),
+        );
+
+        let preprocessed_mask_points = &mut mask_points[PREPROCESSED_TRACE_IDX];
+        *preprocessed_mask_points = vec![vec![]; self.n_preprocessed_columns];
+
+        for component in &self.components {
+            for idx in component.preproccessed_column_indices() {
+                preprocessed_mask_points[idx] = vec![point];
+            }
+        }
+
+        mask_points
+    }
+```
+
+From the perspective of the prover (and verifier), when they need to open the composition polynomial at a specific point sent by the verifier (for example, an out-of-domain point), they require additional polynomial evaluations to verify the constraints.
+
+The composition polynomial combines many component-level constraint quotients. Each constraint involves relationships between multiple cells in the execution trace, potentially at different rows/offsets.
+
+The function `mask_points` performs the following:
+- Given a single point as input, it determines all related points where polynomial evaluations are needed to verify constraints.
+- Handles offsets for each component, since different components may have different constraint structures requiring different offset patterns.
+- Ensures preprocessed columns (shared lookup tables, etc.) are properly included.
+
+
+## Evaluate Composition Polynomial
+The `eval_composition_polynomial_at_point` function evaluates the combined constraint polynomial.
+```rust
+    pub fn eval_composition_polynomial_at_point(
+        &self,
+        point: CirclePoint<SecureField>,
+        mask_values: &TreeVec<Vec<Vec<SecureField>>>,
+        random_coeff: SecureField,
+    ) -> SecureField {
+        let mut evaluation_accumulator = PointEvaluationAccumulator::new(random_coeff);
+        for component in &self.components {
+            component.evaluate_constraint_quotients_at_point(
+                point,
+                mask_values,
+                &mut evaluation_accumulator,
+            )
+        }
+        evaluation_accumulator.finalize()
+    }
+```
+The inputs to this function are as follows:
+- `&self`: The `Components` on which the function is called.
+- `point`: The circle point at which the composition polynomial is to be evaluated.
+- `mask_values`: The evaluations of the polynomials at the mask points that were previously determined by the `mask_points` function. These provide the constraint polynomial values needed to compute the composition polynomial at the input `point`.
+- `random_coeff`: An element from the `SecureField` (i.e. $\mathsf{QM31}$). In the example, this is represented as $\gamma$, which is used to compose all constraints into a single composition polynomial.
+
+The function body operates as follows. First, an `evaluation_accumulator` is instantiated. Then, for each component, the evaluation of the component-level quotient is added to the `evaluation_accumulator`. For the [example AIR containing two components](./overview.mdx#air-to-composition-polynomial), this adds the evaluations of component-level quotients $q_0$ and $q_1$ at the input `point` to the `evaluation_accumulator`. Finally, the `finalize()` function is called on the `evaluation_accumulator`, which outputs the random linear combination evaluated at the input `point`.
+$$
+q = q_0 + \gamma^{c_0} \cdot q_1
+$$

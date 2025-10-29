@@ -1,0 +1,252 @@
+---
+title: "Polynomial Commitment Scheme Prover"
+---
+
+# Polynomial Commitment Scheme Prover
+
+
+In this section, we will see the implementation of the commitment scheme prover. We will start by looking at the building blocks.
+
+## Commitment Tree Prover
+
+
+The `CommitmentTreeProver` struct represents the data for a single Merkle tree commitment. As we have seen in the [Merkle tree section](../vcs/merkle_prover.mdx#merkle-prover), we can commit to multiple polynomials of different degrees in the same Merkle tree. It is implemented as follows:
+
+```rust
+pub struct CommitmentTreeProver<B: BackendForChannel<MC>, MC: MerkleChannel> {
+    pub polynomials: ColumnVec<CirclePoly<B>>,
+    pub evaluations: ColumnVec<CircleEvaluation<B, BaseField, BitReversedOrder>>,
+    pub commitment: MerkleProver<B, MC::H>,
+}
+```
+
+Here, `pub type ColumnVec<T> = Vec<T>`. It contains the following fields:
+- `polynomials`: The set of polynomials committed in a single Merkle tree.
+- `evaluations`: The evaluations of these polynomials over their respective domains.
+- `commitment`: The `MerkleProver` struct as described in the [Merkle tree section](../vcs/merkle_prover.mdx#merkleprover-structure).
+
+It is initialized as follows:
+```rust
+    pub fn new(
+        polynomials: ColumnVec<CirclePoly<B>>,
+        log_blowup_factor: u32,
+        channel: &mut MC::C,
+        twiddles: &TwiddleTree<B>,
+    ) -> Self {
+        let span = span!(Level::INFO, "Extension").entered();
+        let evaluations = B::evaluate_polynomials(&polynomials, log_blowup_factor, twiddles);
+        span.exit();
+
+        let _span = span!(Level::INFO, "Merkle").entered();
+        let tree = MerkleProver::commit(evaluations.iter().map(|eval| &eval.values).collect());
+        MC::mix_root(channel, tree.root());
+
+        CommitmentTreeProver {
+            polynomials,
+            evaluations,
+            commitment: tree,
+        }
+    }
+```
+
+It proceeds as follows. First, given the `polynomials`, we evaluate them on the evaluation domain using circle FFT to compute `evaluations`. Then we commit to those evaluations using the `MerkleProver` struct. Finally, we create and output the `CommitmentTreeProver` struct.
+
+## Commitment Scheme Prover
+
+
+The `CommitmentSchemeProver` struct is the key struct which maintains a vector of commitment trees. It implements functionalities to open the committed polynomials, compute quotients, and then apply the FRI protocol. It contains the following fields:
+```rust
+pub struct CommitmentSchemeProver<'a, B: BackendForChannel<MC>, MC: MerkleChannel> {
+    pub trees: TreeVec<CommitmentTreeProver<B, MC>>,
+    pub config: PcsConfig,
+    twiddles: &'a TwiddleTree<B>,
+}
+```
+
+It contains the following fields:
+- `tree`: This contains a vector of commitment trees. Here, `pub struct TreeVec<T>(pub Vec<T>)`.
+- `config`: This is the `PcsConfig`, which contains the `fri_config` and `pow_bits`.
+```rust
+pub struct PcsConfig {
+    pub pow_bits: u32,
+    pub fri_config: FriConfig,
+}
+```
+The security of the polynomial commitment scheme is computed as:
+```rust
+    pub const fn security_bits(&self) -> u32 {
+        self.pow_bits + self.fri_config.security_bits()
+    }
+```
+- `twiddles`: This contains [precomputed twiddle factors](../circle-fft/twiddles.mdx#twiddle-tree).
+
+
+Now we will see some key functions defined on the `CommitmentSchemeProver` struct.
+
+### Commit
+
+
+The `commit` function, given a batch of polynomials, computes the `CommitmentTreeProver` struct which commits to the input polynomials and then appends the `tree` struct to the vector of stored `trees`.
+```rust
+    fn commit(&mut self, polynomials: ColumnVec<CirclePoly<B>>, channel: &mut MC::C) {
+        let _span = span!(Level::INFO, "Commitment").entered();
+        let tree = CommitmentTreeProver::new(
+            polynomials,
+            self.config.fri_config.log_blowup_factor,
+            channel,
+            self.twiddles,
+        );
+        self.trees.push(tree);
+    }
+```
+
+### Trace
+
+The `trace` function returns a `Trace` struct containing all polynomials and their evaluations corresponding to all the commitment trees. It is implemented as follows:
+```rust
+    pub fn trace(&self) -> Trace<'_, B> {
+        let polys = self.polynomials();
+        let evals = self.evaluations();
+        Trace { polys, evals }
+    }
+```
+
+### Commitment Tree Builder
+
+
+The `tree_builder` function outputs the `TreeBuilder` struct.
+```rust
+    pub fn tree_builder(&mut self) -> TreeBuilder<'_, 'a, B, MC> {
+        TreeBuilder {
+            tree_index: self.trees.len(),
+            commitment_scheme: self,
+            polys: Vec::default(),
+        }
+    }
+```
+
+
+The `TreeBuilder` struct is a helper for aggregating polynomials and evaluations before committing them in a Merkle tree. It allows the prover to collect columns (polynomials) and then commit them together as a batch. It is implemented as follows:
+```rust
+pub struct TreeBuilder<'a, 'b, B: BackendForChannel<MC>, MC: MerkleChannel> {
+    tree_index: usize,
+    commitment_scheme: &'a mut CommitmentSchemeProver<'b, B, MC>,
+    polys: ColumnVec<CirclePoly<B>>,
+}
+```
+
+
+### Prove
+
+
+The `prove_values` function is central to the protocol, handling the opening of committed polynomials at specified sample points and integrating with the FRI protocol for low-degree testing. It is implemented as follows:
+```rust
+    pub fn prove_values(
+        self,
+        sampled_points: TreeVec<ColumnVec<Vec<CirclePoint<SecureField>>>>,
+        channel: &mut MC::C,
+    ) -> CommitmentSchemeProof<MC::H> {
+        // Evaluate polynomials on open points.
+        let span = span!(
+            Level::INFO,
+            "Evaluate columns out of domain",
+            class = "EvaluateOutOfDomain"
+        )
+        .entered();
+        let samples = self
+            .polynomials()
+            .zip_cols(&sampled_points)
+            .map_cols(|(poly, points)| {
+                points
+                    .iter()
+                    .map(|&point| PointSample {
+                        point,
+                        value: poly.eval_at_point(point),
+                    })
+                    .collect_vec()
+            });
+        span.exit();
+        let sampled_values = samples
+            .as_cols_ref()
+            .map_cols(|x| x.iter().map(|o| o.value).collect());
+        channel.mix_felts(&sampled_values.clone().flatten_cols());
+
+        // Compute oods quotients for boundary constraints on the sampled points.
+        let columns = self.evaluations().flatten();
+        let quotients = compute_fri_quotients(
+            &columns,
+            &samples.flatten(),
+            channel.draw_secure_felt(),
+            self.config.fri_config.log_blowup_factor,
+        );
+
+        // Run FRI commitment phase on the oods quotients.
+        let fri_prover =
+            FriProver::<B, MC>::commit(channel, self.config.fri_config, &quotients, self.twiddles);
+
+        // Proof of work.
+        let span1 = span!(Level::INFO, "Grind", class = "Queries POW").entered();
+        let proof_of_work = B::grind(channel, self.config.pow_bits);
+        span1.exit();
+        channel.mix_u64(proof_of_work);
+
+        // FRI decommitment phase.
+        let (fri_proof, query_positions_per_log_size) = fri_prover.decommit(channel);
+
+        // Decommit the FRI queries on the merkle trees.
+        let decommitment_results = self
+            .trees
+            .as_ref()
+            .map(|tree| tree.decommit(&query_positions_per_log_size));
+
+        let queried_values = decommitment_results.as_ref().map(|(v, _)| v.clone());
+        let decommitments = decommitment_results.map(|(_, d)| d);
+
+        CommitmentSchemeProof {
+            commitments: self.roots(),
+            sampled_values,
+            decommitments,
+            queried_values,
+            proof_of_work,
+            fri_proof,
+            config: self.config,
+        }
+    }
+}
+```
+
+
+Here is a detailed breakdown:
+
+1. **Evaluate Polynomials at Sample Points**:
+   - For each committed polynomial and each sample point (including out-of-domain points and mask points which contain constraint offsets), the function evaluates the polynomials and collects the results in `samples`.
+   - The `sampled_values` are mixed into the channel, ensuring they are bound to the proof and used for subsequent randomness generation.
+
+2. **Compute FRI Quotients**:
+   - The function computes FRI quotient polynomials using `compute_fri_quotients` to open the committed polynomials at sampled points in `samples`. This follows the same quotienting process as described in the [overview section](./overview.mdx#polynomial-commitment-scheme).
+
+3. **FRI Commitment Phase**:
+   - The FRI protocol is run on the quotient polynomials, committing to their evaluations in Merkle trees and initializing the `fri_prover`. For more details, refer to the [FRI prover section](../circle-fri/fri_prover).
+
+4. **Proof of Work**:
+   - A proof-of-work step is performed, with the result mixed into the channel.
+
+6. **FRI Decommitment Phase**:
+   - The function generates random query positions using the channel and decommits the FRI layers at those positions, providing Merkle decommitments for all queried values. For more details, refer to the [FRI prover section](../circle-fri/fri_prover).
+
+7. **Decommitment of Committed Trees**:
+   - For each commitment tree, the function decommits the Merkle tree at the FRI query positions, providing the queried values and authentication paths.
+
+8. **Return Proof Object**:
+   - The function returns a `CommitmentSchemeProof` object containing:
+     - Merkle roots of all commitments
+     - Sampled values at all sample points
+     - Merkle decommitments for all queries
+     - Queried values
+     - Proof-of-work result
+     - FRI proof
+     - Protocol configuration
+
+
+
+We will now look into the proof verifier implementation.

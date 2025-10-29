@@ -1,0 +1,2615 @@
+---
+title: "Stwo Examples"
+---
+
+# Stwo Examples
+
+This page embeds the local example sources used throughout the AIR Development section.
+
+- Repo location: `learn/S-two-book/stwo-examples/`
+- Rust examples are under `examples/`
+
+Below is an index of all example files:
+
+- [committing_to_the_trace_polynomials.rs](#committing_to_the_trace_polynomialsrs)
+- [components.rs](#componentsrs)
+- [constraints_over_trace_polynomials.rs](#constraints_over_trace_polynomialsrs)
+- [dynamic_lookups.rs](#dynamic_lookupsrs)
+- [from_spreadsheet_to_trace_polynomials.rs](#from_spreadsheet_to_trace_polynomialsrs)
+- [hello_zk_world.rs](#hello_zk_worldrs)
+- [local_row_constraints_fails_1.rs](#local_row_constraints_fails_1rs)
+- [local_row_constraints_fails_2.rs](#local_row_constraints_fails_2rs)
+- [local_row_constraints.rs](#local_row_constraintsrs)
+- [preprocessed_trace.rs](#preprocessed_tracers)
+- [proving_an_air.rs](#proving_an_airrs)
+- [public_input.rs](#public_inputrs)
+- [static_lookups.rs](#static_lookupsrs)
+- [writing_a_spreadsheet.rs](#writing_a_spreadsheetrs)
+
+## committing_to_the_trace_polynomials.rs
+
+<a id="committing_to_the_trace_polynomialsrs"></a>
+
+<details>
+<summary>View committing_to_the_trace_polynomials.rs</summary>
+
+```rust
+use stwo::core::{
+    channel::{Blake2sChannel, Channel},
+    fields::m31::M31,
+    pcs::PcsConfig,
+    poly::circle::CanonicCoset,
+    vcs::blake2_merkle::Blake2sMerkleChannel,
+    ColumnVec,
+};
+use stwo::prover::{
+    backend::{
+        simd::{
+            column::BaseColumn,
+            m31::{LOG_N_LANES, N_LANES},
+            SimdBackend,
+        },
+        Column,
+    },
+    poly::{
+        circle::{CircleEvaluation, PolyOps},
+        BitReversedOrder,
+    },
+    CommitmentSchemeProver,
+};
+
+// ANCHOR: here_1
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+fn main() {
+    // --snip--
+
+    // ANCHOR_END: here_1
+    let num_rows = N_LANES;
+    let log_num_rows = LOG_N_LANES;
+
+    // Create the table
+    let mut col_1 = BaseColumn::zeros(num_rows);
+    col_1.set(0, M31::from(1));
+    col_1.set(1, M31::from(7));
+
+    let mut col_2 = BaseColumn::zeros(num_rows);
+    col_2.set(0, M31::from(5));
+    col_2.set(1, M31::from(11));
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_num_rows).circle_domain();
+    let trace: ColumnVec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> = vec![col_1, col_2]
+        .into_iter()
+        .map(|col| CircleEvaluation::new(domain, col))
+        .collect();
+
+    // ANCHOR: here_2
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_num_rows + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // Commit to the preprocessed trace
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![]);
+    tree_builder.commit(channel);
+
+    // Commit to the size of the trace
+    channel.mix_u64(log_num_rows as u64);
+
+    // Commit to the original trace
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace);
+    tree_builder.commit(channel);
+}
+// ANCHOR_END: here_2
+
+```
+
+</details>
+
+## components.rs
+
+<a id="componentsrs"></a>
+
+<details>
+<summary>View components.rs</summary>
+
+```rust
+use itertools::chain;
+use num_traits::{identities::Zero, One};
+use rand::Rng;
+use stwo::core::{
+    air::Component,
+    channel::{Blake2sChannel, Channel},
+    fields::{m31::M31, qm31::SecureField},
+    pcs::{CommitmentSchemeVerifier, PcsConfig, TreeVec},
+    poly::circle::CanonicCoset,
+    proof::StarkProof,
+    vcs::{blake2_merkle::Blake2sMerkleChannel, MerkleHasher},
+    verifier::verify,
+};
+use stwo::prover::{
+    backend::simd::{column::BaseColumn, m31::LOG_N_LANES, qm31::PackedSecureField, SimdBackend},
+    poly::{
+        circle::{CircleEvaluation, PolyOps},
+        BitReversedOrder,
+    },
+    prove, CommitmentSchemeProver, ComponentProver,
+};
+use stwo_constraint_framework::{
+    relation, EvalAtRow, FrameworkComponent, FrameworkEval, InfoEvaluator, LogupTraceGenerator,
+    Relation, RelationEntry, TraceLocationAllocator,
+};
+
+struct ComponentsProof<H: MerkleHasher> {
+    statement0: ComponentsStatement0,
+    statement1: ComponentsStatement1,
+    stark_proof: StarkProof<H>,
+}
+
+pub struct Components {
+    scheduling_component: FrameworkComponent<SchedulingEval>,
+    computing_component: FrameworkComponent<ComputingEval>,
+}
+
+impl Components {
+    pub fn new(
+        statement0: &ComponentsStatement0,
+        lookup_elements: &ComputationLookupElements,
+        statement1: &ComponentsStatement1,
+    ) -> Self {
+        let tree_span_provider =
+            &mut TraceLocationAllocator::new_with_preprocessed_columns(&vec![]);
+
+        let scheduling_component = SchedulingComponent::new(
+            tree_span_provider,
+            SchedulingEval {
+                log_size: statement0.log_size,
+                lookup_elements: lookup_elements.clone(),
+            },
+            statement1.scheduling_claimed_sum,
+        );
+
+        let computing_component = ComputingComponent::new(
+            tree_span_provider,
+            ComputingEval {
+                log_size: statement0.log_size,
+                lookup_elements: lookup_elements.clone(),
+            },
+            statement1.computing_claimed_sum,
+        );
+
+        Self {
+            scheduling_component,
+            computing_component,
+        }
+    }
+
+    pub fn components(&self) -> Vec<&dyn Component> {
+        chain![[
+            &self.scheduling_component as &dyn Component,
+            &self.computing_component as &dyn Component
+        ]]
+        .collect()
+    }
+
+    pub fn component_provers(&self) -> Vec<&dyn ComponentProver<SimdBackend>> {
+        chain![[
+            &self.scheduling_component as &dyn ComponentProver<SimdBackend>,
+            &self.computing_component as &dyn ComponentProver<SimdBackend>
+        ]]
+        .collect()
+    }
+}
+
+pub struct ComponentsStatement0 {
+    log_size: u32,
+}
+
+impl ComponentsStatement0 {
+    pub fn mix_into(&self, channel: &mut impl Channel) {
+        channel.mix_u64(self.log_size as u64);
+    }
+
+    pub fn log_sizes(&self) -> TreeVec<Vec<u32>> {
+        let mut log_sizes = vec![];
+
+        log_sizes.push(
+            scheduling_info()
+                .mask_offsets
+                .as_cols_ref()
+                .map_cols(|_| self.log_size),
+        );
+
+        log_sizes.push(
+            computing_info()
+                .mask_offsets
+                .as_cols_ref()
+                .map_cols(|_| self.log_size),
+        );
+
+        TreeVec::concat_cols(log_sizes.into_iter())
+    }
+}
+
+pub struct ComponentsStatement1 {
+    scheduling_claimed_sum: SecureField,
+    computing_claimed_sum: SecureField,
+}
+
+impl ComponentsStatement1 {
+    pub fn mix_into(&self, channel: &mut impl Channel) {
+        channel.mix_felts(&[self.scheduling_claimed_sum, self.computing_claimed_sum]);
+    }
+}
+
+fn scheduling_info() -> InfoEvaluator {
+    let component = SchedulingEval {
+        log_size: 1,
+        lookup_elements: ComputationLookupElements::dummy(),
+    };
+
+    component.evaluate(InfoEvaluator::empty())
+}
+
+fn computing_info() -> InfoEvaluator {
+    let component = ComputingEval {
+        log_size: 1,
+        lookup_elements: ComputationLookupElements::dummy(),
+    };
+
+    component.evaluate(InfoEvaluator::empty())
+}
+
+pub type SchedulingComponent = FrameworkComponent<SchedulingEval>;
+pub type ComputingComponent = FrameworkComponent<ComputingEval>;
+
+pub struct SchedulingEval {
+    log_size: u32,
+    lookup_elements: ComputationLookupElements,
+}
+
+// ANCHOR: scheduling_eval_start
+impl FrameworkEval for SchedulingEval {
+    // ANCHOR_END: scheduling_eval_start
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    // ANCHOR: scheduling_eval_evaluate
+    // --snip--
+
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let input_col = eval.next_trace_mask();
+        let output_col = eval.next_trace_mask();
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            E::EF::one(),
+            &[input_col, output_col],
+        ));
+
+        eval.finalize_logup();
+
+        eval
+    }
+}
+// ANCHOR_END: scheduling_eval_evaluate
+
+pub struct ComputingEval {
+    log_size: u32,
+    lookup_elements: ComputationLookupElements,
+}
+
+// ANCHOR: computing_eval_start
+impl FrameworkEval for ComputingEval {
+    // ANCHOR_END: computing_eval_start
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    // ANCHOR: computing_eval_evaluate
+    // --snip--
+
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let input_col = eval.next_trace_mask();
+        let intermediate_col = eval.next_trace_mask();
+        let output_col = eval.next_trace_mask();
+
+        eval.add_constraint(
+            intermediate_col.clone() - input_col.clone() * input_col.clone() * input_col.clone(),
+        );
+        eval.add_constraint(
+            output_col.clone()
+                - intermediate_col.clone() * input_col.clone() * input_col.clone()
+                - E::F::one(),
+        );
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            -E::EF::one(),
+            &[input_col, output_col],
+        ));
+
+        eval.finalize_logup();
+
+        eval
+    }
+}
+// ANCHOR_END: computing_eval_evaluate
+
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+relation!(ComputationLookupElements, 2);
+
+fn gen_scheduling_trace(
+    log_size: u32,
+) -> Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> {
+    // Create a table with random values
+    let mut rng = rand::thread_rng();
+    let scheduling_col_1 =
+        BaseColumn::from_iter((0..(1 << log_size)).map(|_| M31::from(rng.gen_range(0..16))));
+    let scheduling_col_2 = BaseColumn::from_iter(
+        scheduling_col_1
+            .as_slice()
+            .iter()
+            .map(|&v| M31::from(v.0.pow(5) + 1)),
+    );
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_size).circle_domain();
+
+    vec![scheduling_col_1, scheduling_col_2]
+        .into_iter()
+        .map(|col| CircleEvaluation::new(domain, col))
+        .collect()
+}
+
+fn gen_computing_trace(
+    log_size: u32,
+    scheduling_col_1: &CircleEvaluation<SimdBackend, M31, BitReversedOrder>,
+    scheduling_col_2: &CircleEvaluation<SimdBackend, M31, BitReversedOrder>,
+) -> Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> {
+    let intermediate_values = scheduling_col_1
+        .as_slice()
+        .iter()
+        .map(|&v| v.0.pow(3))
+        .collect::<Vec<_>>();
+    let intermediate_trace = CircleEvaluation::new(
+        CanonicCoset::new(log_size).circle_domain(),
+        BaseColumn::from_iter(intermediate_values.iter().map(|&v| M31::from(v))),
+    );
+
+    vec![
+        scheduling_col_1.clone(),
+        intermediate_trace,
+        scheduling_col_2.clone(),
+    ]
+}
+
+// ANCHOR: gen_scheduling_logup_trace_start
+fn gen_scheduling_logup_trace(
+    log_size: u32,
+    scheduling_col_1: &CircleEvaluation<SimdBackend, M31, BitReversedOrder>,
+    scheduling_col_2: &CircleEvaluation<SimdBackend, M31, BitReversedOrder>,
+    lookup_elements: &ComputationLookupElements,
+) -> (
+    Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>>,
+    SecureField,
+) {
+    // ANCHOR_END: gen_scheduling_logup_trace_start
+    let mut logup_gen = LogupTraceGenerator::new(log_size);
+
+    let mut col_gen = logup_gen.new_col();
+    for row in 0..(1 << (log_size - LOG_N_LANES)) {
+        // ANCHOR: gen_scheduling_logup_trace_row
+        // --snip--
+
+        let scheduling_input_output: PackedSecureField =
+            lookup_elements.combine(&[scheduling_col_1.data[row], scheduling_col_2.data[row]]);
+        col_gen.write_frac(row, PackedSecureField::one(), scheduling_input_output);
+
+        // --snip--
+        // ANCHOR_END: gen_scheduling_logup_trace_row
+    }
+    col_gen.finalize_col();
+
+    logup_gen.finalize_last()
+    // ANCHOR_END: gen_scheduling_logup_trace_end
+}
+// ANCHOR_END: gen_scheduling_logup_trace_end
+
+// ANCHOR: gen_computing_logup_trace_start
+fn gen_computing_logup_trace(
+    log_size: u32,
+    computing_col_1: &CircleEvaluation<SimdBackend, M31, BitReversedOrder>,
+    computing_col_3: &CircleEvaluation<SimdBackend, M31, BitReversedOrder>,
+    lookup_elements: &ComputationLookupElements,
+) -> (
+    Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>>,
+    SecureField,
+) {
+    // ANCHOR_END: gen_computing_logup_trace_start
+    let mut logup_gen = LogupTraceGenerator::new(log_size);
+
+    let mut col_gen = logup_gen.new_col();
+    for row in 0..(1 << (log_size - LOG_N_LANES)) {
+        // ANCHOR: gen_computing_logup_trace_row
+        // --snip--
+
+        let computing_input_output: PackedSecureField =
+            lookup_elements.combine(&[computing_col_1.data[row], computing_col_3.data[row]]);
+        col_gen.write_frac(row, -PackedSecureField::one(), computing_input_output);
+
+        // --snip--
+        // ANCHOR_END: gen_computing_logup_trace_row
+    }
+    col_gen.finalize_col();
+
+    logup_gen.finalize_last()
+    // ANCHOR: gen_computing_logup_trace_end
+}
+// ANCHOR_END: gen_computing_logup_trace_end
+
+// ANCHOR: main_start
+fn main() {
+    // ANCHOR_END: main_start
+    let log_size = LOG_N_LANES;
+
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // Create and commit to the preprocessed columns
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![]);
+    tree_builder.commit(channel);
+
+    // ANCHOR: main_prove
+    // --snip--
+
+    // Create trace columns
+    let scheduling_trace = gen_scheduling_trace(log_size);
+    let computing_trace = gen_computing_trace(log_size, &scheduling_trace[0], &scheduling_trace[1]);
+
+    // Statement 0
+    let statement0 = ComponentsStatement0 { log_size };
+    statement0.mix_into(channel);
+
+    // Commit to the trace columns
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals([scheduling_trace.clone(), computing_trace.clone()].concat());
+    tree_builder.commit(channel);
+
+    // Draw random elements to use when creating the random linear combination of lookup values in the LogUp columns
+    let lookup_elements = ComputationLookupElements::draw(channel);
+
+    // Create LogUp columns
+    let (scheduling_logup_cols, scheduling_claimed_sum) = gen_scheduling_logup_trace(
+        log_size,
+        &scheduling_trace[0],
+        &scheduling_trace[1],
+        &lookup_elements,
+    );
+    let (computing_logup_cols, computing_claimed_sum) = gen_computing_logup_trace(
+        log_size,
+        &computing_trace[0],
+        &computing_trace[2],
+        &lookup_elements,
+    );
+
+    // Statement 1
+    let statement1 = ComponentsStatement1 {
+        scheduling_claimed_sum,
+        computing_claimed_sum,
+    };
+    statement1.mix_into(channel);
+
+    // Commit to the LogUp columns
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals([scheduling_logup_cols, computing_logup_cols].concat());
+    tree_builder.commit(channel);
+
+    let components = Components::new(&statement0, &lookup_elements, &statement1);
+
+    let stark_proof = prove(&components.component_provers(), channel, commitment_scheme).unwrap();
+
+    let proof = ComponentsProof {
+        statement0,
+        statement1,
+        stark_proof,
+    };
+
+    // --snip--
+    // ANCHOR_END: main_prove
+
+    // ANCHOR: main_verify
+    // --snip--
+
+    // Verify claimed sums
+    assert_eq!(
+        scheduling_claimed_sum + computing_claimed_sum,
+        SecureField::zero()
+    );
+
+    // Unpack proof
+    let statement0 = proof.statement0;
+    let statement1 = proof.statement1;
+    let stark_proof = proof.stark_proof;
+
+    // Create channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+    let log_sizes = statement0.log_sizes();
+
+    // Preprocessed columns.
+    commitment_scheme.commit(stark_proof.commitments[0], &log_sizes[0], channel);
+
+    // Commit to statement 0
+    statement0.mix_into(channel);
+
+    // Trace columns.
+    commitment_scheme.commit(stark_proof.commitments[1], &log_sizes[1], channel);
+
+    // Draw lookup element.
+    let lookup_elements = ComputationLookupElements::draw(channel);
+
+    // Commit to statement 1
+    statement1.mix_into(channel);
+
+    // Interaction columns.
+    commitment_scheme.commit(stark_proof.commitments[2], &log_sizes[2], channel);
+
+    // Create components
+    let components = Components::new(&statement0, &lookup_elements, &statement1);
+
+    verify(
+        &components.components(),
+        channel,
+        commitment_scheme,
+        stark_proof,
+    )
+    .unwrap();
+    // ANCHOR_END: main_verify
+
+    // ANCHOR: main_end
+}
+// ANCHOR_END: main_end
+
+```
+
+</details>
+
+## constraints_over_trace_polynomials.rs
+
+<a id="constraints_over_trace_polynomialsrs"></a>
+
+<details>
+<summary>View constraints_over_trace_polynomials.rs</summary>
+
+```rust
+use num_traits::identities::Zero;
+use stwo::core::{
+    channel::{Blake2sChannel, Channel},
+    fields::{m31::M31, qm31::QM31},
+    pcs::PcsConfig,
+    poly::circle::CanonicCoset,
+    vcs::blake2_merkle::Blake2sMerkleChannel,
+    ColumnVec,
+};
+use stwo::prover::{
+    backend::{
+        simd::{
+            column::BaseColumn,
+            m31::{LOG_N_LANES, N_LANES},
+            SimdBackend,
+        },
+        Column,
+    },
+    poly::{
+        circle::{CircleEvaluation, PolyOps},
+        BitReversedOrder,
+    },
+    CommitmentSchemeProver,
+};
+use stwo_constraint_framework::{
+    EvalAtRow, FrameworkComponent, FrameworkEval, TraceLocationAllocator,
+};
+
+// ANCHOR: here_1
+struct TestEval {
+    log_size: u32,
+}
+
+impl FrameworkEval for TestEval {
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let col_1 = eval.next_trace_mask();
+        let col_2 = eval.next_trace_mask();
+        let col_3 = eval.next_trace_mask();
+        eval.add_constraint(col_1.clone() * col_2.clone() + col_1.clone() - col_3.clone());
+        eval
+    }
+}
+// ANCHOR_END: here_1
+
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+// ANCHOR: here_2
+fn main() {
+    // ANCHOR_END: here_2
+    let num_rows = N_LANES;
+    let log_num_rows = LOG_N_LANES;
+
+    // Create the table
+    let mut col_1 = BaseColumn::zeros(num_rows);
+    col_1.set(0, M31::from(1));
+    col_1.set(1, M31::from(7));
+
+    let mut col_2 = BaseColumn::zeros(num_rows);
+    col_2.set(0, M31::from(5));
+    col_2.set(1, M31::from(11));
+
+    // ANCHOR: here_3
+    // --snip--
+
+    let mut col_3 = BaseColumn::zeros(num_rows);
+    col_3.set(0, col_1.at(0) * col_2.at(0) + col_1.at(0));
+    col_3.set(1, col_1.at(1) * col_2.at(1) + col_1.at(1));
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_num_rows).circle_domain();
+    let trace: ColumnVec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> =
+        vec![col_1, col_2, col_3]
+            .into_iter()
+            .map(|col| CircleEvaluation::new(domain, col))
+            .collect();
+    // ANCHOR_END: here_3
+
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_num_rows + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // Commit to the preprocessed trace
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![]);
+    tree_builder.commit(channel);
+
+    // Commit to the size of the trace
+    channel.mix_u64(log_num_rows as u64);
+
+    // Commit to the original trace
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace);
+    tree_builder.commit(channel);
+
+    // ANCHOR: here_4
+    // --snip--
+
+    // Create a component
+    let _component = FrameworkComponent::<TestEval>::new(
+        &mut TraceLocationAllocator::default(),
+        TestEval {
+            log_size: log_num_rows,
+        },
+        QM31::zero(),
+    );
+}
+// ANCHOR_END: here_4
+
+```
+
+</details>
+
+## dynamic_lookups.rs
+
+<a id="dynamic_lookupsrs"></a>
+
+<details>
+<summary>View dynamic_lookups.rs</summary>
+
+```rust
+use num_traits::{identities::Zero, One};
+use rand::prelude::SliceRandom;
+use stwo::core::verifier::verify;
+use stwo::core::{
+    air::Component,
+    channel::{Blake2sChannel, Channel},
+    fields::{m31::M31, qm31::SecureField},
+    pcs::{CommitmentSchemeVerifier, PcsConfig},
+    poly::circle::CanonicCoset,
+    vcs::blake2_merkle::Blake2sMerkleChannel,
+};
+use stwo::prover::{
+    backend::simd::{column::BaseColumn, m31::LOG_N_LANES, qm31::PackedSecureField, SimdBackend},
+    poly::{
+        circle::{CircleEvaluation, PolyOps},
+        BitReversedOrder,
+    },
+    prove, CommitmentSchemeProver,
+};
+use stwo_constraint_framework::relation;
+use stwo_constraint_framework::{
+    EvalAtRow, FrameworkComponent, FrameworkEval, LogupTraceGenerator, Relation, RelationEntry,
+    TraceLocationAllocator,
+};
+
+// ANCHOR: test_eval
+struct TestEval {
+    log_size: u32,
+    lookup_elements: LookupElements,
+}
+
+impl FrameworkEval for TestEval {
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let random_col = eval.next_trace_mask();
+        let ordered_col = eval.next_trace_mask();
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            E::EF::one(),
+            &[random_col],
+        ));
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            -E::EF::one(),
+            &[ordered_col],
+        ));
+
+        eval.finalize_logup_in_pairs();
+
+        eval
+    }
+}
+// ANCHOR_END: test_eval
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+relation!(LookupElements, 1);
+
+// ANCHOR: gen_trace
+fn gen_trace(log_size: u32) -> Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> {
+    let mut rng = rand::thread_rng();
+    let values = (0..(1 << log_size)).map(|i| i).collect::<Vec<_>>();
+
+    // Create a random permutation of the values
+    let mut random_values = values.clone();
+    random_values.shuffle(&mut rng);
+    let random_col_1 = BaseColumn::from_iter(random_values.iter().map(|v| M31::from(*v)));
+
+    // Create another random permutation of the values
+    let mut random_values = random_values.clone();
+    random_values.shuffle(&mut rng);
+    let random_col_2 = BaseColumn::from_iter(random_values.iter().map(|v| M31::from(*v)));
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_size).circle_domain();
+    vec![random_col_1, random_col_2]
+        .into_iter()
+        .map(|col| CircleEvaluation::new(domain, col))
+        .collect()
+}
+
+fn gen_logup_trace(
+    log_size: u32,
+    random_col_1: &BaseColumn,
+    random_col_2: &BaseColumn,
+    lookup_elements: &LookupElements,
+) -> (
+    Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>>,
+    SecureField,
+) {
+    let mut logup_gen = LogupTraceGenerator::new(log_size);
+
+    let mut col_gen = logup_gen.new_col();
+    for row in 0..(1 << (log_size - LOG_N_LANES)) {
+        // 1 / random - 1 / ordered = (ordered - random) / (random * ordered)
+        let random_val: PackedSecureField = lookup_elements.combine(&[random_col_1.data[row]]);
+        let ordered_val: PackedSecureField = lookup_elements.combine(&[random_col_2.data[row]]);
+        col_gen.write_frac(row, ordered_val - random_val, random_val * ordered_val);
+    }
+    col_gen.finalize_col();
+
+    logup_gen.finalize_last()
+}
+// ANCHOR_END: gen_trace
+
+// ANCHOR: main_start
+fn main() {
+    // ANCHOR_END: main_start
+    let log_size = LOG_N_LANES;
+
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // Create and commit to the preprocessed columns
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![]);
+    tree_builder.commit(channel);
+
+    // Commit to the size of the trace
+    channel.mix_u64(log_size as u64);
+
+    // ANCHOR: gen_trace_main
+    // Create and commit to the trace columns
+    let trace = gen_trace(log_size);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace.clone());
+    tree_builder.commit(channel);
+
+    // Draw random elements to use when creating the random linear combination of lookup values in the LogUp columns
+    let lookup_elements = LookupElements::draw(channel);
+
+    // Create and commit to the LogUp columns
+    let (logup_cols, claimed_sum) =
+        gen_logup_trace(log_size, &trace[0], &trace[1], &lookup_elements);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(logup_cols);
+    tree_builder.commit(channel);
+    // ANCHOR_END: gen_trace_main
+
+    // Create a component
+    let component = FrameworkComponent::<TestEval>::new(
+        &mut TraceLocationAllocator::default(),
+        TestEval {
+            log_size,
+            lookup_elements,
+        },
+        claimed_sum,
+    );
+
+    // Prove
+    let proof = prove(&[&component], channel, commitment_scheme).unwrap();
+
+    // Verify
+    assert_eq!(claimed_sum, SecureField::zero());
+
+    let channel = &mut Blake2sChannel::default();
+    let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+    let sizes = component.trace_log_degree_bounds();
+
+    commitment_scheme.commit(proof.commitments[0], &sizes[0], channel);
+    channel.mix_u64(log_size as u64);
+    commitment_scheme.commit(proof.commitments[1], &sizes[1], channel);
+    commitment_scheme.commit(proof.commitments[2], &sizes[2], channel);
+
+    verify(&[&component], channel, commitment_scheme, proof).unwrap();
+
+    // ANCHOR: main_end
+}
+// ANCHOR_END: main_end
+
+```
+
+</details>
+
+## from_spreadsheet_to_trace_polynomials.rs
+
+<a id="from_spreadsheet_to_trace_polynomialsrs"></a>
+
+<details>
+<summary>View from_spreadsheet_to_trace_polynomials.rs</summary>
+
+```rust
+use stwo::prover::{
+    backend::{
+        simd::{
+            column::BaseColumn,
+            m31::{LOG_N_LANES, N_LANES},
+            SimdBackend,
+        },
+        Column,
+    },
+    poly::{
+        circle::{CircleEvaluation},
+        BitReversedOrder,
+    },
+};
+use stwo::core::{
+    fields::m31::M31,
+    poly::circle::CanonicCoset,
+    ColumnVec,
+};
+
+// ANCHOR: main_start
+fn main() {
+    // ANCHOR_END: main_start
+    let num_rows = N_LANES;
+    let log_num_rows = LOG_N_LANES;
+
+    // Create the table
+    let mut col_1 = BaseColumn::zeros(num_rows);
+    col_1.set(0, M31::from(1));
+    col_1.set(1, M31::from(7));
+
+    let mut col_2 = BaseColumn::zeros(num_rows);
+    col_2.set(0, M31::from(5));
+    col_2.set(1, M31::from(11));
+
+    // ANCHOR: main_end
+    // --snip--
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_num_rows).circle_domain();
+    let _trace: ColumnVec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> =
+        vec![col_1, col_2]
+            .into_iter()
+            .map(|col| CircleEvaluation::new(domain, col))
+            .collect();
+}
+// ANCHOR_END: main_end
+
+```
+
+</details>
+
+## hello_zk_world.rs
+
+<a id="hello_zk_worldrs"></a>
+
+<details>
+<summary>View hello_zk_world.rs</summary>
+
+```rust
+fn main() {
+    println!("Hello, ZK world!");
+}
+
+```
+
+</details>
+
+## local_row_constraints_fails_1.rs
+
+<a id="local_row_constraints_fails_1rs"></a>
+
+<details>
+<summary>View local_row_constraints_fails_1.rs</summary>
+
+```rust
+use num_traits::{identities::Zero, One};
+use rand::prelude::SliceRandom;
+use stwo::core::{
+    air::Component,
+    channel::Blake2sChannel,
+    fields::{m31::M31, qm31::SecureField},
+    pcs::{CommitmentSchemeVerifier, PcsConfig},
+    poly::circle::CanonicCoset,
+    vcs::blake2_merkle::Blake2sMerkleChannel,
+    verifier::verify,
+};
+use stwo::prover::{
+    backend::simd::{column::BaseColumn, m31::LOG_N_LANES, qm31::PackedSecureField, SimdBackend},
+    poly::{
+        circle::{CircleEvaluation, PolyOps},
+        BitReversedOrder,
+    },
+    prove, CommitmentSchemeProver,
+};
+use stwo_constraint_framework::relation;
+use stwo_constraint_framework::{
+    EvalAtRow, FrameworkComponent, FrameworkEval, LogupTraceGenerator, Relation, RelationEntry,
+    TraceLocationAllocator, ORIGINAL_TRACE_IDX,
+};
+
+struct TestEval {
+    log_size: u32,
+    lookup_elements: ComputationLookupElements,
+}
+
+impl FrameworkEval for TestEval {
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    // ANCHOR: evaluate
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let unsorted_col = eval.next_trace_mask();
+        let [sorted_col_prev_row, sorted_col_curr_row] =
+            eval.next_interaction_mask(ORIGINAL_TRACE_IDX, [-1, 0]);
+
+        // New constraint
+        eval.add_constraint(
+            E::F::one() - (sorted_col_curr_row.clone() - sorted_col_prev_row.clone()),
+        );
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            E::EF::one(),
+            &[unsorted_col],
+        ));
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            -E::EF::one(),
+            &[sorted_col_curr_row],
+        ));
+
+        eval.finalize_logup_in_pairs();
+
+        eval
+    }
+    // ANCHOR_END: evaluate
+}
+
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+relation!(ComputationLookupElements, 1);
+
+fn gen_trace(log_size: u32) -> Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> {
+    // Create a table with random values
+    let mut rng = rand::thread_rng();
+    let sorted_values = (0..(1 << log_size)).map(|i| i).collect::<Vec<_>>();
+    let mut unsorted_values = sorted_values.clone();
+    unsorted_values.shuffle(&mut rng);
+
+    let unsorted_col = BaseColumn::from_iter(unsorted_values.iter().map(|v| M31::from(*v)));
+    let sorted_col = BaseColumn::from_iter(sorted_values.iter().map(|v| M31::from(*v)));
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_size).circle_domain();
+    vec![unsorted_col, sorted_col]
+        .into_iter()
+        .map(|col| CircleEvaluation::new(domain, col))
+        .collect()
+}
+
+fn gen_logup_trace(
+    log_size: u32,
+    unsorted_col: &BaseColumn,
+    sorted_col: &BaseColumn,
+    lookup_elements: &ComputationLookupElements,
+) -> (
+    Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>>,
+    SecureField,
+) {
+    let mut logup_gen = LogupTraceGenerator::new(log_size);
+
+    let mut col_gen = logup_gen.new_col();
+    for row in 0..(1 << (log_size - LOG_N_LANES)) {
+        // 1 / unsorted - 1 / sorted = (sorted - unsorted) / (unsorted * sorted)
+        let unsorted_val: PackedSecureField = lookup_elements.combine(&[unsorted_col.data[row]]);
+        let sorted_val: PackedSecureField = lookup_elements.combine(&[sorted_col.data[row]]);
+        col_gen.write_frac(row, sorted_val - unsorted_val, unsorted_val * sorted_val);
+    }
+    col_gen.finalize_col();
+
+    logup_gen.finalize_last()
+}
+
+fn main() {
+    let log_size = LOG_N_LANES;
+
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // Create and commit to the preprocessed columns
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![]);
+    tree_builder.commit(channel);
+
+    // Create and commit to the trace columns
+    let trace = gen_trace(log_size);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace.clone());
+    tree_builder.commit(channel);
+
+    // Draw random elements to use when creating the random linear combination of lookup values in the LogUp columns
+    let lookup_elements = ComputationLookupElements::draw(channel);
+
+    // Create and commit to the LogUp columns
+    let (logup_cols, claimed_sum) =
+        gen_logup_trace(log_size, &trace[0], &trace[1], &lookup_elements);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(logup_cols);
+    tree_builder.commit(channel);
+
+    // Create a component
+    let component = FrameworkComponent::<TestEval>::new(
+        &mut TraceLocationAllocator::default(),
+        TestEval {
+            log_size,
+            lookup_elements,
+        },
+        claimed_sum,
+    );
+
+    // Prove
+    let proof = prove(&[&component], channel, commitment_scheme).unwrap();
+
+    // Verify
+    assert_eq!(claimed_sum, SecureField::zero());
+
+    let channel = &mut Blake2sChannel::default();
+    let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+    let sizes = component.trace_log_degree_bounds();
+
+    commitment_scheme.commit(proof.commitments[0], &sizes[0], channel);
+    commitment_scheme.commit(proof.commitments[1], &sizes[1], channel);
+    commitment_scheme.commit(proof.commitments[2], &sizes[2], channel);
+
+    verify(&[&component], channel, commitment_scheme, proof).unwrap();
+}
+
+```
+
+</details>
+
+## local_row_constraints_fails_2.rs
+
+<a id="local_row_constraints_fails_2rs"></a>
+
+<details>
+<summary>View local_row_constraints_fails_2.rs</summary>
+
+```rust
+use num_traits::{identities::Zero, One};
+use rand::prelude::SliceRandom;
+use stwo::core::{
+    air::Component,
+    channel::Blake2sChannel,
+    fields::{m31::M31, qm31::SecureField},
+    pcs::{CommitmentSchemeVerifier, PcsConfig},
+    poly::circle::CanonicCoset,
+    vcs::blake2_merkle::Blake2sMerkleChannel,
+    verifier::verify,
+};
+use stwo::prover::{
+    backend::simd::{column::BaseColumn, m31::LOG_N_LANES, qm31::PackedSecureField, SimdBackend},
+    backend::Column,
+    poly::{
+        circle::{CircleEvaluation, PolyOps},
+        BitReversedOrder,
+    },
+    prove, CommitmentSchemeProver,
+};
+use stwo_constraint_framework::relation;
+use stwo_constraint_framework::{
+    preprocessed_columns::PreProcessedColumnId, EvalAtRow, FrameworkComponent, FrameworkEval,
+    LogupTraceGenerator, Relation, RelationEntry, TraceLocationAllocator, ORIGINAL_TRACE_IDX,
+};
+
+// ANCHOR: is_first_column
+struct IsFirstColumn {
+    pub log_size: u32,
+}
+
+#[allow(dead_code)]
+impl IsFirstColumn {
+    pub fn new(log_size: u32) -> Self {
+        Self { log_size }
+    }
+
+    pub fn gen_column(&self) -> CircleEvaluation<SimdBackend, M31, BitReversedOrder> {
+        let mut col = BaseColumn::zeros(1 << self.log_size);
+        col.set(0, M31::from(1));
+        CircleEvaluation::new(CanonicCoset::new(self.log_size).circle_domain(), col)
+    }
+
+    pub fn id(&self) -> PreProcessedColumnId {
+        PreProcessedColumnId {
+            id: format!("is_first_{}", self.log_size),
+        }
+    }
+}
+// ANCHOR_END: is_first_column
+
+// ANCHOR: test_eval
+struct TestEval {
+    is_first_id: PreProcessedColumnId,
+    log_size: u32,
+    lookup_elements: LookupElements,
+}
+
+impl FrameworkEval for TestEval {
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    // ANCHOR: evaluate
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let unsorted_col = eval.next_trace_mask();
+        let [sorted_col_prev_row, sorted_col_curr_row] =
+            eval.next_interaction_mask(ORIGINAL_TRACE_IDX, [-1, 0]);
+
+        // ANCHOR: constraint
+        let is_first_col = eval.get_preprocessed_column(self.is_first_id.clone());
+
+        eval.add_constraint(
+            (E::F::one() - is_first_col.clone())
+                * (E::F::one() - (sorted_col_curr_row.clone() - sorted_col_prev_row.clone())),
+        );
+        // ANCHOR_END: constraint
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            E::EF::one(),
+            &[unsorted_col],
+        ));
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            -E::EF::one(),
+            &[sorted_col_curr_row],
+        ));
+
+        eval.finalize_logup_in_pairs();
+
+        eval
+    }
+    // ANCHOR_END: evaluate
+}
+// ANCHOR_END: test_eval
+
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+relation!(LookupElements, 1);
+
+fn gen_trace(log_size: u32) -> Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> {
+    // Create a table with random values
+    let mut rng = rand::thread_rng();
+    let sorted_values = (0..(1 << log_size)).map(|i| i).collect::<Vec<_>>();
+    let mut unsorted_values = sorted_values.clone();
+    unsorted_values.shuffle(&mut rng);
+
+    let unsorted_col = BaseColumn::from_iter(unsorted_values.iter().map(|v| M31::from(*v)));
+    let sorted_col = BaseColumn::from_iter(sorted_values.iter().map(|v| M31::from(*v)));
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_size).circle_domain();
+    vec![unsorted_col, sorted_col]
+        .into_iter()
+        .map(|col| CircleEvaluation::new(domain, col))
+        .collect()
+}
+
+fn gen_logup_trace(
+    log_size: u32,
+    unsorted_col: &BaseColumn,
+    sorted_col: &BaseColumn,
+    lookup_elements: &LookupElements,
+) -> (
+    Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>>,
+    SecureField,
+) {
+    let mut logup_gen = LogupTraceGenerator::new(log_size);
+
+    let mut col_gen = logup_gen.new_col();
+    for row in 0..(1 << (log_size - LOG_N_LANES)) {
+        // 1 / unsorted - 1 / sorted = (sorted - unsorted) / (unsorted * sorted)
+        let unsorted_val: PackedSecureField = lookup_elements.combine(&[unsorted_col.data[row]]);
+        let sorted_val: PackedSecureField = lookup_elements.combine(&[sorted_col.data[row]]);
+        col_gen.write_frac(row, sorted_val - unsorted_val, unsorted_val * sorted_val);
+    }
+    col_gen.finalize_col();
+
+    logup_gen.finalize_last()
+}
+
+// ANCHOR: main_start
+fn main() {
+    // ANCHOR_END: main_start
+    let log_size = LOG_N_LANES;
+
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // ANCHOR: main_preprocessed_columns
+    // Create and commit to the preprocessed columns
+    let is_first_column = IsFirstColumn::new(log_size);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![is_first_column.gen_column()]);
+    tree_builder.commit(channel);
+    // ANCHOR_END: main_preprocessed_columns
+
+    // Create and commit to the trace columns
+    let trace = gen_trace(log_size);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace.clone());
+    tree_builder.commit(channel);
+
+    // Draw random elements to use when creating the random linear combination of lookup values in the LogUp columns
+    let lookup_elements = LookupElements::draw(channel);
+
+    // Create and commit to the LogUp columns
+    let (logup_cols, claimed_sum) =
+        gen_logup_trace(log_size, &trace[0], &trace[1], &lookup_elements);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(logup_cols);
+    tree_builder.commit(channel);
+
+    // Create a component
+    let component = FrameworkComponent::<TestEval>::new(
+        &mut TraceLocationAllocator::default(),
+        TestEval {
+            is_first_id: is_first_column.id(),
+            log_size,
+            lookup_elements,
+        },
+        claimed_sum,
+    );
+
+    // Prove
+    let proof = prove(&[&component], channel, commitment_scheme).unwrap();
+
+    // Verify
+    assert_eq!(claimed_sum, SecureField::zero());
+
+    let channel = &mut Blake2sChannel::default();
+    let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+    let sizes = component.trace_log_degree_bounds();
+
+    commitment_scheme.commit(proof.commitments[0], &sizes[0], channel);
+    commitment_scheme.commit(proof.commitments[1], &sizes[1], channel);
+    commitment_scheme.commit(proof.commitments[2], &sizes[2], channel);
+
+    verify(&[&component], channel, commitment_scheme, proof).unwrap();
+
+    // ANCHOR: main_end
+}
+// ANCHOR_END: main_end
+
+```
+
+</details>
+
+## local_row_constraints.rs
+
+<a id="local_row_constraintsrs"></a>
+
+<details>
+<summary>View local_row_constraints.rs</summary>
+
+```rust
+use num_traits::{identities::Zero, One};
+use rand::prelude::SliceRandom;
+use stwo::core::{
+    air::Component,
+    channel::Blake2sChannel,
+    fields::{m31::M31, qm31::SecureField},
+    pcs::{CommitmentSchemeVerifier, PcsConfig},
+    poly::circle::CanonicCoset,
+    utils::bit_reverse_coset_to_circle_domain_order,
+    vcs::blake2_merkle::Blake2sMerkleChannel,
+    verifier::verify,
+};
+use stwo::prover::{
+    backend::{
+        simd::{column::BaseColumn, m31::LOG_N_LANES, qm31::PackedSecureField, SimdBackend},
+        Column,
+    },
+    poly::{
+        circle::{CircleEvaluation, PolyOps},
+        BitReversedOrder,
+    },
+    prove, CommitmentSchemeProver,
+};
+use stwo_constraint_framework::relation;
+use stwo_constraint_framework::{
+    preprocessed_columns::PreProcessedColumnId, EvalAtRow, FrameworkComponent, FrameworkEval,
+    LogupTraceGenerator, Relation, RelationEntry, TraceLocationAllocator, ORIGINAL_TRACE_IDX,
+};
+
+struct IsFirstColumn {
+    pub log_size: u32,
+}
+
+// ANCHOR: is_first_column_impl_start
+impl IsFirstColumn {
+    // ANCHOR_END: is_first_column_impl_start
+    pub fn new(log_size: u32) -> Self {
+        Self { log_size }
+    }
+
+    // ANCHOR: is_first_column
+    pub fn gen_column(&self) -> CircleEvaluation<SimdBackend, M31, BitReversedOrder> {
+        let mut col = BaseColumn::zeros(1 << self.log_size);
+        col.set(0, M31::from(1));
+
+        //////////////////////////////////////////////////////////////
+        // Convert the columns to bit-reversed circle domain order
+        bit_reverse_coset_to_circle_domain_order(col.as_mut_slice());
+        //////////////////////////////////////////////////////////////
+
+        CircleEvaluation::new(CanonicCoset::new(self.log_size).circle_domain(), col)
+    }
+    // ANCHOR_END: is_first_column
+
+    pub fn id(&self) -> PreProcessedColumnId {
+        PreProcessedColumnId {
+            id: format!("is_first_{}", self.log_size),
+        }
+    }
+    // ANCHOR: is_first_column_impl_end
+}
+// ANCHOR_END: is_first_column_impl_end
+
+struct TestEval {
+    is_first_id: PreProcessedColumnId,
+    log_size: u32,
+    lookup_elements: ComputationLookupElements,
+}
+
+impl FrameworkEval for TestEval {
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let unsorted_col = eval.next_trace_mask();
+        let [sorted_col_prev_row, sorted_col_curr_row] =
+            eval.next_interaction_mask(ORIGINAL_TRACE_IDX, [-1, 0]);
+
+        let is_first_col = eval.get_preprocessed_column(self.is_first_id.clone());
+
+        eval.add_constraint(
+            (E::F::one() - is_first_col.clone())
+                * (E::F::one() - (sorted_col_curr_row.clone() - sorted_col_prev_row.clone())),
+        );
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            E::EF::one(),
+            &[unsorted_col],
+        ));
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            -E::EF::one(),
+            &[sorted_col_curr_row],
+        ));
+
+        eval.finalize_logup_in_pairs();
+
+        eval
+    }
+}
+
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+relation!(ComputationLookupElements, 1);
+
+// ANCHOR: gen_trace
+fn gen_trace(log_size: u32) -> Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> {
+    // Create a table with random values
+    let mut rng = rand::thread_rng();
+    let sorted_values = (0..(1 << log_size)).map(|i| i).collect::<Vec<_>>();
+    let mut unsorted_values = sorted_values.clone();
+    unsorted_values.shuffle(&mut rng);
+
+    let mut unsorted_col = BaseColumn::from_iter(unsorted_values.iter().map(|v| M31::from(*v)));
+    let mut sorted_col = BaseColumn::from_iter(sorted_values.iter().map(|v| M31::from(*v)));
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_size).circle_domain();
+
+    ////////////////////////////////////////////////////////////////////
+    // Convert the columns to bit-reversed circle domain order
+    bit_reverse_coset_to_circle_domain_order(unsorted_col.as_mut_slice());
+    bit_reverse_coset_to_circle_domain_order(sorted_col.as_mut_slice());
+    ////////////////////////////////////////////////////////////////////
+
+    vec![unsorted_col, sorted_col]
+        .into_iter()
+        .map(|col| CircleEvaluation::new(domain, col))
+        .collect()
+}
+// ANCHOR_END: gen_trace
+
+fn gen_logup_trace(
+    log_size: u32,
+    unsorted_col: &BaseColumn,
+    sorted_col: &BaseColumn,
+    lookup_elements: &ComputationLookupElements,
+) -> (
+    Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>>,
+    SecureField,
+) {
+    let mut logup_gen = LogupTraceGenerator::new(log_size);
+
+    let mut col_gen = logup_gen.new_col();
+    for row in 0..(1 << (log_size - LOG_N_LANES)) {
+        // 1 / unsorted - 1 / sorted = (sorted - unsorted) / (unsorted * sorted)
+        let unsorted_val: PackedSecureField = lookup_elements.combine(&[unsorted_col.data[row]]);
+        let sorted_val: PackedSecureField = lookup_elements.combine(&[sorted_col.data[row]]);
+        col_gen.write_frac(row, sorted_val - unsorted_val, unsorted_val * sorted_val);
+    }
+    col_gen.finalize_col();
+
+    logup_gen.finalize_last()
+}
+
+fn main() {
+    let log_size = LOG_N_LANES;
+
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // Create and commit to the preprocessed columns
+    let is_first_column = IsFirstColumn::new(log_size);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![is_first_column.gen_column()]);
+    tree_builder.commit(channel);
+
+    // Create and commit to the trace columns
+    let trace = gen_trace(log_size);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace.clone());
+    tree_builder.commit(channel);
+
+    // Draw random elements to use when creating the random linear combination of lookup values in the LogUp columns
+    let lookup_elements = ComputationLookupElements::draw(channel);
+
+    // Create and commit to the LogUp columns
+    let (logup_cols, claimed_sum) =
+        gen_logup_trace(log_size, &trace[0], &trace[1], &lookup_elements);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(logup_cols);
+    tree_builder.commit(channel);
+
+    // Create a component
+    let component = FrameworkComponent::<TestEval>::new(
+        &mut TraceLocationAllocator::default(),
+        TestEval {
+            is_first_id: is_first_column.id(),
+            log_size,
+            lookup_elements,
+        },
+        claimed_sum,
+    );
+
+    // Prove
+    let proof = prove(&[&component], channel, commitment_scheme).unwrap();
+
+    // Verify
+    assert_eq!(claimed_sum, SecureField::zero());
+
+    let channel = &mut Blake2sChannel::default();
+    let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+    let sizes = component.trace_log_degree_bounds();
+
+    commitment_scheme.commit(proof.commitments[0], &sizes[0], channel);
+    commitment_scheme.commit(proof.commitments[1], &sizes[1], channel);
+    commitment_scheme.commit(proof.commitments[2], &sizes[2], channel);
+
+    verify(&[&component], channel, commitment_scheme, proof).unwrap();
+}
+
+```
+
+</details>
+
+## preprocessed_trace.rs
+
+<a id="preprocessed_tracers"></a>
+
+<details>
+<summary>View preprocessed_trace.rs</summary>
+
+```rust
+use num_traits::identities::Zero;
+use stwo::core::verifier::verify;
+use stwo::core::{
+    air::Component,
+    channel::{Blake2sChannel, Channel},
+    fields::{m31::M31, qm31::QM31},
+    pcs::{CommitmentSchemeVerifier, PcsConfig},
+    poly::circle::CanonicCoset,
+    vcs::blake2_merkle::Blake2sMerkleChannel,
+};
+use stwo::prover::{
+    backend::simd::{column::BaseColumn, m31::LOG_N_LANES, SimdBackend},
+    backend::Column,
+    poly::{
+        circle::{CircleEvaluation, PolyOps},
+        BitReversedOrder,
+    },
+    prove, CommitmentSchemeProver,
+};
+use stwo_constraint_framework::{
+    preprocessed_columns::PreProcessedColumnId, EvalAtRow, FrameworkComponent, FrameworkEval,
+    TraceLocationAllocator,
+};
+
+// ANCHOR: is_first_column
+struct IsFirstColumn {
+    pub log_size: u32,
+}
+
+#[allow(dead_code)]
+impl IsFirstColumn {
+    pub fn new(log_size: u32) -> Self {
+        Self { log_size }
+    }
+
+    pub fn gen_column(&self) -> CircleEvaluation<SimdBackend, M31, BitReversedOrder> {
+        let mut col = BaseColumn::zeros(1 << self.log_size);
+        col.set(0, M31::from(1));
+        CircleEvaluation::new(CanonicCoset::new(self.log_size).circle_domain(), col)
+    }
+
+    pub fn id(&self) -> PreProcessedColumnId {
+        PreProcessedColumnId {
+            id: format!("is_first_{}", self.log_size),
+        }
+    }
+}
+// ANCHOR_END: is_first_column
+
+// ANCHOR: test_eval
+struct TestEval {
+    is_first_id: PreProcessedColumnId,
+    log_size: u32,
+}
+
+impl FrameworkEval for TestEval {
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let is_first = eval.get_preprocessed_column(self.is_first_id.clone());
+
+        let col_1 = eval.next_trace_mask();
+        let col_2 = eval.next_trace_mask();
+        let col_3 = eval.next_trace_mask();
+
+        // If is_first is 1, then the constraint is col_1 * col_2 - col_3 = 0
+        // If is_first is 0, then the constraint is col_1 * col_2 + col_1 - col_3 = 0
+        eval.add_constraint(
+            is_first.clone() * (col_1.clone() * col_2.clone() - col_3.clone())
+                + (E::F::from(M31::from(1)) - is_first.clone())
+                    * (col_1.clone() * col_2.clone() + col_1.clone() - col_3.clone()),
+        );
+
+        eval
+    }
+}
+// ANCHOR_END: test_eval
+
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+fn gen_trace(log_size: u32) -> Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> {
+    // Create the table
+    let mut col_1 = BaseColumn::zeros(1 << log_size);
+    col_1.set(0, M31::from(1));
+    col_1.set(1, M31::from(7));
+
+    let mut col_2 = BaseColumn::zeros(1 << log_size);
+    col_2.set(0, M31::from(5));
+    col_2.set(1, M31::from(11));
+
+    let mut col_3 = BaseColumn::zeros(1 << log_size);
+    col_3.set(0, col_1.at(0) * col_2.at(0));
+    col_3.set(1, col_1.at(1) * col_2.at(1) + col_1.at(1));
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_size).circle_domain();
+
+    vec![col_1, col_2, col_3]
+        .into_iter()
+        .map(|col| CircleEvaluation::new(domain, col))
+        .collect()
+}
+
+// ANCHOR: main_start
+fn main() {
+    // ANCHOR_END: main_start
+    let log_size = LOG_N_LANES;
+
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // ANCHOR: gen_traces
+    // Create and commit to the preprocessed trace
+    let is_first_column = IsFirstColumn::new(log_size);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![is_first_column.gen_column()]);
+    tree_builder.commit(channel);
+
+    // Commit to the size of the trace
+    channel.mix_u64(log_size as u64);
+
+    // Create and commit to the original trace
+    let trace = gen_trace(log_size);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace);
+    tree_builder.commit(channel);
+    // ANCHOR_END: gen_traces
+
+    // ANCHOR: create_component
+    // Create a component
+    let component = FrameworkComponent::<TestEval>::new(
+        &mut TraceLocationAllocator::default(),
+        TestEval {
+            is_first_id: is_first_column.id(),
+            log_size,
+        },
+        QM31::zero(),
+    );
+
+    // Prove
+    let proof = prove(&[&component], channel, commitment_scheme).unwrap();
+
+    // Verify
+    let channel = &mut Blake2sChannel::default();
+    let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+    let sizes = component.trace_log_degree_bounds();
+
+    commitment_scheme.commit(proof.commitments[0], &sizes[0], channel);
+    channel.mix_u64(log_size as u64);
+    commitment_scheme.commit(proof.commitments[1], &sizes[1], channel);
+
+    verify(&[&component], channel, commitment_scheme, proof).unwrap();
+    // ANCHOR_END: create_component
+
+    // ANCHOR: main_end
+}
+// ANCHOR_END: main_end
+
+```
+
+</details>
+
+## proving_an_air.rs
+
+<a id="proving_an_airrs"></a>
+
+<details>
+<summary>View proving_an_air.rs</summary>
+
+```rust
+use num_traits::identities::Zero;
+use stwo::core::{
+    air::Component,
+    channel::{Blake2sChannel, Channel},
+    fields::{m31::M31, qm31::QM31},
+    pcs::{CommitmentSchemeVerifier, PcsConfig},
+    poly::circle::CanonicCoset,
+    vcs::blake2_merkle::Blake2sMerkleChannel,
+    verifier::verify,
+    ColumnVec,
+};
+use stwo::prover::{
+    backend::{
+        simd::{
+            column::BaseColumn,
+            m31::{LOG_N_LANES, N_LANES},
+            SimdBackend,
+        },
+        Column,
+    },
+    poly::{
+        circle::{CircleEvaluation, PolyOps},
+        BitReversedOrder,
+    },
+    prove, CommitmentSchemeProver,
+};
+use stwo_constraint_framework::{
+    EvalAtRow, FrameworkComponent, FrameworkEval, TraceLocationAllocator,
+};
+
+struct TestEval {
+    log_size: u32,
+}
+
+impl FrameworkEval for TestEval {
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let col_1 = eval.next_trace_mask();
+        let col_2 = eval.next_trace_mask();
+        let col_3 = eval.next_trace_mask();
+        eval.add_constraint(col_1.clone() * col_2.clone() + col_1.clone() - col_3.clone());
+        eval
+    }
+}
+
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+// ANCHOR: here_1
+fn main() {
+    // ANCHOR_END: here_1
+    let num_rows = N_LANES;
+    let log_num_rows = LOG_N_LANES;
+
+    // Create the table
+    let mut col_1 = BaseColumn::zeros(num_rows);
+    col_1.set(0, M31::from(1));
+    col_1.set(1, M31::from(7));
+
+    let mut col_2 = BaseColumn::zeros(num_rows);
+    col_2.set(0, M31::from(5));
+    col_2.set(1, M31::from(11));
+
+    let mut col_3 = BaseColumn::zeros(num_rows);
+    col_3.set(0, col_1.at(0) * col_2.at(0) + col_1.at(0));
+    col_3.set(1, col_1.at(1) * col_2.at(1) + col_1.at(1));
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_num_rows).circle_domain();
+    let trace: ColumnVec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> =
+        vec![col_1, col_2, col_3]
+            .into_iter()
+            .map(|col| CircleEvaluation::new(domain, col))
+            .collect();
+
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_num_rows + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // Commit to the preprocessed trace
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![]);
+    tree_builder.commit(channel);
+
+    // Commit to the size of the trace
+    channel.mix_u64(log_num_rows as u64);
+
+    // Commit to the original trace
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace);
+    tree_builder.commit(channel);
+
+    // Create a component
+    let component = FrameworkComponent::<TestEval>::new(
+        &mut TraceLocationAllocator::default(),
+        TestEval {
+            log_size: log_num_rows,
+        },
+        QM31::zero(),
+    );
+
+    // ANCHOR: here_2
+    // --snip--
+
+    // Prove
+    let proof = prove(&[&component], channel, commitment_scheme).unwrap();
+
+    // Verify
+    let channel = &mut Blake2sChannel::default();
+    let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+    let sizes = component.trace_log_degree_bounds();
+
+    commitment_scheme.commit(proof.commitments[0], &sizes[0], channel);
+    channel.mix_u64(log_num_rows as u64);
+    commitment_scheme.commit(proof.commitments[1], &sizes[1], channel);
+
+    verify(&[&component], channel, commitment_scheme, proof).unwrap();
+}
+// ANCHOR_END: here_2
+
+```
+
+</details>
+
+## public_input.rs
+
+<a id="public_inputrs"></a>
+
+<details>
+<summary>View public_input.rs</summary>
+
+```rust
+use num_traits::One;
+use num_traits::Zero;
+use stwo::core::fields::FieldExpOps;
+use stwo::core::verifier::verify;
+use stwo::core::{
+    air::Component,
+    channel::{Blake2sChannel, Channel},
+    fields::{m31::M31, qm31::SecureField},
+    pcs::{CommitmentSchemeVerifier, PcsConfig},
+    poly::circle::CanonicCoset,
+    vcs::blake2_merkle::Blake2sMerkleChannel,
+    ColumnVec,
+};
+use stwo::prover::{
+    backend::simd::{
+        column::BaseColumn,
+        m31::{PackedM31, LOG_N_LANES},
+        qm31::PackedSecureField,
+        SimdBackend,
+    },
+    backend::Column,
+    poly::{
+        circle::{CircleEvaluation, PolyOps},
+        BitReversedOrder,
+    },
+    prove, CommitmentSchemeProver,
+};
+use stwo_constraint_framework::{
+    relation, EvalAtRow, FrameworkComponent, FrameworkEval, LogupTraceGenerator, Relation,
+    RelationEntry, TraceLocationAllocator,
+};
+
+struct PublicDataClaim {
+    public_input: Vec<Vec<PackedM31>>,
+    public_output: Vec<PackedM31>,
+}
+
+impl PublicDataClaim {
+    pub fn mix_into(&self, channel: &mut impl Channel) {
+        for input in self.public_input.iter().flatten() {
+            for v in input.to_array().iter() {
+                channel.mix_u64(v.0 as u64);
+            }
+        }
+        for output in self.public_output.iter() {
+            for v in output.to_array().iter() {
+                channel.mix_u64(v.0 as u64);
+            }
+        }
+    }
+}
+
+relation!(PublicInputElements, 3);
+
+struct TestEval {
+    log_size: u32,
+    lookup_elements: PublicInputElements,
+}
+
+impl FrameworkEval for TestEval {
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        // 10 columns: c0..c9, each row encodes a Fibonacci sequence across columns
+        let c0 = eval.next_trace_mask();
+        let c1 = eval.next_trace_mask();
+        let c2 = eval.next_trace_mask();
+        let c3 = eval.next_trace_mask();
+        let c4 = eval.next_trace_mask();
+        let c5 = eval.next_trace_mask();
+        let c6 = eval.next_trace_mask();
+        let c7 = eval.next_trace_mask();
+        let c8 = eval.next_trace_mask();
+        let c9 = eval.next_trace_mask();
+
+        // Enforce Fibonacci relation: c_{i} = c_{i-1} + c_{i-2}
+        eval.add_constraint(c0.clone() + c1.clone() - c2.clone());
+        eval.add_constraint(c1.clone() + c2.clone() - c3.clone());
+        eval.add_constraint(c2.clone() + c3.clone() - c4.clone());
+        eval.add_constraint(c3.clone() + c4.clone() - c5.clone());
+        eval.add_constraint(c4.clone() + c5.clone() - c6.clone());
+        eval.add_constraint(c5.clone() + c6.clone() - c7.clone());
+        eval.add_constraint(c6.clone() + c7.clone() - c8.clone());
+        eval.add_constraint(c7.clone() + c8.clone() - c9.clone());
+
+        // LogUp relation: -1/(c0 + alpha * c1 + alpha^2 * c9 - Z)
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            -E::EF::one(),
+            &[c0.clone(), c1.clone(), c9.clone()],
+        ));
+        eval.finalize_logup();
+
+        eval
+    }
+}
+
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+fn main() {
+    // 16 rows, 10 columns
+    let num_rows: usize = 16;
+    let log_num_rows: u32 = 4; // log2(16)
+
+    // Create the table
+    const NUM_COLS: usize = 10;
+    let mut cols: Vec<BaseColumn> = (0..NUM_COLS).map(|_| BaseColumn::zeros(num_rows)).collect();
+
+    // Seeds per row: (1, 1), (1, 2), (1, 3), ... up to 16 rows
+    for r in 0..num_rows {
+        cols[0].set(r, M31::from(1u32));
+        cols[1].set(r, M31::from((r as u32) + 1));
+        for c in 2..NUM_COLS {
+            let a = cols[c - 2].at(r);
+            let b = cols[c - 1].at(r);
+            cols[c].set(r, a + b);
+        }
+    }
+
+    let public_input = [cols[0].clone(), cols[1].clone()]
+        .into_iter()
+        .map(|col| col.data)
+        .collect();
+    let public_output = cols[9].clone().data;
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_num_rows).circle_domain();
+    let trace: ColumnVec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> = cols
+        .into_iter()
+        .map(|col| CircleEvaluation::new(domain, col))
+        .collect();
+
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_num_rows + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // Commit to the preprocessed trace
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![]);
+    tree_builder.commit(channel);
+
+    // Commit to the size of the trace
+    channel.mix_u64(log_num_rows as u64);
+
+    // Commit to the public input
+    let public_data_claim = PublicDataClaim {
+        public_input,
+        public_output,
+    };
+    public_data_claim.mix_into(channel);
+
+    // Commit to the original trace
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace.clone());
+    tree_builder.commit(channel);
+
+    // Draw random elements for LogUp
+    let lookup_elements = PublicInputElements::draw(channel);
+
+    // Build LogUp column:
+    //   -1/(c0 + alpha * c1 + alpha^2 * c9 - Z)
+    let mut logup_gen = LogupTraceGenerator::new(log_num_rows);
+
+    let mut col_gen = logup_gen.new_col();
+    for simd_row in 0..(1 << (log_num_rows - LOG_N_LANES)) {
+        let denom: PackedSecureField = lookup_elements.combine(&[
+            trace[0].data[simd_row],
+            trace[1].data[simd_row],
+            trace[9].data[simd_row],
+        ]);
+        col_gen.write_frac(simd_row, -PackedSecureField::one(), denom);
+    }
+    col_gen.finalize_col();
+
+    let (logup_cols, mut claimed_sum) = logup_gen.finalize_last();
+
+    // Commit to the LogUp columns
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(logup_cols);
+    tree_builder.commit(channel);
+
+    // Create a component
+    let component = FrameworkComponent::<TestEval>::new(
+        &mut TraceLocationAllocator::default(),
+        TestEval {
+            log_size: log_num_rows,
+            lookup_elements: lookup_elements.clone(),
+        },
+        claimed_sum,
+    );
+
+    // Prove
+    let proof = prove(&[&component], channel, commitment_scheme).unwrap();
+
+    // Verify
+
+    // Add the public values to the claimed sum
+    let mut public_values = vec![PackedSecureField::zero(); 1 << (log_num_rows - LOG_N_LANES)];
+    for simd_row in 0..(1 << (log_num_rows - LOG_N_LANES)) {
+        let denom: PackedSecureField = lookup_elements.combine(&[
+            trace[0].data[simd_row],
+            trace[1].data[simd_row],
+            trace[9].data[simd_row],
+        ]);
+        public_values[simd_row] = denom;
+    }
+    let public_values = PackedSecureField::batch_inverse(&public_values);
+    for value in public_values.iter() {
+        for v in value.to_array().iter() {
+            claimed_sum += *v;
+        }
+    }
+    assert_eq!(claimed_sum, SecureField::zero());
+
+    let channel = &mut Blake2sChannel::default();
+    let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+    let sizes = component.trace_log_degree_bounds();
+
+    commitment_scheme.commit(proof.commitments[0], &sizes[0], channel);
+    channel.mix_u64(log_num_rows as u64);
+    public_data_claim.mix_into(channel);
+    commitment_scheme.commit(proof.commitments[1], &sizes[1], channel);
+    commitment_scheme.commit(proof.commitments[2], &sizes[2], channel);
+
+    verify(&[&component], channel, commitment_scheme, proof).unwrap();
+}
+
+```
+
+</details>
+
+## static_lookups.rs
+
+<a id="static_lookupsrs"></a>
+
+<details>
+<summary>View static_lookups.rs</summary>
+
+```rust
+use num_traits::{identities::Zero, One};
+use rand::Rng;
+use stwo_constraint_framework::{
+    LogupTraceGenerator, preprocessed_columns::PreProcessedColumnId, EvalAtRow,
+    FrameworkComponent, FrameworkEval, Relation, RelationEntry, TraceLocationAllocator, relation,
+};
+use stwo::core::{
+    air::Component,
+    channel::{Blake2sChannel, Channel},
+    fields::{m31::M31, qm31::SecureField},
+    pcs::{CommitmentSchemeVerifier, PcsConfig},
+    poly::{ circle::CanonicCoset },
+    vcs::blake2_merkle::Blake2sMerkleChannel,
+};
+use stwo::core::verifier::verify;
+use stwo::prover::{
+    backend::simd::{column::BaseColumn, m31::LOG_N_LANES, qm31::PackedSecureField, SimdBackend},
+    backend::Column,
+    poly::{ circle::{CircleEvaluation, PolyOps}, BitReversedOrder },
+    CommitmentSchemeProver, prove,
+};
+
+// ANCHOR: range_check_column
+struct RangeCheckColumn {
+    pub log_size: u32,
+}
+
+#[allow(dead_code)]
+impl RangeCheckColumn {
+    pub fn new(log_size: u32) -> Self {
+        Self { log_size }
+    }
+
+    pub fn gen_column(&self) -> CircleEvaluation<SimdBackend, M31, BitReversedOrder> {
+        let col = BaseColumn::from_iter((0..(1 << self.log_size)).map(|i| M31::from(i)));
+        CircleEvaluation::new(CanonicCoset::new(self.log_size).circle_domain(), col)
+    }
+
+    pub fn id(&self) -> PreProcessedColumnId {
+        PreProcessedColumnId {
+            id: format!("range_check_{}_bits", self.log_size),
+        }
+    }
+}
+// ANCHOR_END: range_check_column
+
+// ANCHOR: test_eval
+struct TestEval {
+    range_check_id: PreProcessedColumnId,
+    log_size: u32,
+    lookup_elements: SmallerThan16Elements,
+}
+
+impl FrameworkEval for TestEval {
+    fn log_size(&self) -> u32 {
+        self.log_size
+    }
+
+    fn max_constraint_log_degree_bound(&self) -> u32 {
+        self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR
+    }
+
+    fn evaluate<E: EvalAtRow>(&self, mut eval: E) -> E {
+        let range_check_col = eval.get_preprocessed_column(self.range_check_id.clone());
+
+        let lookup_col_1 = eval.next_trace_mask();
+        let lookup_col_2 = eval.next_trace_mask();
+        let multiplicity_col = eval.next_trace_mask();
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            -E::EF::from(multiplicity_col),
+            &[range_check_col],
+        ));
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            E::EF::one(),
+            &[lookup_col_1],
+        ));
+
+        eval.add_to_relation(RelationEntry::new(
+            &self.lookup_elements,
+            E::EF::one(),
+            &[lookup_col_2],
+        ));
+
+        eval.finalize_logup_batched(&vec![0, 1, 1]);
+
+        eval
+    }
+}
+// ANCHOR_END: test_eval
+
+const LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR: u32 = 1;
+
+// ANCHOR: gen_trace
+fn gen_trace(log_size: u32) -> Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>> {
+    // Create a table with random values
+    let mut rng = rand::thread_rng();
+    let lookup_col_1 =
+        BaseColumn::from_iter((0..(1 << log_size)).map(|_| M31::from(rng.gen_range(0..16))));
+    let lookup_col_2 =
+        BaseColumn::from_iter((0..(1 << log_size)).map(|_| M31::from(rng.gen_range(0..16))));
+
+    let mut multiplicity_col = BaseColumn::zeros(1 << log_size);
+    lookup_col_1
+        .as_slice()
+        .iter()
+        .chain(lookup_col_2.as_slice().iter())
+        .for_each(|value| {
+            let index = value.0 as usize;
+            multiplicity_col.set(index, multiplicity_col.at(index) + M31::from(1));
+        });
+
+    // Convert table to trace polynomials
+    let domain = CanonicCoset::new(log_size).circle_domain();
+    vec![
+        lookup_col_1.clone(),
+        lookup_col_2.clone(),
+        multiplicity_col.clone(),
+    ]
+    .into_iter()
+    .map(|col| CircleEvaluation::new(domain, col))
+    .collect()
+}
+// ANCHOR_END: gen_trace
+
+// ANCHOR: gen_logup_trace
+relation!(SmallerThan16Elements, 1);
+
+fn gen_logup_trace(
+    range_log_size: u32,
+    log_size: u32,
+    range_check_col: &BaseColumn,
+    lookup_col_1: &BaseColumn,
+    lookup_col_2: &BaseColumn,
+    multiplicity_col: &BaseColumn,
+    lookup_elements: &SmallerThan16Elements,
+) -> (
+    Vec<CircleEvaluation<SimdBackend, M31, BitReversedOrder>>,
+    SecureField,
+) {
+    let mut logup_gen = LogupTraceGenerator::new(range_log_size);
+
+    let mut col_gen = logup_gen.new_col();
+    for simd_row in 0..(1 << (range_log_size - LOG_N_LANES)) {
+        let numerator: PackedSecureField = PackedSecureField::from(multiplicity_col.data[simd_row]);
+        let denom: PackedSecureField = lookup_elements.combine(&[range_check_col.data[simd_row]]);
+        col_gen.write_frac(simd_row, -numerator, denom);
+    }
+    col_gen.finalize_col();
+
+    let mut col_gen = logup_gen.new_col();
+    for simd_row in 0..(1 << (log_size - LOG_N_LANES)) {
+        let lookup_col_1_val: PackedSecureField =
+            lookup_elements.combine(&[lookup_col_1.data[simd_row]]);
+        let lookup_col_2_val: PackedSecureField =
+            lookup_elements.combine(&[lookup_col_2.data[simd_row]]);
+        // 1 / denom1 + 1 / denom2 = (denom1 + denom2) / (denom1 * denom2)
+        let numerator = lookup_col_1_val + lookup_col_2_val;
+        let denom = lookup_col_1_val * lookup_col_2_val;
+        col_gen.write_frac(simd_row, numerator, denom);
+    }
+    col_gen.finalize_col();
+
+    logup_gen.finalize_last()
+}
+// ANCHOR_END: gen_logup_trace
+
+// ANCHOR: main_start
+fn main() {
+    // ANCHOR_END: main_start
+    let range_log_size = LOG_N_LANES;
+    let log_num_rows = range_log_size;
+
+    // Config for FRI and PoW
+    let config = PcsConfig::default();
+
+    // Precompute twiddles for evaluating and interpolating the trace
+    let twiddles = SimdBackend::precompute_twiddles(
+        CanonicCoset::new(
+            log_num_rows + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor,
+        )
+        .circle_domain()
+        .half_coset,
+    );
+
+    // Create the channel and commitment scheme
+    let channel = &mut Blake2sChannel::default();
+    let mut commitment_scheme =
+        CommitmentSchemeProver::<SimdBackend, Blake2sMerkleChannel>::new(config, &twiddles);
+
+    // Create and commit to the preprocessed columns
+    let range_check_col = RangeCheckColumn::new(range_log_size).gen_column();
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(vec![range_check_col.clone()]);
+    tree_builder.commit(channel);
+
+    // Commit to the size of the trace
+    channel.mix_u64((log_num_rows) as u64);
+
+    // Create and commit to the trace columns
+    let trace = gen_trace(log_num_rows);
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(trace.clone());
+    tree_builder.commit(channel);
+
+    // ANCHOR: logup_start
+    // Draw random elements to use when creating the random linear combination of lookup values in the LogUp columns
+    let lookup_elements = SmallerThan16Elements::draw(channel);
+
+    // Create and commit to the LogUp columns
+    let (logup_cols, claimed_sum) = gen_logup_trace(
+        range_log_size,
+        log_num_rows,
+        &range_check_col,
+        &trace[0],
+        &trace[1],
+        &trace[2],
+        &lookup_elements,
+    );
+    // ANCHOR_END: logup_start
+    let mut tree_builder = commitment_scheme.tree_builder();
+    tree_builder.extend_evals(logup_cols);
+    tree_builder.commit(channel);
+
+    // Create a component
+    let component = FrameworkComponent::<TestEval>::new(
+        &mut TraceLocationAllocator::default(),
+        TestEval {
+            range_check_id: RangeCheckColumn::new(range_log_size).id(),
+            log_size: log_num_rows,
+            lookup_elements,
+        },
+        claimed_sum,
+    );
+
+    // Prove
+    let proof = prove(&[&component], channel, commitment_scheme).unwrap();
+
+    // ANCHOR: verify
+    // Verify
+    assert_eq!(claimed_sum, SecureField::zero());
+
+    let channel = &mut Blake2sChannel::default();
+    let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+    let sizes = component.trace_log_degree_bounds();
+
+    commitment_scheme.commit(proof.commitments[0], &sizes[0], channel);
+    channel.mix_u64((log_num_rows) as u64);
+    commitment_scheme.commit(proof.commitments[1], &sizes[1], channel);
+    commitment_scheme.commit(proof.commitments[2], &sizes[2], channel);
+
+    verify(&[&component], channel, commitment_scheme, proof).unwrap();
+    // ANCHOR_END: verify
+    // ANCHOR: main_end
+}
+// ANCHOR_END: main_end
+
+```
+
+</details>
+
+## writing_a_spreadsheet.rs
+
+<a id="writing_a_spreadsheetrs"></a>
+
+<details>
+<summary>View writing_a_spreadsheet.rs</summary>
+
+```rust
+use stwo::prover::{
+    backend::{
+        simd::{column::BaseColumn, m31::N_LANES},
+        Column,
+    },
+};
+use stwo::core::fields::m31::M31;
+
+fn main() {
+    let num_rows = N_LANES;
+
+    let mut col_1 = BaseColumn::zeros(num_rows as usize);
+    col_1.set(0, M31::from(1));
+    col_1.set(1, M31::from(7));
+
+    let mut col_2 = BaseColumn::zeros(num_rows as usize);
+    col_2.set(0, M31::from(5));
+    col_2.set(1, M31::from(11));
+}
+
+```
+
+</details>
+

@@ -1,0 +1,230 @@
+---
+title: "Merkle Verifier"
+---
+
+# Merkle Verifier
+
+This section covers the verification component of the Merkle commitment scheme. The following struct implements the verifier of the Merkle commitment scheme.
+
+```rust
+pub struct MerkleVerifier<H: MerkleHasher> {
+    pub root: H::Hash,
+    pub column_log_sizes: Vec<u32>,
+    pub n_columns_per_log_size: BTreeMap<u32, usize>,
+}
+```
+
+The struct elements are defined as follows:
+* `root`: root hash of the Merkle tree committing to column data
+* `column_log_sizes`: a vector containing log size values of all the columns
+* `n_columns_per_log_size`: a map that associates each column log size with the number of columns of that size
+
+
+## Verifying the decommitment
+
+The `verify` function is the main function defined for the `MerkleVerifier`. It takes the following input:
+- `queries_per_log_size`: A map from log size to a vector of query indices for columns of that size.
+- `queried_values`: The queried column values, which is one of the outputs of the `decommit` function.
+- `decommitment`: `MerkleDecommitment` containing the `hash_witness` and `column_witness` required to check inclusion of the `queried_values` in the Merkle tree. This is also one of the outputs of the `decommit` function.
+
+Below is the complete implementation of the `verify` function:
+```rust
+    pub fn verify(
+        &self,
+        queries_per_log_size: &BTreeMap<u32, Vec<usize>>,
+        queried_values: Vec<BaseField>,
+        decommitment: MerkleDecommitment<H>,
+    ) -> Result<(), MerkleVerificationError> {
+        let Some(max_log_size) = self.column_log_sizes.iter().max() else {
+            return Ok(());
+        };
+
+        let mut queried_values = queried_values.into_iter();
+
+        // Prepare read buffers.
+
+        let mut hash_witness = decommitment.hash_witness.into_iter();
+        let mut column_witness = decommitment.column_witness.into_iter();
+
+        let mut last_layer_hashes: Option<Vec<(usize, H::Hash)>> = None;
+        for layer_log_size in (0..=*max_log_size).rev() {
+            let n_columns_in_layer = *self
+                .n_columns_per_log_size
+                .get(&layer_log_size)
+                .unwrap_or(&0);
+
+            // Prepare write buffer for queries to the current layer. This will propagate to the
+            // next layer.
+            let mut layer_total_queries = vec![];
+
+            // Queries to this layer come from queried node in the previous layer and queried
+            // columns in this one.
+            let mut prev_layer_queries = last_layer_hashes
+                .iter()
+                .flatten()
+                .map(|(q, _)| *q)
+                .collect_vec()
+                .into_iter()
+                .peekable();
+            let mut prev_layer_hashes = last_layer_hashes.as_ref().map(|x| x.iter().peekable());
+            let mut layer_column_queries =
+                option_flatten_peekable(queries_per_log_size.get(&layer_log_size));
+
+            // Merge previous layer queries and column queries.
+            while let Some(node_index) =
+                next_decommitment_node(&mut prev_layer_queries, &mut layer_column_queries)
+            {
+                prev_layer_queries
+                    .peek_take_while(|q| q / 2 == node_index)
+                    .for_each(drop);
+
+                let node_hashes = prev_layer_hashes
+                    .as_mut()
+                    .map(|prev_layer_hashes| {
+                        {
+                            // If the left child was not computed, read it from the witness.
+                            let left_hash = prev_layer_hashes
+                                .next_if(|(index, _)| *index == 2 * node_index)
+                                .map(|(_, hash)| Ok(*hash))
+                                .unwrap_or_else(|| {
+                                    hash_witness
+                                        .next()
+                                        .ok_or(MerkleVerificationError::WitnessTooShort)
+                                })?;
+
+                            // If the right child was not computed, read it to from the witness.
+                            let right_hash = prev_layer_hashes
+                                .next_if(|(index, _)| *index == 2 * node_index + 1)
+                                .map(|(_, hash)| Ok(*hash))
+                                .unwrap_or_else(|| {
+                                    hash_witness
+                                        .next()
+                                        .ok_or(MerkleVerificationError::WitnessTooShort)
+                                })?;
+                            Ok((left_hash, right_hash))
+                        }
+                    })
+                    .transpose()?;
+
+                // If the column values were queried, read them from `queried_value`.
+                let (err, node_values_iter) = match layer_column_queries.next_if_eq(&node_index) {
+                    Some(_) => (
+                        MerkleVerificationError::TooFewQueriedValues,
+                        &mut queried_values,
+                    ),
+                    // Otherwise, read them from the witness.
+                    None => (
+                        MerkleVerificationError::WitnessTooShort,
+                        &mut column_witness,
+                    ),
+                };
+
+                let node_values = node_values_iter.take(n_columns_in_layer).collect_vec();
+                if node_values.len() != n_columns_in_layer {
+                    return Err(err);
+                }
+
+                layer_total_queries.push((node_index, H::hash_node(node_hashes, &node_values)));
+            }
+
+            last_layer_hashes = Some(layer_total_queries);
+        }
+
+        // Check that all witnesses and values have been consumed.
+        if hash_witness.next().is_some() {
+            return Err(MerkleVerificationError::WitnessTooLong);
+        }
+        if queried_values.next().is_some() {
+            return Err(MerkleVerificationError::TooManyQueriedValues);
+        }
+        if column_witness.next().is_some() {
+            return Err(MerkleVerificationError::WitnessTooLong);
+        }
+
+        let [(_, computed_root)] = last_layer_hashes.unwrap().try_into().unwrap();
+        if computed_root != self.root {
+            return Err(MerkleVerificationError::RootMismatch);
+        }
+
+        Ok(())
+    }
+```
+
+Let's break down the function step by step:
+
+1. **Initialize Variables:**
+   - Convert `queried_values` into an iterator for consumption during verification.
+   - Create iterators for `hash_witness` and `column_witness` from the `decommitment`.
+   - Initialize `last_layer_hashes` to track computed hashes from the previous layer.
+
+2. **Layer-by-Layer Verification:**
+   - For each layer (from largest to smallest):
+     - Get the number of columns in the current layer (`n_columns_in_layer`) from the map `n_columns_per_log_size`.
+     - Prepare iterators for previous layer queries (`prev_layer_queries`), previous layer hashes (`prev_layer_hashes`) and current layer column queries (`layer_column_queries`).
+     - For each node index:
+       - **Reconstruct `node_hashes`:** Use computed hashes from the `prev_layer_hashes` or read missing sibling hashes from `hash_witness`.
+       - **Get Node Values:** If the node is queried, read column values from `queried_values`; otherwise, read from `column_witness`.
+       - **Compute Hash:** Use the hash function to compute the hash of the current node from its children hashes and column values.
+       - Store the computed hash for propagation to the next layer.
+
+3. **Final Verification:**
+   - Check that all witnesses and queried values have been fully consumed (no excess data).
+   - Verify that the computed root matches the expected root stored in the verifier.
+   - Return `Ok(())` if verification succeeds, or an appropriate error otherwise.
+
+### Example: Verify the decommitment
+
+The same example from the [decommit process](./merkle_prover.mdx#example-decommit-process) is used to verify the output of the `decommit` function. The input to the `verify` function is as follows:
+- `queries_per_log_size`: $[(2, [0]), (1, [1])]$
+- `queried_values`: $[\textcolor{red}{a}, \textcolor{green}{p}, \textcolor{blue}{v}]$
+- `decommitment`:
+    - `hash_witness`: $[h_{01}, h_{10}, h_{11}]$
+    - `column_witness`: $[\textcolor{blue}{u}]$
+
+Below is a walkthrough of the main loop in the `verify` function, showing how the verifier reconstructs the Merkle root:
+
+- **layer_log_size = 2 (columns of size 4):**
+    - `n_columns_in_layer`: 2 (for $\textcolor{red}{\text{\textit{Column} 0}}$ and $\textcolor{green}{\text{\textit{Column} 1}}$)
+    - `last_layer_hashes`: `None` (first layer)
+    - `prev_layer_queries`: empty
+    - `layer_column_queries`: $[0]$
+    - For `node_index = 0`:
+        - `node_hashes`: `None` (no previous layer)
+        - `node_values`: Read from `queried_values` → $[\textcolor{red}{a}, \textcolor{green}{p}]$
+        - Compute hash: $h_{00} = H(\textcolor{red}{a}, \textcolor{green}{p})$
+        - Add to `layer_total_queries`: $(0, h_{00})$
+    - At this stage: `last_layer_hashes` = $[(0, h_{00})]$
+
+- **layer_log_size = 1 (columns of size 2):**
+    - `n_columns_in_layer`: 1 (for $\textcolor{blue}{\text{\textit{Column} 2}}$)
+    - `last_layer_hashes`: $[(0, h_{00})]$
+    - `prev_layer_queries`: $[0]$
+    - `layer_column_queries`: $[1]$
+    - For `node_index = 0`:
+        - `node_hashes`: Left child is $h_{00}$ (computed from `last_layer_hashes`), right child $h_{01}$ read from `hash_witness`
+        - `node_values`: Read from `column_witness` → $[\textcolor{blue}{u}]$
+        - Compute hash: $h_0 = H(h_{00}, h_{01}, \textcolor{blue}{u})$
+        - Add to `layer_total_queries`: $(0, h_0)$
+    - For `node_index = 1`:
+        - `node_hashes`: Both children $h_{10}, h_{11}$ read from `hash_witness`
+        - `node_values`: Read from `queried_values` → $[\textcolor{blue}{v}]$
+        - Compute hash: $h_1 = H(h_{10}, h_{11}, \textcolor{blue}{v})$
+        - Add to `layer_total_queries`: $(1, h_1)$
+    - At this stage: `last_layer_hashes` = $[(0, h_0), (1, h_1)]$
+
+- **layer_log_size = 0 (root):**
+    - `n_columns_in_layer`: 0 (no columns of size 1)
+    - `last_layer_hashes`: $[(0, h_0), (1, h_1)]$
+    - `prev_layer_queries`: $[0, 1]$
+    - `layer_column_queries`: empty
+    - For `node_index = 0`:
+        - `node_hashes`: Left child is $h_0$, right child is $h_1$ (both computed from `last_layer_hashes`)
+        - `node_values`: empty (no columns)
+        - Compute hash: $root = H(h_0, h_1)$
+        - Add to `layer_total_queries`: $(0, root)$
+    - At this stage: `last_layer_hashes` = $[(0, root)]$
+
+**Final verification:**
+- Check that all iterators are exhausted: `hash_witness`, `queried_values`, and `column_witness` should all be empty.
+- Compare the computed `root` with the expected root stored in the `MerkleVerifier`.
+- If they match, return `Ok(())`; otherwise, return `Err(MerkleVerificationError::RootMismatch)`.
