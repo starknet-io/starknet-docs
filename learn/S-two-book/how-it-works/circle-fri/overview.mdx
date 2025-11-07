@@ -11,7 +11,7 @@ This section does not provide a detailed analysis of how FRI works, but instead 
 ## Introduction
 
 
-Circle FRI tests the proximity of a function $f \in F^D$ over a [canonical coset](../circle-group.mdx#canonic-coset) $D$ of size $|D|=2^{n + \beta}$ to some polynomial $p(x, y)$ from the [polynomial space](../circle-fft/basis.mdx#dimension-gap) $L'_n(F)$. The function $f \in F^D$ is represented as a vector of evaluations over the domain $D$.
+Circle FRI tests the proximity of a function $f \in F^D$ over a [canonical coset](/learn/S-two-book/how-it-works/circle-group#canonic-coset) $D$ of size $|D|=2^{n + \beta}$ to some polynomial $p(x, y)$ from the [polynomial space](/learn/S-two-book/how-it-works/circle-fft/basis#dimension-gap) $L'_n(F)$. The function $f \in F^D$ is represented as a vector of evaluations over the domain $D$.
 
 Here:
 - $F$ is a field extension of $\mathsf{M31}$
@@ -40,13 +40,23 @@ H_0 \xrightarrow{\pi} H_1 \xrightarrow{\pi} H_2
 $$
 Suppose for the sake of our example, for $i$ in $\{0,1,2\}$ the domain $H_i = D_{3-i + \beta}$, where $D_{3-i + \beta}$ is a canonical coset of size $2^{3-i + \beta}$. For each $i$ in $\{0,1,2\}$, we need to check that the functions $h_{i} \in F^{H_i}$ are "close" to the polynomial space $L'_{3-i}(F)$. For example, for $i=0$, we need to check that the function $h_{0}$ defined over $H_0 = D_{3 + \beta}$ is close to the polynomial space $L'_{3}(F)$.
 
-Circle FRI follows a similar divide-and-conquer strategy as the [Circle FFT](../circle-fft/algorithm) algorithm. The prover recursively decomposes the functions and folds the odd and even parts using randomness sent by the verifier. This reduction continues until the proximity test of the folded function to the polynomial space is small enough for the verifier to check directly; in this case, the prover sends the folded function directly to the verifier.
+Circle FRI follows a similar divide-and-conquer strategy as the [Circle FFT](/learn/S-two-book/how-it-works/circle-fft/algorithm) algorithm. The prover recursively decomposes the functions and folds the odd and even parts using randomness sent by the verifier. This reduction continues until the proximity test of the folded function to the polynomial space is small enough for the verifier to check directly; in this case, the prover sends the folded function directly to the verifier.
 
 We reduce the functions up to folded functions evaluated over a domain $H_r$. For the sake of our example, consider $r=2$. Then the sequence of domains for circle FRI in the multi-domain setting is as follows:
-<div style={{ textAlign: 'center' }}>
-    ![](../figures/fri-domains.svg)
-
-*Figure 1: Sequence of domains for Circle FRI*
+<div
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '0.5rem',
+  }}
+>
+  <img
+    src="/learn/S-two-book/how-it-works/figures/fri-domains.svg"
+    alt="Sequence of domains for Circle FRI"
+    style={{ maxWidth: '100%', height: 'auto' }}
+  />
+  <span>Figure 1: Sequence of domains for Circle FRI</span>
 </div>
 
 As shown in the above diagram, we use two different maps, as in the circle FFT algorithm: the projection map $\pi_x$ and the squaring map $\pi$. Here, $I_i$ is the "line" domain; for every $i$ in $\{0,1,2\}$, $I_i = S_{3-i}$, where $S_{3-i}$ is the "line" domain of size $|S_{3-i}| = |D_{3-i}| / 2 = 2^{2-i+\beta}$.
@@ -64,7 +74,7 @@ Using circle FRI, the prover will prove proximity of functions $h_{0}$ to polyno
     $$
     h_{0,0}(x) = \frac{h_0(x,y)+h_0(x,-y)}{2} \quad, \quad h_{0,1}(x) = \frac{h_0(x,y)-h_0(x,-y)}{2y}.
     $$
-    Note that this decomposition and the process of finding evaluations of the decomposed functions is very similar to the circle FFT algorithm. Now the prover will fold the evaluations of $h_{0,0}$ and $h_{0,1}$ over the domain $I_0$ using the randomness $\lambda_0 \xleftarrow{\$} F$ from the verifier as follows:
+    Note that this decomposition and the process of finding evaluations of the decomposed functions is very similar to the circle FFT algorithm. Now the prover will fold the evaluations of $h_{0,0}$ and $h_{0,1}$ over the domain $I_0$ using the randomness $\lambda_0 \in F$ from the verifier as follows:
     $$
     g_0(x) = {\lambda_0}^2 \cdot (h_{0,0}(x) + \lambda_0 \cdot h_{0, 1}(x))
     $$
@@ -77,7 +87,7 @@ Using circle FRI, the prover will prove proximity of functions $h_{0}$ to polyno
     $$
     g_{0,0}(2x^2 - 1) = \frac{g_0(x)+g_0(-x)}{2} \quad, \quad g_{0,1}(2x^2 - 1) = \frac{g_0(x)-g_0(-x)}{2x}.
     $$
-    Now the prover will fold the evaluations of $h_{1,0}$, $h_{1,1}$, $g_{0,0}$, and $g_{0,1}$ over the domain $I_1$ using the randomness $\lambda_1 \xleftarrow{\$} F$ from the verifier as follows:
+    Now the prover will fold the evaluations of $h_{1,0}$, $h_{1,1}$, $g_{0,0}$, and $g_{0,1}$ over the domain $I_1$ using the randomness $\lambda_1 \in F$ from the verifier as follows:
     $$
     g_1(x) = g_{0,0}(x) + \lambda_1 \cdot g_{0, 1}(x) + \lambda_1^2 \cdot (h_{1,0}(x) + \lambda_1 \cdot h_{1,1}(x))
     $$
@@ -88,7 +98,7 @@ Using circle FRI, the prover will prove proximity of functions $h_{0}$ to polyno
     $$
     This is the final round, so the prover will send $g_2(x) \in F^{I_2}$ to the verifier in plain.
 
-    Let us describe the protocol for the general case. In each round $i = \{0, \dots, r\}$, the prover has previous evaluations $g_{i-1} \in F^{I_{i-1}}$ (for round $i = 0$ we take $g_{-1} = 0$). The verifier sends $\lambda_i \xleftarrow{\$} F$ and the prover commits to $g_i \in F^{I_i}$, defined as follows:
+    Let us describe the protocol for the general case. In each round $i = \{0, \dots, r\}$, the prover has previous evaluations $g_{i-1} \in F^{I_{i-1}}$ (for round $i = 0$ we take $g_{-1} = 0$). The verifier sends $\lambda_i \in F$ and the prover commits to $g_i \in F^{I_i}$, defined as follows:
 
     $$
     g_i = g_{i-1,0} + \lambda_i \cdot g_{i-1,1} + \lambda_i^2 \cdot (h_{i,0} + \lambda_i \cdot h_{i,1})
@@ -123,4 +133,3 @@ Using circle FRI, the prover will prove proximity of functions $h_{0}$ to polyno
 In this section, we analyze the security of the FRI protocol at a high level. There are roughly two ways a prover can cheat:
 - The functions $h_{i} \in F^{H_i}$ are "far" from the polynomial space $L'_{3-i}(F)$ but somehow the prover gets lucky and ends up with $g_2 \in \mathcal{L}_0$. The [proximity gaps paper](https://eprint.iacr.org/2020/654.pdf) analyzes that this happens with negligible probability. That is, if even one of the functions $h_{i} \in F^{H_i}$ is "far" from the polynomial space $L'_{3-i}(F)$, then the function $g_2$ will be "far" from $\mathcal{L}_0$ with high probability.
 - Now suppose $h_{i} \in F^{H_i}$ are "far" from the polynomial space $L'_{3-i}(F)$, then the function $g_2$ will be "far" from $\mathcal{L}_0$, but to cheat the verifier, the prover cheats in the folding rounds and sends some valid $g_2 \in \mathcal{L}_0$. Now the verifier must ensure that the prover has performed the folding correctly in each round using the oracles sent by the prover. This is exactly what the verifier checks in the query phase. From the "Toy Problem Conjecture" ([ethSTARK, Section 5.9](https://eprint.iacr.org/2021/582.pdf)), each query done by the verifier gives $\beta$ (i.e. log of blowup $B$) bits of security. Thus, for $s$ queries, the security is $s \cdot \beta$ bits.
-

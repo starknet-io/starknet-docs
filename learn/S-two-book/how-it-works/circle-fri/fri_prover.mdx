@@ -30,7 +30,7 @@ We calculate the security bits of our protocol as follows:
         self.log_blowup_factor * self.n_queries as u32
     }
 ```
-This is as we discussed in the [Security Analysis section](./overview.mdx#security-analysis).
+This is as we discussed in the [Security Analysis section](/learn/S-two-book/how-it-works/circle-fri/overview#security-analysis).
 
 ## Proving
 
@@ -44,10 +44,10 @@ pub struct FriProver<'a, B: FriOps + MerkleOps<MC::H>, MC: MerkleChannel> {
 }
 ```
 
-Here, `FriOps` is a trait which implements functionality for the commit phase of FRI, such as folding the evaluations, and `MerkleOps` is the trait used in the [Merkle commitment scheme](../vcs/hash_functions.mdx#merkleops-trait). The generic `B` refers to a specific backend, for example either `CpuBackend` or `SimdBackend`, which implements the `FriOps` and `MerkleOps` traits.
+Here, `FriOps` is a trait which implements functionality for the commit phase of FRI, such as folding the evaluations, and `MerkleOps` is the trait used in the [Merkle commitment scheme](/learn/S-two-book/how-it-works/vcs/hash_functions#merkleops-trait). The generic `B` refers to a specific backend, for example either `CpuBackend` or `SimdBackend`, which implements the `FriOps` and `MerkleOps` traits.
 
 
-We described [FRI](./overview.mdx#protocol) as an interactive protocol between the prover and the verifier. To make the protocol non-interactive, we use the [Fiat-Shamir transform](https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic), where both the prover and verifier use a channel to hash the transcript and generate random challenges. These functionalities are defined by the `MerkleChannel` trait. In the non-interactive protocol, oracles to functions are replaced by Merkle commitments to their evaluations, and queries to the oracle by the verifier are replaced by Merkle decommitments, which the prover appends to the channel.
+We described [FRI](/learn/S-two-book/how-it-works/circle-fri/overview#protocol) as an interactive protocol between the prover and the verifier. To make the protocol non-interactive, we use the [Fiat-Shamir transform](https://en.wikipedia.org/wiki/Fiat%E2%80%93Shamir_heuristic), where both the prover and verifier use a channel to hash the transcript and generate random challenges. These functionalities are defined by the `MerkleChannel` trait. In the non-interactive protocol, oracles to functions are replaced by Merkle commitments to their evaluations, and queries to the oracle by the verifier are replaced by Merkle decommitments, which the prover appends to the channel.
 
 
 The `FRIProver` struct is composed of several layers. Each layer contains a Merkle tree that commits to the evaluations of a polynomial for that layer. The main components are:
@@ -56,31 +56,36 @@ The `FRIProver` struct is composed of several layers. Each layer contains a Merk
 
 **• `first_layer`**: The first layer of the FRI protocol, containing the commitment to the initial set of columns. 
   
-   ```rust,no_run,noplayground
    ```rust
-// Source: https://raw.githubusercontent.com/starkware-libs/stwo/0790eba46b8af5697083d84fb75bd34b08a0b31f/crates/stwo/src/prover/fri.rs#L278-L281
-// (External snippet not embedded)
-```
+    struct FriFirstLayerProver<'a, B: FriOps + MerkleOps<H>, H: MerkleHasher> {
+        columns: &'a [SecureEvaluation<B, BitReversedOrder>],
+        merkle_tree: MerkleProver<B, H>,
+    }
    ```
    For example, the `columns` are the array of evaluations $[h_{0}, h_{1}, h_{2}]$, and `merkle_tree` commits to $h_{0} \in F^{H_0}$, $h_{1} \in F^{H_1}$, and $h_{2} \in F^{H_2}$ using a single Merkle tree.
 
 **• `inner_layers`**: The inner layers of FRI, each representing a folding round and its corresponding Merkle commitment.
   
-   ```rust,no_run,noplayground
    ```rust
-// Source: https://raw.githubusercontent.com/starkware-libs/stwo/0790eba46b8af5697083d84fb75bd34b08a0b31f/crates/stwo/src/prover/fri.rs#L363-L366
-// (External snippet not embedded)
-```
+    struct FriInnerLayerProver<B: FriOps + MerkleOps<H>, H: MerkleHasher> {
+        evaluation: LineEvaluation<B>,
+        merkle_tree: MerkleProver<B, H>,
+    }
    ```
    In our example, there are two FRI inner layers: the first contains evaluations of $g_0$ over the "line" domain $F^{I_0}$ with a Merkle commitment to $g_0$, and the second contains evaluations of $g_1$ over $F^{I_1}$ with its Merkle commitment.
 
 **• `last_layer_poly`**: The last layer polynomial, which the prover sends in clear to the verifier.
   
-   ```rust,no_run,noplayground
    ```rust
-// Source: https://raw.githubusercontent.com/starkware-libs/stwo/0790eba46b8af5697083d84fb75bd34b08a0b31f/crates/stwo/src/core/poly/line.rs#L108-L116
-// (External snippet not embedded)
-```
+   pub struct LinePoly {
+    /// Coefficients of the polynomial in [`line_ifft`] algorithm's basis.
+    ///
+    /// The coefficients are stored in bit-reversed order.
+    #[allow(rustdoc::private_intra_doc_links)]
+    coeffs: Vec<SecureField>,
+    /// The number of coefficients stored as `log2(len(coeffs))`.
+    log_size: u32,
+    }
    ```
    For our example, this is the polynomial $g_2$ in coefficient representation.
 
@@ -122,10 +127,10 @@ It takes the following inputs:
 - `channel`: The Merkle channel used for the Fiat-Shamir transform to generate random challenges and maintain the transcript.
 - `config`: The `FriConfig` containing protocol parameters.
 - `columns`: The array of evaluations of the functions. For our example, this will contain $[h_0, h_1, h_2]$ over their respective domains $[H_0, H_1, H_2]$.
-- `twiddles`: The [precomputed twiddle](../circle-fft/twiddles.mdx#twiddle-tree) values needed for folding.
+- `twiddles`: The [precomputed twiddle](/learn/S-two-book/how-it-works/circle-fft/twiddles#twiddle-tree) values needed for folding.
 
 
-The commitment phase consists of the following steps, corresponding to the protocol rounds described in the [overview](./overview.mdx#protocol):
+The commitment phase consists of the following steps, corresponding to the protocol rounds described in the [overview](/learn/S-two-book/how-it-works/circle-fri/overview#protocol):
 
 1. **First Layer Commitment** (`commit_first_layer`): 
    - Takes the input functions $[h_0, h_1, h_2]$ and creates a Merkle commitment to all of them using a single Merkle tree.
