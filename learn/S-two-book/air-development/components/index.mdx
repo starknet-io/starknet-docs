@@ -13,19 +13,21 @@ One of the most common use cases of components is to separate frequently used fu
 
 To illustrate how to use components, we will create two components where the main component calls a hash function component. For simplicity, instead of an actual hash function, the second component will compute $x^5 + 1$ from an input $x$. This component will have, in total, three columns: [input, intermediate, output], which will correspond to the values $[x, x^3, x^5 + 1]$. Our main component, on the other hand, will have two columns, [input, output], which corresponds to the values $[x, x^5 + 1]$.
 
-We'll refer to the main component as the **scheduling component** and the hash function component as the **computing component**, since the main component is essentially _scheduling_ the hash function component to run its function with a given input and the hash function component _computes_ on the provided input. As can be seen in [Figure 1](#fig-component-example), the input and output of each component are connected by lookups.
+We'll refer to the main component as the **scheduling component** and the hash function component as the **computing component**, since the main component is essentially _scheduling_ the hash function component to run its function with a given input and the hash function component _computes_ on the provided input. As can be seen in [Figure 1](#figure-1), the input and output of each component are connected by lookups.
 
+<div id="figure-1" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./component-example.png)
-
 *Figure 1: Scheduling and Computing components*
+</div>
 
 ### Design
 
+<div id="figure-2" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./component-trace.png)
-
 *Figure 2: Traces of each component*
+</div>
 
-When we implement this in S-two, the traces of each component will look like [Figure 2](#fig-component-trace) above. Each component has its own original and LogUp traces, and the inputs and outputs of each component are connected by lookups. Since the scheduling component sets the LogUp value as a positive multiplicity and the computing component sets the same value as a negative multiplicity, the verifier can simply check that the sum of the two LogUp columns is zero. Note that we combine the input and output randomly as
+When we implement this in S-two, the traces of each component will look like [Figure 2](#figure-2) above. Each component has its own original and LogUp traces, and the inputs and outputs of each component are connected by lookups. Since the scheduling component sets the LogUp value as a positive multiplicity and the computing component sets the same value as a negative multiplicity, the verifier can simply check that the sum of the two LogUp columns is zero. Note that we combine the input and output randomly as
 
 $$
 \frac{1}{Z - x \cdot \alpha^0 - (x^5+1) \cdot \alpha^1}
@@ -57,7 +59,7 @@ would be valid.
 
 Let's move on to the implementation.
 
-```rust,ignore
+```rust
 fn main() {
     // --snip--
 
@@ -121,7 +123,7 @@ The code above for proving the components should look pretty familiar by now. Si
 
 Let's take a closer look at how the LogUp columns are generated.
 
-```rust,ignore
+```rust
 fn gen_scheduling_logup_trace(
     log_size: u32,
     scheduling_col_1: &CircleEvaluation<SimdBackend, M31, BitReversedOrder>,
@@ -163,7 +165,7 @@ As you can see, the LogUp values of the input and output columns of both the sch
 
 Next, let's check how the constraints are created.
 
-```rust,ignore
+```rust
 impl FrameworkEval for SchedulingEval {
     // --snip--
 
@@ -215,7 +217,7 @@ impl FrameworkEval for ComputingEval {
 
 As you can see, we define the LogUp constraints for each component, and we also add two constraints that make sure the computations $x^3$ and $x^5 + 1$ are correct.
 
-```rust,ignore
+```rust
 fn main() {
     // --snip--
 

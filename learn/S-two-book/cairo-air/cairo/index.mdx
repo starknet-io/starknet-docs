@@ -3,9 +3,9 @@ title: "Overview of Cairo"
 ---
 
 
-<Callout type="info">
+<Note>
 This is an informal overview of Cairo. For a more formal explanation, please refer to the original [Cairo paper](https://eprint.iacr.org/2021/1063.pdf).
-</Callout>
+</Note>
 
 Let's start by understanding how Cairo works. Essentially, Cairo is a Turing-complete CPU architecture specifically designed to enable efficient proofs of execution using STARKs. In particular, Cairo uses a read-only memory model instead of the more common read-write memory model and does not use any general-purpose registers.
 
@@ -27,17 +27,18 @@ In physical CPUs, accessing memory is expensive compared to accessing registers 
 
 Let's now see what a Cairo instruction looks like.
 
+<div id="figure-1" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./cairo-instruction.png)
-
 *Figure 1: Cairo instruction (little-endian)*
+</div>
 
-As the figure above from the [Cairo paper](https://eprint.iacr.org/2021/1063.pdf) shows, an instruction is 64 bits, where the first three 16-bit integers are signed offsets to the operands `dst`, `op0`, and `op1`.
+As the figure above from the Cairo paper shows, an instruction is 64 bits, where the first three 16-bit integers are signed offsets to the operands `dst`, `op0`, and `op1`.
 
 The next 15 bits are flags. The `dst_reg` and `op0_reg` 1-bit flags indicate whether to use the `ap` or the `fp` register as the base for the `dst` and `op0` operands. The `op1_src` flag supports a wider range of base values for the `op1` operand: `op0`, `pc`, `fp`, and `ap`. The `res_logic` flag indicates how to compute the `res` operand: `op1`, `op0 + op1`, or `op0 * op1`. The `pc_update` and `ap_update` flags show how to update the `pc` and `ap` registers after computing the operands. The `opcode` flag indicates whether this instruction belongs to a predefined opcode (e.g., `CALL`, `RET`, `ASSERT_EQ`) and also defines how the `ap` and `fp` registers should be updated.
 
-<Callout type="info">
-For a more detailed explanation of the flags, please refer to Section 4.5 of the [Cairo paper](https://eprint.iacr.org/2021/1063.pdf).
-</Callout>
+<Note>
+For a more detailed explanation of the flags, please refer to Section 4.5 of the Cairo paper.
+</Note>
 
 Finally, the last bit is fixed to 0, but as we will see in the next section, this design has been modified in the current version of Cairo to support opcode extensions.
 
@@ -47,9 +48,10 @@ In Cairo, an **opcode** refers to what the instruction should do. Cairo defines 
 
 Since the 64-bit instruction structure is not flexible enough to support this extended set of opcodes, Cairo extends the instruction size to 72 bits and uses the last 9 bits as the **opcode extension** value.
 
+<div id="figure-2" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./opcode-extension.png)
-
 *Figure 2: New instruction format with opcode extension*
+</div>
 
 As of [this commit](https://github.com/starkware-libs/stwo-cairo/blob/b712c77887f8f8ce0d39a8a9741221c89846836e/stwo_cairo_prover/crates/adapter/src/decode.rs#L4), the following opcode extension values are supported:
 
@@ -58,6 +60,6 @@ As of [this commit](https://github.com/starkware-libs/stwo-cairo/blob/b712c77887
 - `2`: BlakeFinalize
 - `3`: QM31Operation
 
-<Callout type="info">
-Even if an instruction does not belong to any predefined set of opcodes, it is considered a valid opcode as long as it adheres to the state-transition function defined in Section 4.5 of the [Cairo paper](https://eprint.iacr.org/2021/1063.pdf). In S-two Cairo, this is referred to as a _generic opcode_.
-</Callout>
+<Info>
+Even if an instruction does not belong to any predefined set of opcodes, it is considered a valid opcode as long as it adheres to the state-transition function defined in Section 4.5 of the Cairo paper. In S-two Cairo, this is referred to as a _generic opcode_.
+</Info>
