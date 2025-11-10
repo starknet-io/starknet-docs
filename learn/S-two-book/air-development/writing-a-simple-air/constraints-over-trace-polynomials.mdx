@@ -3,9 +3,10 @@ title: "Evaluating Constraints Over Trace Polynomials"
 ---
 
 
+<div id="figure-1" style={{ textAlign: 'center' }}>
 ![](./constraints-over-trace-polynomials-1.png)
-
 *Figure 1: Prover workflow: Constraints*
+</div>
 
 ## Proving Spreadsheet Functions
 
@@ -13,15 +14,16 @@ When we want to perform computations over the cells in a spreadsheet, we don't w
 
 We can do the same thing with our table, except in addition to autofilling cells, we can also create a constraint that the result was computed correctly. Remember that the purpose of using a proof system is that the verifier can verify a computation was executed correctly without having to execute it themselves? Well, that's exactly why we need to create a constraint.
 
-Now let's say we want to add a new column `C` to our spreadsheet that computes the product of the previous columns plus the first column. We can set `C1` as `A1 * B1 + A1` as in [Figure 2](#fig-constraints-over-trace-polynomials-2). The corresponding constraint is expressed as `C1 = A1 * B1 + A1`. However, we use an alternate representation `A1 * B1 + A1 - C1 = 0` because we can only enforce constraints stating that an expression should equal zero. Generalizing this constraint to the whole column, we get `col1_row1 * col2_row1 + col1_row1 - col3_row1 = 0`.
+Now let's say we want to add a new column `C` to our spreadsheet that computes the product of the previous columns plus the first column. We can set `C1` as `A1 * B1 + A1` as in [Figure 2](#figure-2). The corresponding constraint is expressed as `C1 = A1 * B1 + A1`. However, we use an alternate representation `A1 * B1 + A1 - C1 = 0` because we can only enforce constraints stating that an expression should equal zero. Generalizing this constraint to the whole column, we get `col1_row1 * col2_row1 + col1_row1 - col3_row1 = 0`.
 
+<div id="figure-2" style={{ textAlign: 'center' }}>
 ![](./constraints-over-trace-polynomials-2.png)
-
 *Figure 2: Proving spreadsheet functions as constraints*
+</div>
 
 ## Identical Constraints Every Row
 
-Obviously, as can be seen in [Figure 2](#fig-constraints-over-trace-polynomials-2), our new constraint is satisfied for every row in the table. This means that we can substitute creating a constraint for each row with a single constraint over the columns, i.e. the trace polynomials.
+Obviously, as can be seen in [Figure 2](#figure-2), our new constraint is satisfied for every row in the table. This means that we can substitute creating a constraint for each row with a single constraint over the columns, i.e. the trace polynomials.
 
 Thus, `col1_row1 * col2_row1 + col1_row1 - col3_row1 = 0` becomes:
 
@@ -29,11 +31,11 @@ $$
 f_1(x,y) \cdot f_2(x,y) + f_1(x,y) - f_3(x,y) = 0
 $$
 
-<Callout type="info">
+<Info>
 The idea that all rows must have the same constraint may seem restrictive, compared to say a spreadsheet where we can define different functions for different rows. However, we will show in later sections how to handle such use-cases.
 
 (Spoiler alert: it involves selectors and components)
-</Callout>
+</Info>
 
 ## Composition Polynomial
 
@@ -45,15 +47,15 @@ $$
 
 Basically, in order to prove that the constraints are satisfied, we need to show that the composition polynomial evaluates to 0 over the original domain (i.e. the domain of size the number of rows in the table).
 
-But first, as can be seen in the upper part of [Figure 1](#fig-constraints-over-trace-polynomials-1), we need to expand the evaluations of the trace polynomials by a factor of 2. This is because when you multiply two trace polynomials of degree `n-1` (where `n` is the number of rows) to compute the constraint polynomial, the degree of the constraint polynomial will be the sum of the degrees of the trace polynomials, which is `2n-2`. To adjust for this increase in degree, we double the number of evaluations.
+But first, as can be seen in the upper part of [Figure 1](#figure-1), we need to expand the evaluations of the trace polynomials by a factor of 2. This is because when you multiply two trace polynomials of degree `n-1` (where `n` is the number of rows) to compute the constraint polynomial, the degree of the constraint polynomial will be the sum of the degrees of the trace polynomials, which is `2n-2`. To adjust for this increase in degree, we double the number of evaluations.
 
-Once we have the expanded evaluations, we can evaluate the composition polynomial $C(x,y)$. Since we need to do a FRI operation on the composition polynomial as well, we expand the evaluations again by a factor of 2 and commit to them as a merkle tree. This part corresponds to the bottom part of [Figure 1](#fig-constraints-over-trace-polynomials-1).
+Once we have the expanded evaluations, we can evaluate the composition polynomial $C(x,y)$. Since we need to do a FRI operation on the composition polynomial as well, we expand the evaluations again by a factor of 2 and commit to them as a merkle tree. This part corresponds to the bottom part of [Figure 1](#figure-1).
 
 ## Implementation
 
 Let's see how this is implemented in the code.
 
-```rust,ignore
+```rust
 struct TestEval {
     log_size: u32,
 }
@@ -108,15 +110,16 @@ First, we add a new column `col_3` that contains the result of the computation: 
 
 Then, to create a constraint over the trace polynomials, we first create a `TestEval` struct that implements the `FrameworkEval` trait. Then, we add our constraint logic in the `FrameworkEval::evaluate` function. Note that this function is called for every row in the table, so we only need to define the constraint once.
 
-Inside `FrameworkEval::evaluate`, we call `eval.next_trace_mask()` consecutively three times, retrieving the cell values of all three columns (see [Figure 3](#fig-constraints-over-trace-polynomials-3) below for a visual representation). Once we retrieve all three column values, we add a constraint of the form `col_1 * col_2 + col_1 - col_3`, which should equal 0. Note that `FrameworkEval::evaluate` will be called for every row in the table.
+Inside `FrameworkEval::evaluate`, we call `eval.next_trace_mask()` consecutively three times, retrieving the cell values of all three columns (see [Figure 3](#figure-3) below for a visual representation). Once we retrieve all three column values, we add a constraint of the form `col_1 * col_2 + col_1 - col_3`, which should equal 0. Note that `FrameworkEval::evaluate` will be called for every row in the table.
 
+<div id="figure-3" style={{ textAlign: 'center' }}>
 ![](./constraints-over-trace-polynomials-3.png)
-
 *Figure 3: Evaluate function*
+</div>
 
 We also need to implement `FrameworkEval::max_constraint_log_degree_bound(&self)` for `FrameworkEval`. As mentioned in the [Composition Polynomial section](#composition-polynomial), we need to expand the trace polynomial evaluations because the degree of our composition polynomial is higher than that of the trace polynomial. Expanding it by `LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR=1` is sufficient for our example as the total degree of the highest degree term $f_1(x,y) \cdot f_2(x,y)$ is 2, so we return `self.log_size + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR`. For those who are interested in how to set this value in general, we leave a detailed note below.
 
-<Callout type="info">
+<Tip>
 **What value to set for `max_constraint_log_degree_bound(&self)`?**
 
 `self.log_size + max(1, ceil(log2(max_degree - 1)))`, where `max_degree` is the maximum total degree of all defined constraint polynomials. For example, the `max_degree` of constraint $f_1(x,y) \cdot f_2(x,y) = 0$ is 2, while that of $f_1(x,y) \cdot f_1(x,y) \cdot f_2(x,y) \cdot f_3(x,y) = 0$ is 4.
@@ -127,13 +130,13 @@ e.g.
 - degree 6 - 9: `self.log_size + 3`
 - degree 10 - 17: `self.log_size + 4`
 - ...
-</Callout>
+</Tip>
 
-<Callout type="info">
+<Note>
 Now that we know the degree of the composition polynomial, we can now why we need to set the `log_size` of the domain to `log_num_rows + LOG_CONSTRAINT_EVAL_BLOWUP_FACTOR + config.fri_config.log_blowup_factor` when precomputing twiddles in the following code:
-</Callout>
+</Note>
 
-```rust,ignore
+```rust
 // Precompute twiddles for evaluating and interpolating the trace
 let twiddles = SimdBackend::precompute_twiddles(
     CanonicCoset::new(
@@ -155,7 +158,7 @@ Using the new `TestEval` struct, we can create a new `FrameworkComponent::<TestE
 
 We now move on to the final section where we finally create and verify a proof.
 
-<Callout type="info">
+<Info>
 Finally, we can break down what an Algebraic Intermediate Representation (AIR) means.
 
 *Algebraic* means that we are using polynomials to represent the constraints.
@@ -163,4 +166,4 @@ Finally, we can break down what an Algebraic Intermediate Representation (AIR) m
 *Intermediate Representation* means that this is a modified representation of our statement so that it can be proven.
 
 So AIR is just another way of saying that we are representing statements to be proven as constraints over polynomials.
-</Callout>
+</Info>

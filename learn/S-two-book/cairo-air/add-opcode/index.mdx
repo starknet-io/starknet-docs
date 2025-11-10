@@ -5,13 +5,14 @@ title: "ADD Opcode Walkthrough"
 
 To better understand how `Opcode` components work, let's walk through the implementation of the `AddOpcode` component.
 
+<div id="figure-1" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./add-opcode-columns.png)
-
 *Figure 1: The `AddOpcode` columns*
+</div>
 
 Above is the list of all the columns used in the `AddOpcode` component. Note that the `dst_val`, `op0_val`, and `op1_val` columns are actually 28 columns each (to support 28 9-bit limbs), but we show them as single columns for brevity.
 
-To reiterate what an `Opcode` component does from the [Main Components](../main-components/index.mdx#opcode-component) section, it verifies the following:
+To reiterate what an `Opcode` component does from the [Main Components](./main-components/index#opcode-component) section, it verifies the following:
 
 1. The offsets and flag values are correct using the `VerifyInstruction` component.
 2. The instruction is correctly mapped to the current `Opcode` component using the flags.
@@ -19,25 +20,27 @@ To reiterate what an `Opcode` component does from the [Main Components](../main-
 4. The operation for the current `Opcode` component is done correctly.
 5. The state transition of the three registers (`pc`, `ap`, `fp`) is done correctly using the flags.
 
-<Callout type="info">
-An instruction should contain 15 bits of flags but only 5 bits are represented in the `AddOpcode` columns. Can you see why?
+<Callout icon="question" color="#FFC107" iconType="regular">
+An instruction should contain 15 bits of flags but only 5 bits are represented in the `AddOpcode` columns.
+
+Can you see why?
 </Callout>
 
-<Callout type="info">
+<Tip>
 Check out how a Cairo instruction is pattern-matched to an `ADD` opcode [here](https://github.com/starkware-libs/stwo-cairo/blob/04f142e0376e2a0e797cdb64973449aa3e58a18f/stwo_cairo_prover/crates/adapter/src/opcodes.rs#L349).
-</Callout>
+</Tip>
 
-<Callout type="info">
+<Tip>
 Check out how the decomposition of the flags is verified [here](https://github.com/starkware-libs/stwo-cairo/blob/04f142e0376e2a0e797cdb64973449aa3e58a18f/stwo_cairo_prover/crates/cairo-air/src/components/subroutines/decode_instruction_bc3cd.rs#L59).
-</Callout>
+</Tip>
 
-Items 1 and 3 should be familiar, as we already covered them in the [Main Components](../main-components/index.mdx#opcode-component) section. For item 2, you can check the specs for the `ADD` opcode [here](https://github.com/starkware-libs/stwo-cairo/blob/04f142e0376e2a0e797cdb64973449aa3e58a18f/stwo_cairo_prover/crates/adapter/src/opcodes.rs#L349). For item 5, the specs for a valid state transition can be found in Section 4.5 of the [Cairo paper](https://eprint.iacr.org/2021/1063.pdf).
+Items 1 and 3 should be familiar, as we already covered them in the [Main Components](../main-components/index#opcode-component) section. For item 2, you can check the specs for the `ADD` opcode [here](https://github.com/starkware-libs/stwo-cairo/blob/04f142e0376e2a0e797cdb64973449aa3e58a18f/stwo_cairo_prover/crates/adapter/src/opcodes.rs#L349). For item 5, the specs for a valid state transition can be found in Section 4.5 of the [Cairo paper](https://eprint.iacr.org/2021/1063.pdf).
 
 In this section, we will focus on how item 4 is implemented.
 
 ## Adding two 252-bit integers
 
-Assuming that the operands `op0`, `op1`, and `dst` are correctly accessed from the `Memory` table, we now check that the addition of two 252-bit integers is done correctly, i.e. `op0 + op1 = dst`. As noted in the [Felt252 to M31](../basic-building-blocks/index.mdx#felt252-to-m31) section, a 252-bit integer is stored as 28 9-bit limbs, so we need to check addition for each of the 28 limbs.
+Assuming that the operands `op0`, `op1`, and `dst` are correctly accessed from the `Memory` table, we now check that the addition of two 252-bit integers is done correctly, i.e. `op0 + op1 = dst`. As noted in the [Felt252 to M31](../basic-building-blocks/index#felt252-to-m31) section, a 252-bit integer is stored as 28 9-bit limbs, so we need to check addition for each of the 28 limbs.
 
 We will incrementally build up to the final constraint.
 
@@ -45,7 +48,7 @@ We will incrementally build up to the final constraint.
 
 To verify that the two sets of limbs are correctly added, we check limb-wise addition. Since each limb can create a carry, we also add the carry from the previous limb (except for the first limb). Thus, the constraints look like this:
 
-```
+```python
 carry_limb_1 = (op0[0] + op1[0] - dst[0]) / 2^9
 carry_limb_1 * (carry_limb_1 - 1) = 0
 
@@ -65,7 +68,7 @@ We also need to account for addition overflowing the 252-bit prime field `P` (i.
 
 Now let's revisit the constraints:
 
-```
+```python
 sub_p_bit * (sub_p_bit - 1) = 0
 
 carry_limb_1 = (op0[0] + op1[0] - dst[0] - sub_p_bit) / 2^9
@@ -85,7 +88,7 @@ First, we verify that `sub_p_bit` is a bit. Then, we subtract `sub_p_bit` from t
 
 A caveat of this approach is that subtracting `sub_p_bit` can introduce an underflow, i.e., `(op0[0] + op1[0] - dst[0] - sub_p_bit) / 2^9 = -1`. This means that `carry_limb_0` can be `-1` as well as `0` or `1`. Thus, we update the constraint for all carries to the following:
 
-```
+```python
 ...
 
 carry_limb_1 * (carry_limb_1 - 1) * (carry_limb_1 + 1) = 0
@@ -97,7 +100,7 @@ carry_limb_1 * (carry_limb_1 - 1) * (carry_limb_1 + 1) = 0
 
 To optimize the number of constraints, we can combine all the constraints for each limb into a single constraint. Naively checking that `carry_limb_1 = (op0[0] + op1[0] - dst[0] - sub_p_bit) / 2^9` would require a dedicated column for `carry_limb_1`. Instead, we keep `carry_limb_1` as an intermediate value and inline the equation when computing the next carry. For example, the second-limb carry is computed as follows:
 
-```
+```python
 carry_limb_2 = (op0[1] + op1[1] + ((op0[0] + op1[0] - dst[0] - sub_p_bit) / 2^9) - dst[1]) / 2^9
 ```
 
@@ -111,7 +114,7 @@ One last note: in the implementation, we replace division by `2^9` with multipli
 
 So the final constraint looks like this:
 
-```
+```python
 sub_p_bit * (sub_p_bit - 1) = 0
 
 carry_limb_1 = (op0[0] + op1[0] - dst[0] - sub_p_bit) * 2^22 // intermediate representation

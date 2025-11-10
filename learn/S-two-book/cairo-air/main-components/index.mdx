@@ -5,17 +5,18 @@ title: "Main Components"
 
 Now that we have a basic understanding of Cairo and the building blocks that are used to build the Cairo AIR, let's take a look at the main components of the Cairo AIR.
 
-<Callout type="info">
+<Note>
 For readers who are unfamiliar with the concepts of components and lookups, we suggest going over the [Components](../../air-development/components/index) section of the book.
-</Callout>
+</Note>
 
 ## Fetch, Decode, Execute
 
 Cairo follows the common CPU architecture of fetching, decoding, and executing an instruction in a single CPU step. Below is a high-level diagram of what a single CPU step looks like in Cairo.
 
+<div id="figure-1" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./fetch-decode-execute.png)
-
 *Figure 1: A single CPU step in Cairo*
+</div>
 
 Since we need to prove the correctness of all CPU steps, the Cairo AIR writes the results of fetching, decoding, and executing an instruction at every CPU step into a trace and proves that the constraints over the trace are satisfied—i.e., consistent with the semantics of Cairo.
 
@@ -39,7 +40,7 @@ The first constraint is implemented by using a preprocessed column that contains
 
 The second constraint is guaranteed because the `address` value is always unique.
 
-<Callout type="info">
+<Info>
 A short explainer on how the `id` value is computed:
 
 The `id` value is a 31-bit integer that is incremented by 1 from 0 whenever there is a unique memory access. For example, if the addresses `[5, 1523, 142]` were accessed in that order, the ids for those addresses will be `(5, 0)`, `(1523, 1)`, and `(142, 2)`.
@@ -47,15 +48,16 @@ The `id` value is a 31-bit integer that is incremented by 1 from 0 whenever ther
 Since an `id` value needs to include information as to whether the corresponding `value` is `Small` or `Big`, we use the MSB as a flag (0 for `Small` and 1 for `Big`). Thus, an `id` value that corresponds to a `Small` value can occupy the space `[0, 2^30)`, while an `id` value that corresponds to a `Big` value can occupy the space `[2^30, 2^31)`.
 
 In reality, the size of each table will be `[0, NUM_SMALL_VALUES_ACCESSED)` and `[2^30, 2^30 + NUM_BIG_VALUES_ACCESSED)`, where `NUM_SMALL_VALUES_ACCESSED` and `NUM_BIG_VALUES_ACCESSED` are values that are provided by the prover. To make sure that the `id` values are created correctly, we can use the preprocessed column as the `id` values.
-</Callout>
+</Info>
 
 ## 2. VerifyInstruction Component
 
-The `VerifyInstruction` component is responsible for accessing the instruction from the `Memory` component and decomposing the retrieved value. As mentioned in the [Felt252 to M31](../basic-building-blocks/index.mdx#felt252-to-m31) section, a 252-bit integer is stored as 28 9-bit limbs, so we need to decompose the limbs and concatenate them to get the values we need. For example, as in [Figure 2](#fig-limb-decomposition) in order to get the 3 16-bit offset values, we need to decompose the first 6 limbs into `[9, [7, 2], [9], [5, 4], [9], [3, 6]]` and concatenate them as the following: `[[9, 7], [2, 9, 5], [4, 9, 3]]`. Then, the remaining 6-bit value and the next limb will correspond to the 15-bit flags, and the next (8th) limb will be the opcode extension value. The other 20 limbs should all be zeros. At the end, we will have decomposed the instruction value into 3 16-bit offsets, 2 chunks of flags, and a 9-bit opcode extension.
+The `VerifyInstruction` component is responsible for accessing the instruction from the `Memory` component and decomposing the retrieved value. As mentioned in the [Felt252 to M31](../basic-building-blocks/index#felt252-to-m31) section, a 252-bit integer is stored as 28 9-bit limbs, so we need to decompose the limbs and concatenate them to get the values we need. For example, as in [Figure 2](#figure-2) in order to get the 3 16-bit offset values, we need to decompose the first 6 limbs into `[9, [7, 2], [9], [5, 4], [9], [3, 6]]` and concatenate them as the following: `[[9, 7], [2, 9, 5], [4, 9, 3]]`. Then, the remaining 6-bit value and the next limb will correspond to the 15-bit flags, and the next (8th) limb will be the opcode extension value. The other 20 limbs should all be zeros. At the end, we will have decomposed the instruction value into 3 16-bit offsets, 2 chunks of flags, and a 9-bit opcode extension.
 
+<div id="figure-2" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./limb-decomposition.png)
-
 *Figure 2: Limb decomposition*
+</div>
 
 Note that the decomposition will be constrained by range checking that each integer is within its corresponding range.
 
@@ -85,9 +87,10 @@ On the left-hand side, we can see lookups that are computed directly by the veri
 
 Each component has a **claimed sum** value that corresponds to the sum of all the lookups in the component. These claimed sums are provided by the prover as part of the proof, and the verifier adds them together along with the lookups on the left-hand side. If the total sum is zero, the verifier is convinced that the proof is valid.
 
+<div id="figure-3" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./main-components.png)
-
 *Figure 3: Lookups between the main components*
+</div>
 
 ### Memory Lookups
 
