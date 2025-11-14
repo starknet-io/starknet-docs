@@ -19,7 +19,7 @@ We can use the idea that two sets of values will have the same cumulative produc
 
 ### Step 3: We want to check that all values in `col_2` are in `col_1`, but each value appears an arbitrary number of times.
 
-_(Note that this is a generalization of the second step in that for the second step,all values in `col_2` appear exactly once in `col_1`)_
+_(Note that this is a generalization of the second step in that for the second step, all values in `col_2` appear exactly once in `col_1`)_
 
 Supporting this third step is actually pretty simple: when creating the running cumulative product, we need to raise each value in `col_1` to its multiplicity, or the number of times it appears in `col_2`. The rest of the constraints do not need to be changed.
 
@@ -29,13 +29,13 @@ Finally, we want to create many more columns that contain values from `col_1`. F
 
 To support this, we can use the same idea as the third step: when creating the running cumulative product, we need to raise each value in `col_1` to the power of the number of times it appears in `[col_2, col_3, ...]`.
 
-<Callout type="info">
-In summary, lookups support the following use-cases:
+<Info>
+**In summary, lookups support the following use-cases:**
 
 1. Prove equality: we want to prove that the values of the first column are equal to the values of the second column.
 2. Prove permutation: we want to prove that the values of the first column are a permutation of the values of the second column.
 3. Prove permutation with multiplicities: we want to prove that each value of the first column appears a certain number of times over multiple columns.
-</Callout>
+</Info>
 
 ## Technique: LogUp
 
@@ -63,27 +63,30 @@ Let's walk through how LogUp is implemented in S-two using a simple example wher
 
 First, we create columns in the original trace, where all values are from the preprocessed trace $A$.
 
+<div id="figure-1" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./figures/lookups-1.png)
-
 *Figure 1: Create original trace columns that look up values from a preprocessed trace*
-
+</div>
 Then, we add a multiplicity column to the original trace indicating the number of times each value in $A$ appears in the original trace.
 
+<div id="figure-2" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./figures/lookups-2.png)
-
 *Figure 2: Add a multiplicity column*
+</div>
 
 Next, we create LogUp columns as part of the interaction trace, one for the preprocessed trace and the multiplicity column, and another for the batch of all lookups.
 
+<div id="figure-3" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./figures/lookups-3.png)
-
 *Figure 3: Create LogUp columns*
+</div>
 
 To create a constraint over the LogUp columns, S-two modifies the LogUp columns to contain the cumulative sum of the fractions in each row. This results in columns that look like the following:
 
+<div id="figure-4" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./figures/lookups-4.png)
-
 *Figure 4: Cumulative sum columns*
+</div>
 
 A constraint is created using the values of two rows of the cumulative sum LogUp column. For example, as in **Figure 5**, we can create a constraint by subtracting $row_1$ from $row_2$ and checking that it equals the LogUp fraction created using values $a_2$ and $m_2$:
 
@@ -91,9 +94,10 @@ $$
 \frac{m_2}{X - a_2} = row\_2 - row\_1
 $$
 
+<div id="figure-5" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./figures/lookups-5.png)
-
 *Figure 5: Constraint over two rows*
+</div>
 
 However, this constraint actually does not hold for the first row since $\frac{m_1}{X - a_1} \neq row_1 - row_n$. A typical solution to this problem would be to disable this constraint for the first row and create a separate constraint that is enabled only on the first row.
 
@@ -105,9 +109,10 @@ $$
 
 Where $\text{avg}$ is a witness value provided by the prover.
 
+<div id="figure-6" style={{ textAlign: 'center', maxWidth: '100%', height: 'auto', margin: '0 auto',  }}>
 ![](./figures/lookups-6.png)
-
 *Figure 6: Trick to not create a separate constraint for the first row*
+</div>
 
 The right column in **Figure 6** is the final form of the LogUp column that S-two commits to as part of the interaction trace.
 
