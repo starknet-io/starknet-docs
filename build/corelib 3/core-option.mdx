@@ -1,0 +1,183 @@
+---
+title: "Overview of core::option"
+sidebarTitle: "Overview"
+---
+
+
+Optional values.
+The [`Option`](./core-option-Option) type represents an optional value: every [`Option`](./core-option-Option) is either [`Some`](./core-option#some) and
+contains a value, or [`None`](./core-option#none), and does not. [`Option`](./core-option-Option) types are very common in Cairo code, as
+they have a number of uses:
+- Initial values
+- Return values for functions that are not defined
+over their entire input range (partial functions)
+- Return value for otherwise reporting simple errors, where [`None`](./core-option#none) is
+returned on error
+- Optional struct fields
+- Optional function arguments
+
+Options are commonly paired with pattern matching to query the presence of a value and take
+action, always accounting for the `None` case.
+```rust
+fn divide(numerator: u64, denominator: u64) -> Option {
+    if denominator == 0 {
+        None
+    } else {
+        Some(numerator / denominator)
+    }
+}
+
+// The return value of the function is an option
+let result = divide(2, 3);
+
+// Pattern match to retrieve the value
+match result {
+    // The division was valid
+    Some(x) => println!("Result: {x}"),
+    // The division was invalid
+    None    => println!("Cannot divide by 0"),
+}
+```
+# The question mark operator, `?`
+
+Similar to the [`Result`](./core-result-Result) type, when writing code that calls many functions that return the
+[`Option`](./core-option-Option) type, handling `Some`/`None` can be tedious. The question mark
+operator, `?`, hides some of the boilerplate of propagating values
+up the call stack.
+It replaces this:
+```rust
+fn add_last_numbers(mut array: Array) -> Option {
+    let a = array.pop_front();
+    let b = array.pop_front();
+
+    match (a, b) {
+        (Some(x), Some(y)) => Some(x + y),
+        _ => None,
+    }
+}
+
+```
+
+With this:
+```rust
+fn add_last_numbers(mut array: Array) -> Option {
+    Some(array.pop_front()? + array.pop_front()?)
+ }
+```
+
+It's much nicer!
+Ending the expression with `?` will result in the [`Some`](./core-option#some)'s unwrapped value, unless the
+result is [`None`](./core-option#none), in which case [`None`](./core-option#none) is returned early from the enclosing function.
+`?` can be used in functions that return [`Option`](./core-option-Option) because of the
+early return of [`None`](./core-option#none) that it provides.
+# Method overview
+
+In addition to working with pattern matching, [`Option`](./core-option-Option) provides a wide
+variety of different methods.
+## Querying the variant
+
+The `is_some` and `is_none` methods return `true` if the [`Option`](./core-option-Option)
+is [`Some`](./core-option#some) or [`None`](./core-option#none), respectively.
+## Extracting the contained value
+
+These methods extract the contained value in an `Option` when it
+is the [`Some`](./core-option#some) variant. If the [`Option`](./core-option-Option) is [`None`](./core-option#none):
+- `expect` panics with a provided custom message
+- `unwrap` panics with a generic message
+- `unwrap_or` returns the provided default value
+- `unwrap_or_default` returns the default value of the type `T`
+(which must implement the [`Default`](./core-traits-Default) trait)
+- `unwrap_or_else` returns the result of evaluating the provided
+function
+## Transforming contained values
+
+These methods transform [`Option`](./core-option-Option) to [`Result`](./core-result-Result):
+- `ok_or` transforms [`Some(v)`](./core-option#some) to [`Ok(v)`](./core-result#ok), and [`None`](./core-option#none) to
+[`Err(err)`](./core-result#err) using the provided default `err` value.
+- `ok_or_else` transforms [`Some(v)`](./core-option#some) to [`Ok(v)`](./core-result#ok), and [`None`](./core-option#none) to
+a value of [`Err`](./core-result#err) using the provided function
+
+These methods transform the [`Some`](./core-option#some) variant:
+- `map` transforms `Option` to `Option` by applying the
+provided function to the contained value of [`Some`](./core-option#some) and leaving
+[`None`](./core-option#none) values unchanged
+
+These methods transform `Option` to a value of a possibly
+different type `U`:
+- `map_or` applies the provided function to the contained value of
+[`Some`](./core-option#some), or returns the provided default value if the [`Option`](./core-option-Option) is
+[`None`](./core-option#none)
+- `map_or_else` applies the provided function to the contained value
+of [`Some`](./core-option#some), or returns the result of evaluating the provided
+fallback function if the [`Option`](./core-option-Option) is [`None`](./core-option#none)
+## Boolean operators
+
+These methods treat the [`Option`](./core-option-Option) as a boolean value, where [`Some`](./core-option#some)
+acts like `true` and [`None`](./core-option#none) acts like `false`. There are two
+categories of these methods: ones that take an [`Option`](./core-option-Option) as input, and
+ones that take a function as input (to be lazily evaluated).
+The `and`, `or`, and `xor` methods take another [`Option`](./core-option-Option) as
+input, and produce an [`Option`](./core-option-Option) as output. Only the `and` method can
+produce an `Option` value having a different inner type `U` than
+`Option`.
+
+|method|self|input|output|
+|---|---|---|---|
+|`and`|`None`|(ignored)|`None`|
+|`and`|`Some(x)`|`None`|`None`|
+|`and`|`Some(x)`|`Some(y)`|`Some(y)`|
+|`or`|`None`|`None`|`None`|
+|`or`|`None`|`Some(y)`|`Some(y)`|
+|`or`|`Some(x)`|(ignored)|`Some(x)`|
+|`xor`|`None`|`None`|`None`|
+|`xor`|`None`|`Some(y)`|`Some(y)`|
+|`xor`|`Some(x)`|`None`|`Some(x)`|
+|`xor`|`Some(x)`|`Some(y)`|`None`|
+
+The `and_then` and `or_else` methods take a function as input, and
+only evaluate the function when they need to produce a new value. Only
+the `and_then` method can produce an `Option` value having a
+different inner type `U` than `Option`.
+
+|method|self|function input|function result|output|
+|---|---|---|---|---|
+|`and_then`|`None`|(not provided)|(not evaluated)|`None`|
+|`and_then`|`Some(x)`|`x`|`None`|`None`|
+|`and_then`|`Some(x)`|`x`|`Some(y)`|`Some(y)`|
+|`or_else`|`None`|(not provided)|`None`|`None`|
+|`or_else`|`None`|(not provided)|`Some(y)`|`Some(y)`|
+|`or_else`|`Some(x)`|(not provided)|(not evaluated)|`Some(x)`|
+## Iterating over `Option`
+
+An [`Option`](./core-option-Option) can be iterated over. This can be helpful if you need an
+iterator that is conditionally empty. The iterator will either produce
+a single value (when the [`Option`](./core-option-Option) is [`Some`](./core-option#some)), or produce no values
+(when the [`Option`](./core-option-Option) is [`None`](./core-option#none)). For example, `into_iter`
+contains [`Some(v)`](./core-option#some) if the [`Option`](./core-option-Option) is [`Some(v)`](./core-option#some), and [`None`](./core-option#none) if the
+[`Option`](./core-option-Option) is [`None`](./core-option#none).
+
+
+
+## [Structs](./core-option-structs)
+
+| | |
+|:---|:---|
+| [OptionIter](./core-option-OptionIter) | An iterator over the value in the [`Some`](./core-option#some)  variant of an [`Option`](./core-option-Option) . The iterator yields one value if the [`Option`](./core-option-Option)  is a... |
+
+## [Enums](./core-option-enums)
+
+| | |
+|:---|:---|
+| [Option](./core-option-Option) | The `Option`  enum representing either `Some(value)`  or `None` . |
+
+## [Traits](./core-option-traits)
+
+| | |
+|:---|:---|
+| [OptionTrait](./core-option-OptionTrait) | A trait for handling `Option`  related operations. |
+
+## [Impls](./core-option-impls)
+
+| | |
+|:---|:---|
+| [DestructOption](./core-option-DestructOption) | — |

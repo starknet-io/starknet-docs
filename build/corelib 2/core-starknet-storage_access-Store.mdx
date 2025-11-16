@@ -1,0 +1,178 @@
+---
+title: "core::starknet::storage_access::Store"
+---
+
+Trait for types that can be stored in Starknet contract storage.
+The `Store` trait enables types to be stored in and retrieved from Starknet's contract storage.
+Cairo implements `Store` for most primitive types. However, collection types (arrays, dicts,
+etc.) do not implement `Store` directly. Instead, use specialized storage types, such as [`Vec`](./core-starknet-storage-vec-Vec)
+or [`Map`](./core-starknet-storage-map-Map).
+
+## Signature
+
+```rust
+pub trait Store
+```
+
+
+
+## Derivation
+
+To make a type storable in contract storage, simply derive the `Store` trait:
+```rust
+#[derive(Drop, starknet::Store)]
+struct Sizes {
+    tiny: u8,    // 8 bits
+    small: u32,  // 32 bits
+    medium: u64, // 64 bits
+}
+```
+
+This allows the `Size` struct to be stored in a contract's storage.
+There's no real reason to implement this trait yourself, as it can be trivially derived.
+For efficiency purposes, consider manually implementing [`StorePacking`](./core-starknet-storage_access-StorePacking) to optimize storage
+usage.
+
+
+## Trait functions
+
+### read
+
+
+
+Reads a value from storage at the given domain and base address.
+#### Arguments
+
+- `address_domain` - The storage domain (currently only 0 is supported)
+- `base` - The base storage address to read from
+
+
+
+
+
+#### Signature
+
+```rust
+fn read(address_domain: u32, base: StorageBaseAddress) -> Result>
+```
+
+
+### write
+
+
+
+Writes a value to storage at the given domain and base address.
+#### Arguments
+
+- `address_domain` - The storage domain (currently only 0 is supported)
+- `base` - The base storage address to write to
+- `value` - The value to store
+
+
+
+
+
+#### Signature
+
+```rust
+fn write(
+    address_domain: u32, base: StorageBaseAddress, value: T,
+) -> Result>
+```
+
+
+### read_at_offset
+
+
+
+Reads a value from storage at a base address plus an offset.
+#### Arguments
+
+- `address_domain` - The storage domain (currently only 0 is supported)
+- `base` - The base storage address
+- `offset` - The offset from the base address where the value should be read
+
+
+
+
+
+#### Signature
+
+```rust
+fn read_at_offset(
+    address_domain: u32, base: StorageBaseAddress, offset: u8,
+) -> Result>
+```
+
+
+### write_at_offset
+
+
+
+Writes a value to storage at a base address plus an offset.
+#### Arguments
+
+- `address_domain` - The storage domain (currently only 0 is supported)
+- `base` - The base storage address
+- `offset` - The offset from the base address where the value should be written
+- `value` - The value to store
+
+
+
+
+
+#### Signature
+
+```rust
+fn write_at_offset(
+    address_domain: u32, base: StorageBaseAddress, offset: u8, value: T,
+) -> Result>
+```
+
+
+### size
+
+
+
+Returns the size in storage for this type.
+This is bounded to 255, as the offset is a u8. As such, a single type can only take up to
+255 slots in storage.
+
+
+
+
+
+#### Signature
+
+```rust
+fn size() -> u8
+```
+
+
+### scrub
+
+
+
+Clears the storage area by writing zeroes to it.
+#### Arguments
+
+- `address_domain` - The storage domain
+- `base` - The base storage address to start clearing
+- `offset` - The offset from the base address where clearing should start
+
+The operation writes zeroes to storage starting from the specified base address and offset,
+and continues for the size of the type as determined by the `size()` function.
+
+
+
+
+
+#### Signature
+
+```rust
+fn scrub(
+    address_domain: u32, base: StorageBaseAddress, offset: u8,
+) -> Result>
+```
+
+

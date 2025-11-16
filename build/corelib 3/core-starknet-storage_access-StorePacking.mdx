@@ -1,0 +1,108 @@
+---
+title: "core::starknet::storage_access::StorePacking"
+---
+
+Trait for efficient packing of values into optimized storage representations.
+This trait enables bit-packing of complex types into simpler storage types to reduce gas costs
+by minimizing the number of storage slots used. When a type implements `StorePacking`, the
+compiler automatically uses `StoreUsingPacking` to handle storage operations. As such, a type
+cannot implement both `Store` and `StorePacking`.
+
+## Signature
+
+```rust
+pub trait StorePacking
+```
+
+
+
+# Storage Optimization
+
+Each storage slot in Starknet is a `felt252`, and storage operations are expensive. By packing
+multiple values into fewer slots, you can significantly reduce gas costs. For example:
+- Multiple small integers can be packed into a single `felt252`
+- Structs with several fields can be compressed into a single storage slot
+# Implementation Requirements
+
+To implement `StorePacking`, ensure that the `PackedT` type implements [`Store`](./core-starknet-storage_access-Store). The packed
+representation must preserve all necessary information to allow unpacking back to the original
+type. Additionally, the `pack` and `unpack` operations must be reversible, meaning that packing
+followed by unpacking should return the original value.
+# Example
+
+Packing multiple integer fields into a single storage slot:
+```rust
+use starknet::storage_access::StorePacking;
+
+#[derive(Drop)]
+struct Sizes {
+    tiny: u8,    // 8 bits
+    small: u32,  // 32 bits
+    medium: u64, // 64 bits
+}
+
+const TWO_POW_8: u128 = 0x100;
+const TWO_POW_40: u128 = 0x10000000000;
+
+impl SizesStorePacking of StorePacking {
+    fn pack(value: Sizes) -> u128 {
+        value.tiny.into() +
+        (value.small.into() * TWO_POW_8) +
+        (value.medium.into() * TWO_POW_40)
+    }
+
+    fn unpack(value: u128) -> Sizes {
+        let tiny = value & 0xff;
+        let small = (value / TWO_POW_8) & 0xffffffff;
+        let medium = (value / TWO_POW_40);
+
+        Sizes {
+            tiny: tiny.try_into().unwrap(),
+            small: small.try_into().unwrap(),
+            medium: medium.try_into().unwrap(),
+        }
+    }
+}
+```
+
+By implementing `StorePacking` for `Sizes`, the `Sizes` will be stored in its packed form,
+using a single storage slot instead of 3. When retrieved, it will automatically be unpacked back
+into the original type.
+
+
+## Trait functions
+
+### pack
+
+
+
+Packs a value into its optimized storage representation.
+
+
+
+
+
+#### Signature
+
+```rust
+fn pack(value: T) -> PackedT
+```
+
+
+### unpack
+
+
+
+Unpacks a storage representation back into the original type.
+
+
+
+
+
+#### Signature
+
+```rust
+fn unpack(value: PackedT) -> T
+```
+
+

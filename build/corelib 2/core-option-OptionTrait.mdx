@@ -1,0 +1,711 @@
+---
+title: "core::option::OptionTrait"
+---
+
+A trait for handling `Option` related operations.
+
+
+
+## Signature
+
+```rust
+pub trait OptionTrait
+```
+
+
+
+## Trait functions
+
+### expect
+
+Returns the contained `Some` value, consuming the `self` value.
+
+#### Signature
+
+```rust
+fn expect(self: Option, err: felt252) -> T
+```
+
+#### Panics
+
+Panics if the option value is `None` with a custom `felt252` panic message `err`.
+#### Examples
+
+```rust
+let option = Some(123);
+let value = option.expect('no value');
+assert!(value == 123);
+```
+
+
+### unwrap
+
+Returns the contained `Some` value, consuming the `self` value.
+
+#### Signature
+
+```rust
+fn unwrap(self: Option) -> T
+```
+####  Panics
+
+Panics if the `self` value equals `None`.
+#### Examples
+
+```rust
+let option = Some(123);
+let value = option.unwrap();
+assert!(value == 123);
+```
+
+
+### ok_or
+
+
+
+Transforms the `Option` into a `Result`, mapping `Some(v)` to
+`Ok(v)` and `None` to `Err(err)`.
+
+#### Signature
+
+```rust
+fn ok_or>(self: Option, err: E) -> Result
+```
+
+
+
+#### Examples
+
+```rust
+assert_eq!(Some('foo').ok_or(0), Ok('foo'));
+
+let option: Option = None;
+assert_eq!(option.ok_or(0), Err(0));
+```
+
+
+
+
+
+### ok_or_else
+
+
+
+Transforms the `Option` into a `Result`, mapping `Some(v)` to
+`Ok(v)` and `None` to `Err(err())`.
+
+#### Signature
+
+```rust
+fn ok_or_else, +core::ops::FnOnce[Output: E], +Drop>(
+    self: Option, err: F,
+) -> Result
+```
+
+
+
+#### Examples
+
+```rust
+assert_eq!(Some('foo').ok_or_else(|| 0), Ok('foo'));
+
+let option: Option = None;
+assert_eq!(option.ok_or_else(|| 0), Err(0));
+```
+
+
+
+
+
+### and
+
+
+
+Returns [`None`](./core-option#none) if the option is [`None`](./core-option#none), otherwise returns `optb`.
+Arguments passed to `and` are eagerly evaluated; if you are passing the
+result of a function call, it is recommended to use `and_then`, which is
+lazily evaluated.
+
+#### Signature
+
+```rust
+fn and, +Drop>(self: Option, optb: Option) -> Option
+```
+
+
+
+#### Examples
+
+```rust
+let x = Some(2);
+let y: Option = None;
+assert_eq!(x.and(y), None);
+
+let x: Option = None;
+let y: Option = Some("foo");
+assert_eq!(x.and(y), None);
+
+let x = Some(2);
+let y: Option = Some("foo");
+assert_eq!(x.and(y), Some("foo"));
+
+let x: Option = None;
+let y: Option = None;
+assert_eq!(x.and(y), None);
+```
+
+
+
+
+
+### and_then
+
+
+
+Returns [`None`](./core-option#none) if the option is [`None`](./core-option#none), otherwise calls `f` with the
+wrapped value and returns the result.
+Some languages call this operation flatmap.
+
+#### Signature
+
+```rust
+fn and_then, +core::ops::FnOnce[Output: Option]>(
+    self: Option, f: F,
+) -> Option
+```
+
+
+
+#### Examples
+
+```rust
+use core::num::traits::CheckedMul;
+
+let option: Option = checked_mul(2_u32, 2_u32)
+    .and_then(|v| Some(format!("{}", v)));
+assert_eq!(option, Some("4"));
+
+let option: Option = checked_mul(65536_u32, 65536_u32)
+    .and_then(|v| Some(format!("{}", v)));
+assert_eq!(option, None); // overflowed!
+
+let option: Option = Option::::None
+    .and_then(|v| Some(format!("{}", v)));
+assert_eq!(option, None);
+```
+
+
+
+
+
+### or
+
+
+
+Returns the option if it contains a value, otherwise returns `optb`.
+Arguments passed to `or` are eagerly evaluated; if you are passing the
+result of a function call, it is recommended to use `or_else`, which is
+lazily evaluated.
+
+#### Signature
+
+```rust
+fn or>(self: Option, optb: Option) -> Option
+```
+
+
+
+#### Examples
+
+```rust
+let x = Some(2);
+let y = None;
+assert_eq!(x.or(y), Some(2));
+
+let x = None;
+let y = Some(100);
+assert_eq!(x.or(y), Some(100));
+
+let x = Some(2);
+let y = Some(100);
+assert_eq!(x.or(y), Some(2));
+
+let x: Option = None;
+let y = None;
+assert_eq!(x.or(y), None);
+```
+
+
+
+
+
+### or_else
+
+
+
+Returns the option if it contains a value, otherwise calls `f` and
+returns the result.
+
+#### Signature
+
+```rust
+fn or_else, +core::ops::FnOnce[Output: Option]>(
+    self: Option, f: F,
+) -> Option
+```
+
+
+
+#### Examples
+
+```rust
+let nobody = || Option::::None;
+let vikings = || Option::::Some("vikings");
+
+assert_eq!(Some("barbarians").or_else(vikings), Some("barbarians"));
+assert_eq!(None.or_else(vikings), Some("vikings"));
+assert_eq!(None.or_else(nobody), None);
+```
+
+
+
+
+
+### xor
+
+
+
+Returns [`Some`](./core-option#some) if exactly one of `self`, `optb` is [`Some`](./core-option#some), otherwise returns [`None`](./core-option#none).
+
+#### Signature
+
+```rust
+fn xor>(self: Option, optb: Option) -> Option
+```
+
+
+
+#### Examples
+
+```rust
+let x = Some(2);
+let y: Option = None;
+assert_eq!(x.xor(y), Some(2));
+
+let x: Option = None;
+let y = Some(2);
+assert_eq!(x.xor(y), Some(2));
+
+let x = Some(2);
+let y = Some(2);
+assert_eq!(x.xor(y), None);
+
+let x: Option = None;
+let y: Option = None;
+assert_eq!(x.xor(y), None);
+```
+
+
+
+
+
+### is_some
+
+
+
+Returns `true` if the `Option` is `Some`, `false` otherwise.
+
+#### Signature
+
+```rust
+fn is_some(self: @Option) -> bool
+```
+
+
+
+#### Examples
+
+```rust
+let option = Some(123);
+assert!(option.is_some());
+```
+
+
+
+
+
+### is_some_and
+
+
+
+Returns `true` if the `Option` is `Some` and the value inside of it matches a
+predicate.
+
+#### Signature
+
+```rust
+fn is_some_and, +core::ops::FnOnce[Output: bool]>(
+    self: Option, f: F,
+) -> bool
+```
+
+
+
+#### Examples
+
+```rust
+assert_eq!(Some(2_u8).is_some_and(|x| x > 1), true);
+assert_eq!(Some(0_u8).is_some_and(|x| x > 1), false);
+
+let option: Option = None;
+assert_eq!(option.is_some_and(|x| x > 1), false);
+```
+
+
+
+
+
+### is_none
+
+
+
+Returns `true` if the `Option` is `None`, `false` otherwise.
+
+#### Signature
+
+```rust
+fn is_none(self: @Option) -> bool
+```
+
+
+
+#### Examples
+
+```rust
+let option = Some(123);
+assert!(!option.is_none());
+```
+
+
+
+
+
+### is_none_or
+
+
+
+Returns `true` if the `Option` is `None` or the value inside of it matches a
+predicate.
+
+#### Signature
+
+```rust
+fn is_none_or, +core::ops::FnOnce[Output: bool]>(
+    self: Option, f: F,
+) -> bool
+```
+
+
+
+#### Examples
+
+```rust
+assert_eq!(Some(2_u8).is_none_or(|x| x > 1), true);
+assert_eq!(Some(0_u8).is_none_or(|x| x > 1), false);
+
+let option: Option = None;
+assert_eq!(option.is_none_or(|x| x > 1), true);
+```
+
+
+
+
+
+### unwrap_or
+
+
+
+Returns the contained `Some` value if `self` is `Some(x)`. Otherwise, returns the
+provided default.
+
+#### Signature
+
+```rust
+fn unwrap_or>(self: Option, default: T) -> T
+```
+
+
+
+#### Examples
+
+```rust
+let option = Some(123);
+assert!(option.unwrap_or(456) == 123);
+
+let option = None;
+assert!(option.unwrap_or(456) == 456);
+```
+
+
+
+
+
+### unwrap_or_default
+
+
+
+Returns the contained `Some` value if `self` is `Some(x)`. Otherwise, returns
+`Default::::default()`.
+
+#### Signature
+
+```rust
+fn unwrap_or_default>(self: Option) -> T
+```
+
+
+
+#### Examples
+
+```rust
+let option = Some(123);
+assert!(option.unwrap_or_default() == 123);
+
+let option: Option = None;
+assert!(option.unwrap_or_default() == Default::default());
+```
+
+
+
+
+
+### unwrap_or_else
+
+
+
+Returns the contained [`Some`](./core-option#some) value or computes it from a closure.
+
+#### Signature
+
+```rust
+fn unwrap_or_else, impl func: FnOnce, +Drop>(
+    self: Option, f: F,
+) -> T
+```
+
+
+
+#### Examples
+
+```rust
+let k = 10;
+assert!(Some(4).unwrap_or_else(|| 2 * k) == 4);
+assert!(None.unwrap_or_else(|| 2 * k) == 20);
+```
+
+
+
+
+
+### map
+
+
+
+Maps an `Option` to `Option` by applying a function to a contained value (if `Some`)
+or returns `None` (if `None`).
+
+#### Signature
+
+```rust
+fn map, +core::ops::FnOnce[Output: U]>(
+    self: Option, f: F,
+) -> Option
+```
+
+
+
+#### Examples
+
+```rust
+let maybe_some_string: Option = Some("Hello, World!");
+// `Option::map` takes self *by value*, consuming `maybe_some_string`
+let maybe_some_len = maybe_some_string.map(|s: ByteArray| s.len());
+assert!(maybe_some_len == Some(13));
+
+let x: Option = None;
+assert!(x.map(|s: ByteArray| s.len()) == None);
+```
+
+
+
+
+
+### map_or
+
+
+
+Returns the provided default result (if none),
+or applies a function to the contained value (if any).
+Arguments passed to `map_or` are eagerly evaluated; if you are passing
+the result of a function call, it is recommended to use `map_or_else`,
+which is lazily evaluated.
+
+#### Signature
+
+```rust
+fn map_or, +Drop, +core::ops::FnOnce[Output: U]>(
+    self: Option, default: U, f: F,
+) -> U
+```
+
+
+
+#### Examples
+
+```rust
+assert_eq!(Some("foo").map_or(42, |v: ByteArray| v.len()), 3);
+
+let x: Option = None;
+assert_eq!(x.map_or(42, |v: ByteArray| v.len()), 42);
+```
+
+
+
+
+
+### map_or_else
+
+
+
+Computes a default function result (if none), or
+applies a different function to the contained value (if any).
+
+#### Signature
+
+```rust
+fn map_or_else,
+    +Drop,
+    +Drop,
+    +core::ops::FnOnce[Output: U],
+    +core::ops::FnOnce[Output: U],
+>(
+    self: Option, default: D, f: F,
+) -> U
+```
+
+#### Examples
+
+```rust
+let k = 21;
+
+let x = Some("foo");
+assert_eq!(x.map_or_else( || 2 * k, |v: ByteArray| v.len()), 3);
+
+let x: Option = None;
+assert_eq!(x.map_or_else( || 2 * k, |v: ByteArray| v.len()), 42);
+```
+
+
+### take
+
+
+
+Takes the value out of the option, leaving a [`None`](./core-option#none) in its place.
+
+#### Signature
+
+```rust
+fn take(ref self: Option) -> Option
+```
+
+
+
+#### Examples
+
+```rust
+let mut x = Some(2);
+let y = x.take();
+assert_eq!(x, None);
+assert_eq!(y, Some(2));
+
+let mut x: Option = None;
+let y = x.take();
+assert_eq!(x, None);
+assert_eq!(y, None);
+```
+
+
+
+
+
+### filter
+
+
+
+Returns [`None`](./core-option#none) if the option is [`None`](./core-option#none), otherwise calls `predicate`
+with the wrapped value and returns:
+- `Some(t)` if `predicate` returns `true` (where `t` is the wrapped
+value), and
+- [`None`](./core-option#none) if `predicate` returns `false`.
+
+#### Signature
+
+```rust
+fn filter[Output: bool], +Destruct, +Destruct>(
+    self: Option, predicate: P,
+) -> Option
+```
+
+#### Examples
+
+```rust
+let is_even = |n: @u32| -> bool {
+    *n % 2 == 0
+};
+
+assert_eq!(None.filter(is_even), None);
+assert_eq!(Some(3).filter(is_even), None);
+assert_eq!(Some(4).filter(is_even), Some(4));
+```
+
+
+
+### flatten
+
+
+
+Converts from `Option>` to `Option`.
+
+#### Signature
+
+```rust
+fn flatten(self: Option>) -> Option
+```
+
+
+
+
+#### Examples
+
+Basic usage:
+```rust
+let x: Option> = Some(Some(6));
+assert_eq!(Some(6), x.flatten());
+
+let x: Option> = Some(None);
+assert_eq!(None, x.flatten());
+
+let x: Option> = None;
+assert_eq!(None, x.flatten());
+```
+
+Flattening only removes one level of nesting at a time:
+```rust
+let x: Option>> = Some(Some(Some(6)));
+assert_eq!(Some(Some(6)), x.flatten());
+assert_eq!(Some(6), x.flatten().flatten());
+```
+
+
+
+

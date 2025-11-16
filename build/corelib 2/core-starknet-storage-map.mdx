@@ -1,0 +1,110 @@
+---
+title: "core::starknet::storage::map"
+---
+
+
+Key-value storage mapping implementation for Starknet contracts.
+This module provides the core mapping functionality used in Starknet smart contracts,
+enabling persistent key-value storage. Unlike traditional hash tables, storage mappings
+do not store the key data itself. Instead, they use the hash of the key to compute
+a storage slot address where the corresponding value is stored.
+# Interacting with [`Map`](./core-starknet-storage-map-Map)
+
+Storage maps can be accessed through two sets of traits, each serving different use cases:
+
+1. Direct access using `StorageMapReadAccess`/`StorageMapWriteAccess`:
+These traits allow you to read from or write to a map directly by providing the key(s)
+and value:
+```rust
+// Read directly with key
+let value = self.my_map.read(key);
+
+// Write directly with key and value
+self.my_map.write(key, value);
+```
+
+
+2. Path-based access combining `StoragePathEntry` with
+`StoragePointerReadAccess`/`StoragePointerWriteAccess`:
+This approach first computes a `StoragePath` for the entry, which can then be used with
+the `StoragePointer` access traits from `starknet::storage`:
+```rust
+// Get storage path for the entry
+let path = self.my_map.entry(key);
+
+// Read/write using the storage pointer traits
+let value = path.read();
+path.write(new_value);
+```
+
+
+The path-based approach is particularly useful for:
+- Nested mappings where you need to chain multiple keys
+- Cases where you need to reuse the same storage path multiple times
+# Storage Address Computation
+
+Storage addresses for mapping entries are deterministically computed using hash functions:
+
+- For a single key mapping:
+```text
+address = h(sn_keccak(variable_name), k) mod N
+```
+
+where:
+    - `h` is the Pedersen hash function
+    - `k` is the key value
+    - `N` is 2^251 - 256
+
+- For nested mappings with multiple keys:
+```text
+address = h(h(...h(h(sn_keccak(variable_name), k₁), k₂)...), kₙ) mod N
+```
+
+where each key `kᵢ` is hashed sequentially with the result of the previous hash.
+## Examples
+
+Basic usage with a single mapping:
+```rust
+use starknet::ContractAddress;
+use starknet::storage::{Map, StorageMapReadAccess, StoragePathEntry,
+StoragePointerReadAccess};
+
+#[storage]
+struct Storage {
+    balances: Map,
+}
+
+fn read_storage(self: @ContractState, address: ContractAddress) {
+    let balance = self.balances.read(address);
+    let balance = self.balances.entry(address).read();
+}
+```
+
+Nested mappings:
+```rust
+#[storage]
+struct Storage {
+    allowances: Map>,
+}
+
+fn read_storage(self: @ContractState, owner: ContractAddress, spender: ContractAddress) {
+    let allowance = self.allowances.entry(owner).entry(spender).read();
+    let allowance = self.allowances.entry(owner).read(spender);
+}
+```
+
+
+
+## [Structs](./core-starknet-storage-map-structs)
+
+| | |
+|:---|:---|
+| [Map](./core-starknet-storage-map-Map) | A persistent key-value store in contract storage. This type cannot be instantiated as it is marked with `#[phantom]` . This is by design: `Map`... |
+
+## [Traits](./core-starknet-storage-map-traits)
+
+| | |
+|:---|:---|
+| [StorageMapReadAccess](./core-starknet-storage-map-StorageMapReadAccess) | Provides direct read access to values in a storage [`Map`](./core-starknet-storage-map-Map) .... |
+| [StorageMapWriteAccess](./core-starknet-storage-map-StorageMapWriteAccess) | Provides direct write access to values in a storage [`Map`](./core-starknet-storage-map-Map) . Enables directly storing values in the contract's storage at the address of the given key.... |
+| [StoragePathEntry](./core-starknet-storage-map-StoragePathEntry) | Computes storage paths for accessing [`Map`](./core-starknet-storage-map-Map)  entries. The storage path combines the variable's base path with the key's hash to create a unique... |

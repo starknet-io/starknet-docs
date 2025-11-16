@@ -1,0 +1,100 @@
+---
+title: "core::traits::TryInto"
+---
+
+Simple and safe type conversions that may fail in a controlled way under
+some circumstances.
+This is useful when you are doing a type conversion that may trivially succeed but may also need
+special handling. For example, there is no way to convert an [`i64`](./core-integer-i64) into an [`i32`](./core-integer-i32) using the
+[`Into`](./core-traits-Into) trait, because an [`i64`](./core-integer-i64) may contain a value that an [`i32`](./core-integer-i32) cannot represent and so
+the conversion would lose data.  This might be handled by truncating the [`i64`](./core-integer-i64) to an [`i32`](./core-integer-i32)
+or by simply returning `Bounded::::MAX`, or by some other method. The [`Into`](./core-traits-Into) trait
+is intended for perfect conversions, so the `TryInto` trait informs the programmer when a type
+conversion could go bad and lets them decide how to handle it.
+
+## Signature
+
+```rust
+pub trait TryInto
+```
+
+
+
+# Generic Implementations
+
+- [`TryInto`](./core-traits-TryInto) is reflexive, which means that `TryInto` is implemented
+- [`TryInto`](./core-traits-TryInto) is implemented for all types that implement [`Into`](./core-traits-Into)
+## Examples
+
+Converting chess coordinates (like 'e4') into a validated position:
+```rust
+#[derive(Copy, Drop, PartialEq)]
+ struct Position {
+     file: u8, // Column a-h (0-7)
+     rank: u8, // Row 1-8 (0-7)
+ }
+
+ impl TupleTryIntoPosition of TryInto {
+    fn try_into(self: (u8, u8)) -> Option {
+        let (file_char, rank) = self;
+
+        // Validate rank is between 1 and 8
+        if rank  8 {
+            return None;
+        }
+
+        // Validate and convert file character (a-h) to number (0-7)
+        if file_char  'h' {
+            return None;
+        }
+        let file = file_char - 'a';
+
+        Some(Position {
+            file,
+            rank: rank - 1 // Convert 1-8 (chess notation) to 0-7 (internal index)
+        })
+    }
+}
+
+// Valid positions
+let e4 = ('e', 4).try_into();
+assert!(e4 == Some(Position { file: 4, rank: 3 }));
+
+// Invalid positions
+let invalid_file = ('x', 4).try_into();
+let invalid_rank = ('a', 9).try_into();
+assert!(invalid_file == None);
+assert!(invalid_rank == None);
+```
+
+
+## Trait functions
+
+### try_into
+
+
+
+Attempts to convert the input type T into the output type S.
+In the event of a conversion error, returns [`None`](./core-option#none).
+
+#### Signature
+
+```rust
+fn try_into(self: T) -> Option
+```
+
+
+
+
+#### Examples
+
+```rust
+let a: Option = 1_u16.try_into();
+assert!(a == Some(1));
+let b: Option = 256_u16.try_into();
+assert!(b == None);
+```
+
+
+
+

@@ -1,0 +1,61 @@
+# Get
+
+A trait for fallible indexing operations with different index types.
+Unlike [`IndexView`](./core-ops-index-IndexView.md) and [`Index`](./core-ops-index-Index.md) which panic on out-of-bounds access, `Get`
+returns an `Option`, providing safe indexing operations. This trait enables containers
+to support multiple index types (e.g., `Range<usize>`, `RangeInclusive<usize>`,
+or `usize`) through a unified interface.
+# Examples
+
+The following example shows how `ByteSpan` implements `Get` for both `Range<usize>`
+and `RangeInclusive<usize>`, enabling safe slicing operations that return `None` when
+out of bounds.
+```cairo
+use core::byte_array::{ByteSpan, ByteSpanTrait};
+
+let ba: ByteArray = "hello";
+let span = ba.span();
+
+// Using usize.
+let byte = span.get(1).unwrap();
+assert!(byte == 'e');
+
+// Using Range<usize>.
+let slice = span.get(1..4).unwrap();
+assert_eq!(slice.to_byte_array(), "ell");
+
+// Using RangeInclusive<usize>.
+let slice = span.get(1..=3).unwrap();
+assert_eq!(slice.to_byte_array(), "ell");
+
+// Out of bounds returns None.
+assert!(span.get(10).is_none());
+assert!(span.get(10..20).is_none());
+```
+
+Fully qualified path: [core](./core.md)::[ops](./core-ops.md)::[get](./core-ops-get.md)::[Get](./core-ops-get-Get.md)
+
+<pre><code class="language-cairo">pub trait Get&lt;C, I&gt;</code></pre>
+
+## Trait functions
+
+### get
+
+Returns the output at this index, if in bounds.
+
+Fully qualified path: [core](./core.md)::[ops](./core-ops.md)::[get](./core-ops-get.md)::[Get](./core-ops-get-Get.md)::[get](./core-ops-get-Get.md#get-1)
+
+<pre><code class="language-cairo">fn get&lt;C, I, C, I&gt;(self: @C, index: I) -&gt; <a href="core-option-Option.html">Option&lt;Get&lt;C, I&gt;Output&gt;</a></code></pre>
+
+
+## Trait types
+
+### Output
+
+The returned type after indexing.
+
+Fully qualified path: [core](./core.md)::[ops](./core-ops.md)::[get](./core-ops-get.md)::[Get](./core-ops-get-Get.md)::[Output](./core-ops-get-Get.md#output)
+
+<pre><code class="language-cairo">type Output;</code></pre>
+
+
