@@ -6,15 +6,61 @@ icon: flask
 
 ## Overview
 
-Starkzap repository includes three complete example applications that demonstrate different integration patterns and use cases:
+Starkzap repository includes example applications in the `examples/` directory:
 
-1. **Web Example** - Vanilla TypeScript + Vite app with multiple wallet connection methods
-2. **Mobile Example** - React Native + Expo app with full-featured UI
-3. **Server Example** - Express.js backend for Privy wallet operations
-
-All examples are located in the `examples/` directory of the SDK repository.
+1. **Flappy Bird (Web)** — Cartridge Controller, policies, and paymaster (gasless) on a game contract; contract assumed deployed, calls on-chain.
+2. **Web Example** — Vanilla TypeScript + Vite with multiple wallet connection methods (Cartridge, Privy, WebAuthn, private key).
+3. **Mobile Example** — React Native + Expo with balances, transfers, staking.
+4. **Server Example** — Express.js backend for Privy wallet operations and paymaster proxy.
 
 <Tabs>
+  <Tab title="Flappy Bird (Web)">
+    Game example: StarkZap + **Cartridge Controller**, **policies**, and **paymaster** (gasless). The on-chain contract is assumed already deployed; the app calls it (start game, increment score, end game) and reads high score / leaderboard.
+
+    ### Run
+
+    ```bash
+    cd examples/flappy-bird
+    npm install
+    npm run dev
+    ```
+
+    Open **`https://localhost:5173`** (HTTPS required for Cartridge). Click **Connect Controller**, sign in, then play; each pipe increments score on-chain (sponsored when the account supports SNIP-9).
+
+    ### StarkZap + Controller
+
+    - **SDK:** `StarkSDK({ network: "sepolia" })`, then `sdk.onboard({ strategy: OnboardStrategy.Cartridge, cartridge: { policies } })`.
+    - **Policies:** One entry per contract, all methods listed (e.g. `start_new_game`, `increment_score`, `end_game`). Policies define what the session can call; only matching calls are paymastered.
+    - **Paymaster:** Sponsored (gasless) when the Cartridge account is SNIP-9 compatible; otherwise the example falls back to user-paid gas.
+    - **Contract:** We assume the game contract is already deployed. The app only **calls it on-chain** (execute + view) via `wallet.execute()` and read-only `Contract` + `wallet.getProvider()` (both from StarkZap re-exports).
+
+    ### Snippets
+
+    **Policies and connect:**
+
+    ```typescript
+    const policies = [
+      { target: GAME_CONTRACT, method: "start_new_game" },
+      { target: GAME_CONTRACT, method: "increment_score" },
+      { target: GAME_CONTRACT, method: "end_game" },
+    ];
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Cartridge,
+      cartridge: { policies },
+      deploy: "never",
+    });
+    const wallet = onboard.wallet;
+    ```
+
+    **Execute (sponsored or user_pays):**
+
+    ```typescript
+    await wallet.execute(
+      [{ contractAddress: GAME_CONTRACT, entrypoint: "increment_score", calldata: [] }],
+      { feeMode: "sponsored" }
+    );
+    ```
+  </Tab>
   <Tab title="Web App">
     The web example demonstrates wallet integration in a browser environment using vanilla TypeScript and Vite.
 
