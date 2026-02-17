@@ -1,0 +1,283 @@
+---
+title: Paymasters
+description: "Set up gasless transactions using AVNU Paymaster or Cartridge's built-in paymaster"
+icon: gift
+---
+
+## Overview
+
+Paymasters allow you to sponsor (pay for) transaction fees so users don't have to worry about gas costs. Starkzap supports two paymaster options depending on your wallet connection strategy.
+
+<Tabs>
+  <Tab title="AVNU Paymaster">
+    Use AVNU Paymaster for **Privy** and **Private Key** strategies. AVNU provides both gasfree (you sponsor) and gasless (user pays in tokens) modes.
+
+    ## When to Use AVNU Paymaster
+
+    - ✅ Using **Privy** strategy for wallet connection
+    - ✅ Using **Private Key** strategy (server-side)
+    - ✅ Want to sponsor all gas fees for users (gasfree mode)
+    - ✅ Want users to pay gas in tokens instead of STRK (gasless mode)
+
+    <Tabs>
+      <Tab title="You Sponsor (Gasfree)">
+        In gasfree mode, your dApp covers all gas costs. This is ideal for:
+        - User onboarding flows
+        - Premium UX experiences
+        - Consumer applications
+
+        ## Setup
+
+        ### 1. Get an API Key
+
+        Get an API key from the [AVNU Portal](https://portal.avnu.fi). This is required for gasfree mode.
+
+        ### 2. Configure the SDK
+
+        ```typescript
+        import { StarkSDK } from "starkzap";
+
+        const sdk = new StarkSDK({
+          network: "mainnet",
+          paymaster: {
+            nodeUrl: "https://starknet.paymaster.avnu.fi",
+            apiKey: "your-api-key-here", // Required for gasfree mode
+          },
+        });
+        ```
+
+        ### 3. Use Sponsored Transactions
+
+        ```typescript
+        // Execute with sponsored fees
+        const tx = await wallet.execute([call], { feeMode: "sponsored" });
+
+        // Or set as default when connecting
+        const wallet = await sdk.connectWallet({
+          account: { signer },
+          feeMode: "sponsored",
+        });
+        ```
+
+        ## Propulsion Program
+
+        The [Starknet Foundation Propulsion Program](https://docs.avnu.fi/docs/paymaster/propulsion-program) offers up to $1M in gas subsidies for qualifying projects. This program helps reduce the cost of sponsoring transactions for your users.
+
+        ## Server-Side Paymaster Proxy
+
+        For production applications, you may want to proxy paymaster requests through your backend:
+
+        ```typescript
+        // Backend endpoint
+        app.post("/api/paymaster", async (req, res) => {
+          const response = await fetch("https://starknet.paymaster.avnu.fi", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(AVNU_API_KEY && { "x-paymaster-api-key": AVNU_API_KEY }),
+            },
+            body: JSON.stringify(req.body),
+          });
+          
+          const data = await response.json();
+          res.status(response.status).json(data);
+        });
+        ```
+
+        Then configure the SDK to use your proxy:
+
+        ```typescript
+        const sdk = new StarkSDK({
+          network: "mainnet",
+          paymaster: {
+            nodeUrl: "https://your-api.example/paymaster",
+          },
+        });
+        ```
+      </Tab>
+
+      <Tab title="Gasless Mode">
+        In gasless mode, users pay gas fees in supported tokens instead of STRK. No API key required.
+
+        ## Supported Tokens
+
+        USDC, USDT, DAI, ETH, STRK, WBTC, solvBTC, LBTC, EKUBO, NSTR, LORDS, wstETH, and more.
+
+        ## Setup
+
+        ### 1. Configure the SDK
+
+        ```typescript
+        import { StarkSDK } from "starkzap";
+
+        const sdk = new StarkSDK({
+          network: "mainnet",
+          paymaster: {
+            nodeUrl: "https://starknet.paymaster.avnu.fi",
+            // No API key needed for gasless mode
+          },
+        });
+        ```
+
+        ### 2. Use Transactions
+
+        The SDK automatically handles gasless transactions when a paymaster is configured. Users can pay in any supported token:
+
+        ```typescript
+        // Transactions automatically use gasless mode
+        const tx = await wallet.execute([call]);
+        await tx.wait();
+        ```
+
+        Users will pay gas fees in their preferred token (USDC, USDT, etc.) instead of STRK.
+      </Tab>
+    </Tabs>
+
+    ## Best Practices
+
+    1. **Use gasfree mode** for onboarding and critical user flows
+    2. **Use gasless mode** to let users pay in their preferred tokens
+    3. **Proxy paymaster requests** through your backend in production to keep API keys secure
+    4. **Monitor usage** through the [AVNU Portal](https://portal.avnu.fi) dashboard
+    5. **Apply for Propulsion Program** if eligible for gas subsidies
+
+    ## Resources
+
+    - [AVNU Paymaster Documentation](https://docs.avnu.fi/docs/paymaster/index)
+    - [AVNU Portal](https://portal.avnu.fi) - Get your API key and monitor usage
+    - [Propulsion Program](https://docs.avnu.fi/docs/paymaster/propulsion-program) - Gas subsidies up to $1M
+    - [starknet.js Paymaster Guide](https://starknetjs.com/docs/guides/account/paymaster)
+  </Tab>
+
+  <Tab title="Cartridge Paymaster">
+    Use Cartridge's built-in paymaster when using the **Cartridge Controller** strategy. Cartridge automatically sponsors all transactions—no configuration needed.
+
+    ## When to Use Cartridge Paymaster
+
+    - ✅ Using **Cartridge Controller** strategy for wallet connection
+    - ✅ Building gaming applications
+    - ✅ Want automatic gasless transactions without setup
+    - ✅ Want seamless, uninterrupted user experience
+
+    ## How It Works
+
+    Cartridge includes a built-in paymaster that automatically sponsors (pays for) all transactions. When you use Cartridge Controller, all transactions are gasless by default—no configuration required.
+
+    ### Session-Based Paymastered Transactions
+
+    According to the [Cartridge Controller architecture](https://docs.cartridge.gg/controller/architecture#how-paymastered-transactions-work), Cartridge uses session-based transactions with the paymaster:
+
+    1. **User approves policies once** - Defines what contracts/methods can be called
+    2. **Session is registered** - Can be registered without signature for paymastered transactions
+    3. **Transactions execute automatically** - When you call `account.execute()`:
+       - SDK validates the session is active
+       - Constructs an `OutsideExecution` message (meta-transaction via SNIP-9)
+       - Signs the message with the session key
+       - Sends the signed payload to Cartridge's paymaster service
+       - The paymaster submits the transaction on-chain and pays gas fees
+
+    All of this happens automatically—you don't need to configure anything.
+
+    ### Policies for Paymaster
+
+    Policies define what contracts and methods can be called in paymastered transactions. Users approve these policies once when connecting, and then all transactions matching those policies are automatically sponsored:
+
+    ```typescript
+    const policies = [
+      { target: "0xTOKEN_CONTRACT", method: "transfer" },
+      { target: "0xGAME_CONTRACT", method: "play_card" },
+      { target: "0xGAME_CONTRACT", method: "claim_rewards" },
+    ];
+    ```
+
+    Transactions that match these policies are automatically paymastered. Transactions outside these policies require user approval.
+
+    ### Register Session Without Signature
+
+    For paymastered transactions, sessions can be registered without requiring a signature from the user. The session is automatically registered when policies are approved, allowing seamless transaction execution:
+
+    ```typescript
+    // When user connects and approves policies, session is automatically registered
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Cartridge,
+      cartridge: {
+        policies: [
+          { target: "0xTOKEN_CONTRACT", method: "transfer" },
+        ],
+      },
+    });
+
+    // Session is now active and registered
+    // All transactions matching policies are automatically paymastered
+    ```
+
+    ## Integration
+
+    Simply connect with Cartridge Controller and define policies. All transactions matching those policies are automatically sponsored:
+
+    ```typescript
+    import { StarkSDK, OnboardStrategy } from "starkzap";
+
+    const sdk = new StarkSDK({ network: "mainnet" });
+
+    // Connect with Cartridge and define policies
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Cartridge,
+      cartridge: {
+        policies: [
+          { target: "0xTOKEN_CONTRACT", method: "transfer" },
+          { target: "0xGAME_CONTRACT", method: "play_card" },
+        ],
+      },
+    });
+
+    const wallet = onboard.wallet;
+
+    // All transactions matching policies are automatically gasless!
+    const tx = await wallet.execute([call]);
+    // No need to specify feeMode: "sponsored" - it's automatic
+    await tx.wait();
+    ```
+
+    ## Key Advantages
+
+    - ✅ **Zero Configuration** - No API keys, no setup, just works
+    - ✅ **Automatic** - All transactions are sponsored by default
+    - ✅ **Perfect for Gaming** - Seamless, uninterrupted gameplay
+    - ✅ **Session-Based** - Users approve policies once, then transactions happen automatically
+
+    ## Comparison with AVNU Paymaster
+
+    | Feature | Cartridge Paymaster | AVNU Paymaster |
+    |---------|-------------------|----------------|
+    | **Setup** | Automatic (built-in) | Requires configuration |
+    | **API Key** | Not needed | Required for gasfree mode |
+    | **Use Case** | Gaming applications | General consumer apps |
+    | **Strategy** | Cartridge Controller only | Privy or Private Key |
+    | **Configuration** | None | SDK + optional backend proxy |
+
+    ## Resources
+
+    - [Cartridge Controller Documentation](https://docs.cartridge.gg/controller/overview)
+    - [Cartridge Architecture](https://docs.cartridge.gg/controller/architecture#how-paymastered-transactions-work) - How paymastered transactions work
+    - [Cartridge Integration Guide](/build/consumer-app-sdk/integrations/cartridge-controller) - Detailed integration instructions
+  </Tab>
+</Tabs>
+
+## Choosing the Right Paymaster
+
+**Use AVNU Paymaster if:**
+- You're using Privy or Private Key strategies
+- You want control over gas sponsorship
+- You need gasless mode (user pays in tokens)
+
+**Use Cartridge Paymaster if:**
+- You're using Cartridge Controller strategy
+- You're building gaming applications
+- You want automatic gasless transactions with zero setup
+
+## Next Steps
+
+- Learn about [AVNU Paymaster Integration](/build/consumer-app-sdk/integrations/avnu-paymaster) for detailed setup
+- Learn about [Cartridge Controller Integration](/build/consumer-app-sdk/integrations/cartridge-controller) for gaming applications
+- Configure your [SDK Configuration](/build/consumer-app-sdk/configuration) with paymaster settings

@@ -1,0 +1,426 @@
+---
+title: Examples
+description: "Complete example applications demonstrating Starkzap in action"
+icon: flask
+---
+
+## Overview
+
+Starkzap repository includes three complete example applications that demonstrate different integration patterns and use cases:
+
+1. **Web Example** - Vanilla TypeScript + Vite app with multiple wallet connection methods
+2. **Mobile Example** - React Native + Expo app with full-featured UI
+3. **Server Example** - Express.js backend for Privy wallet operations
+
+All examples are located in the `examples/` directory of the SDK repository.
+
+<Tabs>
+  <Tab title="Web App">
+    The web example demonstrates wallet integration in a browser environment using vanilla TypeScript and Vite.
+
+    ### Features
+
+    - ✅ Multiple wallet connection methods:
+      - Cartridge Controller (social login)
+      - Privy (server-side key management)
+      - WebAuthn (Face ID / Touch ID)
+      - Private Key (local signing)
+    - ✅ Account deployment and status checking
+    - ✅ Test transactions (regular and sponsored)
+    - ✅ Support for multiple account presets (OpenZeppelin, Argent, Braavos, etc.)
+
+    ### Getting Started
+
+    ```bash
+    cd examples/web
+    npm install
+    npm run dev
+    ```
+
+    The app will be available at `http://localhost:5173` (or the port Vite assigns).
+
+    ### Running with Privy Server
+
+    To test Privy integration, you'll need to run the server example:
+
+    ```bash
+    # In examples/server
+    PRIVY_APP_ID=xxx PRIVY_APP_SECRET=xxx AVNU_API_KEY=xxx npx tsx server.ts
+    ```
+
+    Then update the `PRIVY_SERVER_URL` in `examples/web/main.ts` to point to your server.
+
+    ### Key Code Snippets
+
+    **Connecting with Cartridge:**
+
+    ```typescript
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Cartridge,
+      deploy: "never",
+      cartridge: { policies: [DUMMY_POLICY] },
+    });
+    wallet = onboard.wallet;
+    ```
+
+    **Connecting with Privy:**
+
+    ```typescript
+    const accessToken = await privy.getAccessToken();
+    const walletRes = await fetch(`${PRIVY_SERVER_URL}/api/wallet/starknet`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    const { wallet: walletData } = await walletRes.json();
+
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Privy,
+      deploy: "never",
+      accountPreset: preset,
+      privy: {
+        resolve: async () => ({
+          walletId: walletData.id,
+          publicKey: walletData.publicKey,
+          serverUrl: `${PRIVY_SERVER_URL}/api/wallet/sign`,
+        }),
+      },
+    });
+    wallet = onboard.wallet;
+    ```
+
+    **Executing a Transaction:**
+
+    ```typescript
+    const tx = await wallet.execute([
+      {
+        contractAddress: STRK_CONTRACT,
+        entrypoint: "transfer",
+        calldata: [wallet.address, "0", "0"],
+      },
+    ]);
+    await tx.wait();
+    ```
+  </Tab>
+
+  <Tab title="Mobile App">
+    The mobile example is a full-featured React Native + Expo application with a complete UI for wallet operations.
+
+    ### Features
+
+    - ✅ Balance checking across multiple tokens
+    - ✅ Single and batch ERC20 transfers
+    - ✅ Staking: enter/add/claim/exit delegation pools
+    - ✅ Transaction toasts with explorer links
+    - ✅ Network switching (Mainnet / Sepolia)
+    - ✅ Privy integration for mobile
+    - ✅ Beautiful, modern UI with dark mode support
+
+    ### Getting Started
+
+    ```bash
+    cd examples/mobile
+    npm install
+    npx expo start
+    ```
+
+    Then choose to run on:
+    - iOS Simulator
+    - Android Emulator
+    - Physical device via Expo Go
+    - Web browser
+
+    ### Project Structure
+
+    ```
+    examples/mobile/
+    ├── app/                    # Expo Router pages
+    │   ├── index.tsx          # Wallet connection screen
+    │   ├── (tabs)/            # Tab navigation
+    │   │   ├── balances.tsx   # Token balances
+    │   │   ├── transfers.tsx  # Token transfers
+    │   │   └── staking.tsx    # Staking operations
+    │   └── logs.tsx           # Transaction logs
+    ├── components/            # Reusable UI components
+    │   ├── TokenBalance.tsx
+    │   ├── TransactionToast.tsx
+    │   └── ...
+    ├── stores/                # Zustand state management
+    │   ├── wallet.ts
+    │   ├── balances.ts
+    │   └── staking.ts
+    └── providers/             # Context providers
+        └── privy.tsx
+    ```
+
+    ### Key Code Snippets
+
+    **Wallet Connection with Privy:**
+
+    ```typescript
+    import { PrivyProvider } from "@privy-io/expo";
+    import { StarkSDK, OnboardStrategy } from "starkzap";
+
+    const accessToken = await privyClient.getAccessToken();
+    const walletRes = await fetch("https://your-api.example/api/wallet/starknet", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    const { wallet: walletData } = await walletRes.json();
+
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Privy,
+      deploy: "never",
+      privy: {
+        resolve: async () => ({
+          walletId: walletData.id,
+          publicKey: walletData.publicKey,
+          serverUrl: "https://your-api.example/api/wallet/sign",
+        }),
+      },
+      accountPreset: accountPresets.argentXV050,
+    });
+    ```
+
+    **Checking Balances:**
+
+    ```typescript
+    const balance = await wallet.balanceOf(STRK);
+    console.log(balance.toFormatted()); // "150.25 STRK"
+    ```
+
+    **Transferring Tokens:**
+
+    ```typescript
+    const tx = await wallet.transfer(STRK, [
+      { to: fromAddress("0xRECIPIENT"), amount: Amount.parse("10", STRK) },
+    ]);
+    await tx.wait();
+    ```
+
+    **Staking Operations:**
+
+    ```typescript
+    // Enter a pool
+    await wallet.enterPool(poolAddress, Amount.parse("100", STRK));
+
+    // Claim rewards
+    await wallet.claimPoolRewards(poolAddress);
+    ```
+
+    ### React Native Setup
+
+    The mobile example includes all necessary polyfills:
+
+    ```typescript
+    // entrypoint.js
+    import "react-native-get-random-values";
+    import "fast-text-encoding";
+    ```
+  </Tab>
+</Tabs>
+
+## Server Example
+
+The server example provides an Express.js backend for Privy wallet operations, including wallet creation, signing, and paymaster integration.
+
+### Features
+
+- ✅ Privy wallet creation and management
+- ✅ Transaction signing endpoint
+- ✅ AVNU Paymaster proxy for sponsored transactions
+- ✅ Account registration and deployment tracking
+- ✅ Simple file-based storage (use a database in production)
+
+### Getting Started
+
+```bash
+cd examples/server
+npm install
+PRIVY_APP_ID=xxx PRIVY_APP_SECRET=xxx AVNU_API_KEY=xxx npx tsx server.ts
+```
+
+The server will run on `http://localhost:3001`.
+
+### Environment Variables
+
+- `PRIVY_APP_ID` - Your Privy application ID (required)
+- `PRIVY_APP_SECRET` - Your Privy application secret (required)
+- `AVNU_API_KEY` - AVNU Paymaster API key (optional, for sponsored mode)
+- `AVNU_PAYMASTER_URL` - Paymaster URL (defaults to Sepolia)
+
+### API Endpoints
+
+#### Health Check
+
+```bash
+GET /api/health
+```
+
+Returns `{ status: "ok" }`
+
+#### Create/Get Privy Wallet
+
+```bash
+POST /api/wallet/starknet
+Authorization: Bearer <privy_access_token>
+```
+
+Creates or retrieves a Starknet wallet for the authenticated user.
+
+#### Sign Transaction Hash
+
+```bash
+POST /api/wallet/sign
+Content-Type: application/json
+
+{
+  "walletId": "wallet-id",
+  "hash": "0x..."
+}
+```
+
+Returns `{ signature: [...] }`
+
+#### Register Account
+
+```bash
+POST /api/wallet/register-account
+Authorization: Bearer <privy_access_token>
+Content-Type: application/json
+
+{
+  "preset": "argentXV050",
+  "address": "0x...",
+  "deployed": false
+}
+```
+
+#### Paymaster Proxy
+
+```bash
+POST /api/paymaster
+Content-Type: application/json
+
+{
+  "method": "estimate_fee",
+  "params": { ... }
+}
+```
+
+Forwards requests to AVNU Paymaster with API key authentication.
+
+### Key Code Snippets
+
+**Signing Endpoint:**
+
+```typescript
+app.post("/api/wallet/sign", async (req, res) => {
+  const { walletId, hash } = req.body;
+  
+  const result = await privy
+    .wallets()
+    .rawSign(walletId, { params: { hash } });
+  
+  res.json({ signature: result.signature });
+});
+```
+
+**Paymaster Proxy:**
+
+```typescript
+app.post("/api/paymaster", async (req, res) => {
+  const response = await fetch(AVNU_PAYMASTER_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(AVNU_API_KEY && { "x-paymaster-api-key": AVNU_API_KEY }),
+    },
+    body: JSON.stringify(req.body),
+  });
+  
+  const data = await response.json();
+  res.status(response.status).json(data);
+});
+```
+
+## Running All Examples Together
+
+You can run the web example and server together:
+
+```bash
+# Terminal 1: Start the server
+cd examples/server
+PRIVY_APP_ID=xxx PRIVY_APP_SECRET=xxx AVNU_API_KEY=xxx npx tsx server.ts
+
+# Terminal 2: Start the web app
+cd examples/web
+npm run dev
+```
+
+Or use the convenience script:
+
+```bash
+cd examples/web
+npm run dev:all
+```
+
+This runs both the Vite dev server and the Express server concurrently.
+
+## Common Patterns
+
+### Error Handling
+
+All examples include proper error handling:
+
+```typescript
+try {
+  const tx = await wallet.execute(calls);
+  await tx.wait();
+  console.log("Success!");
+} catch (error) {
+  console.error("Transaction failed:", error);
+  // Show user-friendly error message
+}
+```
+
+### Loading States
+
+Examples demonstrate loading state management:
+
+```typescript
+function setButtonLoading(btn: HTMLButtonElement, loading: boolean) {
+  if (loading) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+  } else {
+    btn.disabled = false;
+    btn.textContent = "Submit";
+  }
+}
+```
+
+### Transaction Tracking
+
+All examples show how to track transaction status:
+
+```typescript
+const tx = await wallet.execute(calls);
+console.log(`Tx hash: ${tx.hash}`);
+console.log(`Explorer: ${tx.explorerUrl}`);
+
+await tx.wait();
+console.log("Transaction confirmed!");
+```
+
+## Next Steps
+
+- Explore the example code in the `examples/` directory
+- Adapt the patterns to your own application
+- Check the [API Reference](/build/consumer-app-sdk/api-reference) for detailed method documentation
+- Review the [Troubleshooting](/build/consumer-app-sdk/troubleshooting) guide if you encounter issues

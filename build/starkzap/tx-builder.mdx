@@ -1,0 +1,122 @@
+---
+title: Tx Builder
+description: "Batch multiple operations into a single atomic transaction using the fluent TxBuilder API"
+icon: building
+---
+
+## Overview
+
+The `TxBuilder` provides a fluent API for batching multiple operations into a single atomic transaction. This saves gas and guarantees all-or-nothing execution—either all operations succeed together, or none of them execute.
+
+## Basic Usage
+
+```typescript
+const tx = await wallet
+  .tx()
+  .enterPool(poolAddress, Amount.parse("100", STRK))
+  .send();
+await tx.wait();
+```
+
+## Mixing Operations
+
+Combine transfers, staking, approvals, and raw calls:
+
+```typescript
+const tx = await wallet
+  .tx()
+  // Transfer tokens to multiple recipients
+  .transfer(USDC, [
+    { to: alice, amount: Amount.parse("50", USDC) },
+    { to: bob, amount: Amount.parse("25", USDC) },
+  ])
+  // Stake in a pool (auto-detects enter vs. add)
+  .stake(poolAddress, Amount.parse("100", STRK))
+  // Claim rewards
+  .claimPoolRewards(anotherPoolAddress)
+  // Add raw contract calls
+  .add({
+    contractAddress: "0xDEX_CONTRACT",
+    entrypoint: "swap",
+    calldata: [/* ... */],
+  })
+  .send();
+
+await tx.wait();
+```
+
+The `.stake()` method is smart — it automatically calls `enter_delegation_pool` for new members or `add_to_delegation_pool` for existing members.
+
+## Preflight with Builder
+
+```typescript
+const builder = wallet
+  .tx()
+  .stake(poolAddress, amount)
+  .transfer(USDC, { to: alice, amount: usdcAmount });
+
+const result = await builder.preflight();
+if (!result.ok) {
+  console.error("Transaction would fail:", result.reason);
+} else {
+  const tx = await builder.send();
+  await tx.wait();
+}
+```
+
+## Fee Estimation
+
+```typescript
+const fee = await wallet
+  .tx()
+  .transfer(USDC, { to: alice, amount })
+  .stake(poolAddress, stakeAmount)
+  .estimateFee();
+
+console.log("Estimated fee:", fee.overall_fee);
+```
+
+## Extracting Calls
+
+You can also extract the raw calls for inspection:
+
+```typescript
+const calls = await wallet
+  .tx()
+  .transfer(USDC, { to: alice, amount })
+  .enterPool(poolAddress, stakeAmount)
+  .calls();
+
+console.log(`${calls.length} calls in this transaction`);
+```
+
+## Available Builder Methods
+
+| Method                             | Description                                    |
+| ---------------------------------- | ---------------------------------------------- |
+| `.add(...calls)`                   | Add raw `Call` objects                         |
+| `.approve(token, spender, amount)` | ERC20 approval                                 |
+| `.transfer(token, transfers)`      | ERC20 transfer(s)                              |
+| `.stake(pool, amount)`             | Smart stake (enter or add based on membership) |
+| `.enterPool(pool, amount)`         | Enter pool as new member                       |
+| `.addToPool(pool, amount)`         | Add to existing pool position                  |
+| `.claimPoolRewards(pool)`          | Claim staking rewards                          |
+| `.exitPoolIntent(pool, amount)`    | Start exit process                             |
+| `.exitPool(pool)`                  | Complete exit after window                     |
+| `.calls()`                         | Resolve all calls without sending              |
+| `.estimateFee()`                   | Estimate gas cost                              |
+| `.preflight()`                     | Simulate the transaction                       |
+| `.send(options?)`                  | Execute all calls atomically                   |
+
+## Best Practices
+
+1. **Use the transaction builder** for complex operations to save gas
+2. **Always preflight** non-trivial batches before submitting
+3. **Combine related operations** into a single transaction when possible
+4. **Use `.estimateFee()`** to show users the cost before executing
+
+## Next Steps
+
+- Learn about [Transaction Execution](/build/consumer-app-sdk/transactions) for direct execution methods
+- Explore [Staking and Delegation](/build/consumer-app-sdk/staking) for staking operations
+- Check the [Bitcoin, Stablecoins, and Token](/build/consumer-app-sdk/erc20) module for token operations
