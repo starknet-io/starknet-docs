@@ -6,7 +6,7 @@ icon: flask
 
 ## Overview
 
-Starkzap repository includes example applications in the `examples/` directory:
+The SDK name is **starkzap** (install: `npm install starkzap`, import: `from "starkzap"`). The repository includes example applications in the `examples/` directory:
 
 1. **Flappy Bird (Web)** — Cartridge Controller, policies, and paymaster (gasless) on a game contract; contract assumed deployed, calls on-chain.
 2. **Web Example** — Vanilla TypeScript + Vite with multiple wallet connection methods (Cartridge, Privy, WebAuthn, private key).
@@ -15,7 +15,7 @@ Starkzap repository includes example applications in the `examples/` directory:
 
 <Tabs>
   <Tab title="Flappy Bird (Web)">
-    Game example: StarkZap + **Cartridge Controller**, **policies**, and **paymaster** (gasless). The on-chain contract is assumed already deployed; the app calls it (start game, increment score, end game) and reads high score / leaderboard.
+    We integrate the **Cartridge Controller** — a wallet — with **session keys** (so users don’t sign each transaction) and a **paymaster** (gasless), all thanks to native **account abstraction** on Starknet. The demo game contract is already deployed; the app calls it on-chain and shows a **leaderboard** of scores.
 
     ### Run
 
@@ -25,20 +25,42 @@ Starkzap repository includes example applications in the `examples/` directory:
     npm run dev
     ```
 
-    Open **`https://localhost:5173`** (HTTPS required for Cartridge). Click **Connect Controller**, sign in, then play; each pipe increments score on-chain (sponsored when the account supports SNIP-9).
+    Open **`https://localhost:5173`** (HTTPS required for Cartridge). Click **Connect Controller**, sign in, then play; each pipe increments your score on-chain. Use the **Leaderboard** button to query on-chain scores.
 
-    ### StarkZap + Controller
+    ### Controller via SDK: session keys + paymaster
 
-    - **SDK:** `StarkSDK({ network: "sepolia" })`, then `sdk.onboard({ strategy: OnboardStrategy.Cartridge, cartridge: { policies } })`.
-    - **Policies:** One entry per contract, all methods listed (e.g. `start_new_game`, `increment_score`, `end_game`). Policies define what the session can call; only matching calls are paymastered.
-    - **Paymaster:** Sponsored (gasless) when the Cartridge account is SNIP-9 compatible; otherwise the example falls back to user-paid gas.
-    - **Contract:** We assume the game contract is already deployed. The app only **calls it on-chain** (execute + view) via `wallet.execute()` and read-only `Contract` + `wallet.getProvider()` (both from StarkZap re-exports).
+    - **Controller = wallet:** The Cartridge Controller is the user’s wallet (social login / passkey). We connect it through the SDK with **policies** that define which contract calls the session may make.
+    - **Session keys:** Once the user approves the policies, the session can send those calls **without a signature per tx** — no popup for each pipe or game over.
+    - **Paymaster:** Matching calls are **sponsored** (gasless) when the account supports SNIP-9; otherwise the example falls back to user-paid gas.
+    - All of this is built on Starknet’s **account abstraction** (single approval, then batched/sponsored execution).
 
-    ### Snippets
+    ### Demo contract (already deployed)
 
-    **Policies and connect:**
+    Contract on **Starknet Sepolia** (Voyager): [0x03730b941e8d3ece030a4a0d5f1008f34fbde0976e86577a78648c8b35079464](https://sepolia.voyager.online/contract/0x03730b941e8d3ece030a4a0d5f1008f34fbde0976e86577a78648c8b35079464)
+
+    **Entrypoints and how they map to Flappy Bird:**
+
+    | Entrypoint | When we call it |
+    |------------|------------------|
+    | `start_new_game` | User starts a new round (tap / Space). |
+    | `increment_score` | Bird passes a pipe (each pipe = one call). |
+    | `end_game` | Game over (hit pipe or ground). |
+    | `get_high_score` (view) | Show player’s best score. |
+    | `get_current_leaderboard_id` (view) | Current leaderboard period. |
+    | `get_leaderboard` (view) | Top scores — used by the **Leaderboard** button to show on-chain data. |
+
+    ### Leaderboard button
+
+    A **Leaderboard** button in the UI calls `get_leaderboard()` on the contract (via StarkZap’s `Contract` + `wallet.getProvider()`) and displays the top scores from chain.
+
+    ### How the controller is integrated and how we call the contract
+
+    **1. Init SDK and connect Controller (policies = what the session can call):**
 
     ```typescript
+    import { StarkZap, OnboardStrategy, Contract, type RpcProvider } from "starkzap";
+
+    const sdk = new StarkZap({ network: "sepolia" });
     const policies = [
       { target: GAME_CONTRACT, method: "start_new_game" },
       { target: GAME_CONTRACT, method: "increment_score" },
@@ -52,14 +74,35 @@ Starkzap repository includes example applications in the `examples/` directory:
     const wallet = onboard.wallet;
     ```
 
-    **Execute (sponsored or user_pays):**
+    **2. Contract calls (writes) — start game, increment score, end game:**
 
     ```typescript
+    await wallet.execute(
+      [{ contractAddress: GAME_CONTRACT, entrypoint: "start_new_game", calldata: [] }],
+      { feeMode: "sponsored" }
+    );
     await wallet.execute(
       [{ contractAddress: GAME_CONTRACT, entrypoint: "increment_score", calldata: [] }],
       { feeMode: "sponsored" }
     );
+    await wallet.execute(
+      [{ contractAddress: GAME_CONTRACT, entrypoint: "end_game", calldata: [] }],
+      { feeMode: "sponsored" }
+    );
     ```
+
+    **3. Read on-chain data (leaderboard, high score) — use provider from wallet:**
+
+    ```typescript
+    const provider = wallet.getProvider();
+    const contract = new Contract({ abi: GAME_ABI, address: GAME_CONTRACT, providerOrAccount: provider });
+    const leaderboard = await contract.get_leaderboard();
+    const highScore = await contract.get_high_score(wallet.address.toString(), await contract.get_current_leaderboard_id());
+    ```
+
+    ### What is a contract ABI?
+
+    An **ABI** (Application Binary Interface) is a description of a smart contract’s **public interface**: its callable functions (entrypoints), their names, arguments, and return types. We use it above when building the `Contract` instance for read-only calls (`get_leaderboard`, `get_high_score`, etc.): the ABI tells the SDK how to encode the call and how to decode the result. You typically get the ABI from the contract’s project (e.g. compiled artifact) or from an explorer (Voyager, Starkscan). For writes we only need the entrypoint name and calldata; for reads we pass the ABI into `Contract` so it can expose typed methods.
   </Tab>
   <Tab title="Web App">
     The web example demonstrates wallet integration in a browser environment using vanilla TypeScript and Vite.
@@ -269,13 +312,10 @@ Starkzap repository includes example applications in the `examples/` directory:
     import "fast-text-encoding";
     ```
   </Tab>
-</Tabs>
+  <Tab title="Server">
+    Express.js backend for Privy wallet operations: wallet creation, signing, and paymaster integration.
 
-## Server Example
-
-The server example provides an Express.js backend for Privy wallet operations, including wallet creation, signing, and paymaster integration.
-
-### Features
+    ### Features
 
 - ✅ Privy wallet creation and management
 - ✅ Transaction signing endpoint
@@ -395,28 +435,8 @@ app.post("/api/paymaster", async (req, res) => {
 });
 ```
 
-## Running All Examples Together
-
-You can run the web example and server together:
-
-```bash
-# Terminal 1: Start the server
-cd examples/server
-PRIVY_APP_ID=xxx PRIVY_APP_SECRET=xxx AVNU_API_KEY=xxx npx tsx server.ts
-
-# Terminal 2: Start the web app
-cd examples/web
-npm run dev
-```
-
-Or use the convenience script:
-
-```bash
-cd examples/web
-npm run dev:all
-```
-
-This runs both the Vite dev server and the Express server concurrently.
+  </Tab>
+</Tabs>
 
 ## Common Patterns
 
