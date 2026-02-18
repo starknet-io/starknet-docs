@@ -6,7 +6,7 @@ icon: flask
 
 ## Overview
 
-The repository includes example applications in the examples directory:
+The repository includes example applications in the [examples/](https://github.com/0xsisyfos/x/tree/main/examples) directory:
 
 1. **Flappy Bird (Web)** — Cartridge Controller, policies, and paymaster (gasless) on a game contract; contract assumed deployed, calls on-chain. **Live demo:** [flappybird-starkzap.vercel.app](https://flappybird-starkzap.vercel.app/)
 2. **Web Example** — Vanilla TypeScript + Vite with multiple wallet connection methods (Cartridge, Privy, WebAuthn, private key).
@@ -27,7 +27,7 @@ The repository includes example applications in the examples directory:
     npm run dev
     ```
 
-    Open **`https://localhost:3000`** (or your local servel link) (HTTPS required for Cartridge). Click **Connect Controller**, sign in, then play; each pipe increments your score on-chain. Use the **Leaderboard** button to query on-chain scores.
+    Open **`https://localhost:5173`** (HTTPS required for Cartridge). Click **Connect Controller**, sign in, then play; each pipe increments your score on-chain. Use the **Leaderboard** button to query on-chain scores.
 
     ### Controller via SDK: session keys + paymaster
 
@@ -319,123 +319,123 @@ The repository includes example applications in the examples directory:
 
     ### Features
 
-- ✅ Privy wallet creation and management
-- ✅ Transaction signing endpoint
-- ✅ AVNU Paymaster proxy for sponsored transactions
-- ✅ Account registration and deployment tracking
-- ✅ Simple file-based storage (use a database in production)
+    - ✅ Privy wallet creation and management
+    - ✅ Transaction signing endpoint
+    - ✅ AVNU Paymaster proxy for sponsored transactions
+    - ✅ Account registration and deployment tracking
+    - ✅ Simple file-based storage (use a database in production)
 
-### Getting Started
+    ### Getting Started
 
-```bash
-cd examples/server
-npm install
-PRIVY_APP_ID=xxx PRIVY_APP_SECRET=xxx AVNU_API_KEY=xxx npx tsx server.ts
-```
+    ```bash
+    cd examples/server
+    npm install
+    PRIVY_APP_ID=xxx PRIVY_APP_SECRET=xxx AVNU_API_KEY=xxx npx tsx server.ts
+    ```
 
-The server will run on `http://localhost:3001`.
+    The server will run on `http://localhost:3001`.
 
-### Environment Variables
+    ### Environment Variables
 
-- `PRIVY_APP_ID` - Your Privy application ID (required)
-- `PRIVY_APP_SECRET` - Your Privy application secret (required)
-- `AVNU_API_KEY` - AVNU Paymaster API key (optional, for sponsored mode)
-- `AVNU_PAYMASTER_URL` - Paymaster URL (defaults to Sepolia)
+    - `PRIVY_APP_ID` - Your Privy application ID (required)
+    - `PRIVY_APP_SECRET` - Your Privy application secret (required)
+    - `AVNU_API_KEY` - AVNU Paymaster API key (optional, for sponsored mode)
+    - `AVNU_PAYMASTER_URL` - Paymaster URL (defaults to Sepolia)
 
-### API Endpoints
+    ### API Endpoints
 
-#### Health Check
+    #### Health Check
 
-```bash
-GET /api/health
-```
+    ```bash
+    GET /api/health
+    ```
 
-Returns `{ status: "ok" }`
+    Returns `{ status: "ok" }`
 
-#### Create/Get Privy Wallet
+    #### Create/Get Privy Wallet
 
-```bash
-POST /api/wallet/starknet
-Authorization: Bearer <privy_access_token>
-```
+    ```bash
+    POST /api/wallet/starknet
+    Authorization: Bearer <privy_access_token>
+    ```
 
-Creates or retrieves a Starknet wallet for the authenticated user.
+    Creates or retrieves a Starknet wallet for the authenticated user.
 
-#### Sign Transaction Hash
+    #### Sign Transaction Hash
 
-```bash
-POST /api/wallet/sign
-Content-Type: application/json
+    ```bash
+    POST /api/wallet/sign
+    Content-Type: application/json
 
-{
-  "walletId": "wallet-id",
-  "hash": "0x..."
-}
-```
+    {
+      "walletId": "wallet-id",
+      "hash": "0x..."
+    }
+    ```
 
-Returns `{ signature: [...] }`
+    Returns `{ signature: [...] }`
 
-#### Register Account
+    #### Register Account
 
-```bash
-POST /api/wallet/register-account
-Authorization: Bearer <privy_access_token>
-Content-Type: application/json
+    ```bash
+    POST /api/wallet/register-account
+    Authorization: Bearer <privy_access_token>
+    Content-Type: application/json
 
-{
-  "preset": "argentXV050",
-  "address": "0x...",
-  "deployed": false
-}
-```
+    {
+      "preset": "argentXV050",
+      "address": "0x...",
+      "deployed": false
+    }
+    ```
 
-#### Paymaster Proxy
+    #### Paymaster Proxy
 
-```bash
-POST /api/paymaster
-Content-Type: application/json
+    ```bash
+    POST /api/paymaster
+    Content-Type: application/json
 
-{
-  "method": "estimate_fee",
-  "params": { ... }
-}
-```
+    {
+      "method": "estimate_fee",
+      "params": { ... }
+    }
+    ```
 
-Forwards requests to AVNU Paymaster with API key authentication.
+    Forwards requests to AVNU Paymaster with API key authentication.
 
-### Key Code Snippets
+    ### Key Code Snippets
 
-**Signing Endpoint:**
+    **Signing Endpoint:**
 
-```typescript
-app.post("/api/wallet/sign", async (req, res) => {
-  const { walletId, hash } = req.body;
-  
-  const result = await privy
-    .wallets()
-    .rawSign(walletId, { params: { hash } });
-  
-  res.json({ signature: result.signature });
-});
-```
+    ```typescript
+    app.post("/api/wallet/sign", async (req, res) => {
+      const { walletId, hash } = req.body;
+      
+      const result = await privy
+        .wallets()
+        .rawSign(walletId, { params: { hash } });
+      
+      res.json({ signature: result.signature });
+    });
+    ```
 
-**Paymaster Proxy:**
+    **Paymaster Proxy:**
 
-```typescript
-app.post("/api/paymaster", async (req, res) => {
-  const response = await fetch(AVNU_PAYMASTER_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(AVNU_API_KEY && { "x-paymaster-api-key": AVNU_API_KEY }),
-    },
-    body: JSON.stringify(req.body),
-  });
-  
-  const data = await response.json();
-  res.status(response.status).json(data);
-});
-```
+    ```typescript
+    app.post("/api/paymaster", async (req, res) => {
+      const response = await fetch(AVNU_PAYMASTER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(AVNU_API_KEY && { "x-paymaster-api-key": AVNU_API_KEY }),
+        },
+        body: JSON.stringify(req.body),
+      });
+      
+      const data = await response.json();
+      res.status(response.status).json(data);
+    });
+    ```
 
   </Tab>
 </Tabs>
