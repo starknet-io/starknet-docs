@@ -27,13 +27,13 @@ The repository includes example applications in the [examples/](https://github.c
     npm run dev
     ```
 
-    Open **`https://localhost:xxxx`** (HTTPS required for Cartridge). Click **Connect Controller**, sign in, then play; each pipe increments your score on-chain. Use the **Leaderboard** button to query on-chain scores.
+    Open **`https://localhost:5173`** (HTTPS required for Cartridge). Click **Connect Controller**, sign in, then play; each pipe increments your score on-chain. Use the **Leaderboard** button to query on-chain scores.
 
     ### Controller via SDK: session keys + paymaster
 
     - **Controller = wallet:** The Cartridge Controller is the user’s wallet (social login / passkey). We connect it through the SDK with **policies** that define which contract calls the session may make.
     - **Session keys:** Once the user approves the policies, the session can send those calls **without a signature per tx** — no popup for each pipe or game over.
-    - **Paymaster:** transctions under approved policies are **sponsored** (gasless); otherwise the example falls back to user-paid gas, and the account must be funded with STRK.
+    - **Paymaster:** Matching calls are **sponsored** (gasless) when the account supports SNIP-9; otherwise the example falls back to user-paid gas.
     - All of this is built on Starknet’s **account abstraction** (single approval, then batched/sponsored execution).
 
     ### Demo contract (already deployed)
@@ -197,86 +197,67 @@ The repository includes example applications in the [examples/](https://github.c
   </Tab>
 
   <Tab title="Mobile App">
-    The mobile example is a full-featured React Native + Expo application with a complete UI for wallet operations.
+    The mobile example is a React Native + Expo app that demonstrates the StarkZap SDK on mobile: connect with **Privy** (social/login) or a **private key**, view balances, send transfers, and use staking (enter pool, add, claim, exit). It uses the parent SDK via `"x": "file:../.."` in the monorepo.
 
-    ### Features
+    ### What the example does
 
-    - ✅ Balance checking across multiple tokens
-    - ✅ Single and batch ERC20 transfers
-    - ✅ Staking: enter/add/claim/exit delegation pools
-    - ✅ Transaction toasts with explorer links
-    - ✅ Network switching (Mainnet / Sepolia)
-    - ✅ Privy integration for mobile
-    - ✅ Beautiful, modern UI with dark mode support
+    - **Onboarding** — Sign in with Privy (email, Google, etc.) or paste a Starknet private key; choose Mainnet or Sepolia.
+    - **Balances** — View STRK, USDC, WBTC (and network-specific tokens) with optional USD conversion.
+    - **Transfers** — Single and batch ERC20 transfers with amount input and explorer links.
+    - **Staking** — Enter delegation pools, add to stake, claim rewards, exit (intent + complete).
+    - **UX** — Themed light/dark UI, transaction toasts with explorer links, copyable errors, logs FAB.
+
+    ### Configure environment (required for Privy)
+
+    **You must set up `.env` before running**, or the app will show a **"Configuration required"** screen with instructions.
+
+    1. Copy the example env file: `cp .env.example .env`
+    2. Edit `examples/mobile/.env` and set at least:
+
+    | Variable | Required | Description |
+    | -------- | -------- | ----------- |
+    | `EXPO_PUBLIC_PRIVY_APP_ID` | Yes (for Privy) | From [Privy Dashboard](https://dashboard.privy.io) → your app → App ID |
+    | `EXPO_PUBLIC_PRIVY_CLIENT_ID` | Optional | From Privy Dashboard → Clients |
+    | `EXPO_PUBLIC_PRIVY_SERVER_URL` | Optional | Your backend URL for server-side signing (e.g. `http://localhost:3001`) |
+    | `EXPO_PUBLIC_PAYMASTER_PROXY_URL` | Optional | Paymaster proxy; defaults to `{PRIVY_SERVER_URL}/api/paymaster` if server URL is set |
+
+    Without `EXPO_PUBLIC_PRIVY_APP_ID`, the app still runs but **Privy login is disabled**; you can use the **private key** flow only.
+
+    **Privy Dashboard (Expo Go):** If you use Expo Go and see "Native app ID `host.exp.Exponent` has not been set as an allowed app identifier", add `host.exp.Exponent` in [Privy Dashboard](https://dashboard.privy.io) → **Configuration → App settings → Clients** → **Allowed app identifiers**. **OAuth (Google, Apple, etc.):** Enable login methods and set [allowed URL schemes](https://docs.privy.io/basics/get-started/dashboard/app-clients#allowed-url-schemes) for redirects.
 
     ### Getting Started
 
+    Run from the **monorepo root** (e.g. `x` or your fork):
+
     ```bash
+    npm install
     cd examples/mobile
     npm install
     npx expo start
     ```
 
-    Then choose to run on:
-    - iOS Simulator
-    - Android Emulator
-    - Physical device via Expo Go
-    - Web browser
+    Then open the app in the iOS simulator, Android emulator, or Expo Go (scan QR code). If `.env` is not configured, you'll see the "Configuration required" screen.
+
+    **Optional: Privy server** — For server-side signing, run `examples/server`, then set `EXPO_PUBLIC_PRIVY_SERVER_URL` in `examples/mobile/.env` to that server URL (e.g. `http://localhost:3001`).
 
     ### Project Structure
 
     ```
     examples/mobile/
     ├── app/                    # Expo Router pages
-    │   ├── index.tsx          # Wallet connection screen
-    │   ├── (tabs)/            # Tab navigation
-    │   │   ├── balances.tsx   # Token balances
-    │   │   ├── transfers.tsx  # Token transfers
-    │   │   └── staking.tsx    # Staking operations
-    │   └── logs.tsx           # Transaction logs
-    ├── components/            # Reusable UI components
-    │   ├── TokenBalance.tsx
-    │   ├── TransactionToast.tsx
-    │   └── ...
-    ├── stores/                # Zustand state management
-    │   ├── wallet.ts
-    │   ├── balances.ts
-    │   └── staking.ts
-    └── providers/             # Context providers
-        └── privy.tsx
+    │   ├── index.tsx           # Onboarding (Privy / private key)
+    │   ├── (tabs)/             # Tab navigation
+    │   │   ├── balances.tsx    # Token balances
+    │   │   ├── transfers.tsx   # Token transfers
+    │   │   └── staking.tsx     # Staking operations
+    │   └── logs                # Transaction logs (modal)
+    ├── components/             # Reusable UI (AmountInput, ValidatorCard, Toast, EnvConfigScreen, …)
+    ├── stores/                 # Zustand: wallet, balances, staking
+    ├── constants/              # Theme, env validation
+    └── providers/              # Privy provider wrapper
     ```
 
     ### Key Code Snippets
-
-    **Wallet Connection with Privy:**
-
-    ```typescript
-    import { PrivyProvider } from "@privy-io/expo";
-    import { StarkZap, OnboardStrategy } from "starkzap";
-
-    const accessToken = await privyClient.getAccessToken();
-    const walletRes = await fetch("https://your-api.example/api/wallet/starknet", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    const { wallet: walletData } = await walletRes.json();
-
-    const onboard = await sdk.onboard({
-      strategy: OnboardStrategy.Privy,
-      deploy: "never",
-      privy: {
-        resolve: async () => ({
-          walletId: walletData.id,
-          publicKey: walletData.publicKey,
-          serverUrl: "https://your-api.example/api/wallet/sign",
-        }),
-      },
-      accountPreset: accountPresets.argentXV050,
-    });
-    ```
 
     **Checking Balances:**
 
@@ -297,22 +278,11 @@ The repository includes example applications in the [examples/](https://github.c
     **Staking Operations:**
 
     ```typescript
-    // Enter a pool
     await wallet.enterPool(poolAddress, Amount.parse("100", STRK));
-
-    // Claim rewards
     await wallet.claimPoolRewards(poolAddress);
     ```
 
-    ### React Native Setup
-
-    The mobile example includes all necessary polyfills:
-
-    ```typescript
-    // entrypoint.js
-    import "react-native-get-random-values";
-    import "fast-text-encoding";
-    ```
+    **React Native:** The example includes the usual polyfills (`react-native-get-random-values`, `fast-text-encoding`) and uses the SDK's optional peer deps for React Native. See the [examples/mobile README](https://github.com/0xsisyfos/x/tree/main/examples/mobile) in the repo for full run instructions and env details.
   </Tab>
   <Tab title="Server">
     Express.js backend for Privy wallet operations: wallet creation, signing, and paymaster integration.
