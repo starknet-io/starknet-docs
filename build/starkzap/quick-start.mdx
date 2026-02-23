@@ -1,0 +1,191 @@
+---
+title: Quick Start
+description: "Get your first wallet integration working in minutes with code examples"
+icon: rocket
+---
+
+## Quick Start
+
+### Basic Example
+
+Here's a minimal example to get you started:
+
+<Info>
+  **For testing, use Sepolia testnet** - Replace `"mainnet"` with `"sepolia"` and select tokens from `getPresets(wallet.getChainId())`. The [Starknet Sepolia Faucet](https://starknet-faucet.vercel.app/) is only available for Sepolia testnet (not mainnet). On mainnet, you'll need to purchase or transfer real tokens.
+</Info>
+
+```typescript
+import { StarkZap, StarkSigner, Amount, fromAddress, getPresets } from "starkzap";
+
+// 1. Initialize the SDK (use "sepolia" for testing)
+const sdk = new StarkZap({ network: "sepolia" });
+
+// 2. Connect a wallet with a private key
+const wallet = await sdk.connectWallet({
+  account: { signer: new StarkSigner("0xYOUR_PRIVATE_KEY") },
+});
+
+// 3. Get your account address to fund it
+const address = wallet.address;
+console.log("Your account address:", address.toString());
+// Copy this address and use it to request tokens from the faucet:
+// https://starknet-faucet.vercel.app/
+
+// 4. Ensure the account is deployed
+// This will create the wallet on the blockchain if it doesn't exist yet
+// Note: Deployment requires tokens to pay for the transaction (unless using a paymaster)
+// If you don't have tokens yet, request them from the faucet first
+await wallet.ensureReady({ deploy: "if_needed" });
+
+// 5. Check a token balance
+const STRK = getPresets(wallet.getChainId()).STRK;
+const balance = await wallet.balanceOf(STRK);
+console.log(balance.toFormatted()); // "100 STRK" or "0 STRK" if empty
+
+// 6. If balance is zero, fund the account first (Sepolia testnet only):
+// - Visit https://starknet-faucet.vercel.app/ (only works for Sepolia testnet)
+// - Paste your account address
+// - Request 100 STRK (or 800 STRK if signed in with GitHub)
+// - Wait a few moments for the tokens to arrive
+// Note: On mainnet, you'll need to purchase or transfer real tokens
+
+// 7. Transfer tokens (only if balance is sufficient)
+if (!balance.isZero() && balance.gte(Amount.parse("10", STRK))) {
+  const tx = await wallet.transfer(STRK, [
+    { to: fromAddress("0xRECIPIENT"), amount: Amount.parse("10", STRK) },
+  ]);
+  console.log(tx.explorerUrl); // https://sepolia.voyager.online/tx/0x...
+  await tx.wait();
+} else {
+  console.log("Insufficient balance. Get test tokens from: https://starknet-faucet.vercel.app/");
+}
+```
+
+### Onboarding API (Recommended)
+
+For most consumer applications, the **Onboarding API** is the recommended approach. Instead of manually setting up signers, creating wallets, and checking if accounts exist, the `onboard()` method does all of this in one call:
+
+<Info>
+  Privy login/signup already happened before this snippet.
+
+  `accessToken` identifies the current Privy user so your backend can return the correct signer context (`walletId`, `publicKey`) and authorize signatures.
+
+  Your backend is a thin relay to Privy server APIs:
+  1. verify `accessToken`
+  2. return `{ walletId, publicKey, serverUrl }`
+  3. relay sign requests to Privy `rawSign` using `PRIVY_APP_SECRET` (kept server-side)
+</Info>
+
+```typescript
+import {
+  StarkZap,
+  OnboardStrategy,
+  accountPresets,
+  Amount,
+  fromAddress,
+  getPresets,
+} from "starkzap";
+
+const sdk = new StarkZap({ network: "sepolia" });
+
+// Example: user is already authenticated with Privy in your app
+const accessToken = await privy.getAccessToken();
+
+// Onboard with Privy (recommended for consumer apps)
+const { wallet } = await sdk.onboard({
+  strategy: OnboardStrategy.Privy,
+  privy: {
+    resolve: async () =>
+      fetch("https://your-api.example/signer-context", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }).then((r) => r.json()), // { walletId, publicKey, serverUrl }
+  },
+  accountPreset: accountPresets.argentXV050,
+  feeMode: "sponsored",
+  deploy: "if_needed",
+});
+
+// Use the wallet immediately
+const token = getPresets(wallet.getChainId()).STRK;
+const balance = await wallet.balanceOf(token);
+console.log(balance.toFormatted(true));
+```
+
+## Supported Onboarding Strategies
+
+The `sdk.onboard()` method lets you choose how users authenticate and connect their wallets. You can pick from these strategies:
+
+<Tabs>
+  <Tab title="Privy Strategy">
+    Best for consumer apps where you want Privy to manage wallet keys securely on their servers (like how OAuth providers manage login credentials). For sponsored transactions, you'll need to configure AVNU Paymaster separately:
+
+    ```typescript
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Privy,
+      privy: {
+        resolve: async () =>
+          fetch("https://your-api.example/signer-context", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }).then((r) => r.json()), // { walletId, publicKey, serverUrl }
+      },
+      accountPreset: accountPresets.argentXV050,
+      deploy: "if_needed",
+    });
+    ```
+  </Tab>
+  <Tab title="Signer Strategy">
+    For apps where you manage private keys yourself (only use on secure servers, never in client-side code). For sponsored transactions, you'll need to configure AVNU Paymaster separately:
+
+    ```typescript
+    import { StarkSigner, OnboardStrategy } from "starkzap";
+
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Signer,
+      account: { signer: new StarkSigner("0xPRIVATE_KEY") },
+      accountPreset: "openzeppelin",
+      deploy: "if_needed",
+    });
+    ```
+  </Tab>
+  <Tab title="Cartridge Strategy">
+    Best for gaming applications where users sign in with social accounts (Google, Twitter) or biometrics (Face ID, Touch ID). **Key advantage:** Cartridge includes a built-in paymaster that automatically sponsors (pays for) all transactions, so users never pay gas fees:
+
+    ```typescript
+    import { OnboardStrategy } from "starkzap";
+
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Cartridge,
+      cartridge: {
+        policies: [{ target: "0xCONTRACT", method: "transfer" }],
+      },
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## What the Onboarding API Handles
+
+The `sdk.onboard()` method automatically handles everything needed to get a wallet ready:
+
+- ✅ Chooses the right authentication method based on your strategy
+- ✅ Sets up the signer (the thing that proves ownership)
+- ✅ Connects and initializes the wallet
+- ✅ Creates the wallet on the blockchain if it doesn't exist yet
+- ✅ Configures network settings
+- ✅ Sets up fee payment options (user pays or sponsored)
+
+## Next Steps
+
+Now that you have a basic example working:
+
+1. Learn about [Configuration](/build/starkzap/configuration) options
+2. Explore different [Wallet Connection](/build/starkzap/connecting-wallets) methods
+3. See how to [Execute Transactions](/build/starkzap/transactions)

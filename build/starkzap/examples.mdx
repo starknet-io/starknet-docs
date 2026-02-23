@@ -1,0 +1,468 @@
+---
+title: "Examples"
+description: "Complete example applications demonstrating Starkzap in action"
+icon: "flask"
+---
+
+## Overview
+
+The repository includes example applications in the [examples/](https://github.com/0xsisyfos/x/tree/main/examples) directory:
+
+1. **Flappy Bird (Web)** — Cartridge Controller, policies, and paymaster (gasless) on a game contract; contract assumed deployed, calls on-chain. [**<u>Live demo</u>**](https://flappybird-starkzap.vercel.app/).
+2. **Web Example** — Vanilla TypeScript + Vite with multiple wallet connection methods (Cartridge, Privy, WebAuthn, private key).
+3. **Mobile Example** — React Native + Expo with login, account creation, balances, transfers, staking.
+4. **Server Example** — Express.js backend for Privy wallet operations and paymaster proxy.
+
+<Tabs>
+  <Tab title="Flappy Bird (Web)">
+    We integrate the [Cartridge Controller](https://docs.cartridge.gg/controller/overview) — a wallet — with **session keys** (so users don’t sign each transaction) and a **paymaster** (gasless), all thanks to native **account abstraction** on Starknet. The demo game contract is already deployed; the app calls it on-chain and shows a **leaderboard** of scores.
+
+    [**Live demo**](https://flappybird-starkzap.vercel.app/).
+
+    ### Run
+
+    ```bash
+    cd examples/flappy-bird
+    npm install
+    npm run dev
+    ```
+
+    Open **`https://localhost:xxxx`** (HTTPS required for Cartridge). Click **Connect Controller**, sign in, then play; each pipe increments your score on-chain. Use the **Leaderboard** button to query on-chain scores.
+
+    ### Controller via SDK: session keys + paymaster
+
+    - **Controller = wallet:** The Cartridge Controller is the user’s wallet (social login / passkey). We connect it through the SDK with **policies** that define which contract calls the session may make.
+    - **Session keys:** Once the user approves the policies, the session can send those calls **without a signature per tx** — no popup for each pipe or game over.
+    - **Paymaster:** Matching calls are **sponsored** (gasless).
+    - All of this is built on Starknet’s **account abstraction** (single approval, then batched/sponsored execution).
+
+    ### Demo contract (already deployed)
+
+    Contract on **Starknet Sepolia** ([<u>Voyager</u>](https://sepolia.voyager.online/contract/0x03730b941e8d3ece030a4a0d5f1008f34fbde0976e86577a78648c8b35079464)): `0x03730b941e8d3ece030a4a0d5f1008f34fbde0976e86577a78648c8b35079464`
+
+    To learn how to create and deploy your own contract on Starknet, check the[ Quickstart](/build/quickstart/overview), and Cairo sections.
+
+    **Entrypoints and how they map to Flappy Bird:**
+
+    | Entrypoint                   | When we call it                                                        |
+    | ---------------------------- | ---------------------------------------------------------------------- |
+    | `start_new_game`             | User starts a new round (tap / Space).                                 |
+    | `increment_score`            | Bird passes a pipe (each pipe = one call).                             |
+    | `end_game`                   | Game over (hit pipe or ground).                                        |
+    | `get_high_score`             | Show player’s best score.                                              |
+    | `get_current_leaderboard_id` | Current leaderboard period.                                            |
+    | `get_leaderboard`            | Top scores — used by the **Leaderboard** button to show on-chain data. |
+
+    ### Leaderboard button
+
+    A **Leaderboard** button in the UI calls `get_leaderboard()` on the contract (via StarkZap’s `Contract` + `wallet.getProvider()`) and displays the top scores from chain.
+
+    ### How the controller is integrated and how we call the contract
+
+    **1. Init SDK and connect Controller (policies = what the session can call):**
+
+    ```typescript
+    import { StarkZap, OnboardStrategy, Contract, type RpcProvider } from "starkzap";
+    
+    const sdk = new StarkZap({ network: "sepolia" });
+    const policies = [
+      { target: GAME_CONTRACT, method: "start_new_game" },
+      { target: GAME_CONTRACT, method: "increment_score" },
+      { target: GAME_CONTRACT, method: "end_game" },
+    ];
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Cartridge,
+      cartridge: { policies },
+      deploy: "never",
+    });
+    const wallet = onboard.wallet;
+    ```
+
+    **2. Contract calls (writes) — start game, increment score, end game:**
+
+    ```typescript
+    await wallet.execute(
+      [{ contractAddress: GAME_CONTRACT, entrypoint: "start_new_game", calldata: [] }],
+      { feeMode: "sponsored" }
+    );
+    await wallet.execute(
+      [{ contractAddress: GAME_CONTRACT, entrypoint: "increment_score", calldata: [] }],
+      { feeMode: "sponsored" }
+    );
+    await wallet.execute(
+      [{ contractAddress: GAME_CONTRACT, entrypoint: "end_game", calldata: [] }],
+      { feeMode: "sponsored" }
+    );
+    ```
+
+    **3. Read on-chain data (leaderboard, high score) — use provider from wallet:**
+
+    ```typescript
+    const provider = wallet.getProvider();
+    const contract = new Contract({ abi: GAME_ABI, address: GAME_CONTRACT, providerOrAccount: provider });
+    const leaderboard = await contract.get_leaderboard();
+    const highScore = await contract.get_high_score(wallet.address.toString(), await contract.get_current_leaderboard_id());
+    ```
+
+    ### What is a contract ABI?
+
+    An **ABI** (Application Binary Interface) is a description of a smart contract’s **public interface**: its callable functions (entrypoints), their names, arguments, and return types. We use it above when building the `Contract` instance for read-only calls (`get_leaderboard`, `get_high_score`, etc.): the ABI tells the SDK how to encode the call and how to decode the result. You typically get the ABI from the contract’s project (e.g. compiled artifact) or from an explorer (e.g. Voyager). For writes we only need the entrypoint name and calldata; for reads we pass the ABI into `Contract` so it can expose typed methods.
+  </Tab>
+  <Tab title="Web App">
+    The web example demonstrates wallet integration in a browser environment using vanilla TypeScript and Vite.
+
+    ### Features
+
+    - ✅ Multiple wallet connection methods:
+      - Cartridge Controller (social login)
+      - Privy (server-side key management)
+      - WebAuthn (Face ID / Touch ID)
+      - Private Key (local signing)
+    - ✅ Account deployment and status checking
+    - ✅ Test transactions (regular and sponsored)
+    - ✅ Support for multiple account presets (OpenZeppelin, Argent, Braavos, etc.)
+
+    ### Getting Started
+
+    ```bash
+    cd examples/web
+    npm install
+    npm run dev
+    ```
+
+    The app will be available at `http://localhost:5173` (or the port Vite assigns).
+
+    ### Running with Privy Server
+
+    To test Privy integration, you'll need to run the server example:
+
+    ```bash
+    # In examples/server
+    PRIVY_APP_ID=xxx PRIVY_APP_SECRET=xxx AVNU_API_KEY=xxx npx tsx server.ts
+    ```
+
+    Then update the `PRIVY_SERVER_URL` in `examples/web/main.ts` to point to your server.
+
+    ### Key Code Snippets
+
+    **Connecting with Cartridge:**
+
+    ```typescript
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Cartridge,
+      deploy: "never",
+      cartridge: { policies: [DUMMY_POLICY] },
+    });
+    wallet = onboard.wallet;
+    ```
+
+    **Connecting with Privy:**
+
+    ```typescript
+    const accessToken = await privy.getAccessToken();
+    const walletRes = await fetch(`${PRIVY_SERVER_URL}/api/wallet/starknet`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    const { wallet: walletData } = await walletRes.json();
+    
+    const onboard = await sdk.onboard({
+      strategy: OnboardStrategy.Privy,
+      deploy: "never",
+      accountPreset: preset,
+      privy: {
+        resolve: async () => ({
+          walletId: walletData.id,
+          publicKey: walletData.publicKey,
+          serverUrl: `${PRIVY_SERVER_URL}/api/wallet/sign`,
+        }),
+      },
+    });
+    wallet = onboard.wallet;
+    ```
+
+    **Executing a Transaction:**
+
+    ```typescript
+    const tx = await wallet.execute([
+      {
+        contractAddress: STRK_CONTRACT,
+        entrypoint: "transfer",
+        calldata: [wallet.address, "0", "0"],
+      },
+    ]);
+    await tx.wait();
+    ```
+  </Tab>
+  <Tab title="Mobile App">
+    The mobile example is a React Native + Expo app that demonstrates the StarkZap SDK on mobile: connect with **Privy** (social/login) or a **private key**, view balances, send transfers, and use staking (enter pool, add, claim, exit). It uses the parent SDK via `"x": "file:../.."` in the monorepo.
+
+    ### What the example does
+
+    - **Onboarding** — Sign in with Privy (email, Google, etc.) or paste a Starknet private key; choose Mainnet or Sepolia.
+    - **Balances** — View STRK, USDC, WBTC (and network-specific tokens) with optional USD conversion.
+    - **Transfers** — Single and batch ERC20 transfers with amount input and explorer links.
+    - **Staking** — Enter delegation pools, add to stake, claim rewards, exit (intent + complete).
+    - **UX** — Themed light/dark UI, transaction toasts with explorer links, copyable errors, logs FAB.
+
+    ### Configure environment (required for Privy)
+
+    **`You must set up .env before running`**, or the app will show a **"Configuration required"** screen with instructions.
+
+    1. Copy the example env file: `cp .env.example .env`
+    2. Edit `examples/mobile/.env` and set at least:
+
+    | Variable                          | Required        | Description                                                                          |
+    | --------------------------------- | --------------- | ------------------------------------------------------------------------------------ |
+    | `EXPO_PUBLIC_PRIVY_APP_ID`        | Yes (for Privy) | From [Privy Dashboard](https://dashboard.privy.io) → your app → App ID               |
+    | `EXPO_PUBLIC_PRIVY_CLIENT_ID`     | Optional        | From Privy Dashboard → Clients                                                       |
+    | `EXPO_PUBLIC_PRIVY_SERVER_URL`    | Optional        | Your backend URL for server-side signing (e.g. `http://localhost:3001`)              |
+    | `EXPO_PUBLIC_PAYMASTER_PROXY_URL` | Optional        | Paymaster proxy; defaults to `{PRIVY_SERVER_URL}/api/paymaster` if server URL is set |
+
+    Without `EXPO_PUBLIC_PRIVY_APP_ID`, the app still runs but **Privy login is disabled**; you can use the **private key** flow only.
+
+    **Privy Dashboard (Expo Go):** If you use Expo Go and see "Native app ID `host.exp.Exponent` has not been set as an allowed app identifier", add `host.exp.Exponent` in [Privy Dashboard](https://dashboard.privy.io) → **Configuration → App settings → Clients** → **Allowed app identifiers**. **OAuth (Google, Apple, etc.):** Enable login methods and set [allowed URL schemes](https://docs.privy.io/basics/get-started/dashboard/app-clients#allowed-url-schemes) for redirects.
+
+    ### Getting Started
+
+    Run from the **monorepo root** (e.g. `x` or your fork):
+
+    ```bash
+    npm install
+    cd examples/mobile
+    npm install
+    npx expo start
+    ```
+
+    Then open the app in the iOS simulator, Android emulator, or Expo Go (scan QR code). If `.env` is not configured, you'll see the "Configuration required" screen.
+
+    **Optional: Privy server** — For server-side signing, run `examples/server`, then set `EXPO_PUBLIC_PRIVY_SERVER_URL` in `examples/mobile/.env` to that server URL (e.g. `http://localhost:3001`).
+
+    ### Project Structure
+
+    ```
+    examples/mobile/
+    ├── app/                    # Expo Router pages
+    │   ├── index.tsx           # Onboarding (Privy / private key)
+    │   ├── (tabs)/             # Tab navigation
+    │   │   ├── balances.tsx    # Token balances
+    │   │   ├── transfers.tsx   # Token transfers
+    │   │   └── staking.tsx     # Staking operations
+    │   └── logs                # Transaction logs (modal)
+    ├── components/             # Reusable UI (AmountInput, ValidatorCard, Toast, EnvConfigScreen, …)
+    ├── stores/                 # Zustand: wallet, balances, staking
+    ├── constants/              # Theme, env validation
+    └── providers/              # Privy provider wrapper
+    ```
+
+    ### Key Code Snippets
+
+    **Checking Balances:**
+
+    ```typescript
+    const balance = await wallet.balanceOf(STRK);
+    console.log(balance.toFormatted()); // "150.25 STRK"
+    ```
+
+    **Transferring Tokens:**
+
+    ```typescript
+    const tx = await wallet.transfer(STRK, [
+      { to: fromAddress("0xRECIPIENT"), amount: Amount.parse("10", STRK) },
+    ]);
+    await tx.wait();
+    ```
+
+    **Staking Operations:**
+
+    ```typescript
+    await wallet.enterPool(poolAddress, Amount.parse("100", STRK));
+    await wallet.claimPoolRewards(poolAddress);
+    ```
+
+    **React Native:** The example includes the usual polyfills (`react-native-get-random-values`, `fast-text-encoding`) and uses the SDK's optional peer deps for React Native. See the [examples/mobile README](https://github.com/0xsisyfos/x/tree/main/examples/mobile) in the repo for full run instructions and env details.
+  </Tab>
+  <Tab title="Server">
+    Express.js backend for Privy wallet operations: wallet creation, signing, and paymaster integration.
+
+    ### Features
+
+    - ✅ Privy wallet creation and management
+    - ✅ Transaction signing endpoint
+    - ✅ AVNU Paymaster proxy for sponsored transactions
+    - ✅ Account registration and deployment tracking
+    - ✅ Simple file-based storage (use a database in production)
+
+    ### Getting Started
+
+     [Login to Privy](https://dashboard.privy.io/) ([Privy Docs.](https://docs.privy.io/basics/get-started/dashboard/overview))
+
+    On the Privy Dashboard, create an App, and retrieve the API Keys. Configure your `env.` file.
+
+    ```bash
+    cd examples/server
+    npm install
+    PRIVY_APP_ID=xxx PRIVY_APP_SECRET=xxx AVNU_API_KEY=xxx npx tsx server.ts
+    ```
+
+    The server will run on `http://localhost:xxxx`.
+
+    ### Environment Variables
+
+    - `PRIVY_APP_ID` - Your Privy application ID (required).
+    - `PRIVY_APP_SECRET` - Your Privy application secret (required)
+    - `AVNU_API_KEY` - AVNU Paymaster API key (optional, for sponsored mode)
+    - `AVNU_PAYMASTER_URL` - Paymaster URL (defaults to Sepolia)
+
+    ### API Endpoints
+
+    #### Health Check
+
+    ```bash
+    GET /api/health
+    ```
+
+    Returns `{ status: "ok" }`
+
+    #### Create/Get Privy Wallet
+
+    ```bash
+    POST /api/wallet/starknet
+    Authorization: Bearer <privy_access_token>
+    ```
+
+    Creates or retrieves a Starknet wallet for the authenticated user.
+
+    #### Sign Transaction Hash
+
+    ```bash
+    POST /api/wallet/sign
+    Content-Type: application/json
+    
+    {
+      "walletId": "wallet-id",
+      "hash": "0x..."
+    }
+    ```
+
+    Returns `{ signature: [...] }`
+
+    #### Register Account
+
+    ```bash
+    POST /api/wallet/register-account
+    Authorization: Bearer <privy_access_token>
+    Content-Type: application/json
+    
+    {
+      "preset": "argentXV050",
+      "address": "0x...",
+      "deployed": false
+    }
+    ```
+
+    #### Paymaster Proxy
+
+    ```bash
+    POST /api/paymaster
+    Content-Type: application/json
+    
+    {
+      "method": "estimate_fee",
+      "params": { ... }
+    }
+    ```
+
+    Forwards requests to AVNU Paymaster with API key authentication.
+
+    ### Key Code Snippets
+
+    **Signing Endpoint:**
+
+    ```typescript
+    app.post("/api/wallet/sign", async (req, res) => {
+      const { walletId, hash } = req.body;
+      
+      const result = await privy
+        .wallets()
+        .rawSign(walletId, { params: { hash } });
+      
+      res.json({ signature: result.signature });
+    });
+    ```
+
+    **Paymaster Proxy:**
+
+    ```typescript
+    app.post("/api/paymaster", async (req, res) => {
+      const response = await fetch(AVNU_PAYMASTER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(AVNU_API_KEY && { "x-paymaster-api-key": AVNU_API_KEY }),
+        },
+        body: JSON.stringify(req.body),
+      });
+      
+      const data = await response.json();
+      res.status(response.status).json(data);
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Common Patterns
+
+### Error Handling
+
+All examples include proper error handling:
+
+```typescript
+try {
+  const tx = await wallet.execute(calls);
+  await tx.wait();
+  console.log("Success!");
+} catch (error) {
+  console.error("Transaction failed:", error);
+  // Show user-friendly error message
+}
+```
+
+### Loading States
+
+Examples demonstrate loading state management:
+
+```typescript
+function setButtonLoading(btn: HTMLButtonElement, loading: boolean) {
+  if (loading) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+  } else {
+    btn.disabled = false;
+    btn.textContent = "Submit";
+  }
+}
+```
+
+### Transaction Tracking
+
+All examples show how to track transaction status:
+
+```typescript
+const tx = await wallet.execute(calls);
+console.log(`Tx hash: ${tx.hash}`);
+console.log(`Explorer: ${tx.explorerUrl}`);
+
+await tx.wait();
+console.log("Transaction confirmed!");
+```
+
+## Next Steps
+
+- Explore the example code in the `examples/` directory
+- Adapt the patterns to your own application
+- Check the [API Reference](/build/starkzap/api-reference) for detailed method documentation
+- Review the [Troubleshooting](/build/starkzap/troubleshooting) guide if you encounter issues

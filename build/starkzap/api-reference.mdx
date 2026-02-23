@@ -1,0 +1,375 @@
+---
+title: API Reference
+description: Complete API documentation for Starkzap
+icon: code-branch
+---
+
+## StarkZap
+
+The main SDK class for initializing and managing wallet connections.
+
+### Constructor
+
+```typescript
+new StarkZap(config: SDKConfig): StarkZap
+```
+
+### Methods
+
+| Method                       | Returns                    | Description                          |
+| ---------------------------- | -------------------------- | ------------------------------------ |
+| `connectWallet(options)`     | `Promise<Wallet>`          | Connect with signer + account preset |
+| `connectCartridge(options?)` | `Promise<CartridgeWallet>` | Connect via Cartridge Controller     |
+| `onboard(options)`           | `Promise<OnboardResult>`   | Onboard with strategy selection      |
+| `stakingTokens()`            | `Promise<Token[]>`         | Get stakeable tokens                 |
+| `getStakerPools(staker)`     | `Promise<Pool[]>`          | Get validator's delegation pools     |
+| `getProvider()`              | `RpcProvider`              | Get the underlying RPC provider      |
+
+### Configuration
+
+```typescript
+interface SDKConfig {
+  network?: NetworkName | NetworkPreset;
+  rpcUrl?: string;
+  chainId?: ChainId;
+  paymaster?: { nodeUrl: string };
+  explorer?: ExplorerConfig;
+  staking?: StakingConfig;
+}
+```
+
+## Wallet / WalletInterface
+
+The wallet interface provides access to account operations, transactions, and token management.
+
+### Properties
+
+| Property | Type     | Description    |
+| -------- | -------- | -------------- |
+| `address` | `Address` | Wallet address |
+
+### Methods
+
+| Method                                   | Returns                        | Description                  |
+| ---------------------------------------- | ------------------------------ | ---------------------------- |
+| `isDeployed()`                           | `Promise<boolean>`             | Check deployment status      |
+| `ensureReady(options?)`                  | `Promise<void>`                | Deploy if needed             |
+| `deploy(options?)`                       | `Promise<Tx>`                  | Deploy account contract      |
+| `execute(calls, options?)`               | `Promise<Tx>`                  | Execute contract calls       |
+| `signMessage(typedData)`                 | `Promise<Signature>`           | Sign typed data              |
+| `preflight(options)`                     | `Promise<PreflightResult>`     | Simulate transaction         |
+| `tx()`                                   | `TxBuilder`                    | Create a transaction builder |
+| `balanceOf(token)`                       | `Promise<Amount>`              | Get token balance            |
+| `transfer(token, transfers, options?)`   | `Promise<Tx>`                  | Transfer ERC20 tokens        |
+| `stake(pool, amount, options?)`          | `Promise<Tx>`                  | Smart stake (enter or add)   |
+| `enterPool(pool, amount, options?)`      | `Promise<Tx>`                  | Enter staking pool           |
+| `addToPool(pool, amount, options?)`       | `Promise<Tx>`                  | Add to existing stake        |
+| `claimPoolRewards(pool, options?)`        | `Promise<Tx>`                  | Claim staking rewards        |
+| `exitPoolIntent(pool, amount, options?)` | `Promise<Tx>`                  | Start exit process           |
+| `exitPool(pool, options?)`                | `Promise<Tx>`                  | Complete exit                |
+| `isPoolMember(pool)`                     | `Promise<boolean>`             | Check pool membership        |
+| `getPoolPosition(pool)`                  | `Promise<PoolMember \| null>`  | Get staking position         |
+| `getPoolCommission(pool)`                 | `Promise<number>`              | Get pool commission rate     |
+| `estimateFee(calls)`                      | `Promise<EstimateFeeResponse>` | Estimate execution fee       |
+| `getAccount()`                            | `Account`                      | Get starknet.js Account      |
+| `getProvider()`                           | `RpcProvider`                  | Get RPC provider             |
+| `getChainId()`                             | `ChainId`                      | Get chain ID                 |
+| `getFeeMode()`                             | `FeeMode`                      | Get default fee mode         |
+| `disconnect()`                             | `Promise<void>`                | Disconnect wallet            |
+
+## Tx
+
+Transaction object returned from `execute()`, `deploy()`, and `transfer()`.
+
+### Properties
+
+| Property     | Type     | Description        |
+| ------------ | -------- | ------------------ |
+| `hash`       | `string` | Transaction hash   |
+| `explorerUrl` | `string` | Block explorer URL |
+
+### Methods
+
+| Method           | Returns              | Description             |
+| ---------------- | -------------------- | ----------------------- |
+| `wait(options?)` | `Promise<void>`      | Wait for confirmation   |
+| `watch(callback)` | `TxUnsubscribe`      | Watch status changes    |
+| `receipt()`      | `Promise<TxReceipt>` | Get transaction receipt |
+
+## TxBuilder
+
+Fluent API for building and executing batched transactions.
+
+### Methods
+
+| Method                             | Returns                    | Description                                    |
+| ---------------------------------- | -------------------------- | ---------------------------------------------- |
+| `.add(...calls)`                   | `TxBuilder`                | Add raw `Call` objects                         |
+| `.approve(token, spender, amount)` | `TxBuilder`                | ERC20 approval                                 |
+| `.transfer(token, transfers)`      | `TxBuilder`                | ERC20 transfer(s)                              |
+| `.stake(pool, amount)`             | `TxBuilder`                | Smart stake (enter or add based on membership) |
+| `.enterPool(pool, amount)`         | `TxBuilder`                | Enter pool as new member                       |
+| `.addToPool(pool, amount)`         | `TxBuilder`                | Add to existing pool position                  |
+| `.claimPoolRewards(pool)`          | `TxBuilder`                | Claim staking rewards                          |
+| `.exitPoolIntent(pool, amount)`    | `TxBuilder`                | Start exit process                             |
+| `.exitPool(pool)`                  | `TxBuilder`                | Complete exit after window                     |
+| `.calls()`                         | `Promise<Call[]>`          | Resolve all calls without sending              |
+| `.estimateFee()`                   | `Promise<EstimateFeeResponse>` | Estimate gas cost                              |
+| `.preflight()`                     | `Promise<PreflightResult>` | Simulate the transaction                       |
+| `.send(options?)`                  | `Promise<Tx>`               | Execute all calls atomically                   |
+
+## Amount
+
+Type-safe amount handling for token values.
+
+### Static Methods
+
+| Method                         | Returns   | Description                  |
+| ------------------------------ | --------- | ---------------------------- |
+| `Amount.parse(value, token)`   | `Amount`  | From human-readable value    |
+| `Amount.fromRaw(value, token)` | `Amount`  | From raw blockchain value     |
+
+### Instance Methods
+
+| Method                 | Returns   | Description                  |
+| ---------------------- | --------- | ---------------------------- |
+| `toUnit()`             | `string`  | Human-readable string        |
+| `toBase()`             | `bigint`  | Raw value for contracts      |
+| `toFormatted(compressed?)` | `string`  | Locale-formatted with symbol |
+| `getDecimals()`        | `number`  | Token decimal places         |
+| `getSymbol()`          | `string \| undefined` | Token symbol |
+| `add(other)`           | `Amount`  | Addition                     |
+| `subtract(other)`      | `Amount`  | Subtraction                  |
+| `multiply(scalar)`     | `Amount`  | Multiplication               |
+| `divide(scalar)`       | `Amount`  | Division                     |
+| `eq(other)`            | `boolean` | Equal                        |
+| `gt(other)`            | `boolean` | Greater than                 |
+| `gte(other)`           | `boolean` | Greater than or equal        |
+| `lt(other)`            | `boolean` | Less than                    |
+| `lte(other)`           | `boolean` | Less than or equal           |
+| `isZero()`             | `boolean` | Is zero                      |
+| `isPositive()`         | `boolean` | Is positive                  |
+
+## Signers
+
+### StarkSigner
+
+Local Stark curve signer for private key management.
+
+```typescript
+new StarkSigner(privateKey: string): StarkSigner
+```
+
+### PrivySigner
+
+Privy server-side key management signer.
+
+```typescript
+new PrivySigner(config: {
+  walletId: string;
+  publicKey: string;
+  serverUrl?: string;
+  rawSign?: (walletId: string, hash: string) => Promise<Signature>;
+}): PrivySigner
+```
+
+### SignerInterface
+
+Custom signer interface for implementing your own key management.
+
+```typescript
+interface SignerInterface {
+  getPubKey(): Promise<string>;
+  signRaw(hash: string): Promise<Signature>;
+}
+```
+
+## Types
+
+### Address
+
+Branded string type for Starknet addresses.
+
+```typescript
+type Address = string & { __brand: "Address" };
+
+// Create from string
+fromAddress(value: string): Address
+```
+
+### ChainId
+
+Chain ID utilities and constants.
+
+```typescript
+class ChainId {
+  static MAINNET: ChainId;
+  static SEPOLIA: ChainId;
+  
+  static from(literal: ChainIdLiteral): ChainId;
+  static fromFelt252(felt: string): ChainId;
+  
+  isMainnet(): boolean;
+  isSepolia(): boolean;
+  toFelt252(): string;
+  toLiteral(): ChainIdLiteral;
+}
+```
+
+### FeeMode
+
+Transaction fee payment mode.
+
+```typescript
+type FeeMode = "sponsored" | "user_pays";
+```
+
+### DeployMode
+
+Account deployment policy.
+
+```typescript
+type DeployMode = "never" | "if_needed" | "always";
+```
+
+### OnboardStrategy
+
+Onboarding strategy selection.
+
+```typescript
+enum OnboardStrategy {
+  Privy = "privy",
+  Signer = "signer",
+  Cartridge = "cartridge",
+  WebAuthn = "webauthn", // Reserved
+}
+```
+
+## Interfaces
+
+### Token
+
+```typescript
+interface Token {
+  name: string;
+  address: Address;
+  decimals: number;
+  symbol: string;
+  metadata?: { logoUrl?: URL };
+}
+```
+
+### Pool
+
+```typescript
+interface Pool {
+  poolContract: Address;
+  token: Token;
+  amount: Amount;
+}
+```
+
+### PoolMember
+
+```typescript
+interface PoolMember {
+  staked: Amount;
+  rewards: Amount;
+  total: Amount;
+  unpooling: Amount;
+  unpoolTime?: Date;
+  commissionPercent: number;
+  rewardAddress: Address;
+}
+```
+
+### Validator
+
+```typescript
+interface Validator {
+  name: string;
+  stakerAddress: Address;
+  logoUrl?: URL;
+}
+```
+
+### PreflightResult
+
+```typescript
+interface PreflightResult {
+  ok: boolean;
+  reason?: string;
+}
+```
+
+## Presets
+
+### Token Presets
+
+```typescript
+import { mainnetTokens, sepoliaTokens } from "starkzap";
+
+// Access tokens
+const STRK = mainnetTokens.STRK;
+const USDC = mainnetTokens.USDC;
+```
+
+### Validator Presets
+
+```typescript
+import { mainnetValidators, sepoliaValidators } from "starkzap";
+
+// Access validators
+for (const validator of Object.values(mainnetValidators)) {
+  console.log(validator.name);
+}
+```
+
+### Account Presets
+
+```typescript
+import {
+  OpenZeppelinPreset,
+  ArgentPreset,
+  ArgentXV050Preset,
+  BraavosPreset,
+  DevnetPreset,
+} from "starkzap";
+```
+
+## Utility Functions
+
+### fromAddress
+
+Parse and validate a Starknet address.
+
+```typescript
+fromAddress(value: string): Address
+```
+
+### getChainId
+
+Get chain ID from a provider.
+
+```typescript
+getChainId(provider: RpcProvider): Promise<ChainId>
+```
+
+### getPresets
+
+Get token or validator presets for a chain ID.
+
+```typescript
+getPresets(chainId: ChainId): Record<string, Token>
+```
+
+### getTokensFromAddresses
+
+Resolve token metadata from contract addresses.
+
+```typescript
+getTokensFromAddresses(
+  addresses: Address[],
+  provider: RpcProvider
+): Promise<Token[]>
+```

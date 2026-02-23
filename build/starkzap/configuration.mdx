@@ -1,0 +1,189 @@
+---
+title: Network RPC and Staking
+description: "Configure networks, RPC providers, and staking for the SDK"
+icon: cog
+---
+
+## Overview
+
+The `StarkZap` accepts configuration through a single options object. You can use network presets for simplicity, or provide explicit RPC URLs and chain IDs for custom setups.
+
+<Info>
+  **New to blockchain?** An **RPC** (Remote Procedure Call) is like an API endpoint for the blockchain—it's how your app communicates with the network. A **network** is like an environment (production, staging, development). See the [Glossary](/build/starkzap/glossary) for more web2-friendly explanations.
+</Info>
+
+<AccordionGroup>
+  <Accordion title="Network">
+    The simplest way to configure the SDK is using network presets. Think of networks like environments:
+
+    - **mainnet** = Production (real money, real transactions)
+    - **sepolia** = Staging/Testnet (fake money for testing)
+    - **devnet** = Local development (your own test blockchain)
+
+    ```typescript
+    import { StarkZap } from "starkzap";
+
+    // Mainnet
+    const sdk = new StarkZap({ network: "mainnet" });
+
+    // Sepolia testnet
+    const sdk = new StarkZap({ network: "sepolia" });
+
+    // Local devnet (starknet-devnet-rs)
+    const sdk = new StarkZap({ network: "devnet" });
+    ```
+
+    ### Available Presets
+
+    | Preset    | Chain ID     | RPC                                           | Explorer                         |
+    | --------- | ------------ | --------------------------------------------- | -------------------------------- |
+    | `mainnet` | `SN_MAIN`    | `https://api.cartridge.gg/x/starknet/mainnet` | `https://voyager.online`         |
+    | `sepolia` | `SN_SEPOLIA` | `https://api.cartridge.gg/x/starknet/sepolia` | `https://sepolia.voyager.online` |
+    | `devnet`  | `SN_SEPOLIA` | `http://localhost:5050`                       | —                                |
+
+    ### Using Network Objects
+
+    You can also pass a custom `NetworkPreset` object:
+
+    ```typescript
+    import { StarkZap, networks } from "starkzap";
+
+    const sdk = new StarkZap({ network: networks.mainnet });
+    ```
+  </Accordion>
+
+  <Accordion title="RPC">
+    If you run your own blockchain node or use a different RPC provider (like using a different API endpoint):
+
+    <Info>
+      An **RPC provider** is like choosing which API server to use. Just like you might use AWS, Google Cloud, or your own servers, you can use different RPC providers to connect to the blockchain.
+    </Info>
+
+    ```typescript
+    import { StarkZap, ChainId } from "starkzap";
+
+    const sdk = new StarkZap({
+      rpcUrl: "https://starknet-mainnet.infura.io/v3/YOUR_KEY",
+      chainId: ChainId.MAINNET,
+    });
+    ```
+
+    <Note>
+      `rpcUrl` and `chainId` override values from `network` if both are provided.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Staking">
+
+    Enable staking functionality to let users earn passive income by staking their tokens. When configured, users can:
+
+    - 💰 **Stake tokens** in validator pools and earn rewards over time (like earning interest on a savings account)
+    - 📈 **Grow their holdings** as rewards accumulate automatically
+    - 🔄 **Manage their positions** by adding more tokens, claiming rewards, or exiting pools
+    - 🏦 **Support network security** while earning passive income
+
+    Staking works out of the box using chain-aware staking contract presets:
+
+    ```typescript
+    import { StarkZap } from "starkzap";
+
+    const sdk = new StarkZap({
+      network: "mainnet",
+    });
+    ```
+
+    If needed, you can override the default preset:
+
+    ```typescript
+    import { StarkZap, fromAddress } from "starkzap";
+
+    const sdk = new StarkZap({
+      network: "mainnet",
+      staking: {
+        contract: fromAddress(
+          "0x00ca1702e64c81d9a07b86bd2c540188d92a2c73cf5cc0e508d949015e7e84a7"
+        ),
+      },
+    });
+    ```
+
+    <Info>
+      **Ready to implement staking?** See the [Staking & Delegation Guide](/build/starkzap/staking) for complete instructions on how users can stake tokens, claim rewards, and manage their positions.
+    </Info>
+  </Accordion>
+</AccordionGroup>
+
+## Complete Configuration Example
+
+Here's an example with all optional features configured:
+
+### Using Network Preset
+
+```typescript
+import { StarkZap, fromAddress } from "starkzap";
+
+const sdk = new StarkZap({
+  // Network configuration
+  network: "mainnet",
+  
+  // Optional: override staking contract preset
+  staking: {
+    contract: fromAddress(
+      "0x00ca1702e64c81d9a07b86bd2c540188d92a2c73cf5cc0e508d949015e7e84a7"
+    ),
+  },
+});
+```
+
+### Using Custom RPC
+
+```typescript
+import { StarkZap, ChainId, fromAddress } from "starkzap";
+
+const sdk = new StarkZap({
+  // Custom RPC configuration
+  rpcUrl: "https://starknet-mainnet.infura.io/v3/YOUR_KEY",
+  chainId: ChainId.MAINNET,
+  
+  // Optional: override staking contract preset
+  staking: {
+    contract: fromAddress(
+      "0x00ca1702e64c81d9a07b86bd2c540188d92a2c73cf5cc0e508d949015e7e84a7"
+    ),
+  },
+});
+```
+
+<Note>
+  For paymaster configuration, see the [Paymasters Guide](/build/starkzap/paymasters) for detailed setup instructions for AVNU Paymaster or Cartridge's built-in paymaster.
+</Note>
+
+## Configuration Type Reference
+
+```typescript
+interface SDKConfig {
+  // Network (choose one)
+  network?: NetworkName | NetworkPreset;
+  rpcUrl?: string;
+  chainId?: ChainId;
+  
+  // Optional features
+  paymaster?: { nodeUrl: string; apiKey?: string };
+  staking?: StakingConfig;
+}
+
+interface StakingConfig {
+  contract: Address; // optional override
+}
+```
+
+<Note>
+  For paymaster configuration details, see the [Paymasters Guide](/build/starkzap/paymasters).
+</Note>
+
+## Next Steps
+
+- Set up [Paymasters](/build/starkzap/paymasters) for gasless transactions
+- Enable [Staking & Delegation](/build/starkzap/staking) so users can earn passive income
+- Learn about [Connecting Wallets](/build/starkzap/connecting-wallets) with different signers
+- Configure [Account Presets](/build/starkzap/connecting-wallets#account-presets) for your use case

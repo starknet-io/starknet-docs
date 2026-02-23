@@ -1,0 +1,341 @@
+---
+title: Wallets
+description: "Connect wallets using different signer strategies: private keys, Privy, Cartridge, and custom signers"
+icon: wallet
+---
+
+## Overview
+
+Starkzap supports multiple ways to connect wallets, each suited for different use cases and security requirements. This guide covers all available connection methods.
+
+<Info>
+  **New to wallets?** A **wallet** is like a bank account on the blockchain—it has an address (like an account number) and uses a **signer** (like authentication) to authorize transactions. A **signer** is what proves you own the wallet, similar to how OAuth tokens prove you're logged in. See the [Glossary](/build/starkzap/glossary) for more details.
+</Info>
+
+## Connection Methods Comparison
+
+Choose the right method for your use case:
+
+| Method | Best For | User Experience | Gas Fees | Setup Complexity |
+|--------|----------|-----------------|----------|-----------------|
+| **Private Key** | Server-side apps, development | Manual key entry | ⚠️ User pays (or configure AVNU Paymaster) | ⭐ Simple |
+| **Privy** | Consumer apps, mobile/web | Email/social login | ⚠️ User pays (or configure AVNU Paymaster) | ⭐⭐ Moderate |
+| **Cartridge** | Gaming applications | Social login, Face ID/Touch ID | ✅ **Automatic - Cartridge pays** | ⭐⭐ Moderate |
+
+### Quick Decision Guide
+
+- **Building a game?** → Use **Cartridge** (includes automatic gasless transactions)
+- **Building a consumer app?** → Use **Privy** (email/social login, configure AVNU Paymaster for gasless)
+- **Building a server-side service?** → Use **Private Key** (with proper security, configure AVNU Paymaster for gasless)
+- **Need automatic gasless transactions?** → Use **Cartridge** (built-in paymaster)
+- **Need email-based auth?** → Use **Privy**
+- **Just testing?** → Use **Private Key** for quick setup
+
+## Connection Methods
+
+### 1. Local Private Key (StarkSigner)
+
+The simplest approach — sign transactions locally using a private key (like storing a password locally). Best for:
+- Server-side applications
+- Trusted environments
+- Development and testing
+
+<Info>
+  A **private key** is like a password—it proves you own the wallet. Unlike a password, you should **never** expose it in client-side code. Only use this method on secure servers or for development.
+  
+  **For gasless transactions:** Configure [AVNU Paymaster](/build/starkzap/integrations/avnu-paymaster) separately to sponsor transaction fees.
+</Info>
+
+```typescript
+import { StarkZap, StarkSigner, OpenZeppelinPreset } from "starkzap";
+
+const sdk = new StarkZap({ network: "sepolia" });
+const signer = new StarkSigner("0xYOUR_PRIVATE_KEY");
+
+// Default account type: OpenZeppelin
+const wallet = await sdk.connectWallet({
+  account: { signer },
+});
+
+// Or specify an account preset
+const wallet = await sdk.connectWallet({
+  account: { signer, accountClass: ArgentPreset },
+});
+```
+
+<Warning>
+  Never expose private keys in client-side code. Use this method only in secure server environments or for development.
+</Warning>
+
+### 2. Privy Signer (Server-Side Key Management)
+
+[Privy](https://privy.io) manages private keys securely on their infrastructure (like how OAuth providers manage authentication). The signing happens through your backend. Best for:
+- Consumer applications
+- Mobile and web apps
+- Applications requiring secure key management
+
+<Info>
+  Think of Privy like **OAuth for wallets**—they manage the keys (like Google manages your login), and you just call their API to sign transactions (like calling Google's API to verify a token).
+  
+  **For gasless transactions:** Configure [AVNU Paymaster](/build/starkzap/integrations/avnu-paymaster) separately to sponsor transaction fees.
+</Info>
+
+<Info>
+  For detailed Privy integration instructions, see the [Privy Integration Guide](/build/starkzap/integrations/privy).
+</Info>
+
+**Option A: Provide your backend URL (recommended for mobile/web clients)**
+
+```typescript
+import { StarkZap, PrivySigner, ArgentXV050Preset } from "starkzap";
+
+const accessToken = await privy.getAccessToken();
+const walletRes = await fetch("https://your-backend.com/api/wallet/starknet", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  },
+});
+const { wallet: privyWallet } = await walletRes.json();
+
+const signer = new PrivySigner({
+  walletId: privyWallet.id,
+  publicKey: privyWallet.publicKey,
+  serverUrl: "https://your-backend.com/api/wallet/sign",
+});
+
+const wallet = await sdk.connectWallet({
+  account: { signer, accountClass: ArgentXV050Preset },
+});
+```
+
+Your backend endpoint receives `{ walletId, hash }` and must return `{ signature }`.
+
+**Option B: Custom signing function (for server-side Node.js)**
+
+```typescript
+import { PrivySigner } from "starkzap";
+
+// Use the wallet identity returned by your /api/wallet/starknet endpoint
+const walletId = "wallet-id-from-backend";
+const publicKey = "0xPUBLIC_KEY_FROM_BACKEND";
+
+const signer = new PrivySigner({
+  walletId,
+  publicKey,
+  rawSign: async (walletId, messageHash) => {
+    const response = await privyClient.wallets().rawSign(walletId, {
+      params: { hash: messageHash },
+    });
+    return response.signature;
+  },
+});
+```
+
+### 3. Cartridge Controller
+
+[Cartridge](https://cartridge.gg) is specialized for gaming applications and provides social login and passkey authentication. Opens a popup for user authentication. Best for:
+- Gaming applications
+- Social login integration
+- Passkey-based authentication
+- Apps that want automatic gasless transactions
+
+<Info>
+  **Key Advantage:** Cartridge includes a built-in paymaster that automatically sponsors (pays for) all transactions, so users never pay gas fees. This is perfect for gaming where you want seamless, gasless transactions. For detailed integration instructions, see the [Cartridge Controller Integration Guide](/build/starkzap/integrations/cartridge-controller).
+</Info>
+
+```typescript
+import { StarkZap } from "starkzap";
+
+const sdk = new StarkZap({ network: "mainnet" });
+
+const wallet = await sdk.connectCartridge({
+  policies: [
+    { target: "0xTOKEN_CONTRACT", method: "transfer" },
+    { target: "0xPOOL_CONTRACT", method: "enter_delegation_pool" },
+  ],
+});
+
+// Use just like any other wallet
+const tx = await wallet.execute([...]);
+
+// Access Cartridge-specific features
+const controller = wallet.getController();
+controller.openProfile();
+```
+
+### 4. Custom Signer
+
+Implement `SignerInterface` to integrate any key management solution (hardware wallets, MPC, HSMs, etc.):
+
+```typescript
+import type { SignerInterface } from "starkzap";
+import type { Signature } from "starknet";
+
+class MySigner implements SignerInterface {
+  async getPubKey(): Promise<string> {
+    return "0xMY_PUBLIC_KEY";
+  }
+
+  async signRaw(hash: string): Promise<Signature> {
+    // Sign the hash using your key management solution
+    // Return [r, s] tuple
+    return ["0x...", "0x..."];
+  }
+}
+
+const wallet = await sdk.connectWallet({
+  account: { signer: new MySigner() },
+});
+```
+
+## Account Presets
+
+Account presets define what type of wallet account to create. Think of it like choosing between "Personal" vs "Business" account types—different presets have different features and security models.
+
+<Info>
+  An **account preset** is like selecting a user role or account type. Each preset (OpenZeppelin, Argent, Braavos) has different capabilities, just like how different user roles have different permissions in your app.
+</Info>
+
+### Built-in Presets
+
+```typescript
+import {
+  OpenZeppelinPreset, // Default — OpenZeppelin account
+  ArgentPreset, // Argent v0.4.0
+  ArgentXV050Preset, // Argent v0.5.0 (used by Privy)
+  BraavosPreset, // Braavos v1.2.0
+  DevnetPreset, // Local devnet accounts
+} from "starkzap";
+
+// Use when connecting a wallet
+const wallet = await sdk.connectWallet({
+  account: {
+    signer: new StarkSigner(privateKey),
+    accountClass: ArgentPreset,
+  },
+});
+```
+
+### Custom Account Class
+
+```typescript
+import type { AccountClassConfig } from "starkzap";
+import { CallData } from "starknet";
+
+const MyAccountPreset: AccountClassConfig = {
+  classHash: "0xYOUR_CLASS_HASH",
+  buildConstructorCalldata: (publicKey) => {
+    return CallData.compile({ owner: publicKey });
+  },
+  // Optional: custom salt derivation (default uses publicKey)
+  getSalt: (publicKey) => publicKey,
+};
+```
+
+## Wallet Lifecycle
+
+### Deployment
+
+Starknet accounts are smart contracts that need to be "deployed" (created on the blockchain) before they can execute transactions. Think of it like creating a new user account in your database—it needs to exist before you can use it.
+
+<Info>
+  **Deployment** is like provisioning a new service or creating a new account. The SDK handles this automatically, but you can control when it happens with the `deploy` option.
+</Info>
+
+```typescript
+// Check if deployed
+const deployed = await wallet.isDeployed();
+
+// Deploy explicitly
+if (!deployed) {
+  const tx = await wallet.deploy();
+  await tx.wait();
+}
+
+// Deploy with sponsored fees (gasless)
+const tx = await wallet.deploy({ feeMode: "sponsored" });
+await tx.wait();
+```
+
+<Note>
+  For sponsored wallets, `execute()` automatically deploys the account in the same transaction if needed — no separate deploy step required.
+</Note>
+
+### Ensure Ready
+
+A convenience method that checks deployment and optionally deploys:
+
+```typescript
+// Deploy if needed (default behavior)
+await wallet.ensureReady();
+
+// Explicit options
+await wallet.ensureReady({
+  deploy: "if_needed", // "never" | "if_needed" | "always"
+  feeMode: "sponsored",
+  onProgress: (event) => {
+    console.log(event.step); // "CONNECTED" → "CHECK_DEPLOYED" → "DEPLOYING" → "READY"
+  },
+});
+```
+
+### Deployment Policy Options
+
+- `"never"` - Fail if account is undeployed
+- `"if_needed"` - Deploy undeployed accounts automatically
+- `"always"` - Force deployment flow even if already deployed
+
+## Using the Onboarding API
+
+The onboarding API simplifies wallet connection by handling strategy selection, signer construction, and account readiness:
+
+```typescript
+import { StarkZap, OnboardStrategy } from "starkzap";
+
+const sdk = new StarkZap({ network: "sepolia" });
+const accessToken = await privy.getAccessToken();
+
+const onboard = await sdk.onboard({
+  strategy: OnboardStrategy.Privy,
+  privy: {
+    resolve: async () => {
+      const walletRes = await fetch("https://your-api.example/api/wallet/starknet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const { wallet } = await walletRes.json();
+
+      return {
+        walletId: wallet.id,
+        publicKey: wallet.publicKey,
+        serverUrl: "https://your-api.example/api/wallet/sign",
+      };
+    },
+  },
+  accountPreset: "argentXV050",
+  deploy: "if_needed",
+});
+
+const wallet = onboard.wallet;
+```
+
+## Production Guidance
+
+- **Prefer signer separation by trust boundary**:
+  - Server-only keys on backend
+  - Privy for managed end-user keys
+  - Cartridge for delegated UX
+- **Always call `ensureReady()`** before user actions
+- **Use appropriate account presets** for your use case
+- **Handle deployment errors gracefully** in production
+
+## Next Steps
+
+- Learn about [Executing Transactions](/build/starkzap/transactions)
+- Explore [ERC20 Token Operations](/build/starkzap/erc20)
+- Set up [Staking & Delegation](/build/starkzap/staking)

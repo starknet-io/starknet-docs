@@ -1,0 +1,294 @@
+---
+title: Privy Integration
+description: "Server-side key management and wallet infrastructure for Starknet applications"
+---
+
+## Overview
+
+[Privy](https://privy.io) provides secure, server-side key management for Starknet wallets. With Privy, you can:
+
+- Create and manage Starknet wallets for users
+- Sign transactions server-side without exposing private keys
+- Support social login and email-based authentication
+- Integrate with existing Privy authentication flows
+
+Privy supports Starknet as a [Tier 2 chain](https://docs.privy.io/recipes/use-tier-2#starknet), allowing you to use Privy's raw sign functionality for transaction signing.
+
+## Why Use Privy?
+
+- ✅ **Security**: Private keys never leave Privy's secure infrastructure
+- ✅ **User Experience**: Social login and email-based authentication
+- ✅ **Server-Side Signing**: Sign transactions on your backend
+- ✅ **Multi-Chain**: Same infrastructure for multiple blockchains
+- ✅ **Gasless Transactions**: Configure AVNU Paymaster for sponsored transactions (see [AVNU Paymaster Integration](/build/starkzap/integrations/avnu-paymaster))
+
+## Setup
+
+### 1. Install Privy
+
+```bash
+npm install @privy-io/node
+```
+
+### 2. Initialize Privy Client
+
+```typescript
+import { PrivyClient } from "@privy-io/node";
+
+const privy = new PrivyClient({
+  appId: process.env.PRIVY_APP_ID!,
+  appSecret: process.env.PRIVY_APP_SECRET!,
+});
+```
+
+### 3. Create a Starknet Wallet
+
+```typescript
+// Create a wallet for a user
+const wallet = await privy.wallets().create({
+  chain_type: "starknet",
+  user_id: "user-123", // Optional: associate with a Privy user
+});
+
+console.log("Wallet ID:", wallet.id);
+console.log("Wallet Address:", wallet.address);
+console.log("Public Key:", wallet.public_key);
+```
+
+## Integration with Starkzap
+
+### Server-Side Signing Endpoint
+
+Create an endpoint that signs transaction hashes using Privy:
+
+```typescript
+import express from "express";
+
+app.post("/api/wallet/sign", async (req, res) => {
+  const { walletId, hash } = req.body;
+  
+  if (!walletId || !hash) {
+    return res.status(400).json({ error: "walletId and hash required" });
+  }
+
+  try {
+    const result = await privy.wallets().rawSign(walletId, {
+      params: { hash },
+    });
+    
+    res.json({ signature: result.signature });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+### Client-Side Integration
+
+Use Privy with Starkzap:
+
+```typescript
+import { StarkZap, PrivySigner, OnboardStrategy, accountPresets } from "starkzap";
+
+const sdk = new StarkZap({ network: "sepolia" });
+const accessToken = await privy.getAccessToken();
+
+// Option 1: Using onboard API (recommended)
+const onboard = await sdk.onboard({
+  strategy: OnboardStrategy.Privy,
+  accountPreset: accountPresets.argentXV050,
+  privy: {
+    resolve: async () => {
+      // Get Privy signer context (walletId + publicKey) from your backend
+      const walletRes = await fetch("https://your-api.example/api/wallet/starknet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const walletData = await walletRes.json();
+
+      return {
+        walletId: walletData.wallet.id,
+        publicKey: walletData.wallet.publicKey,
+        serverUrl: "https://your-api.example/api/wallet/sign",
+      };
+    },
+  },
+  deploy: "if_needed",
+});
+
+const wallet = onboard.wallet;
+
+// Option 2: Using PrivySigner directly (reuse accessToken)
+const walletRes = await fetch("https://your-api.example/api/wallet/starknet", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  },
+});
+const { wallet: privyWallet } = await walletRes.json();
+
+const signer = new PrivySigner({
+  walletId: privyWallet.id,
+  publicKey: privyWallet.publicKey,
+  serverUrl: "https://your-api.example/api/wallet/sign",
+});
+
+const walletFromSigner = await sdk.connectWallet({
+  account: { signer, accountClass: accountPresets.argentXV050 },
+});
+```
+
+## Complete Example
+
+### Backend (Express.js)
+
+```typescript
+import express from "express";
+import { PrivyClient } from "@privy-io/node";
+import cors from "cors";
+
+const privy = new PrivyClient({
+  appId: process.env.PRIVY_APP_ID!,
+  appSecret: process.env.PRIVY_APP_SECRET!,
+});
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Create or get Starknet wallet
+app.post("/api/wallet/starknet", async (req, res) => {
+  const { userId } = req.body;
+  
+  try {
+    const wallet = await privy.wallets().create({
+      chain_type: "starknet",
+      user_id: userId,
+    });
+    
+    res.json({
+      wallet: {
+        id: wallet.id,
+        address: wallet.address,
+        publicKey: wallet.public_key,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Sign transaction hash
+app.post("/api/wallet/sign", async (req, res) => {
+  const { walletId, hash } = req.body;
+  
+  try {
+    const result = await privy.wallets().rawSign(walletId, {
+      params: { hash },
+    });
+    
+    res.json({ signature: result.signature });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.listen(3001);
+```
+
+### Frontend
+
+```typescript
+import { StarkZap, OnboardStrategy, accountPresets } from "starkzap";
+
+const sdk = new StarkZap({ network: "sepolia" });
+const accessToken = await privy.getAccessToken();
+
+// Connect with SDK
+const onboard = await sdk.onboard({
+  strategy: OnboardStrategy.Privy,
+  accountPreset: accountPresets.argentXV050,
+  privy: {
+    resolve: async () => {
+      const walletRes = await fetch("http://localhost:3001/api/wallet/starknet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const { wallet } = await walletRes.json();
+
+      return {
+        walletId: wallet.id,
+        publicKey: wallet.publicKey,
+        serverUrl: "http://localhost:3001/api/wallet/sign",
+      };
+    },
+  },
+  deploy: "if_needed",
+});
+
+const connectedWallet = onboard.wallet;
+
+// Use the wallet
+const balance = await connectedWallet.balanceOf(STRK);
+console.log(balance.toFormatted());
+```
+
+## React Native Integration
+
+For React Native applications, use `@privy-io/expo`:
+
+```typescript
+import { PrivyProvider } from "@privy-io/expo";
+import { StarkZap, OnboardStrategy } from "starkzap";
+
+// Wrap your app with PrivyProvider
+<PrivyProvider appId={PRIVY_APP_ID}>
+  <App />
+</PrivyProvider>
+
+// In your component
+const privyClient = usePrivy();
+const accessToken = await privyClient.getAccessToken();
+const walletRes = await fetch("https://your-api.example/api/wallet/starknet", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  },
+});
+const { wallet: walletData } = await walletRes.json();
+
+const onboard = await sdk.onboard({
+  strategy: OnboardStrategy.Privy,
+  deploy: "never",
+  privy: {
+    resolve: async () => ({
+      walletId: walletData.id,
+      publicKey: walletData.publicKey,
+      serverUrl: "https://your-api.example/api/wallet/sign",
+    }),
+  },
+});
+```
+
+## Resources
+
+- [Privy Documentation](https://docs.privy.io)
+- [Starknet Tier 2 Support](https://docs.privy.io/recipes/use-tier-2#starknet)
+- [Privy Node SDK](https://docs.privy.io/reference/server-sdk-node)
+- [Privy Expo SDK](https://docs.privy.io/reference/react-native-sdk)
+
+## Best Practices
+
+1. **Never expose private keys** - Always use server-side signing
+2. **Authenticate requests** - Verify user identity before signing
+3. **Use HTTPS** - Always use secure connections for signing endpoints
+4. **Handle errors gracefully** - Provide user-friendly error messages
+5. **Monitor usage** - Track wallet creation and signing operations

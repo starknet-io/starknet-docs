@@ -1,0 +1,265 @@
+---
+title: Bitcoin, Stablecoins, and Token
+description: "Check balances, transfer tokens, and work with amounts using type-safe primitives"
+icon: credit-card
+---
+
+## Overview
+
+Starkzap provides comprehensive support for ERC20 token operations, including balance queries, transfers, and type-safe amount handling. This module allows you to work with:
+
+- **Bitcoin wrappers on Starknet** - wBTC, lBTC, tBTC (wrapped Bitcoin tokens that represent Bitcoin on Starknet)
+- **Stablecoins** - USDC, USDT, and other stablecoins
+- **Other ERC20 tokens** - Any ERC20-compatible token on Starknet
+
+This guide covers all token-related functionality for these different token types.
+
+## Token Presets
+
+The SDK ships with pre-configured token definitions for mainnet and Sepolia:
+
+```typescript
+import { mainnetTokens, sepoliaTokens } from "starkzap";
+
+// Access specific tokens
+const STRK = mainnetTokens.STRK;
+const USDC = mainnetTokens.USDC;
+const ETH = mainnetTokens.ETH;
+```
+
+### Token Shape
+
+```typescript
+interface Token {
+  name: string; // "Starknet Token"
+  address: Address; // "0x04718f5a0..."
+  decimals: number; // 18
+  symbol: string; // "STRK"
+  metadata?: { logoUrl?: URL };
+}
+```
+
+### Getting Tokens for Current Network
+
+```typescript
+import { getPresets } from "starkzap";
+
+const tokens = getPresets(wallet.getChainId()); // Record<string, Token>
+```
+
+### Resolving Unknown Tokens
+
+Resolve tokens from on-chain contract addresses:
+
+```typescript
+import { getTokensFromAddresses } from "starkzap";
+
+const tokens = await getTokensFromAddresses(
+  [fromAddress("0xTOKEN_CONTRACT")],
+  provider
+);
+```
+
+## Checking Balances
+
+```typescript
+const balance = await wallet.balanceOf(STRK);
+
+console.log(balance.toUnit()); // "150.25"
+console.log(balance.toFormatted()); // "150.25 STRK"
+console.log(balance.toFormatted(true)); // "150.25 STRK" (compressed, max 4 decimals)
+console.log(balance.toBase()); // 150250000000000000000n (raw)
+console.log(balance.isZero()); // false
+```
+
+## Transferring Tokens
+
+### Single Transfer
+
+```typescript
+const tx = await wallet.transfer(USDC, [
+  { to: fromAddress("0xRECIPIENT"), amount: Amount.parse("100", USDC) },
+]);
+await tx.wait();
+```
+
+### Batch Transfer (Multiple Recipients)
+
+Send to multiple recipients in a single transaction:
+
+```typescript
+const tx = await wallet.transfer(USDC, [
+  { to: fromAddress("0xALICE"), amount: Amount.parse("50", USDC) },
+  { to: fromAddress("0xBOB"), amount: Amount.parse("25", USDC) },
+  { to: fromAddress("0xCHARLIE"), amount: Amount.parse("10", USDC) },
+]);
+await tx.wait();
+```
+
+### With Sponsored Fees
+
+```typescript
+const tx = await wallet.transfer(
+  USDC,
+  [{ to: recipient, amount: Amount.parse("100", USDC) }],
+  { feeMode: "sponsored" }
+);
+```
+
+## Working with Amounts
+
+The `Amount` class provides precision-safe handling of token amounts, preventing common errors when converting between human-readable values and raw blockchain values.
+
+### Creating Amounts
+
+```typescript
+import { Amount } from "starkzap";
+
+// From human-readable values (what users type)
+const amount = Amount.parse("1.5", STRK); // 1.5 STRK
+const amount = Amount.parse("100", USDC); // 100 USDC
+const amount = Amount.parse("0.001", 18, "ETH"); // With explicit decimals
+
+// From raw blockchain values (from contract calls, balance queries)
+const amount = Amount.fromRaw(1500000000000000000n, STRK); // 1.5 STRK
+const amount = Amount.fromRaw(100000000n, 6, "USDC"); // 100 USDC
+const amount = Amount.fromRaw(balance, STRK); // From balance query
+```
+
+### Converting and Displaying
+
+```typescript
+const amount = Amount.parse("1,500.50", 18, "ETH");
+
+amount.toUnit(); // "1500.5"            — human-readable string
+amount.toBase(); // 1500500000...0n     — raw bigint for contracts
+amount.toFormatted(); // "1,500.5 ETH"       — locale-formatted with symbol
+amount.toFormatted(true); // "1,500.5 ETH"       — compressed (max 4 decimals)
+
+amount.getDecimals(); // 18
+amount.getSymbol(); // "ETH"
+```
+
+### Arithmetic
+
+All arithmetic operations return new `Amount` instances (immutable):
+
+```typescript
+const a = Amount.parse("10", STRK);
+const b = Amount.parse("3", STRK);
+
+a.add(b).toUnit(); // "13"
+a.subtract(b).toUnit(); // "7"
+a.multiply(2).toUnit(); // "20"
+a.multiply("0.5").toUnit(); // "5"
+a.divide(4).toUnit(); // "2.5"
+```
+
+<Warning>
+  Arithmetic between incompatible amounts (different decimals or symbols) throws an error.
+</Warning>
+
+### Comparisons
+
+```typescript
+const a = Amount.parse("10", STRK);
+const b = Amount.parse("5", STRK);
+
+a.eq(b); // false — equal
+a.gt(b); // true  — greater than
+a.gte(b); // true  — greater than or equal
+a.lt(b); // false — less than
+a.lte(b); // false — less than or equal
+a.isZero(); // false
+a.isPositive(); // true
+```
+
+<Note>
+  Comparisons between incompatible amounts return `false` (never throw).
+</Note>
+
+## Using Amounts in Transactions
+
+Amounts work seamlessly with all SDK methods:
+
+```typescript
+// Transfer
+const tx = await wallet.transfer(STRK, [
+  { to: recipient, amount: Amount.parse("10", STRK) },
+]);
+
+// Staking
+await wallet.enterPool(poolAddress, Amount.parse("100", STRK));
+
+// Transaction builder
+await wallet
+  .tx()
+  .transfer(USDC, { to: alice, amount: Amount.parse("50", USDC) })
+  .send();
+```
+
+## Token Approval
+
+For operations that require spending tokens (like staking), you may need to approve first:
+
+```typescript
+// Using transaction builder
+await wallet
+  .tx()
+  .approve(STRK, spenderAddress, Amount.parse("1000", STRK))
+  .send();
+
+// Or direct approval (if supported by your token)
+const tx = await wallet.execute([{
+  contractAddress: STRK.address,
+  entrypoint: "approve",
+  calldata: [spenderAddress, Amount.parse("1000", STRK).toBase(), "0"],
+}]);
+```
+
+## Best Practices
+
+1. **Always use Amount.parse()** for user input to avoid precision errors
+2. **Use token presets** instead of hardcoding addresses
+3. **Check balances before transfers** to provide better UX
+4. **Use batch transfers** when sending to multiple recipients to save gas
+5. **Format amounts for display** using `toFormatted()` for better UX
+
+## Common Patterns
+
+### Checking if User Has Enough Balance
+
+```typescript
+const balance = await wallet.balanceOf(STRK);
+const transferAmount = Amount.parse("100", STRK);
+
+if (balance.lt(transferAmount)) {
+  throw new Error("Insufficient balance");
+}
+
+const tx = await wallet.transfer(STRK, [
+  { to: recipient, amount: transferAmount },
+]);
+```
+
+### Calculating Transfer Fee
+
+```typescript
+const balance = await wallet.balanceOf(STRK);
+const transferAmount = Amount.parse("100", STRK);
+const estimatedFee = await wallet.estimateFee([/* transfer call */]);
+
+const totalNeeded = transferAmount.add(
+  Amount.fromRaw(estimatedFee.overall_fee, 18, "ETH")
+);
+
+if (balance.lt(totalNeeded)) {
+  throw new Error("Insufficient balance including fees");
+}
+```
+
+## Next Steps
+
+- Learn about [Staking & Delegation](/build/starkzap/staking)
+- Explore [Transaction Builder](/build/starkzap/transactions#transaction-builder) for complex operations
+- Check the [API Reference](/build/starkzap/api-reference) for detailed method signatures
