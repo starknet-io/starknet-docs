@@ -1,112 +1,49 @@
 ---
-title: Setup Cursor
-description: "Set up Cursor IDE and MCP with Starkzap documentation for AI-powered development"
-icon: code
+title: AI-Powered Development
+description: "Configure Cursor IDE and MCP using Starkzap's internal standards for smarter coding."
+icon: robot
 ---
 
 ## Overview
 
-Using Docs in Cursor - Learn how to set up Cursor IDE and MCP with Starkzap documentation
+Maximize development speed by providing Cursor and LLMs with the full context of the Starkzap codebase using our built-in AI configuration files.
 
-## Setting Up LLM Integrations with Starkzap
+## 1. Cursor IDE Setup
 
-This guide covers two powerful ways to integrate Starkzap with LLMs: Cursor IDE integration and Model Context Protocol (MCP) setup.
+### Add Project Rules
+For the best experience, Cursor needs to understand our coding standards (ESM, Strict TS, and Path Aliases).
 
-## Cursor IDE Setup
+1. Copy the contents of `CLAUDE.md` from the root of the [repository](https://github.com/keep-starknet-strange/starkzap).
+2. Paste them into a `.cursorrules` file in your project root.
+3. This allows Cursor to automatically use the correct commands (like `npm run typecheck`) and follow our internal `<conventions>`.
 
-### Prerequisites
+### Add External Documentation
+Add the Starkzap API reference to Cursor's indexed docs:
 
-- Cursor IDE installed on your machine
-- Basic familiarity with Cursor's interface
+1. **Settings > Features > Docs**
+2. **Add new doc**
+3. URL: `https://docs.starkzap.com/llms-full.txt` (or your local `docs/export/` path)
 
-### Configuration Steps
+---
 
-1. **Open Cursor IDE**
-2. **Navigate to Settings > Features > Docs**
-3. **Click on Add new doc**
-4. **In the URL field, paste the following URL:**
-   ```
-   https://docs.starknet.io/llms-full.txt
-   ```
+## 2. Using the Agent Model (MCP)
 
-## Using Starkzap Documentation in Cursor
+If you are using the **Model Context Protocol (MCP)** with Claude or Cursor:
 
-Once configured, you can access Starkzap's documentation directly within Cursor using the following methods:
+* **Context Loading:** Point your filesystem MCP to `CLAUDE.md` and `AGENTS.md`.
+* **Workflow Alignment:** The AI will now understand the `Coordinator -> Executor -> Reviewer` workflow defined in our repo, making it better at planning complex features.
 
-### Method 1: Using @docs Command
+---
 
-Type `@docs` followed by "Starkzap" to reference the documentation in your code. For example:
+## 3. Common AI Commands
 
-```typescript
-// @docs -> Starkzap: How to initialize a wallet connection
-const wallet = await sdk.onboard({
-  strategy: OnboardStrategy.Privy,
-  // ...
-});
-```
+Inside Cursor Chat (Cmd+L or Ctrl+L), you can now use specific context:
 
-### Method 2: Local Docs MCP Setup
-
-You can also ask questions about Starkzap directly in comments, and Cursor will use the documentation to provide relevant answers and code suggestions.
-
-## Example Usage
-
-Here are some examples of how to use the documentation in Cursor:
-
-**Initializing the SDK:**
-```typescript
-// @docs -> Starkzap: SDK initialization and configuration
-import { StarkZap } from "starkzap";
-
-const sdk = new StarkZap({
-  network: "mainnet",
-});
-```
-
-**Connecting a Wallet:**
-```typescript
-// @docs -> Starkzap: Wallet connection with Privy
-const accessToken = await privy.getAccessToken();
-
-const onboard = await sdk.onboard({
-  strategy: OnboardStrategy.Privy,
-  privy: {
-    resolve: async () => {
-      const walletRes = await fetch("https://your-api.example/api/wallet/starknet", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      const { wallet } = await walletRes.json();
-
-      return {
-        walletId: wallet.id,
-        publicKey: wallet.publicKey,
-        serverUrl: "https://your-api.example/api/wallet/sign",
-      };
-    },
-  },
-});
-```
-
-**Executing Transactions:**
-```typescript
-// @docs -> Starkzap: Transaction execution and batching
-const tx = await wallet.execute([call]);
-await tx.wait();
-```
-
-## Benefits
-
-- **Faster Development** - Get instant answers without leaving your IDE
-- **Accurate Code Suggestions** - LLM uses official documentation for context
-- **Reduced Errors** - Documentation-backed code examples
-- **Better Understanding** - Learn as you code with inline documentation
+* **"Check my types"**: The AI will know to run `npm run typecheck` based on `CLAUDE.md`.
+* **"Generate a new token preset"**: The AI will point you to `npm run generate:tokens` instead of suggesting manual edits.
+* **"@docs Starkzap how to batch transactions"**: Uses the indexed documentation for accurate SDK syntax.
 
 ## Next Steps
 
-- Explore the [Quick Start Guide](/build/starkzap/quick-start) to begin building
-- Check out [Examples](/build/starkzap/examples) for practical code samples
-- Review the [API Reference](/build/starkzap/api-reference) for detailed method documentation
+- Review the **Development Workflow** in [CLAUDE.md](https://github.com/keep-starknet-strange/starkzap/Claude.md)
+- Learn about **Multi-agent coordination** in [AGENTS.md](https://github.com/keep-starknet-strange/starkzap/Agents.md)
