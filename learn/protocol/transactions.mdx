@@ -4,7 +4,9 @@ title: "Transactions"
 
 ## Overview
 
-Transactions are cryptographically signed instructions from accounts that update the state of the Starknet network. Starknet supports only [three types](#transaction_types) of transactions, with each type going through the same [lifecycle](#transaction_lifecycle) to receive its [execution and finality statuses](#transaction_statuses). Every transaction that was executed successfully is issued a [receipt](#transaction_receipt), which includes its statuses, as well as other information about it.
+A transaction is a signed request to change something on Starknet.
+
+For example, a transaction can call a smart contract, register a new contract class, or deploy a new account. After a transaction is sent, Starknet validates it, tries to execute it, assigns it [statuses](#transaction_statuses), and if it is executed, returns a [receipt](#transaction_receipt) describing what happened.
 
 Additional information
 
@@ -22,55 +24,72 @@ Starknet supports the following types of transactions:
 | `DEPLOY_ACCOUNT` | Deploys a new account contract to Starknet.<Tip>         For more information about deploying a new account, see Accounts.   </Tip>                                                                                                                                                                                                                                                                                                                                                                                        |
 
 <Note>
-  The [`L1HandlerTransaction type`](/learn/protocol/messaging/#l1_handler_transaction) is also a valid transaction type within Starknet, be it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations (particularly, handling messages from L1 to L2).
+  The [`L1HandlerTransaction type`](/learn/protocol/messaging/#l1_handler_transaction) is also a valid transaction type within Starknet, but it cannot be broadcast through the Starknet API like other transaction types, as it was specifically designed for internal Starknet operations, particularly handling messages from L1 to L2.
 
   The `DEPLOY` transaction type existed in Starknet for deploying account before being replaced by `DEPLOY_ACCOUNT`. `DEPLOY` only had one version (v0) and is now unsupported by Starknet.
 </Note>
 
-Each transaction type is versioned, with versions increasing when the fields that comprise the transaction change, either with the addition of a new field or the removal of an existing field. The following table summarizes the current, deprecated, and unsupported versions of each transaction type:
+Each transaction type is versioned. A version changes when the transaction format changes, for example when fields are added, removed, or interpreted differently.
 
-| Type             | Current version | Deprecated versions | Unsupported versions |
-| ---------------- | --------------- | ------------------- | -------------------- |
-| `INVOKE`         | v3              | None                | v1, v0               |
-| `DECLARE`        | v3              | None                | v2, v1, v0           |
-| `DEPLOY_ACCOUNT` | v3              | None                | v1                   |
+Today, Starknet accepts only RPC 0.8-compatible `v3` transactions. Older versions are unsupported.
+
+| Type             | Current version | Unsupported versions |
+| ---------------- | --------------- | -------------------- |
+| `INVOKE`         | v3              | v1, v0               |
+| `DECLARE`        | v3              | v2, v1, v0           |
+| `DEPLOY_ACCOUNT` | v3              | v1                   |
 
 <Warning>
-  Do not submit a transaction that uses an unsupported transaction type, as it cannot be included in a proof, and therefore cannot become part of a Starknet block.
-
-  Sending transaction that use deprecated versions is still supported, but support will be removed in an upcoming Starknet release.
+  Do not submit a transaction that uses an unsupported version. Since Starknet v0.14.0, only RPC 0.8-compatible `v3` transactions are accepted by the network.
 </Warning>
+
+## How transaction versions evolved
+
+The current `v3`-only model is the result of several protocol changes over time:
+
+| Starknet version | Transaction change |
+| ---------------- | ------------------ |
+| `v0.10.0`        | Introduced `INVOKE v1` and `DECLARE v1`, added protocol-level nonces, and separated validation from execution for account contracts. |
+| `v0.10.1`        | Introduced `DEPLOY_ACCOUNT`, replacing the old `DEPLOY` transaction for account deployment. |
+| `v0.11.0`        | Introduced `DECLARE v2` to support Sierra and Cairo 1 contract classes. |
+| `v0.13.0`        | Introduced `v3` transactions, including STRK-denominated fees and reserved fields for future features such as paymasters and data availability modes. |
+| `v0.13.4` / `v0.13.5` | Added the three-resource fee model and the RPC 0.8-compatible `v3` format used today. |
+| `v0.14.0`        | Stopped accepting `v0`, `v1`, `v2`, and old non-RPC-0.8-compatible `v3` transactions; introduced mempools, fee-market ordering, and the `CANDIDATE` / `PRE_CONFIRMED` statuses. |
+
+<Tip>
+  For the exact fields and hash calculations of each transaction version, see [Transaction fields and hash calculations reference](/learn/cheatsheets/transactions-reference/).
+</Tip>
 
 ## Transaction lifecycle
 
 The high-level steps in the Starknet transaction lifecycle are as follows:
 
-1. **Transaction submission:** A transaction is submitted to a sequencer by a full node.
-2. **Mempool validation:** The sequencer's [mempool](#transaction_mempool) performs preliminary validation of the transaction, such as ensuring that its invoker's balance exceeds the transaction's `max_fee` value, assuring the transaction's calldata length is within the legal limit, and more. If the transaction is invalid, it does not proceed.
-3. **Sequencer validation:** The sequencer performs preliminary validation of the transaction before executing it to ensure that the transaction is still valid. If the transaction is invalid, it does not proceed.
-4. **Execution:** The sequencer batches all transactions that passed the preliminary validation into a block, and applies them to the state sequentially. If a transaction fails during execution, it is included in the block with as reverted.
-5. **Proof generation and verification:** The prover uses the [Starknet operating system](/learn/protocol/snos/) to computes the proof for the correct execution of all transactions in the block, and transmits it to the L1 verifier, which verifies it. At this point, the L1 state is updated to include the transaction.
+1. **Submission:** A wallet, app, or service sends the transaction through a full node or provider to a sequencer gateway.
+2. **Mempool admission:** The sequencer checks whether the transaction can enter its mempool. For example, it verifies basic validity, nonce rules, and fee bounds. If the transaction is invalid, it does not proceed.
+3. **Block building and validation:** When building a block, the sequencer revalidates the transaction against the latest relevant state before execution.
+4. **Execution:** The sequencer executes the transaction. If execution fails, the transaction can still be included in the block as `REVERTED`.
+5. **Finalization and proving:** Once transactions are included in a finalized block, the [Starknet operating system](/learn/protocol/snos/) proves the block execution, and the result is eventually verified on L1.
 
 ### Mempools
 
-Up to and including Starknet v0.13.5, transactions were received and ordered by the sequencer in a first-in-first-out (FIFO) fashion. Starting from Starknet v0.14.0, each sequencer will instead maintain a mempool, decouping the transaction order of arrival from the transaction ordering in blocks, for which they are can decide their own policy.
+Up to and including Starknet v0.13.5, transactions were effectively ordered in a first-in-first-out (FIFO) queue. Starting from Starknet v0.14.0, each sequencer maintains its own mempool. This means the order in which transactions arrive is no longer necessarily the order in which they are included in blocks.
 
-The introduction of mempools will have the following implications on how transactions are processed:
+Starting from Starknet v0.14.0, mempools affect transaction processing in the following ways:
 
 - **Nonces**: Transactions with a nonce greater than the sender's current nonce + $x$ will be rejected by the mempool, where:
   - A sender's current nonce is the sender's nonce in the latest finalized state at the time the transaction is received
-  - X is 200 for `INVOKE` and `DEPLOY_ACCOUNT` transactions and $x = 0$ for `DECLARE` transactions (i.e., no declares with future nonces)
-- **Fee escalation**: A transaction in the mempool can be replaced by a transaction sent from the same account with the same nonce and both `tip` and `max_l2_gas_price` increased by at least 10%. If the transaction was submitted with zero tip, it can still be replaced by another transaction with zero tip.
+  - $x$ is 200 for `INVOKE` and `DEPLOY_ACCOUNT` transactions, and 0 for `DECLARE` transactions
+- **Fee escalation**: A transaction in the mempool can be replaced by another transaction from the same account with the same nonce if both `tip` and the `l2_gas` `max_price_per_unit` are increased by at least 10%. If the original transaction used zero tip, it can still be replaced by another transaction with zero tip.
 
   <Note>
     There are unlikely edge cases in which a transaction is not replaced despite submitting a valid transaction to replace it, such as the existing transaction entering a block while the new one is still processed in the gateway.
   </Note>
-- **Transaction time-to-live (TTL)**: Transactions that cannot be included in a block and have exceeded their TTL, currently configured to be 5 mins, are periodically evicted from the mempool
-- **`DECLARE transactions time-to-mature (TTM)`**: Before being inserted into the mempool, `DECLARE` transactions are sent to a "waiting room" until they exceed their TTM, where TTM \< TTL but is still TBD. While in the "waiting room", `DECLARE` transactions can't be replaced, and transactions sent with the same nonce as a transaction in the "waiting room" by the same account are rejected
+- **Transaction time-to-live (TTL)**: Transactions that stay in the mempool for too long without being included are evicted. The current TTL is 5 minutes.
+- **`DECLARE` time-to-mature (TTM)**: Before entering the mempool, `DECLARE` transactions spend time in a waiting room. During that period they cannot be replaced, and another transaction from the same account with the same nonce is rejected. The TTM is smaller than the TTL.
 
 ## Transaction statuses
 
-Since Starknet version 0.14.0, the finality statuses are the following:
+Since Starknet v0.14.0, Starknet uses the following transaction statuses:
 
 | Type          | Status           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -82,6 +101,10 @@ Since Starknet version 0.14.0, the finality statuses are the following:
 |               | `ACCEPTED_ON_L1` | The Starknet state on L1 moved to a block height which is greater than or equal to the height of the block containing the transaction.                                                                                                                                                                                                                                                                                                                                            |
 | **Execution** | `REVERTED`       | The transaction failed during execution by a sequencer, and was included in a block as reverted.<Note>         Since the DEPLOY_ACCOUNT and DECLARE transactions don't have an execution phase, they cannot be reverted.   </Note>                                                                                                                                                                                                                                                |
 |               | `SUCCEEDED`      | The transaction was successfully executed by a sequencer and is included in a block.                                                                                                                                                                                                                                                                                                                                                                                              |
+
+<Note>
+  Before Starknet v0.14.0, readers may encounter older references to a `PENDING` block or `PENDING` transaction semantics. In the current model, `PRE_CONFIRMED` means the transaction was executed and exposed by the sequencer before consensus finalized the block, while `ACCEPTED_ON_L2` means the transaction is already in a consensus-finalized block.
+</Note>
 
 ### State implications of reverted transactions
 
