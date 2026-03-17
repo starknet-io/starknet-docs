@@ -1,0 +1,214 @@
+---
+title: Confidential Transfers
+description: "Fund, transfer, and withdraw using Tongo—privacy-preserving balances and transfers with the Tongo SDK"
+icon: lock
+---
+
+## Overview
+
+Starkzap supports **confidential** (privacy-preserving) balances and transfers through the **[Tongo](https://www.tongo.cash/)** protocol. Using the Tongo SDK, you can fund a confidential account from public ERC20, transfer between confidential accounts without revealing amounts, and withdraw back to a public Starknet address.
+
+**What users can do with confidential:**
+- **Fund a confidential account** - Convert public ERC20 into confidential balance (approval is included in the builder)
+- **Transfer confidentially** - Send to another confidential account by recipient public key; amounts are hidden on-chain
+- **Withdraw to public** - Convert confidential balance back to ERC20 and send to a Starknet address
+- **[Tongo](https://www.tongo.cash/)-specific** - Ragequit (exit full balance) and rollover (activate pending balance)
+
+<Info>
+  The [Tongo](https://www.tongo.cash/) private key is separate from the Starknet wallet key. Your app must create and hold a `TongoConfidential` instance with the user's Tongo key and the correct Tongo contract address for the chain.
+</Info>
+
+## Configuration
+
+Create a `TongoConfidential` instance with the Tongo contract for your chain, the user's Tongo private key, and an RPC provider (typically the wallet's provider).
+
+```typescript
+import { StarkZap, TongoConfidential } from "starkzap";
+
+const sdk = new StarkZap({ network: "mainnet" });
+const wallet = await sdk.connectWallet({ account: { signer, accountClass } });
+
+const confidential = new TongoConfidential({
+  privateKey: tongoPrivateKey,       // BigNumberish or Uint8Array
+  contractAddress: TONGO_CONTRACT,  // Address for mainnet or Sepolia
+  provider: wallet.getProvider(),
+});
+```
+
+Use the [Tongo](https://www.tongo.cash/) protocol documentation or deployment list for the correct `contractAddress` per chain. There is no wallet-level "register confidential"; you pass the `TongoConfidential` (or any `ConfidentialProvider`) into the tx builder methods.
+
+## TongoConfidential: address and state
+
+**Tongo address (for display or sharing):**
+
+```typescript
+const tongoAddress = confidential.address; // base58-encoded public key
+```
+
+**Recipient identity (for receiving confidential transfers):**
+
+Share `recipientId` with others so they can send confidential transfers to this account. It is the public key `{ x, y }` used on-chain:
+
+```typescript
+const recipientId = confidential.recipientId; // { x, y } — pass as `to` in confidentialTransfer
+```
+
+**Decrypted state (balance, pending, nonce):**
+
+```typescript
+const state = await confidential.getState();
+
+console.log("Active balance:", state.balance);   // spendable
+console.log("Pending balance:", state.pending);   // needs rollover to become active
+console.log("Nonce:", state.nonce);
+```
+
+### ConfidentialState shape
+
+```typescript
+interface ConfidentialState {
+  balance: bigint;  // active (spendable)
+  pending: bigint;  // pending (activate via rollover)
+  nonce: bigint;
+}
+```
+
+### Unit conversion (optional)
+
+Convert between public ERC20 amounts and confidential (Tongo) units when you need to display or validate amounts:
+
+```typescript
+const confidentialUnits = await confidential.toConfidentialUnits(Amount.parse("100", USDC));
+const publicUnits = await confidential.toPublicUnits(confidentialUnits);
+```
+
+## Funding a confidential account
+
+Convert public ERC20 into confidential balance. The tx builder calls the provider's `fund()` method, which returns the approve call (if needed) and the fund call.
+
+```typescript
+const tx = await wallet
+  .tx()
+  .confidentialFund(confidential, {
+    amount: Amount.parse("100", USDC),
+    sender: wallet.address,
+  })
+  .send();
+await tx.wait();
+```
+
+Optional: pay a fee to the sender (e.g. for relayed transactions):
+
+```typescript
+.confidentialFund(confidential, {
+  amount: Amount.parse("100", USDC),
+  sender: wallet.address,
+  feeTo: feeAmount,
+})
+```
+
+## Confidential transfer
+
+Send from this confidential account to another confidential account. The recipient is identified by their `recipientId` (public key).
+
+```typescript
+const tx = await wallet
+  .tx()
+  .confidentialTransfer(confidential, {
+    amount: Amount.parse("50", USDC),
+    to: recipientConfidential.recipientId,  // { x, y }
+    sender: wallet.address,
+  })
+  .send();
+await tx.wait();
+```
+
+The transfer generates ZK proofs locally and submits the call on-chain; amounts are not visible on the public ledger.
+
+## Withdrawing to a public address
+
+Convert confidential balance back to ERC20 and send to a Starknet address.
+
+```typescript
+const tx = await wallet
+  .tx()
+  .confidentialWithdraw(confidential, {
+    amount: Amount.parse("25", USDC),
+    to: wallet.address,  // or any Starknet address
+    sender: wallet.address,
+  })
+  .send();
+await tx.wait();
+```
+
+## Tongo-specific: ragequit and rollover
+
+**Ragequit** — Exit the entire confidential balance to a public address in one call. Use when the user wants to close the confidential account or move everything on-chain.
+
+```typescript
+const calls = await confidential.ragequit({
+  to: wallet.address,
+  sender: wallet.address,
+});
+
+const tx = await wallet.tx().add(...calls).send();
+await tx.wait();
+```
+
+**Rollover** — Move pending balance (from received confidential transfers) into the active balance so it can be spent.
+
+```typescript
+const calls = await confidential.rollover({ sender: wallet.address });
+const tx = await wallet.tx().add(...calls).send();
+await tx.wait();
+```
+
+## Batching with the transaction builder
+
+You can combine confidential operations with transfers, approvals, or other builder methods:
+
+```typescript
+const tx = await wallet
+  .tx()
+  .confidentialFund(confidential, { amount: Amount.parse("100", USDC), sender: wallet.address })
+  .transfer(USDC, [{ to: anotherAddress, amount: Amount.parse("10", USDC) }])
+  .send();
+await tx.wait();
+```
+
+**Builder methods for confidential:**
+
+| Method | Description |
+|--------|-------------|
+| `.confidentialFund(confidential, details)` | Fund confidential account (includes approve when needed) |
+| `.confidentialTransfer(confidential, details)` | Transfer to another confidential account |
+| `.confidentialWithdraw(confidential, details)` | Withdraw to a public Starknet address |
+
+Ragequit and rollover are not on the builder; use `confidential.ragequit(...)` / `confidential.rollover(...)` and add the returned calls with `.add(...calls)`.
+
+## Best practices
+
+1. **Keep the Tongo key separate** from the Starknet wallet key; treat it as sensitive user data and protect it accordingly.
+2. **Use the same Tongo contract address** as the rest of your app (same chain) so all operations are consistent.
+3. **Check state before withdraw** — ensure `state.balance` (and pending if needed) is sufficient; use `toPublicUnits` / `toConfidentialUnits` if you need to show human-readable amounts.
+
+## Troubleshooting
+
+### Wrong contract or chain
+
+Ensure `contractAddress` matches the [Tongo](https://www.tongo.cash/) deployment for the wallet's chain. A mismatch can lead to failed transactions or wrong state.
+
+### Fund fails or "approve" errors
+
+The provider includes the approve call in `fund()`; if the token or spender is non-standard, you may need to approve manually before calling the builder. Verify the token is the one supported by the Tongo contract.
+
+### Recipient format for confidential transfer
+
+`to` must be a `ConfidentialRecipient` — the object `{ x, y }` from the recipient's `confidential.recipientId`. Do not pass a Starknet address; use the recipient's Tongo public key.
+
+## Next steps
+
+- [Bitcoin, Stablecoins, and Tokens](/build/consumer-app-sdk/erc20) — Token presets and amounts
+- [Transactions](/build/consumer-app-sdk/transactions) — Execution options
+- [Tx Builder](/build/consumer-app-sdk/tx-builder) — Batching and builder method list
+- [API Reference](/build/consumer-app-sdk/api-reference) — Full method signatures
