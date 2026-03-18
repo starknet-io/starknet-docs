@@ -23,6 +23,7 @@ new StarkZap(config: SDKConfig): StarkZap
 | `onboard(options)`           | `Promise<OnboardResult>`   | Onboard with strategy selection      |
 | `stakingTokens()`            | `Promise<Token[]>`         | Get stakeable tokens                 |
 | `getStakerPools(staker)`     | `Promise<Pool[]>`          | Get validator's delegation pools     |
+| `getBridgingTokens(chain?)`  | `Promise<BridgeToken[]>`   | Get bridgeable tokens by source chain |
 | `getProvider()`              | `RpcProvider`              | Get the underlying RPC provider      |
 
 ### Configuration
@@ -35,6 +36,7 @@ interface SDKConfig {
   paymaster?: { nodeUrl: string };
   explorer?: ExplorerConfig;
   staking?: StakingConfig;
+  bridging?: BridgingConfig;
 }
 ```
 
@@ -76,6 +78,10 @@ The wallet interface provides access to account operations, transactions, and to
 | `getChainId()`                             | `ChainId`                      | Get chain ID                 |
 | `getFeeMode()`                             | `FeeMode`                      | Get default fee mode         |
 | `disconnect()`                             | `Promise<void>`                | Disconnect wallet            |
+| `deposit(recipient, amount, token, externalWallet, options?)` | `Promise<{ hash: string }>` | Bridge deposit from external chain |
+| `getDepositBalance(token, externalWallet)` | `Promise<Amount>`              | Get source-chain available balance |
+| `getAllowance(token, externalWallet)`      | `Promise<Amount \| null>`      | Get source-chain allowance (if applicable) |
+| `getDepositFeeEstimate(token, externalWallet, options?)` | `Promise<BridgeDepositFeeEstimation>` | Estimate bridge route fees |
 
 ## Tx
 
@@ -257,6 +263,66 @@ interface Token {
   symbol: string;
   metadata?: { logoUrl?: URL };
 }
+```
+
+### BridgingConfig
+
+```typescript
+interface BridgingConfig {
+  layerZeroApiKey?: string; // required for OFT/OFT-migrated routes
+  ethereumRpcUrl?: string;
+  solanaRpcUrl?: string;
+}
+```
+
+### ExternalChain
+
+```typescript
+enum ExternalChain {
+  ETHEREUM = "ethereum",
+  SOLANA = "solana",
+}
+```
+
+### BridgeToken
+
+```typescript
+interface BridgeToken {
+  id: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  chain: ExternalChain;
+  protocol: Protocol;
+  address: ExternalAddress;      // source-chain token
+  bridgeAddress: ExternalAddress; // source-chain bridge
+  starknetAddress: Address;      // destination token on Starknet
+  starknetBridge: Address;       // destination bridge contract
+}
+```
+
+### Connected External Wallets
+
+```typescript
+ConnectedEthereumWallet.from(
+  {
+    chain: ExternalChain.ETHEREUM,
+    provider: eip1193Provider,
+    address: "0x...",
+    chainId: "0x1",
+  },
+  starknetChainId
+);
+
+ConnectedSolanaWallet.from(
+  {
+    chain: ExternalChain.SOLANA,
+    provider: solanaProvider,
+    address: "So1...",
+    chainId: "<solana-genesis-hash>",
+  },
+  starknetChainId
+);
 ```
 
 ### Pool

@@ -105,6 +105,48 @@ app.post("/api/wallet/sign", async (req, res) => {
 3. Verify network configuration matches Cartridge's supported networks
 4. Check browser console for Cartridge-specific errors
 
+### Bridge Token Loading Fails
+
+**Problem:** `sdk.getBridgingTokens()` throws an error or returns no tokens.
+
+**Solution:**
+1. Verify the SDK chain config is correct (`SN_MAIN` vs `SN_SEPOLIA`) and matches your intended environment
+2. Confirm network access to the token API endpoint used by the SDK
+3. Install required optional deps for the chains you use:
+   - Ethereum routes: `ethers`
+   - Solana routes: `@solana/web3.js` (and Hyperlane packages for Solana bridge operations)
+
+```bash
+npm install ethers @solana/web3.js @hyperlane-xyz/sdk @hyperlane-xyz/registry @hyperlane-xyz/utils
+```
+
+### OFT Bridge Fails with LayerZero API Key Error
+
+**Problem:** You see an error like:
+`OFT bridging requires a LayerZero API key. Set "bridging.layerZeroApiKey"...`
+
+**Solution:**
+1. Set `bridging.layerZeroApiKey` in `new StarkZap({ ... })`
+2. Use a mainnet route for OFT/OFT-migrated bridge flows
+
+```typescript
+const sdk = new StarkZap({
+  network: "mainnet",
+  bridging: {
+    layerZeroApiKey: "YOUR_LAYERZERO_API_KEY",
+  },
+});
+```
+
+### Bridge Deposit Fails with Chain Mismatch
+
+**Problem:** Deposit fails with errors indicating token chain and external wallet chain do not match.
+
+**Solution:**
+1. Ensure the selected `BridgeToken.chain` matches the connected external wallet type
+2. Ensure external wallet network and Starknet network pairing is valid (mainnet with mainnet, testnet with testnet)
+3. Recreate connected external wallets with `ConnectedEthereumWallet.from(...)` / `ConnectedSolanaWallet.from(...)` after network switch
+
 ### Amount Arithmetic Errors
 
 **Problem:** Getting errors when performing arithmetic on amounts.
