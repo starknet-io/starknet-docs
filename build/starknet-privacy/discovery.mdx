@@ -1,0 +1,39 @@
+---
+title: Channels, subchannels, and note discovery
+description: Location-indexed discovery that scales with recipient activity, not global pool volume
+icon: magnifying-glass
+---
+
+In systems like Zcash, recipients may need to **trial-decrypt** many transactions. Starknet Privacy uses **location-indexed** discovery: ciphertexts sit in **storage slots derived from shared secrets**, so recipients know **where** to read.
+
+## Channels
+
+A **channel** is a unidirectional link **sender → recipient**, created on the **first** private send to that recipient.
+
+- **Channel key** (c) is derived from sender address, sender’s **private viewing key**, recipient address, and recipient’s **public viewing key**.
+- On first send, the sender appends **encrypted** (c, sender addr) to a list keyed by **recipient address** — so the **recipient address** appears on-chain at channel open (privacy–UX tradeoff; subsequent sends on the same channel don’t repeat this).
+
+**Channel markers** (write-once) prevent duplicate channels for the same pair and gate subchannel creation.
+
+## Subchannels
+
+Within a channel, **subchannels** group notes by **token**. Opening a subchannel for a token avoids opening a second channel when paying the same person another asset—important so “self-channel + Bob channel” in one tx don’t get linked incorrectly.
+
+## Sequential indices
+
+**Outgoing channels**, **subchannels**, and **notes** use **dense sequential indices** (0, 1, 2, …). The contract enforces:
+
+- Target slot **empty** before write.
+- For index i &gt; 0, slot i−1 **non-empty**.
+
+That guarantees a **single frontier**: wallets can scan until an empty slot and stop—**completeness** for both users and the auditor’s trace (no skipped indices to hide notes).
+
+## Discovery algorithm (recipient)
+
+1. Scan `channels[recipient][j]` until empty; decrypt each entry → channel key + sender.
+2. For each channel, scan subchannels by index until empty; decrypt → token.
+3. For each (c, token), scan note indices i; read ciphertext; decrypt amount; check nullifier set for spent status.
+
+Work is **O(your channels + your subchannels + your notes)**, not O(all pool activity).
+
+Details: [IACR 2026/474](https://eprint.iacr.org/2026/474.pdf) §5.

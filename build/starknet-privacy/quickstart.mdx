@@ -1,0 +1,73 @@
+---
+title: Quickstart
+description: End-to-end flow from local devnet to proof-backed pool transactions
+icon: play
+---
+
+<Note>
+Exact script names, package paths, and CLI flags live in the [**starknet-privacy README**](https://github.com/starkware-libs/starknet-privacy). The flow below matches the **protocol shape** from [Scalable Compliant Privacy on Starknet](https://eprint.iacr.org/2026/474.pdf); substitute commands from the repo where needed.
+</Note>
+
+## Prerequisites
+
+Complete [Install and build](/build/starknet-privacy/installation) (Scarb, Foundry, Devnet, and Rust if the prover is in-repo).
+
+## 1. Start a local Starknet node
+
+In a separate terminal:
+
+```bash
+starknet-devnet --seed 0
+```
+
+Use the host/port and version flags required by the README if they differ.
+
+## 2. Build contracts
+
+```bash
+cd starknet-privacy   # your clone path
+scarb build
+```
+
+## 3. Declare and deploy the privacy pool
+
+The README should list account setup (`sncast account create` or devnet predeployed accounts) and declare/deploy commands. Typical pattern:
+
+```bash
+# Example pattern — replace with README values (class hash, constructor args, etc.)
+sncast declare --contract-name PrivacyPool
+sncast deploy --class-hash <CLASS_HASH> --constructor-calldata <CALLDATA>
+```
+
+## 4. Register a viewing key (first on-chain step)
+
+Users must **SetViewingKey** before other actions. The repo may expose a script or test that:
+
+1. Derives viewing key material from the account (or test keys).
+2. Builds client-side actions and generates a **ZK proof**.
+3. Submits the transaction (directly or via paymaster flow).
+
+Follow the README’s **first transaction** or **e2e** example.
+
+## 5. Deposit → private transfer (conceptual sequence)
+
+1. **Deposit** public ERC-20 into the pool (paired with note creation in the proof).
+2. **OpenChannel** / **OpenSubchannel** if sending to a recipient or token lane for the first time.
+3. **UseNote** / **CreateNote** to move value; **Withdraw** to paymaster if using relayed submission.
+
+Run the repository’s **demo script**, **integration test**, or **binary** that performs this chain—for example:
+
+```bash
+snforge test -- e2e
+# or, if documented:
+# cargo run -p starknet-privacy-cli -- --help
+```
+
+## 6. Verify behavior
+
+- Pool contract storage reflects new notes / nullifiers (via explorer or `sncast call`).
+- Events match the compliance hooks described in [Compliance](/build/starknet-privacy/compliance) for deposits / withdraws / nullifiers.
+
+---
+
+**Learn more:** [Transaction flow](/build/starknet-privacy/transaction-flow) · [Proving](/build/starknet-privacy/proving) · [Troubleshooting](/build/starknet-privacy/troubleshooting)

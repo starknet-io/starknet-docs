@@ -1,0 +1,42 @@
+---
+title: Transaction flow
+description: Client-side vs server-side actions, ordering, deposits, withdrawals, and balance accounting
+icon: arrows-repeat
+---
+
+## Pipeline
+
+1. User builds a list of **client-side actions**.
+2. User runs the **prover** to obtain a ZK proof that:
+   - The user’s **Starknet account** signed the action list.
+   - Actions are valid (notes, nullifiers, encryption, **per-token temporary balance** ≥ 0 and **zero at end**).
+3. User sends proof + **compiled server-side actions** to a **paymaster** (optional) or broadcasts.
+4. **Pool contract** verifies the proof and executes server-side actions.
+
+## Client-side actions (examples)
+
+- **SetViewingKey** — once per user; stores public key + auditor-encrypted private key.
+- **OpenChannel** / **OpenSubchannel** — discovery scaffolding.
+- **CreateNote** / **UseNote** — create encrypted note or publish nullifier.
+- **Deposit** / **Withdraw** — ERC-20 into/out of pool (often paired with note create/spend).
+- **Invoke** — call external contract (e.g. swap helper); runs after withdraw in ordering for DeFi flows.
+
+## Server-side primitives
+
+- **WriteOnce** — write storage if currently zero (notes, nullifiers, markers).
+- **AppendChannel** — append encrypted channel blob to recipient list.
+- **TransferFrom pool user** / **TransferTo** — deposits and withdrawals.
+
+## Action ordering
+
+Fixed order reduces attack surface:
+
+`SetViewingKey → OpenChannel → OpenSubchannel → Deposit → UseNote → CreateNote → Withdraw`
+
+(`Invoke` follows **Withdraw** where used—see paper §10.)
+
+## Per-token balance
+
+Within one transaction, a **temporary balance** per token tracks: deposits and spent notes **increase** it; new notes and withdrawals **decrease** it. It must never go negative and must end at **zero** so all tokens are accounted for.
+
+Next: [Proving](/build/starknet-privacy/proving), [Paymasters](/build/starknet-privacy/paymasters).

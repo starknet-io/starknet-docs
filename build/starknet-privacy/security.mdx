@@ -1,0 +1,27 @@
+---
+title: Privacy, security, and limitations
+description: Guarantees, fund safety, and known privacy caveats for Starknet Privacy
+icon: helmet-safety
+---
+
+## Privacy (informal)
+
+| Topic | What leaks / what’s protected |
+| ----- | ------------------------------ |
+| **Sender** | External observers see **paymaster** as sender; paymaster may see IP. |
+| **Receiver** | Hidden **except** when a **new channel** is opened (recipient address on-chain once per sender–recipient pair). |
+| **Amounts** | Encrypted in normal notes; **deposits**, **withdrawals**, and **open notes** expose amounts (and tokens) as designed. |
+| **Auditor** | Can decrypt registered users’ viewing keys when authorized; cannot sign spends. |
+
+## Fund security
+
+- **Double-spend** — nullifiers are unique and recorded; proof ties nullifier to existing note.
+- **Unauthorized spend** — requires valid **account signature** in proof; auditor has viewing key only, not signing authority.
+
+## Limitations
+
+1. **New channel + deposit/withdraw in same tx or tight timing** — can link recipient to public address activity; wallets should separate these flows when possible.
+2. **Deposit/withdraw heuristics** — distinctive amounts or immediate in/out weaken privacy (common to all pools).
+3. **Reverted txs** — if a note slot was touched then reverted, **reusing the same note id** can link txs; mitigations include burning dummy writes to exposed ids (paper §11.3.3).
+
+For the full analysis see [IACR 2026/474](https://eprint.iacr.org/2026/474.pdf) §11.
