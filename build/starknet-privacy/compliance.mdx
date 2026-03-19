@@ -1,0 +1,36 @@
+---
+title: Compliance framework
+description: Auditing entity, viewing key escrow, and forward/backward tracing
+icon: scale-balanced
+---
+
+Privacy without accountability is hard to deploy in regulated contexts. The protocol bakes in **selective disclosure** to a designated **auditing entity**: only the user under a lawful request is traceable; everyone else remains private.
+
+## Registration
+
+Users encrypt their **private viewing key** to the auditor’s **public key** and store it on-chain. The auditor can decrypt **only** subjects of a lawful request.
+
+## What the auditor can do
+
+With a user’s viewing key, the auditor can:
+
+- Scan **incoming channels** (who sent to this user).
+- Scan **outgoing channels** (where this user sent).
+- Decrypt **note amounts** along those graphs and follow **nullifiers** / **withdrawals** to trace funds.
+
+Other users’ keys are not decrypted.
+
+## On-chain transparency hooks
+
+The proof enforces emission of events useful for tracing, for example:
+
+- **Registration** — encrypted viewing key (+ event).
+- **Deposit** — depositor address in clear.
+- **Withdraw** — encryption of user address to auditor.
+- **UseNote** — nullifier published.
+
+Together with balance conservation and sequential discovery, this supports **forward tracing** (from deposit to current notes or withdrawals) and **backward tracing** (from withdrawal toward deposits). See Theorem 3 in [IACR 2026/474](https://eprint.iacr.org/2026/474.pdf) §9.
+
+## Threshold auditing
+
+The paper notes **threshold encryption** for the auditor key so no single party can decrypt arbitrary users’ keys.
