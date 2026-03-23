@@ -13,14 +13,44 @@ description: "Use Cartridge Controller with network-safe session configuration"
 - **Passkey Authentication**: Biometric authentication (Face ID, Touch ID, Windows Hello)
 - **Policy-Based Access**: Define policies for what contracts/methods can be called
 - **Delegated Transactions**: Users can approve transactions without managing keys directly
-- **Built-in Paymaster**: **Automatic gasless transactions** - Cartridge sponsors (pays for) all transaction fees automatically
+- **Built-in Paymaster**: **Policy-bound sponsorship** — Cartridge can sponsor fees for calls that match **approved policies** (and eligible session / SNIP-9 paths), not every arbitrary transaction.
 
-Starkzap integrates seamlessly with Cartridge Controller, making it perfect for gaming applications where you want seamless, gasless transactions.
+Starkzap integrates with Cartridge for gaming-style flows: **web** uses `@cartridge/controller`; **React Native / Expo** uses `@starkzap/native` with a **native session adapter** (register it before connecting) when your package version supports native Cartridge.
+
+## StarkZap integration
+
+When StarkZap connects Cartridge, it forwards your SDK network configuration (for example `rpcUrl` and `chainId`) into the Cartridge flow so you typically configure the network once on `new StarkZap(...)`.
+
+<Warning>
+  **Network alignment is not auto-validated.** You must use the same `rpcUrl` / `chainId` (or `network` preset) you intend the Cartridge session and paymaster to target. The SDK forwards these values but does **not** verify that some other tab, deep link, or preset was opened on a different chain. Mismatches often show up as SNIP-9 or paymaster errors.
+</Warning>
+
+You do not need to pass chain settings again when calling `sdk.connectCartridge()` or `sdk.onboard({ strategy: "cartridge" })` on the same `StarkZap` instance.
+
+## Web (browser) vs React Native
+
+| | **Web** | **React Native / Expo** |
+| --- | --- | --- |
+| Package | `starkzap` + `@cartridge/controller` | `@starkzap/native` (depends on `starkzap`) |
+| UX | Controller popup / embedded flow | In-app browser / deep link **session** flow |
+| Before connect | Install `@cartridge/controller` | [React Native setup](/build/starkzap/react-native): Metro `withStarkzap`, optional `import "@starkzap/native/polyfills"` first, **register** the native Cartridge adapter when your SDK version exports it |
+| Import | `import { StarkZap } from "starkzap"` | `import { StarkZap } from "@starkzap/native"` |
+
+## React Native / Expo (native Cartridge session)
+
+1. Follow [React Native Integration](/build/starkzap/react-native) for Metro (`withStarkzap`) and dependencies.
+2. Optionally add `import "@starkzap/native/polyfills"` as the **first** line in your entrypoint if you are not relying solely on Metro-injected polyfills.
+3. **Register** the native Cartridge adapter once at startup before `connectCartridge` / `onboard({ strategy: "cartridge" })` (for example `registerCartridgeTsAdapter` / `registerCartridgeNativeAdapter` — exact exports depend on your `@starkzap/native` version).
+4. Pass **policies** and/or a Cartridge **preset** that resolves policies for your chain.
+5. **Onboarding:** native Cartridge often defaults to **`deploy: "never"`** or recommends it when deployment differs from the browser Controller; pass `deploy: "if_needed"` explicitly if you need core-style deployment checks.
+6. **Sponsored execution** on native is tied to the session wallet (commonly **`feeMode: "sponsored"`** only).
+
+See the `examples/tic-tac-toe` app in the [Starkzap repository](https://github.com/keep-starknet-strange/starkzap) when available for a full Expo reference.
 
 ## Why Use Cartridge?
 
 - ✅ **Perfect for Gaming**: Specialized for gaming applications with session-based transactions
-- ✅ **Automatic Gasless Transactions**: Built-in paymaster sponsors all transactions—users never pay gas fees
+- ✅ **Gasless-style UX for approved calls**: Built-in paymaster can sponsor **policy-matching** transactions after users approve policies
 - ✅ **Better UX**: No seed phrases or private key management
 - ✅ **Social Login**: Users sign in with familiar accounts (Google, Twitter, etc.)
 - ✅ **Biometric Auth**: Face ID, Touch ID, Windows Hello support
@@ -28,14 +58,14 @@ Starkzap integrates seamlessly with Cartridge Controller, making it perfect for 
 - ✅ **Session Management**: Users approve policies once, then transactions happen automatically
 
 <Info>
-  **Key Value Proposition:** Unlike Privy or Private Key strategies (which require separate AVNU Paymaster configuration), Cartridge includes a built-in paymaster that automatically sponsors all transactions. This means users never see gas fees or need to approve individual transactions—perfect for gaming where you want seamless, uninterrupted gameplay.
+  **Key value:** Unlike Privy or private-key flows (which often use AVNU Paymaster for sponsorship), Cartridge can sponsor **policy-approved** calls through its paymaster/session stack—so matching game or token operations stay gasless after users approve policies. Other calls may still require user fees or extra steps.
 </Info>
 
-## Setup
+## Setup (web browser)
 
 ### 1. Install Cartridge Controller
 
-The Cartridge Controller is included as a peer dependency of Starkzap:
+For **web**, install the Controller peer used by `starkzap`:
 
 ```bash
 npm install @cartridge/controller
@@ -49,7 +79,7 @@ import { StarkZap, OnboardStrategy } from "starkzap";
 const sdk = new StarkZap({ network: "mainnet" });
 ```
 
-## Integration
+## Integration (web)
 
 ### Basic Connection
 
@@ -192,7 +222,7 @@ await tx.wait();
 console.log("Transfer complete! (Gas paid by Cartridge)");
 ```
 
-## User Flow
+## User Flow (web)
 
 1. **User clicks "Connect with Cartridge"**
 2. **Cartridge popup appears** with social login options

@@ -1,0 +1,100 @@
+---
+title: React Native Integration
+description: "Set up StarkZap in React Native/Expo projects with @starkzap/native and Metro configuration"
+icon: mobile-screen-button
+---
+
+## Overview
+
+Use `@starkzap/native` when integrating StarkZap in React Native/Expo apps.
+It re-exports the SDK API and adds a Metro helper (`@starkzap/native/metro`) for runtime polyfills and resolver compatibility.
+
+## 1) Install Packages
+
+Install the React Native package and required runtime peers:
+
+```bash
+npm install @starkzap/native
+npm install react-native-get-random-values fast-text-encoding buffer @ethersproject/shims
+```
+
+Optional dependencies by feature:
+
+```bash
+# Ethereum bridge routes
+npm install ethers
+
+# Solana bridge routes
+npm install @solana/web3.js @hyperlane-xyz/sdk @hyperlane-xyz/registry @hyperlane-xyz/utils
+```
+
+## 2) Configure Metro
+
+Set up Metro once and wrap your config with `withStarkzap`:
+
+```javascript
+// metro.config.js
+const { getDefaultConfig } = require("expo/metro-config");
+const { withStarkzap } = require("@starkzap/native/metro");
+
+const config = getDefaultConfig(__dirname);
+
+// Optional: add your own resolver overrides before wrapping.
+module.exports = withStarkzap(config);
+```
+
+<Info>
+  `withStarkzap` injects required polyfills and resolver handling for StarkZap dependencies. You can rely on Metro alone, or add `import "@starkzap/native/polyfills"` as the **first** line in your entry file if you need explicit polyfills before other imports.
+</Info>
+
+## 3) Initialize the SDK
+
+Import from `@starkzap/native` and use the same onboarding APIs as web:
+
+```typescript
+import { StarkZap, OnboardStrategy, StarkSigner } from "@starkzap/native";
+
+const sdk = new StarkZap({ network: "sepolia" });
+
+const { wallet } = await sdk.onboard({
+  strategy: OnboardStrategy.Signer,
+  account: { signer: new StarkSigner("0xYOUR_PRIVATE_KEY") },
+  deploy: "if_needed",
+});
+```
+
+For Privy-based onboarding, see [Privy Integration](/build/starkzap/integrations/privy).
+
+## 4) Cartridge (native session)
+
+When your `@starkzap/native` version supports it, you can onboard with **Cartridge** using an in-app browser / deep-link **session** flow (not the web `@cartridge/controller` popup).
+
+1. **Register** the native Cartridge adapter **once** at app startup, before `connectCartridge()` or `onboard({ strategy: OnboardStrategy.Cartridge })`. Exact export names depend on your SDK version (for example `registerCartridgeTsAdapter` / `registerCartridgeNativeAdapter`).
+2. Pass **policies** and/or a Cartridge **preset** that resolves policies for your chain (same concepts as [Cartridge Controller](/build/starkzap/integrations/cartridge-controller)).
+3. Align `rpcUrl` / `chainId` (or `network`) on `new StarkZap({ ... })` with the session and paymaster you target.
+4. **Deploy:** native Cartridge flows often default to **`deploy: "never"`** or recommend it when deployment semantics differ from the browser Controller. Pass **`deploy: "if_needed"`** explicitly if you need core-style deployment checks.
+5. **Fees:** sponsored execution on native is tied to the session wallet (commonly **`feeMode: "sponsored"`** only for matching policy paths).
+
+See [Cartridge Controller](/build/starkzap/integrations/cartridge-controller) for policy and paymaster behavior, and the `examples/tic-tac-toe` app in the [Starkzap repository](https://github.com/keep-starknet-strange/starkzap) when available for a full Expo reference.
+
+## 5) External Wallet Providers (Optional)
+
+If your app uses WalletConnect/Reown for external wallets, initialize its RN compatibility layer at app startup:
+
+```typescript
+import "@walletconnect/react-native-compat";
+```
+
+Then pass the resulting providers into StarkZap external wallet adapters as described in [Bridging](/build/starkzap/bridging#connect-external-wallets).
+
+<Warning>
+  If `connectCartridge` or Cartridge onboarding throws **not implemented**, your installed `@starkzap/native` build does not ship the native adapter yet — upgrade to a version that documents native Cartridge, or use **Signer** / **Privy** until then.
+</Warning>
+
+## Next Steps
+
+- [Quick Start](/build/starkzap/quick-start)
+- [Connecting Wallets](/build/starkzap/connecting-wallets)
+- [Bridging](/build/starkzap/bridging)
+- [Troubleshooting](/build/starkzap/troubleshooting)
+- [Examples](/build/starkzap/examples)

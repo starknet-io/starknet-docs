@@ -19,10 +19,11 @@ new StarkZap(config: SDKConfig): StarkZap
 | Method                       | Returns                    | Description                          |
 | ---------------------------- | -------------------------- | ------------------------------------ |
 | `connectWallet(options)`     | `Promise<Wallet>`          | Connect with signer + account preset |
-| `connectCartridge(options?)` | `Promise<CartridgeWallet>` | Connect via Cartridge Controller     |
+| `connectCartridge(options?)` | `Promise<CartridgeWallet>` | Connect via Cartridge (**web:** Controller popup; **RN:** native session when supported — register adapter first) |
 | `onboard(options)`           | `Promise<OnboardResult>`   | Onboard with strategy selection      |
 | `stakingTokens()`            | `Promise<Token[]>`         | Get stakeable tokens                 |
 | `getStakerPools(staker)`     | `Promise<Pool[]>`          | Get validator's delegation pools     |
+| `getBridgingTokens(chain?)`  | `Promise<BridgeToken[]>`   | Get bridgeable tokens by source chain |
 | `getProvider()`              | `RpcProvider`              | Get the underlying RPC provider      |
 
 ### Configuration
@@ -35,6 +36,7 @@ interface SDKConfig {
   paymaster?: { nodeUrl: string };
   explorer?: ExplorerConfig;
   staking?: StakingConfig;
+  bridging?: BridgingConfig;
 }
 ```
 
@@ -76,6 +78,10 @@ The wallet interface provides access to account operations, transactions, and to
 | `getChainId()`                             | `ChainId`                      | Get chain ID                 |
 | `getFeeMode()`                             | `FeeMode`                      | Get default fee mode         |
 | `disconnect()`                             | `Promise<void>`                | Disconnect wallet            |
+| `deposit(recipient, amount, token, externalWallet, options?)` | `Promise<{ hash: string }>` | Bridge deposit from external chain |
+| `getDepositBalance(token, externalWallet)` | `Promise<Amount>`              | Get source-chain available balance |
+| `getAllowance(token, externalWallet)`      | `Promise<Amount \| null>`      | Get source-chain allowance (if applicable) |
+| `getDepositFeeEstimate(token, externalWallet, options?)` | `Promise<BridgeDepositFeeEstimation>` | Estimate bridge route fees |
 
 ## Tx
 
@@ -113,6 +119,16 @@ Fluent API for building and executing batched transactions.
 | `.claimPoolRewards(pool)`          | `TxBuilder`                | Claim staking rewards                          |
 | `.exitPoolIntent(pool, amount)`    | `TxBuilder`                | Start exit process                             |
 | `.exitPool(pool)`                  | `TxBuilder`                | Complete exit after window                     |
+| `.lendDeposit(request)`            | `TxBuilder`                | Lending deposit (supply)                       |
+| `.lendWithdraw(request)`           | `TxBuilder`                | Lending withdraw                               |
+| `.lendWithdrawMax(request)`        | `TxBuilder`                | Lending max withdraw                           |
+| `.lendBorrow(request)`             | `TxBuilder`                | Lending borrow                                 |
+| `.lendRepay(request)`              | `TxBuilder`                | Lending repay                                  |
+| `.dcaCreate(request)`              | `TxBuilder`                | Create a DCA (recurring buy) order             |
+| `.dcaCancel(request)`              | `TxBuilder`                | Cancel a DCA order                             |
+| `.confidentialFund(confidential, details)` | `TxBuilder`        | Fund confidential account                      |
+| `.confidentialTransfer(confidential, details)` | `TxBuilder`   | Confidential transfer                          |
+| `.confidentialWithdraw(confidential, details)` | `TxBuilder`   | Withdraw from confidential to public address   |
 | `.calls()`                         | `Promise<Call[]>`          | Resolve all calls without sending              |
 | `.estimateFee()`                   | `Promise<EstimateFeeResponse>` | Estimate gas cost                              |
 | `.preflight()`                     | `Promise<PreflightResult>` | Simulate the transaction                       |
@@ -169,7 +185,7 @@ new PrivySigner(config: {
   walletId: string;
   publicKey: string;
   serverUrl?: string;
-  rawSign?: (walletId: string, hash: string) => Promise<Signature>;
+  rawSign?: (walletId: string, hash: string) => Promise<string>;
 }): PrivySigner
 ```
 
@@ -257,6 +273,66 @@ interface Token {
   symbol: string;
   metadata?: { logoUrl?: URL };
 }
+```
+
+### BridgingConfig
+
+```typescript
+interface BridgingConfig {
+  layerZeroApiKey?: string; // required for OFT/OFT-migrated routes
+  ethereumRpcUrl?: string;
+  solanaRpcUrl?: string;
+}
+```
+
+### ExternalChain
+
+```typescript
+enum ExternalChain {
+  ETHEREUM = "ethereum",
+  SOLANA = "solana",
+}
+```
+
+### BridgeToken
+
+```typescript
+interface BridgeToken {
+  id: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  chain: ExternalChain;
+  protocol: Protocol;
+  address: ExternalAddress;      // source-chain token
+  bridgeAddress: ExternalAddress; // source-chain bridge
+  starknetAddress: Address;      // destination token on Starknet
+  starknetBridge: Address;       // destination bridge contract
+}
+```
+
+### Connected External Wallets
+
+```typescript
+ConnectedEthereumWallet.from(
+  {
+    chain: ExternalChain.ETHEREUM,
+    provider: eip1193Provider,
+    address: "0x...",
+    chainId: "0x1",
+  },
+  starknetChainId
+);
+
+ConnectedSolanaWallet.from(
+  {
+    chain: ExternalChain.SOLANA,
+    provider: solanaProvider,
+    address: "So1...",
+    chainId: "<solana-genesis-hash>",
+  },
+  starknetChainId
+);
 ```
 
 ### Pool

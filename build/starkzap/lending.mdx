@@ -1,0 +1,283 @@
+---
+title: "Lending & Borrowing"
+description: "Supply, borrow, withdraw, and repay with Vesu—discover markets, manage positions, and check collateral health"
+icon: "landmark"
+---
+
+![Lending and Borrowing hero](/assets/starkzap/lending-borrowing.png)
+
+## Overview
+
+Starkzap supports lending and borrowing through [**Vesu**](https://vesu.xyz/lite/markets). Users can supply assets (deposit), borrow against collateral, repay debt, and withdraw supplied assets. 
+
+**What users can do with lending:**
+
+- 💰 **Supply assets** - Deposit tokens into lending pools and earn interest (supply APY)
+- 💳 **Borrow** - Use supplied collateral to borrow other assets
+- 💵 **Repay** - Pay down debt; optionally withdraw collateral in the same flow
+- 📤 **Withdraw** - Withdraw supplied tokens (or max withdraw in one call)
+- 📊 **Monitor positions** - Query position size, debt, and collateralization health
+
+<Info>
+  The default lending provider is [Vesu](https://vesu.xyz/lite/markets). It is registered automatically when the wallet is created. You can register additional providers or set a different default via `wallet.lending().registerProvider()` and `setDefaultProvider()`.
+</Info>
+
+## Configuration
+
+No extra configuration is required for [Vesu](https://vesu.xyz/lite/markets) on mainnet or Sepolia. The wallet's `lending()` client uses the connected chain:
+
+```typescript
+import { StarkZap } from "starkzap";
+
+const sdk = new StarkZap({ network: "mainnet" });
+const wallet = await sdk.connectWallet({ account: { signer, accountClass } });
+
+// Lending client uses wallet chain and address
+const lending = wallet.lending();
+```
+
+Optional: register another provider or set default:
+
+```typescript
+lending.registerProvider(myLendingProvider, true); // true = make default
+lending.setDefaultProvider("vesu");
+```
+
+## Discovering markets
+
+Fetch available lending markets for the wallet's chain:
+
+```typescript
+const markets = await wallet.lending().getMarkets();
+
+for (const market of markets) {
+  console.log(market.asset.symbol, market.poolAddress, market.vTokenAddress);
+  console.log("Can be borrowed:", market.canBeBorrowed);
+}
+```
+
+### LendingMarket shape
+
+```typescript
+interface LendingMarket {
+  protocol: string;
+  poolAddress: Address;
+  asset: Token;
+  vTokenAddress: Address;
+  vTokenSymbol?: string;
+  canBeBorrowed?: boolean;
+}
+```
+
+Use these markets (and their `poolAddress` / `asset` / `vTokenAddress`) when calling deposit, withdraw, borrow, and repay with the same token/pool.
+
+## Depositing
+
+Supply tokens into a lending pool. The provider includes the approval call when building the transaction.
+
+```typescript
+const tx = await wallet.lending().deposit({
+  token: USDC,
+  amount: Amount.parse("1000", USDC),
+  // receiver?: Address — defaults to wallet address
+});
+await tx.wait();
+```
+
+With execution options (e.g. sponsored fees):
+
+```typescript
+const tx = await wallet.lending().deposit(
+  { token: USDC, amount: Amount.parse("1000", USDC) },
+  { feeMode: "sponsored" }
+);
+await tx.wait();
+```
+
+## Withdrawing
+
+Withdraw a specific amount of supplied tokens:
+
+```typescript
+const tx = await wallet.lending().withdraw({
+  token: USDC,
+  amount: Amount.parse("200", USDC),
+  receiver: wallet.address, // optional
+});
+await tx.wait();
+```
+
+Withdraw the maximum allowed (e.g. full supplied balance) in one call:
+
+```typescript
+const tx = await wallet.lending().withdrawMax({
+  token: USDC,
+  receiver: wallet.address,
+});
+await tx.wait();
+```
+
+<Note>
+  Max withdraw may not be supported by all providers. [Vesu](https://vesu.xyz/lite/markets) supports `withdrawMax`. Check `provider.prepareWithdrawMax` or catch the error if you need to support multiple providers.
+</Note>
+
+## Borrowing
+
+Borrow against collateral. You specify the collateral pair (collateral token + debt token) and the amount to borrow (or collateral amount, depending on denomination).
+
+```typescript
+const tx = await wallet.lending().borrow({
+  collateralToken: ETH,
+  debtToken: USDC,
+  amount: Amount.parse("500", USDC), // amount of debt to borrow
+});
+await tx.wait();
+```
+
+Optional: pass `poolAddress` if you have a specific pool, or `provider: "vesu"` to force the provider. `user` defaults to the wallet address.
+
+## Repaying
+
+Repay borrowed debt. You can optionally withdraw collateral in the same action (provider-dependent).
+
+```typescript
+const tx = await wallet.lending().repay({
+  collateralToken: ETH,
+  debtToken: USDC,
+  amount: Amount.parse("100", USDC),
+  // withdrawCollateral?: boolean
+});
+await tx.wait();
+```
+
+## Position and health
+
+### Get position
+
+Retrieve the user's lending position for a collateral/debt pair:
+
+```typescript
+const position = await wallet.lending().getPosition({
+  collateralToken: ETH,
+  debtToken: USDC,
+});
+
+console.log(position.collateralShares);
+console.log(position.nominalDebt);
+console.log(position.collateralAmount, position.debtAmount);
+console.log("Collateralized:", position.isCollateralized);
+console.log("Collateral value:", position.collateralValue, "Debt value:", position.debtValue);
+```
+
+### LendingPosition shape
+
+```typescript
+interface LendingPosition {
+  collateralShares: bigint;
+  nominalDebt: bigint;
+  collateralAmount?: bigint;
+  debtAmount?: bigint;
+  collateralValue: bigint;  // USD value [SCALE]
+  debtValue: bigint;         // USD value [SCALE]
+  isCollateralized: boolean;
+}
+```
+
+### Get health
+
+Check if the position is collateralized (above liquidation threshold):
+
+```typescript
+const health = await wallet.lending().getHealth({
+  collateralToken: ETH,
+  debtToken: USDC,
+});
+
+console.log("Collateralized:", health.isCollateralized);
+console.log("Collateral value:", health.collateralValue, "Debt value:", health.debtValue);
+```
+
+### Quote projected health
+
+Simulate an action (e.g. borrow or repay) and get the projected health after the action, plus the prepared calls and fee simulation:
+
+```typescript
+const quote = await wallet.lending().quoteHealth({
+  action: { action: "borrow", request: { collateralToken: ETH, debtToken: USDC, amount } },
+  health: { collateralToken: ETH, debtToken: USDC },
+  feeMode: "sponsored",
+});
+
+console.log("Current health:", quote.current);
+console.log("Projected health after action:", quote.projected);
+console.log("Prepared calls:", quote.prepared.calls);
+console.log("Simulation:", quote.simulation);
+```
+
+Use this to show users how a borrow or repay would affect their collateralization before they confirm.
+
+## Using the transaction builder
+
+Batch lending actions with transfers, staking, or other operations using the tx builder. Methods are prefixed with `lend`:
+
+- `.lendDeposit(request)` — add a deposit
+- `.lendWithdraw(request)` — add a withdraw
+- `.lendWithdrawMax(request)` — add a max withdraw
+- `.lendBorrow(request)` — add a borrow
+- `.lendRepay(request)` — add a repay
+
+**Example: deposit and then transfer in one tx**
+
+```typescript
+const tx = await wallet
+  .tx()
+  .lendDeposit({ token: USDC, amount: Amount.parse("500", USDC) })
+  .transfer(USDC, [{ to: recipient, amount: Amount.parse("100", USDC) }])
+  .send();
+await tx.wait();
+```
+
+**Example: repay and withdraw collateral**
+
+```typescript
+const tx = await wallet
+  .tx()
+  .lendRepay({
+    collateralToken: ETH,
+    debtToken: USDC,
+    amount: Amount.parse("200", USDC),
+    withdrawCollateral: true,
+  })
+  .send();
+await tx.wait();
+```
+
+See [Tx Builder](/build/consumer-app-sdk/tx-builder) for the full list of builder methods.
+
+## Best practices
+
+1. **Check health before and after** borrow/repay so users understand liquidation risk.
+2. **`Use quoteHealth()`** to show projected health after an action before the user confirms.
+3. **Discover markets once** (e.g. on load) and cache `getMarkets()` if you list markets in the UI.
+4. **Use token presets** for `token`, `collateralToken`, and `debtToken` so addresses match the chain.
+
+## Troubleshooting
+
+### "Lending provider returned no calls"
+
+The provider could not build calls for the given request (e.g. wrong pool, unsupported pair, or invalid amount). Verify the market exists for the current chain and that you are passing the correct tokens and pool.
+
+### Provider does not support chain
+
+[Vesu](https://vesu.xyz/lite/markets) supports `SN_MAIN` and `SN_SEPOLIA`. Ensure the wallet is on one of these chains. If you use a custom provider, ensure it supports the wallet's chain.
+
+### "No default lending provider configured"
+
+The default is set when the wallet is created (Vesu). If you replaced it, call `setDefaultProvider("vesu")` or pass `provider: "vesu"` in each request.
+
+## Next steps
+
+- [Bitcoin, Stablecoins, and Tokens](/build/starkzap/erc20) — Token presets and amounts
+- [Transactions](/build/starkzap/transactions) — Execution options and fee modes
+- [Tx Builder](/build/starkzap/tx-builder) — Batching operations
+- [API Reference](/build/starkzap/api-reference) — Full method signatures

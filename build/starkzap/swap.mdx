@@ -1,0 +1,215 @@
+---
+title: Swaps
+description: "Exchange one token for another using AVNU or Ekubo swap providers—get quotes, set slippage, and execute swaps"
+icon: arrows-left-right
+---
+
+![Swapping hero](/assets/starkzap/swapping.png)
+
+## Overview
+
+Starkzap lets users swap one token for another through pluggable **swap providers**. The SDK supports **[AVNU](https://app.avnu.fi/en)** (DEX aggregator) and **[Ekubo](https://ekubo.org/starknet/swap)** (concentrated liquidity AMM). You get a quote, optionally set slippage tolerance, and execute the swap in one call.
+
+**What users can do with swaps:**
+- 📊 **Get quotes** - See how much they will receive before swapping (amount out, price impact)
+- 🔄 **Execute swaps** - Exchange tokens in a single transaction with optional slippage protection
+- 🏪 **Choose providers** - Use [AVNU](https://app.avnu.fi/en) for aggregated routes or [Ekubo](https://ekubo.org/starknet/swap) for concentrated liquidity
+- 📦 **Batch with other actions** - Run a swap then use the transaction builder for follow-up operations
+
+For **recurring buys (Dollar-Cost Averaging)**, see [DCA](/build/consumer-app-sdk/dca).
+
+<Info>
+  The wallet fills `chainId` and `takerAddress` from the connected wallet when you call `getQuote()` or `swap()`. You only need to pass `tokenIn`, `tokenOut`, and `amountIn` (and optionally `slippageBps` or `provider`).
+</Info>
+
+## Configuration
+
+### Registering swap providers
+
+Register one or more swap providers when connecting the wallet (or at runtime). If you register multiple providers, set a default so `getQuote()` and `swap()` work without specifying `provider` on each request.
+
+**At connect / onboard:**
+
+```typescript
+import { StarkZap, AvnuSwapProvider, EkuboSwapProvider } from "starkzap";
+
+const sdk = new StarkZap({ network: "mainnet" });
+
+const wallet = await sdk.connectWallet({
+  account: { signer, accountClass: ArgentPreset },
+  swapProviders: [
+    new AvnuSwapProvider(),
+    new EkuboSwapProvider(),
+  ],
+  defaultSwapProviderId: "avnu",
+});
+```
+
+**At runtime (e.g. after Cartridge onboard):**
+
+```typescript
+wallet.registerSwapProvider(new AvnuSwapProvider());
+wallet.registerSwapProvider(new EkuboSwapProvider());
+wallet.setDefaultSwapProvider("avnu");
+```
+
+### Token presets
+
+Use the SDK token presets for `tokenIn` and `tokenOut` so addresses and decimals match the chain:
+
+```typescript
+import { getPresets, mainnetTokens } from "starkzap";
+
+const tokens = getPresets(wallet.getChainId());
+const STRK = tokens.STRK ?? mainnetTokens.STRK;
+const USDC = tokens.USDC ?? mainnetTokens.USDC;
+```
+
+See [Bitcoin, Stablecoins, and Tokens](/build/consumer-app-sdk/erc20#token-presets) for more on token presets.
+
+## Getting a quote
+
+Call `wallet.getQuote()` with the swap input. The wallet uses the default swap provider unless you pass `provider`:
+
+```typescript
+import { Amount } from "starkzap";
+
+const quote = await wallet.getQuote({
+  tokenIn: STRK,
+  tokenOut: USDC,
+  amountIn: Amount.parse("100", STRK),
+});
+
+console.log(quote.amountInBase);   // input in base units
+console.log(quote.amountOutBase);  // expected output in base units
+console.log(quote.priceImpactBps); // optional price impact (basis points)
+console.log(quote.provider);       // e.g. "avnu"
+```
+
+**With slippage and a specific provider:**
+
+```typescript
+const quote = await wallet.getQuote({
+  tokenIn: STRK,
+  tokenOut: USDC,
+  amountIn: Amount.parse("100", STRK),
+  slippageBps: 50n,  // 0.5%
+  provider: "ekubo",
+});
+```
+
+### Quote shape
+
+```typescript
+interface SwapQuote {
+  amountInBase: bigint;
+  amountOutBase: bigint;
+  routeCallCount?: number;
+  priceImpactBps?: bigint | null;
+  provider?: string;
+}
+```
+
+## Executing a swap
+
+Use the same request shape as the quote. The wallet resolves the provider and builds the swap calls, then executes them.
+
+**Minimal swap:**
+
+```typescript
+const tx = await wallet.swap({
+  tokenIn: STRK,
+  tokenOut: USDC,
+  amountIn: Amount.parse("100", STRK),
+});
+await tx.wait();
+```
+
+**With slippage:**
+
+```typescript
+const tx = await wallet.swap(
+  {
+    tokenIn: STRK,
+    tokenOut: USDC,
+    amountIn: Amount.parse("100", STRK),
+    slippageBps: 100n, // 1%
+  },
+  { feeMode: "sponsored" } // optional execution options
+);
+await tx.wait();
+```
+
+## Providers
+
+| Provider | Id    | Description                          |
+| -------- | ----- | ------------------------------------ |
+| **[AVNU](https://app.avnu.fi/en)** | `avnu` | DEX aggregator; finds best route across liquidity sources |
+| **[Ekubo](https://ekubo.org/starknet/swap)** | `ekubo` | Concentrated liquidity AMM; single-protocol routes |
+
+**List and switch providers:**
+
+```typescript
+const ids = wallet.listSwapProviders();
+console.log(ids); // ["avnu", "ekubo"]
+
+// Use a specific provider for one request
+const quote = await wallet.getQuote({
+  tokenIn: STRK,
+  tokenOut: USDC,
+  amountIn: Amount.parse("100", STRK),
+  provider: "ekubo",
+});
+```
+
+## Batching with other operations
+
+There is no `.swap()` on the transaction builder; swaps are executed via `wallet.swap()`. You can run a swap and then batch follow-up actions in one transaction:
+
+```typescript
+// 1. Execute swap
+const txSwap = await wallet.swap({
+  tokenIn: STRK,
+  tokenOut: USDC,
+  amountIn: Amount.parse("100", STRK),
+});
+await txSwap.wait();
+
+// 2. Then e.g. transfer or stake the received tokens in one batch
+const tx = await wallet
+  .tx()
+  .transfer(USDC, [{ to: recipient, amount: Amount.parse("50", USDC) }])
+  .send();
+await tx.wait();
+```
+
+For **Dollar-Cost Averaging (recurring buys)** with AVNU or Ekubo, see [DCA](/build/consumer-app-sdk/dca).
+
+## Best practices
+
+1. **Always get a quote first** and show users the expected amount out and price impact before executing.
+2. **Set slippage** (`slippageBps`) for volatile pairs or large sizes to avoid failed transactions.
+3. **Use token presets** from `getPresets(chainId)` or `mainnetTokens` / `sepoliaTokens` so token addresses and decimals match the chain.
+4. **Handle chain mismatch** — ensure the wallet's chain matches the swap provider's supported chains (AVNU and Ekubo support mainnet and Sepolia).
+
+## Troubleshooting
+
+### "No default swap provider configured"
+
+Register at least one swap provider and call `setDefaultSwapProvider(providerId)` (or pass `defaultSwapProviderId` when connecting). Alternatively, pass `provider: "avnu"` or `provider: "ekubo"` on every `getQuote()` / `swap()` call.
+
+### Chain or provider mismatch
+
+Ensure the wallet is on a chain supported by the chosen provider (e.g. `SN_MAIN` or `SN_SEPOLIA`). If you see a chain mismatch error, align the SDK network config with the RPC/wallet chain.
+
+### Swap returned no calls
+
+The provider could not build a route for the pair or amount. Try a different provider, a smaller amount, or another token pair.
+
+## Next steps
+
+- [DCA](/build/starkzap/dca) — Recurring buys (Dollar-Cost Averaging) with AVNU or Ekubo
+- [Bitcoin, Stablecoins, and Tokens](/build/starkzap/erc20) — Token presets and amounts
+- [Transactions](/build/starkzap/transactions) — Execution options and fee modes
+- [Tx Builder](/build/starkzap/tx-builder) — Batching transfers and other operations
+- [API Reference](/build/starkzap/api-reference) — Full method signatures

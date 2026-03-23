@@ -1,6 +1,6 @@
 ---
-title: Network RPC and Staking
-description: "Configure networks, RPC providers, and staking for the SDK"
+title: Network, RPC, Staking, and Bridging
+description: "Configure networks, RPC providers, staking, and bridging for the SDK"
 icon: cog
 ---
 
@@ -111,6 +111,35 @@ The `StarkZap` accepts configuration through a single options object. You can us
       **Ready to implement staking?** See the [Staking & Delegation Guide](/build/starkzap/staking) for complete instructions on how users can stake tokens, claim rewards, and manage their positions.
     </Info>
   </Accordion>
+
+  <Accordion title="Bridging">
+    Configure optional cross-chain bridge settings when depositing assets from Ethereum or Solana into Starknet.
+
+    ```typescript
+    import { StarkZap } from "starkzap";
+
+    const sdk = new StarkZap({
+      network: "mainnet",
+      bridging: {
+        ethereumRpcUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY",
+        solanaRpcUrl: "https://solana-mainnet.g.alchemy.com/v2/YOUR_KEY",
+        layerZeroApiKey: "YOUR_LAYERZERO_API_KEY", // for OFT routes
+      },
+    });
+    ```
+
+    - `ethereumRpcUrl`: Custom Ethereum RPC for bridge fee/balance operations
+    - `solanaRpcUrl`: Custom Solana RPC (falls back to cluster URL if omitted)
+    - `layerZeroApiKey`: Required for OFT/OFT-migrated routes
+
+    <Warning>
+      OFT routes require `bridging.layerZeroApiKey` and are supported on mainnet bridge routes only.
+    </Warning>
+
+    <Info>
+      For the full deposit flow (`getBridgingTokens`, external wallet adapters, fee estimate, deposit), see the [Bridging Guide](/build/starkzap/bridging).
+    </Info>
+  </Accordion>
 </AccordionGroup>
 
 ## Complete Configuration Example
@@ -132,6 +161,10 @@ const sdk = new StarkZap({
       "0x00ca1702e64c81d9a07b86bd2c540188d92a2c73cf5cc0e508d949015e7e84a7"
     ),
   },
+  bridging: {
+    ethereumRpcUrl: "https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY",
+    layerZeroApiKey: "YOUR_LAYERZERO_API_KEY",
+  },
 });
 ```
 
@@ -150,6 +183,9 @@ const sdk = new StarkZap({
     contract: fromAddress(
       "0x00ca1702e64c81d9a07b86bd2c540188d92a2c73cf5cc0e508d949015e7e84a7"
     ),
+  },
+  bridging: {
+    solanaRpcUrl: "https://solana-mainnet.g.alchemy.com/v2/YOUR_KEY",
   },
 });
 ```
@@ -170,10 +206,17 @@ interface SDKConfig {
   // Optional features
   paymaster?: { nodeUrl: string; apiKey?: string };
   staking?: StakingConfig;
+  bridging?: BridgingConfig;
 }
 
 interface StakingConfig {
   contract: Address; // optional override
+}
+
+interface BridgingConfig {
+  layerZeroApiKey?: string;
+  ethereumRpcUrl?: string;
+  solanaRpcUrl?: string;
 }
 ```
 
@@ -185,5 +228,6 @@ interface StakingConfig {
 
 - Set up [Paymasters](/build/starkzap/paymasters) for gasless transactions
 - Enable [Staking & Delegation](/build/starkzap/staking) so users can earn passive income
+- Configure [Bridging](/build/starkzap/bridging) for Ethereum/Solana deposits into Starknet
 - Learn about [Connecting Wallets](/build/starkzap/connecting-wallets) with different signers
 - Configure [Account Presets](/build/starkzap/connecting-wallets#account-presets) for your use case

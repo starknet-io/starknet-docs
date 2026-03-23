@@ -22,14 +22,14 @@ Choose the right method for your use case:
 |--------|----------|-----------------|----------|-----------------|
 | **Private Key** | Server-side apps, development | Manual key entry | ⚠️ User pays (or configure AVNU Paymaster) | ⭐ Simple |
 | **Privy** | Consumer apps, mobile/web | Email/social login | ⚠️ User pays (or configure AVNU Paymaster) | ⭐⭐ Moderate |
-| **Cartridge** | Gaming applications | Social login, Face ID/Touch ID | ✅ **Automatic - Cartridge pays** | ⭐⭐ Moderate |
+| **Cartridge** | Gaming applications | Social login, Face ID/Touch ID (web popup or native session) | ✅ **Policy-matching calls can be sponsored** | ⭐⭐ Moderate (RN: Metro + adapter) |
 
 ### Quick Decision Guide
 
-- **Building a game?** → Use **Cartridge** (includes automatic gasless transactions)
+- **Building a game?** → Use **Cartridge** (web: `@cartridge/controller`; React Native: `@starkzap/native` + [React Native Integration](/build/starkzap/react-native))
 - **Building a consumer app?** → Use **Privy** (email/social login, configure AVNU Paymaster for gasless)
 - **Building a server-side service?** → Use **Private Key** (with proper security, configure AVNU Paymaster for gasless)
-- **Need automatic gasless transactions?** → Use **Cartridge** (built-in paymaster)
+- **Need gasless-style UX for approved game calls?** → Use **Cartridge** with policies that match your contract calls
 - **Need email-based auth?** → Use **Privy**
 - **Just testing?** → Use **Private Key** for quick setup
 
@@ -135,16 +135,22 @@ const signer = new PrivySigner({
 });
 ```
 
-### 3. Cartridge Controller
+### 3. Cartridge (web Controller or native session)
 
-[Cartridge](https://cartridge.gg) is specialized for gaming applications and provides social login and passkey authentication. Opens a popup for user authentication. Best for:
+[Cartridge](https://cartridge.gg) is specialized for gaming applications and provides social login and passkey authentication.
+
+- **Web:** opens a Controller popup (install `@cartridge/controller`).
+- **React Native / Expo:** in-app browser / deep-link **session** flow via `@starkzap/native` — register the native Cartridge adapter before connecting; see [React Native Integration](/build/starkzap/react-native).
+
+Best for:
+
 - Gaming applications
 - Social login integration
 - Passkey-based authentication
-- Apps that want automatic gasless transactions
+- Policy-approved, paymastered execution (not every arbitrary call)
 
 <Info>
-  **Key Advantage:** Cartridge includes a built-in paymaster that automatically sponsors (pays for) all transactions, so users never pay gas fees. This is perfect for gaming where you want seamless, gasless transactions. For detailed integration instructions, see the [Cartridge Controller Integration Guide](/build/starkzap/integrations/cartridge-controller).
+  **Key advantage:** Cartridge can sponsor **policy-matching** transactions through its paymaster/session stack after users approve policies. Other calls may still require user fees or extra steps. See the [Cartridge Controller Integration Guide](/build/starkzap/integrations/cartridge-controller).
 </Info>
 
 ```typescript
