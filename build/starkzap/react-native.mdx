@@ -44,7 +44,7 @@ module.exports = withStarkzap(config);
 ```
 
 <Info>
-  `withStarkzap` injects required polyfills and resolver handling for StarkZap dependencies. You do not need a custom polyfill entrypoint when using this Metro wrapper.
+  `withStarkzap` injects required polyfills and resolver handling for StarkZap dependencies. You can rely on Metro alone, or add `import "@starkzap/native/polyfills"` as the **first** line in your entry file if you need explicit polyfills before other imports.
 </Info>
 
 ## 3) Initialize the SDK
@@ -65,7 +65,19 @@ const { wallet } = await sdk.onboard({
 
 For Privy-based onboarding, see [Privy Integration](/build/starkzap/integrations/privy).
 
-## 4) External Wallet Providers (Optional)
+## 4) Cartridge (native session)
+
+When your `@starkzap/native` version supports it, you can onboard with **Cartridge** using an in-app browser / deep-link **session** flow (not the web `@cartridge/controller` popup).
+
+1. **Register** the native Cartridge adapter **once** at app startup, before `connectCartridge()` or `onboard({ strategy: OnboardStrategy.Cartridge })`. Exact export names depend on your SDK version (for example `registerCartridgeTsAdapter` / `registerCartridgeNativeAdapter`).
+2. Pass **policies** and/or a Cartridge **preset** that resolves policies for your chain (same concepts as [Cartridge Controller](/build/starkzap/integrations/cartridge-controller)).
+3. Align `rpcUrl` / `chainId` (or `network`) on `new StarkZap({ ... })` with the session and paymaster you target.
+4. **Deploy:** native Cartridge flows often default to **`deploy: "never"`** or recommend it when deployment semantics differ from the browser Controller. Pass **`deploy: "if_needed"`** explicitly if you need core-style deployment checks.
+5. **Fees:** sponsored execution on native is tied to the session wallet (commonly **`feeMode: "sponsored"`** only for matching policy paths).
+
+See [Cartridge Controller](/build/starkzap/integrations/cartridge-controller) for policy and paymaster behavior, and the `examples/tic-tac-toe` app in the [Starkzap repository](https://github.com/keep-starknet-strange/starkzap) when available for a full Expo reference.
+
+## 5) External Wallet Providers (Optional)
 
 If your app uses WalletConnect/Reown for external wallets, initialize its RN compatibility layer at app startup:
 
@@ -76,7 +88,7 @@ import "@walletconnect/react-native-compat";
 Then pass the resulting providers into StarkZap external wallet adapters as described in [Bridging](/build/starkzap/bridging#connect-external-wallets).
 
 <Warning>
-  In the current `@starkzap/native` release, the native Cartridge connector is not implemented yet. Use `Signer` or `Privy` onboarding strategies in React Native for now.
+  If `connectCartridge` or Cartridge onboarding throws **not implemented**, your installed `@starkzap/native` build does not ship the native adapter yet — upgrade to a version that documents native Cartridge, or use **Signer** / **Privy** until then.
 </Warning>
 
 ## Next Steps
