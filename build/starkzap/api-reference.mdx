@@ -19,12 +19,13 @@ new StarkZap(config: SDKConfig): StarkZap
 | Method                       | Returns                    | Description                          |
 | ---------------------------- | -------------------------- | ------------------------------------ |
 | `connectWallet(options)`     | `Promise<Wallet>`          | Connect with signer + account preset |
-| `connectCartridge(options?)` | `Promise<CartridgeWallet>` | Connect via Cartridge (**web:** Controller popup; **RN:** native session when supported — register adapter first) |
+| `connectCartridge(options?)` | `Promise<CartridgeWalletInterface>` | Connect via Cartridge Controller popup (web only) |
 | `onboard(options)`           | `Promise<OnboardResult>`   | Onboard with strategy selection      |
 | `stakingTokens()`            | `Promise<Token[]>`         | Get stakeable tokens                 |
 | `getStakerPools(staker)`     | `Promise<Pool[]>`          | Get validator's delegation pools     |
 | `getBridgingTokens(chain?)`  | `Promise<BridgeToken[]>`   | Get bridgeable tokens by source chain |
 | `getProvider()`              | `RpcProvider`              | Get the underlying RPC provider      |
+| `callContract(call)`         | `Promise<CallContractResponse>` | Call a contract read function    |
 
 ### Configuration
 
@@ -33,10 +34,30 @@ interface SDKConfig {
   network?: NetworkName | NetworkPreset;
   rpcUrl?: string;
   chainId?: ChainId;
-  paymaster?: { nodeUrl: string };
+  paymaster?: PaymasterOptions; // { nodeUrl?: string; default?: boolean; headers?: object }
   explorer?: ExplorerConfig;
   staking?: StakingConfig;
   bridging?: BridgingConfig;
+}
+```
+
+### ConnectWalletOptions
+
+```typescript
+interface ConnectWalletOptions {
+  account: AccountConfig;
+  accountAddress?: Address;
+  feeMode?: FeeMode;
+  timeBounds?: PaymasterTimeBounds;
+  swapProviders?: SwapProvider[];
+  defaultSwapProviderId?: string;
+  dcaProviders?: DcaProvider[];
+  defaultDcaProviderId?: string;
+}
+
+interface AccountConfig {
+  signer: SignerInterface;
+  accountClass?: AccountClassConfig;
 }
 ```
 
@@ -77,6 +98,21 @@ The wallet interface provides access to account operations, transactions, and to
 | `getProvider()`                           | `RpcProvider`                  | Get RPC provider             |
 | `getChainId()`                             | `ChainId`                      | Get chain ID                 |
 | `getFeeMode()`                             | `FeeMode`                      | Get default fee mode         |
+| `erc20(token)`                             | `Erc20`                        | Get ERC20 helper for token   |
+| `getClassHash()`                           | `string`                       | Get account class hash       |
+| `getQuote(request)`                        | `Promise<SwapQuote>`           | Get swap quote               |
+| `prepareSwap(request)`                     | `Promise<PreparedSwap>`        | Prepare swap calls           |
+| `swap(request, options?)`                  | `Promise<Tx>`                  | Execute a token swap         |
+| `registerSwapProvider(provider, makeDefault?)` | `void`                     | Register a swap provider     |
+| `setDefaultSwapProvider(providerId)`       | `void`                         | Set the default swap provider |
+| `getSwapProvider(providerId)`              | `SwapProvider`                 | Get a registered swap provider |
+| `getDefaultSwapProvider()`                 | `SwapProvider`                 | Get the default swap provider |
+| `listSwapProviders()`                      | `string[]`                     | List registered swap provider IDs |
+| `dca()`                                    | `DcaClientInterface`           | Get DCA (recurring buy) client |
+| `lending()`                                | `LendingClient`               | Get lending client           |
+| `staking(poolAddress)`                     | `Promise<Staking>`             | Get staking helper for a pool |
+| `stakingInStaker(stakerAddress, token)`    | `Promise<Staking>`             | Get staking helper from a staker |
+| `callContract(call)`                       | `Promise<CallContractResponse>` | Read-only contract call      |
 | `disconnect()`                             | `Promise<void>`                | Disconnect wallet            |
 | `deposit(recipient, amount, token, externalWallet, options?)` | `Promise<{ hash: string }>` | Bridge deposit from external chain |
 | `getDepositBalance(token, externalWallet)` | `Promise<Amount>`              | Get source-chain available balance |
@@ -99,12 +135,20 @@ Transaction object returned from `execute()`, `deploy()`, and `transfer()`.
 | Method           | Returns              | Description             |
 | ---------------- | -------------------- | ----------------------- |
 | `wait(options?)` | `Promise<void>`      | Wait for confirmation   |
-| `watch(callback)` | `TxUnsubscribe`      | Watch status changes    |
+| `watch(callback, options?)` | `TxUnsubscribe`      | Watch status changes (options: pollIntervalMs, timeoutMs, onError) |
 | `receipt()`      | `Promise<TxReceipt>` | Get transaction receipt |
 
 ## TxBuilder
 
 Fluent API for building and executing batched transactions.
+
+### Properties
+
+| Property  | Type      | Description                           |
+| --------- | --------- | ------------------------------------- |
+| `length`  | `number`  | Number of queued call groups          |
+| `isEmpty` | `boolean` | Whether the builder has no calls      |
+| `isSent`  | `boolean` | Whether `send()` has been called      |
 
 ### Methods
 
@@ -119,6 +163,7 @@ Fluent API for building and executing batched transactions.
 | `.claimPoolRewards(pool)`          | `TxBuilder`                | Claim staking rewards                          |
 | `.exitPoolIntent(pool, amount)`    | `TxBuilder`                | Start exit process                             |
 | `.exitPool(pool)`                  | `TxBuilder`                | Complete exit after window                     |
+| `.swap(request)`                   | `TxBuilder`                | Provider-driven token swap                     |
 | `.lendDeposit(request)`            | `TxBuilder`                | Lending deposit (supply)                       |
 | `.lendWithdraw(request)`           | `TxBuilder`                | Lending withdraw                               |
 | `.lendWithdrawMax(request)`        | `TxBuilder`                | Lending max withdraw                           |
@@ -207,7 +252,7 @@ interface SignerInterface {
 Branded string type for Starknet addresses.
 
 ```typescript
-type Address = string & { __brand: "Address" };
+type Address = string & { readonly __type: "StarknetAddress" };
 
 // Create from string
 fromAddress(value: string): Address
@@ -253,12 +298,13 @@ type DeployMode = "never" | "if_needed" | "always";
 Onboarding strategy selection.
 
 ```typescript
-enum OnboardStrategy {
-  Privy = "privy",
-  Signer = "signer",
-  Cartridge = "cartridge",
-  WebAuthn = "webauthn", // Reserved
-}
+const OnboardStrategy = {
+  Signer: "signer",
+  Privy: "privy",
+  Cartridge: "cartridge",
+} as const;
+
+type OnboardStrategy = (typeof OnboardStrategy)[keyof typeof OnboardStrategy];
 ```
 
 ## Interfaces
@@ -297,7 +343,7 @@ enum ExternalChain {
 ### BridgeToken
 
 ```typescript
-interface BridgeToken {
+abstract class BridgeToken {
   id: string;
   name: string;
   symbol: string;
@@ -309,6 +355,7 @@ interface BridgeToken {
   starknetAddress: Address;      // destination token on Starknet
   starknetBridge: Address;       // destination bridge contract
 }
+// Concrete subclasses: EthereumBridgeToken, SolanaBridgeToken
 ```
 
 ### Connected External Wallets
@@ -353,7 +400,7 @@ interface PoolMember {
   rewards: Amount;
   total: Amount;
   unpooling: Amount;
-  unpoolTime?: Date;
+  unpoolTime: Date | null;
   commissionPercent: number;
   rewardAddress: Address;
 }
@@ -365,17 +412,16 @@ interface PoolMember {
 interface Validator {
   name: string;
   stakerAddress: Address;
-  logoUrl?: URL;
+  logoUrl: URL | null;
 }
 ```
 
 ### PreflightResult
 
 ```typescript
-interface PreflightResult {
-  ok: boolean;
-  reason?: string;
-}
+interface PreflightResultOk { ok: true }
+interface PreflightResultError { ok: false; reason: string }
+type PreflightResult = PreflightResultOk | PreflightResultError;
 ```
 
 ## Presets
