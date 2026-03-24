@@ -14,7 +14,7 @@ Starkzap lets users swap one token for another through pluggable **swap provider
 - 🏪 **Choose providers** - Use [AVNU](https://app.avnu.fi/en) for aggregated routes or [Ekubo](https://ekubo.org/starknet/swap) for concentrated liquidity
 - 📦 **Batch with other actions** - Run a swap then use the transaction builder for follow-up operations
 
-For **recurring buys (Dollar-Cost Averaging)**, see [DCA](/build/consumer-app-sdk/dca).
+For **recurring buys (Dollar-Cost Averaging)**, see [DCA](/build/starkzap/dollar-cost-average).
 
 <Info>
   The wallet fills `chainId` and `takerAddress` from the connected wallet when you call `getQuote()` or `swap()`. You only need to pass `tokenIn`, `tokenOut`, and `amountIn` (and optionally `slippageBps` or `provider`).
@@ -63,7 +63,7 @@ const STRK = tokens.STRK ?? mainnetTokens.STRK;
 const USDC = tokens.USDC ?? mainnetTokens.USDC;
 ```
 
-See [Bitcoin, Stablecoins, and Tokens](/build/consumer-app-sdk/erc20#token-presets) for more on token presets.
+See [Bitcoin, Stablecoins, and Tokens](/build/starkzap/erc20#token-presets) for more on token presets.
 
 ## Getting a quote
 
@@ -162,26 +162,33 @@ const quote = await wallet.getQuote({
 
 ## Batching with other operations
 
-There is no `.swap()` on the transaction builder; swaps are executed via `wallet.swap()`. You can run a swap and then batch follow-up actions in one transaction:
+Use the transaction builder's `.swap()` method to batch a swap with other operations in a single atomic transaction:
 
 ```typescript
-// 1. Execute swap
-const txSwap = await wallet.swap({
-  tokenIn: STRK,
-  tokenOut: USDC,
-  amountIn: Amount.parse("100", STRK),
-});
-await txSwap.wait();
-
-// 2. Then e.g. transfer or stake the received tokens in one batch
 const tx = await wallet
   .tx()
+  .swap({
+    tokenIn: STRK,
+    tokenOut: USDC,
+    amountIn: Amount.parse("100", STRK),
+  })
   .transfer(USDC, [{ to: recipient, amount: Amount.parse("50", USDC) }])
   .send();
 await tx.wait();
 ```
 
-For **Dollar-Cost Averaging (recurring buys)** with AVNU or Ekubo, see [DCA](/build/consumer-app-sdk/dca).
+You can also execute a swap standalone via `wallet.swap()`:
+
+```typescript
+const tx = await wallet.swap({
+  tokenIn: STRK,
+  tokenOut: USDC,
+  amountIn: Amount.parse("100", STRK),
+});
+await tx.wait();
+```
+
+For **Dollar-Cost Averaging (recurring buys)** with AVNU or Ekubo, see [DCA](/build/starkzap/dollar-cost-average).
 
 ## Best practices
 
@@ -206,7 +213,7 @@ The provider could not build a route for the pair or amount. Try a different pro
 
 ## Next steps
 
-- [DCA](/build/starkzap/dca) — Recurring buys (Dollar-Cost Averaging) with AVNU or Ekubo
+- [DCA](/build/starkzap/dollar-cost-average) — Recurring buys (Dollar-Cost Averaging) with AVNU or Ekubo
 - [Bitcoin, Stablecoins, and Tokens](/build/starkzap/erc20) — Token presets and amounts
 - [Transactions](/build/starkzap/transactions) — Execution options and fee modes
 - [Tx Builder](/build/starkzap/tx-builder) — Batching transfers and other operations

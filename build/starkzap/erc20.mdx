@@ -244,19 +244,24 @@ const tx = await wallet.transfer(STRK, [
 ]);
 ```
 
-### Calculating Transfer Fee
+### Checking Balance Covers Transfer + Fee
 
 ```typescript
 const balance = await wallet.balanceOf(STRK);
 const transferAmount = Amount.parse("100", STRK);
 const estimatedFee = await wallet.estimateFee([/* transfer call */]);
 
-const totalNeeded = transferAmount.add(
-  Amount.fromRaw(estimatedFee.overall_fee, 18, "ETH")
-);
+// Fee is paid in the fee token (ETH or STRK depending on fee mode).
+// Compare transfer amount and fee separately against their respective balances.
+if (balance.lt(transferAmount)) {
+  throw new Error("Insufficient STRK balance for transfer");
+}
 
-if (balance.lt(totalNeeded)) {
-  throw new Error("Insufficient balance including fees");
+// Check fee token balance separately
+const feeBalance = await wallet.balanceOf(ETH);
+const feeAmount = Amount.fromRaw(estimatedFee.overall_fee, ETH);
+if (feeBalance.lt(feeAmount)) {
+  throw new Error("Insufficient ETH balance for fees");
 }
 ```
 

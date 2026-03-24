@@ -6,7 +6,7 @@ icon: calendar-clock
 
 ## Overview
 
-Starkzap supports **Dollar-Cost Averaging (DCA)** through **[AVNU](https://app.avnu.fi/en)** and **[Ekubo](https://ekubo.org/starknet/swap)**. Users can create recurring buy orders (sell token X, buy token Y on a schedule), preview the expected swap per cycle, and cancel orders. DCA uses the same [swap providers](/build/consumer-app-sdk/swap#providers) under the hood for execution and cycle quoting.
+Starkzap supports **Dollar-Cost Averaging (DCA)** through **[AVNU](https://app.avnu.fi/en)** and **[Ekubo](https://ekubo.org/starknet/swap)**. Users can create recurring buy orders (sell token X, buy token Y on a schedule), preview the expected swap per cycle, and cancel orders. DCA providers handle order creation, execution, and cancellation independently. Swap providers are only used for `previewCycle` quoting.
 
 **What users can do with DCA:**
 - 📅 **Create recurring orders** - Set token pair, amount per cycle, and frequency (e.g. daily); optional min/max bounds with AVNU
@@ -16,7 +16,7 @@ Starkzap supports **Dollar-Cost Averaging (DCA)** through **[AVNU](https://app.a
 - 📦 **Batch with other actions** - Use the transaction builder to combine DCA create/cancel with transfers or swaps
 
 <Info>
-  DCA providers rely on swap providers for cycle execution and preview. Register [swap providers](/build/consumer-app-sdk/swap#registering-swap-providers) and a default swap provider when using DCA; `previewCycle` uses the wallet's default (or specified) swap provider to quote the next cycle.
+  DCA providers (AVNU, Ekubo) handle cycle execution on their own backend — swap providers are **not** involved in execution. However, `previewCycle` uses the wallet's default (or specified) swap provider to quote the next cycle. Register [swap providers](/build/starkzap/swap#registering-swap-providers) if you want to use `previewCycle`.
 </Info>
 
 ## Configuration
@@ -42,10 +42,10 @@ const wallet = await sdk.connectWallet({
 });
 ```
 
-At runtime (e.g. after Cartridge onboard), register DCA providers and set the default the same way you do for [swap providers](/build/consumer-app-sdk/swap#registering-swap-providers): `wallet.dca().registerProvider(provider)`, `wallet.dca().setDefaultDcaProvider(providerId)`.
+At runtime (e.g. after Cartridge onboard), register DCA providers and set the default the same way you do for [swap providers](/build/starkzap/swap#registering-swap-providers): `wallet.dca().registerProvider(provider)`, `wallet.dca().setDefaultProvider(providerId)`.
 
 <Note>
-  Register swap providers and a default swap provider when using DCA; cycle execution and `previewCycle` depend on them.
+  Register swap providers and a default swap provider if you want to use `previewCycle`. Cycle execution is handled by the DCA provider backend and does not require swap providers.
 </Note>
 
 ## Creating a DCA order
@@ -54,17 +54,18 @@ Create a recurring order with token pair, amount per cycle, frequency, and optio
 
 ```typescript
 const tx = await wallet.dca().create({
-  tokenIn: STRK,
-  tokenOut: USDC,
-  amountInPerCycle: Amount.parse("10", STRK),
+  sellToken: STRK,
+  buyToken: USDC,
+  sellAmount: Amount.parse("100", STRK), // total amount to sell across all cycles
+  sellAmountPerCycle: Amount.parse("10", STRK),
   frequency: "P1D", // ISO 8601 duration, e.g. daily
-  // Optional (AVNU): minBuyAmountBase, maxBuyAmountBase
+  // Optional (AVNU): pricingStrategy with min/max bounds
   // Optional: provider, startTime, endTime
 });
 await tx.wait();
 ```
 
-To batch DCA create with other operations, use the [Tx Builder](/build/consumer-app-sdk/tx-builder) (e.g. `.dcaCreate(...)`).
+To batch DCA create with other operations, use the [Tx Builder](/build/starkzap/tx-builder) (e.g. `.dcaCreate(...)`).
 
 ## Previewing a cycle
 
@@ -72,10 +73,10 @@ Show users the expected outcome of the next DCA cycle (quote from the swap provi
 
 ```typescript
 const quote = await wallet.dca().previewCycle({
-  tokenIn: STRK,
-  tokenOut: USDC,
-  amountInPerCycle: Amount.parse("10", STRK),
-  provider: "avnu", // optional; uses default DCA provider and swap provider for quote
+  sellToken: STRK,
+  buyToken: USDC,
+  sellAmountPerCycle: Amount.parse("10", STRK),
+  // optional: swapProvider, slippageBps
 });
 console.log(quote.amountOutBase); // expected buy amount for one cycle
 ```
@@ -88,7 +89,7 @@ List active (and optionally past) DCA orders for the wallet, then cancel by orde
 const orders = await wallet.dca().getOrders({ provider: "avnu" });
 
 for (const order of orders) {
-  console.log(order.id, order.tokenIn.symbol, order.tokenOut.symbol, order.frequency);
+  console.log(order.id, order.sellTokenAddress, order.buyTokenAddress, order.frequency);
 }
 
 // Cancel by order id (provider-specific string) or by order address
@@ -104,9 +105,10 @@ Batch DCA create or cancel with other actions:
 const tx = await wallet
   .tx()
   .dcaCreate({
-    tokenIn: STRK,
-    tokenOut: USDC,
-    amountInPerCycle: Amount.parse("10", STRK),
+    sellToken: STRK,
+    buyToken: USDC,
+    sellAmount: Amount.parse("100", STRK),
+    sellAmountPerCycle: Amount.parse("10", STRK),
     frequency: "P1D",
   })
   .transfer(USDC, [{ to: recipient, amount: Amount.parse("5", USDC) }])
@@ -121,7 +123,7 @@ const tx = await wallet.tx().dcaCancel({ orderId: myOrderId }).send();
 await tx.wait();
 ```
 
-See [Tx Builder](/build/consumer-app-sdk/tx-builder) for the full list of builder methods.
+See [Tx Builder](/build/starkzap/tx-builder) for the full list of builder methods.
 
 ## DCA providers
 
@@ -130,11 +132,11 @@ See [Tx Builder](/build/consumer-app-sdk/tx-builder) for the full list of builde
 | **[AVNU](https://app.avnu.fi/en)** | `avnu` | Recurring orders with optional min/max buy amount per cycle; uses AVNU swap routing for execution. |
 | **[Ekubo](https://ekubo.org/starknet/swap)** | `ekubo` | TWAMM-style continuous DCA; no discrete per-cycle amount (continuous flow). Supports order list and cancel. |
 
-Provider-specific options (e.g. AVNU bounds, Ekubo time alignment) are documented in the SDK types. Use `wallet.dca().listProviders()` to see registered DCA provider ids and `setDefaultDcaProvider(providerId)` to change the default.
+Provider-specific options (e.g. AVNU bounds, Ekubo time alignment) are documented in the SDK types. Use `wallet.dca().listProviders()` to see registered DCA provider ids and `setDefaultProvider(providerId)` to change the default.
 
 ## Best practices
 
-1. **Register swap providers first** so DCA cycle execution and `previewCycle` have a quote source.
+1. **Register swap providers** if you want `previewCycle` to have a quote source (not required for DCA execution itself).
 2. **Use token presets** from `getPresets(chainId)` or `mainnetTokens` / `sepoliaTokens` for `tokenIn` and `tokenOut` so addresses and decimals match the chain.
 3. **Preview before create** — call `previewCycle` and show users the expected buy amount per cycle before they confirm the order.
 4. **Handle provider differences** — AVNU supports discrete cycles and optional min/max bounds; Ekubo is continuous (TWAMM). Validate inputs per provider when building forms.
@@ -143,11 +145,11 @@ Provider-specific options (e.g. AVNU bounds, Ekubo time alignment) are documente
 
 ### "No default DCA provider configured"
 
-Register at least one DCA provider and call `setDefaultDcaProvider(providerId)` (or pass `defaultDcaProviderId` when connecting). Alternatively, pass `provider: "avnu"` or `provider: "ekubo"` on each DCA request.
+Register at least one DCA provider and call `setDefaultProvider(providerId)` (or pass `defaultDcaProviderId` when connecting). Alternatively, pass `provider: "avnu"` or `provider: "ekubo"` on each DCA request.
 
 ### DCA relies on swap providers
 
-If `previewCycle` or cycle execution fails, ensure swap providers are registered and a default swap provider is set. DCA uses the swap provider to get quotes and execute each cycle.
+If `previewCycle` fails, ensure swap providers are registered and a default swap provider is set. Swap providers are only used for cycle quoting — actual cycle execution is handled by the DCA provider backend (AVNU/Ekubo).
 
 ### Chain or provider mismatch
 
@@ -155,7 +157,7 @@ Ensure the wallet is on a chain supported by the chosen DCA provider (AVNU and E
 
 ## Next steps
 
-- [Swaps](/build/starkzap/swap) — One-off quotes and swaps (used by DCA under the hood)
+- [Swaps](/build/starkzap/swap) — One-off quotes and swaps (used by `previewCycle` for quoting)
 - [Bitcoin, Stablecoins, and Tokens](/build/starkzap/erc20) — Token presets and amounts
 - [Tx Builder](/build/starkzap/tx-builder) — Batching DCA with other operations
 - [API Reference](/build/starkzap/api-reference) — Full method signatures
