@@ -1,7 +1,7 @@
 ---
-title: Bitcoin, Stablecoins, and Token
+title: "Stablecoins & Token"
 description: "Check balances, transfer tokens, and work with amounts using type-safe primitives"
-icon: credit-card
+icon: "credit-card"
 ---
 
 ![Bitcoin, Stablecoins, and Token hero](/assets/starkzap/bitcoin-stablecoins-token.png)
@@ -68,8 +68,8 @@ const tokens = await getTokensFromAddresses(
 const balance = await wallet.balanceOf(STRK);
 
 console.log(balance.toUnit()); // "150.25"
-console.log(balance.toFormatted()); // "150.25 STRK"
-console.log(balance.toFormatted(true)); // "150.25 STRK" (compressed, max 4 decimals)
+console.log(balance.toFormatted()); // "STRK 150.25"
+console.log(balance.toFormatted(true)); // "STRK 150.25" (compressed, max 4 decimals)
 console.log(balance.toBase()); // 150250000000000000000n (raw)
 console.log(balance.isZero()); // false
 ```
@@ -131,12 +131,12 @@ const amount = Amount.fromRaw(balance, STRK); // From balance query
 ### Converting and Displaying
 
 ```typescript
-const amount = Amount.parse("1,500.50", 18, "ETH");
+const amount = Amount.parse("1500.50", 18, "ETH");
 
 amount.toUnit(); // "1500.5"            — human-readable string
 amount.toBase(); // 1500500000...0n     — raw bigint for contracts
-amount.toFormatted(); // "1,500.5 ETH"       — locale-formatted with symbol
-amount.toFormatted(true); // "1,500.5 ETH"       — compressed (max 4 decimals)
+amount.toFormatted(); // "ETH 1,500.5"       — locale-formatted with symbol
+amount.toFormatted(true); // "ETH 1,500.5"       — compressed (max 4 decimals)
 
 amount.getDecimals(); // 18
 amount.getSymbol(); // "ETH"
@@ -244,19 +244,24 @@ const tx = await wallet.transfer(STRK, [
 ]);
 ```
 
-### Calculating Transfer Fee
+### Checking Balance Covers Transfer + Fee
 
 ```typescript
 const balance = await wallet.balanceOf(STRK);
 const transferAmount = Amount.parse("100", STRK);
 const estimatedFee = await wallet.estimateFee([/* transfer call */]);
 
-const totalNeeded = transferAmount.add(
-  Amount.fromRaw(estimatedFee.overall_fee, 18, "ETH")
-);
+// Fee is paid in the fee token (ETH or STRK depending on fee mode).
+// Compare transfer amount and fee separately against their respective balances.
+if (balance.lt(transferAmount)) {
+  throw new Error("Insufficient STRK balance for transfer");
+}
 
-if (balance.lt(totalNeeded)) {
-  throw new Error("Insufficient balance including fees");
+// Check fee token balance separately
+const feeBalance = await wallet.balanceOf(ETH);
+const feeAmount = Amount.fromRaw(estimatedFee.overall_fee, ETH);
+if (feeBalance.lt(feeAmount)) {
+  throw new Error("Insufficient ETH balance for fees");
 }
 ```
 
