@@ -1,73 +1,59 @@
 ---
 title: Quickstart
-description: End-to-end flow from local devnet to proof-backed pool transactions
+description: Reproducible local flow with explicit devnet and sncast network parameters
 icon: play
 ---
 
 <Note>
-Exact script names, package paths, and CLI flags live in the [**starknet-privacy README**](https://github.com/starkware-libs/starknet-privacy). The flow below matches the **protocol shape** from [Scalable Compliant Privacy on Starknet](https://eprint.iacr.org/2026/474.pdf); substitute commands from the repo where needed.
+This quickstart uses explicit `--url` flags to avoid network ambiguity in local runs.
 </Note>
 
-## Prerequisites
+## 1. Start local simulation network (Devnet)
 
-Complete [Install and build](/build/starknet-privacy/installation) (Scarb, Foundry, Devnet, and Rust if the prover is in-repo).
-
-## 1. Start a local Starknet node
-
-In a separate terminal:
+`starknet-devnet` is a **local simulation tool**, not a full Starknet node.
 
 ```bash
-starknet-devnet --seed 0
+starknet-devnet --seed 0 --host 127.0.0.1 --port 5050
 ```
-
-Use the host/port and version flags required by the README if they differ.
 
 ## 2. Build contracts
 
 ```bash
-cd starknet-privacy   # your clone path
+cd starknet-privacy
 scarb build
 ```
 
-## 3. Declare and deploy the privacy pool
-
-The README should list account setup (`sncast account create` or devnet predeployed accounts) and declare/deploy commands. Typical pattern:
+## 3. Configure account and network explicitly
 
 ```bash
-# Example pattern — replace with README values (class hash, constructor args, etc.)
-sncast declare --contract-name PrivacyPool
-sncast deploy --class-hash <CLASS_HASH> --constructor-calldata <CALLDATA>
+sncast account list
+# or create/import according to README
+
+export STARKNET_RPC_URL=http://127.0.0.1:5050
 ```
 
-## 4. Register a viewing key (first on-chain step)
+Use `--url "$STARKNET_RPC_URL"` (or `--network`) in every `sncast` command.
 
-Users must **SetViewingKey** before other actions. The repo may expose a script or test that:
-
-1. Derives viewing key material from the account (or test keys).
-2. Builds client-side actions and generates a **ZK proof**.
-3. Submits the transaction (directly or via paymaster flow).
-
-Follow the README’s **first transaction** or **e2e** example.
-
-## 5. Deposit → private transfer (conceptual sequence)
-
-1. **Deposit** public ERC-20 into the pool (paired with note creation in the proof).
-2. **OpenChannel** / **OpenSubchannel** if sending to a recipient or token lane for the first time.
-3. **UseNote** / **CreateNote** to move value; **Withdraw** to paymaster if using relayed submission.
-
-Run the repository’s **demo script**, **integration test**, or **binary** that performs this chain—for example:
+## 4. Declare and deploy (pattern)
 
 ```bash
-snforge test -- e2e
-# or, if documented:
-# cargo run -p starknet-privacy-cli -- --help
+sncast --url "$STARKNET_RPC_URL" declare --contract-name PrivacyPool
+sncast --url "$STARKNET_RPC_URL" deploy --class-hash <CLASS_HASH> --constructor-calldata <CALLDATA>
 ```
 
-## 6. Verify behavior
+## 5. Register viewing key and run first private flow
 
-- Pool contract storage reflects new notes / nullifiers (via explorer or `sncast call`).
-- Events match the compliance hooks described in [Compliance](/build/starknet-privacy/compliance) for deposits / withdraws / nullifiers.
+Use the exact script or test entry listed in the repo README. In most repos this is either:
 
----
+- an integration test (for example `snforge test -- e2e`), or
+- a CLI command from a Rust crate.
 
-**Learn more:** [Transaction flow](/build/starknet-privacy/transaction-flow) · [Proving](/build/starknet-privacy/proving) · [Troubleshooting](/build/starknet-privacy/troubleshooting)
+If an SDK is introduced later, add it to this step (generate proof -> submit actions) and to [Install and build](/build/starknet-privacy/installation).
+
+## 6. Verify
+
+- notes/nullifiers updated on-chain,
+- expected events emitted,
+- paymaster reimbursement (if used).
+
+Related pages: [Transaction flow](/build/starknet-privacy/transaction-flow), [Proof generation](/build/starknet-privacy/proving), [Troubleshooting](/build/starknet-privacy/troubleshooting).

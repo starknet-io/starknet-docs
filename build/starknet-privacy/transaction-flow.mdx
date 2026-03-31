@@ -1,42 +1,30 @@
 ---
 title: Transaction flow
-description: Client-side vs server-side actions, ordering, deposits, withdrawals, and balance accounting
+description: Action compilation, ordering constraints, and per-token balance invariants
 icon: arrows-repeat
 ---
 
 ## Pipeline
 
-1. User builds a list of **client-side actions**.
-2. User runs the **prover** to obtain a ZK proof that:
-   - The user’s **Starknet account** signed the action list.
-   - Actions are valid (notes, nullifiers, encryption, **per-token temporary balance** ≥ 0 and **zero at end**).
-3. User sends proof + **compiled server-side actions** to a **paymaster** (optional) or broadcasts.
-4. **Pool contract** verifies the proof and executes server-side actions.
+1. Build client-side actions.
+2. Generate proof over compiled server-side actions.
+3. Submit (directly or via paymaster).
+4. Contract verifies and executes.
 
-## Client-side actions (examples)
+## Why fixed ordering exists
 
-- **SetViewingKey** — once per user; stores public key + auditor-encrypted private key.
-- **OpenChannel** / **OpenSubchannel** — discovery scaffolding.
-- **CreateNote** / **UseNote** — create encrypted note or publish nullifier.
-- **Deposit** / **Withdraw** — ERC-20 into/out of pool (often paired with note create/spend).
-- **Invoke** — call external contract (e.g. swap helper); runs after withdraw in ordering for DeFi flows.
+Ordering (`SetViewingKey -> OpenChannel -> OpenSubchannel -> Deposit -> UseNote -> CreateNote -> Withdraw`) reduces state-machine ambiguity and closes classes of ordering bugs where the same semantic operation could be encoded in multiple inconsistent sequences.
 
-## Server-side primitives
+## Per-token temporary balance
 
-- **WriteOnce** — write storage if currently zero (notes, nullifiers, markers).
-- **AppendChannel** — append encrypted channel blob to recipient list.
-- **TransferFrom pool user** / **TransferTo** — deposits and withdrawals.
+Within one transaction, each token keeps a temporary balance:
 
-## Action ordering
+- `Deposit` and `UseNote` increase it.
+- `CreateNote` and `Withdraw` decrease it.
 
-Fixed order reduces attack surface:
+Invariant:
 
-`SetViewingKey → OpenChannel → OpenSubchannel → Deposit → UseNote → CreateNote → Withdraw`
+- it must never go negative during execution,
+- and **must end at 0** at the end of transaction.
 
-(`Invoke` follows **Withdraw** where used—see paper §10.)
-
-## Per-token balance
-
-Within one transaction, a **temporary balance** per token tracks: deposits and spent notes **increase** it; new notes and withdrawals **decrease** it. It must never go negative and must end at **zero** so all tokens are accounted for.
-
-Next: [Proving](/build/starknet-privacy/proving), [Paymasters](/build/starknet-privacy/paymasters).
+"Must end at 0" means all temporary inflows are fully matched by outflows in that transaction; no unaccounted residual value remains.

@@ -1,32 +1,24 @@
 ---
 title: Anonymous DeFi and open notes
-description: AMM swaps from the privacy pool without exposing user identity; open notes and Invoke
+description: Swap flow using open notes and helper contracts
 icon: arrows-rotate
 ---
 
-Standard AMMs change **public reserves**, so **amounts** are often inferable. The protocol targets **anonymity**: **identity** hidden while amounts may be visible on-chain.
+Standard AMMs expose amounts through reserve changes, so this flow targets anonymity (identity hiding), not full amount privacy.
 
-## Problem
+## Open-note swap flow
 
-A normal flow would **withdraw → swap → deposit**, but the **output amount** is unknown at **proof time** (depends on AMM state and ordering). **CreateNote** needs a fixed amount in the proof—so it doesn’t fit swap outputs directly.
+1. Spend source notes.
+2. Create empty open note for destination token.
+3. Withdraw source token to helper contract.
+4. Invoke helper: swap, then deposit destination token into open note.
 
-## Open notes
+## Example contract references
 
-An **open note** reserves **salt = 1**, stores **amount 0** initially, and keeps **token** and **depositor address** in dedicated storage. The user’s proof **creates** the empty open note; a **trusted helper contract** (invoked in the same transaction) performs the swap and calls the pool to **fill** the open note **without** a new ZK proof for that fill.
+Use repository helper contracts/examples once available in the public repo. Suggested doc links to add when published:
 
-Spending an open note requires **amount > 0** after fill.
+- helper swap contract source path,
+- open-note deposit entrypoint path,
+- integration test exercising the full swap.
 
-## Invoke action
-
-**Invoke** is a client-side action that becomes a server-side **contract call** from the pool—used to run the **swap helper** atomically after **Withdraw** sends source tokens to that helper.
-
-## Typical swap flow
-
-1. **UseNote** — spend source-token notes.
-2. **CreateNote** — empty **open note** for destination token.
-3. **Withdraw** — source tokens to helper contract.
-4. **Invoke** — helper swaps via AMM, then **deposits** destination tokens into the open note.
-
-User identity is not the on-chain tx sender if a **paymaster** submits the tx; amounts for the swap path are public by design.
-
-Tradeoffs: **linkability** between open-note creation and fill in the same tx; nullifiers for later spends stay unlinkable to observers. See [IACR 2026/474](https://eprint.iacr.org/2026/474.pdf) §10.
+Until then, the canonical protocol description is paper §10.

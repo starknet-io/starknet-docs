@@ -1,36 +1,25 @@
 ---
 title: System architecture
-description: Privacy pool contract, client-side proving, and compliance framework
+description: Pool contract, proof verifier path, client-side proving, and compliance
 icon: diagram-project
 ---
 
-The design has three pillars (see [IACR 2026/474](https://eprint.iacr.org/2026/474.pdf) §3).
+The design has three pillars (paper §3):
 
-## 1. Privacy pool contract
+1. **Privacy pool state contract**
+2. **Proof verification path**
+3. **Client-side proving + compliance data model**
 
-A canonical Starknet contract holds user assets and stores:
+## Pool and verifier
 
-- **Encrypted notes** and **nullifiers**
-- Metadata for **note discovery** (channels, subchannels, markers)
-- **Write-once** storage: cells are written once and never overwritten (immutability for privacy and proof consistency)
+In many deployments, the privacy pool entrypoint and proof verification logic are composed as separate contracts/modules (for upgradeability and audit boundaries), even when docs describe them as one protocol surface. So conceptually: **the pool enforces state transitions, and proof verification gates those transitions**.
 
-The contract verifies **ZK proofs** and executes **server-side actions** (writes, channel appends, token transfers).
+## Client-side proving
 
-## 2. Client-side proving
+Users build client actions and generate a proof in a virtual Starknet execution environment anchored to a recent block.
 
-Users build **client-side actions** and generate a **Stwo** proof over **Cairo** that simulates execution in a **virtual Starknet** environment anchored to a recent block. The proof attests:
+## Compliance model
 
-- Valid **account signature** ([SNIP-6](https://github.com/starknet-io/SNIPs/blob/main/SNIPS/snip-6.md) `is_valid_signature` in the simulated environment)
-- Correct note existence, nullifiers, encryption, and **balance conservation**
-
-## 3. Compliance framework
-
-On registration, each user stores a **public viewing key** and an **encrypted private viewing key** for a designated **auditing entity**. That enables selective tracing under regulatory process without decrypting unrelated users’ data.
-
-## Data model (preview)
-
-- **Notes** — owner, token, amount (amount often encrypted at rest).
-- **Channels** — unidirectional sender → recipient; shared **channel key** for discovery and encryption.
-- **Subchannels** — per-channel, per-token lanes so one channel can carry many assets without extra channel opens.
+Each user registers a public viewing key and an auditor-encrypted private viewing key, enabling selective traceability under lawful requests.
 
 Next: [Notes and nullifiers](/build/starknet-privacy/notes-and-nullifiers).

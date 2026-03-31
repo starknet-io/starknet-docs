@@ -1,78 +1,52 @@
 ---
 title: Install and build
-description: Toolchain and build steps for starknet-privacy—align versions with the repository README
+description: Exact files and setup path for contracts, prover, and tests
 icon: download
 ---
 
 <Warning>
-The [**starknet-privacy**](https://github.com/starkware-libs/starknet-privacy) repository README is the **source of truth** for pinned versions and exact commands. Use the steps below as the **expected stack**; copy version numbers and any extra steps from the README when they differ.
+Use the repository README as the source of truth for exact versions and commands: [starknet-privacy README](https://github.com/starkware-libs/starknet-privacy/blob/main/README.md).
 </Warning>
 
-## 1. Clone the repository
+## Open these files first
+
+From repository root, these are the concrete files to check in order:
+
+1. `README.md`
+2. `Scarb.toml`
+3. `snfoundry.toml` (if present)
+4. `rust-toolchain.toml` and `Cargo.toml` (if prover/CLI is in repo)
+5. `.github/workflows/*.yml` for CI-validated command sequences
+
+## Install toolchain
 
 ```bash
 git clone https://github.com/starkware-libs/starknet-privacy.git
 cd starknet-privacy
-```
 
-## 2. Cairo / Starknet toolchain (contracts)
-
-The privacy pool and proof logic are written in **Cairo**. Install the same toolchain as in [Environment setup](/build/quickstart/environment-setup):
-
-**macOS / Linux** — Starkup (Scarb, Starknet Foundry, Starknet Devnet):
-
-```bash
+# Cairo + Foundry + Devnet
 curl --proto '=https' --tlsv1.2 -sSf https://sh.starkup.sh | sh
-```
 
-Verify:
-
-```bash
 scarb --version
 snforge --version && sncast --version
 starknet-devnet --version
 ```
 
-Use the **Scarb / Cairo versions required by the repo** (see `Scarb.toml` and the README)—if the project pins an older or newer Scarb, switch with `asdf` per the [appendix](/build/quickstart/appendix) or the README.
-
-## 3. Rust (client prover)
-
-Client-side proofs use **Stwo** over Cairo execution. If the repository ships a **Rust** workspace for the prover or CLI:
-
-1. Install [Rust](https://rustup.rs/) (`rustup`).
-2. Use the **Rust toolchain version** specified in `rust-toolchain.toml` or the README (e.g. `rustup default 1.xx`).
+If the project includes a Rust prover/client:
 
 ```bash
-# Example once README specifies the crate/workspace layout
-cargo build --release
+rustup --version
+cargo --version
 ```
 
-## 4. Build Cairo packages
+## Build and test (minimal, non-redundant)
 
-From the repository root (or the path given in the README):
+Run only the commands documented in the project README. Typical sequence is:
 
 ```bash
 scarb build
-```
-
-## 5. Run tests
-
-```bash
 snforge test
+# cargo build --release   # if prover/client crates are present
 ```
 
-If the README documents integration tests, scripts, or a different test entrypoint, follow that instead.
-
-## 6. Optional — Node / pnpm
-
-If the repo includes TypeScript or script tooling:
-
-```bash
-# Example — use the package manager named in the README
-npm install
-# or: pnpm install
-```
-
----
-
-Next: [Quickstart](/build/starknet-privacy/quickstart) · [Repository structure](/build/starknet-privacy/repository)
+For repository layout details, see [Repository structure](/build/starknet-privacy/repository).
