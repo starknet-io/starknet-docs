@@ -1,24 +1,93 @@
 ---
 title: Anonymous DeFi and open notes
-description: Swap flow using open notes and helper contracts
+description: Helper contracts, Invoke, and open-note fills for swaps and lending
 icon: arrows-rotate
 ---
 
-Standard AMMs expose amounts through reserve changes, so this flow targets anonymity (identity hiding), not full amount privacy.
+Standard AMMs and lending vaults expose **amounts** through reserves, share mint/burn, and transfers. Starknet Privacy still lets you route value **through** those protocols while targeting **anonymity** (who is interacting, how notes chain in the pool)—not full **amount** hiding on the leg that must be filled on-chain after the fact. **Open notes** carry that tradeoff by design; see [Notes and nullifiers — Open notes](/build/starknet-privacy/notes-and-nullifiers#open-notes).
 
-## Open-note swap flow
+The paper is authoritative for semantics: [IACR 2026/474](https://eprint.iacr.org/2026/474.pdf) §10.
 
-1. Spend source notes.
-2. Create empty open note for destination token.
-3. Withdraw source token to helper contract.
-4. Invoke helper: swap, then deposit destination token into open note.
+## End-to-end pattern (swap or analogous DeFi)
 
-## Example contract references
+1. **Spend** the source-token notes you are using.
+2. **Create** an **open note** for the **output** token (the amount is not fixed in ciphertext until the external step completes).
+3. **Withdraw** from the pool into a **helper** contract address (so the helper holds the input tokens for the next step).
+4. **Invoke** the helper from the pool: the helper talks to the external protocol (AMM, lending vault, …), then returns instructions for the pool to **credit** the open note with the measured output.
 
-Use repository helper contracts/examples once available in the public repo. Suggested doc links to add when published:
+Steps 3–4 are why you need a small, auditable **adapter** contract: the core pool stays generic; the helper encodes “how to call Vesu / an AMM / …” and how to turn the **actual** token delta into an **open-note deposit**.
 
-- helper swap contract source path,
-- open-note deposit entrypoint path,
-- integration test exercising the full swap.
+## What a helper contract is responsible for
 
-Until then, the canonical protocol description is paper §10.
+In this model the **privacy pool** remains the authority that verifies proofs and updates note state. The **helper** is a separate contract that:
+
+- **Receives** tokens the pool withdrew for this leg (the pool is the orchestrator; the proof authorizes the overall flow).
+- **Performs** one or more calls into external DeFi (approve, deposit, swap, withdraw, …) according to that protocol’s interfaces.
+- **Measures** the **output** amount in a robust way (often a **balance delta** on the output token before vs after the operation), so the correct quantity is known **on-chain** even when it could not be fixed inside the ZK proof.
+- **Approves** the **privacy pool** to pull the output tokens it received, so the pool can complete the accounting and **fill** the open note.
+- **Returns** a structured description of **which open note** gets **which token** and **how much**—in the reference Cairo this is expressed as deposits such as `OpenNoteDeposit { note_id, token, amount }` for the pool to apply.
+
+Helpers are meant to be **small and reviewable**: they should not hold user funds long-term; they execute a single orchestrated step when invoked by the pool.
+
+## Example reference shape: Vesu lending helper
+
+[Vesu](https://vesu.xyz) is a permissionless lending protocol on Starknet built around **tokenized vaults** (ERC-4626 / SNIP-22 style): depositing **underlying** mints **share** tokens (vTokens); withdrawing **burns** shares and returns underlying. A **Vesu lending helper** illustrates the same **open-note + Invoke** pattern as a swap helper, but the external calls are **`deposit`** / **`withdraw`** on the vToken contract instead of a swap.
+
+Vesu documents the vToken entrypoints here: [vToken deposit & withdraw](https://docs.vesu.xyz/developers/core/vtoken#deposit--withdraw).
+
+### Roles of the tokens in `privacy_invoke`
+
+The reference interface is parameterized roughly as follows (names match the conceptual design; exact paths ship with the open source implementation):
+
+- **`operation`** — `Deposit` or `Withdraw`.
+- **`in_token` / `out_token`** — addresses that identify which ERC-20 the helper spends vs which it receives **for that operation**:
+  - **Deposit (underlying → shares):** spend **`in_token`** (underlying), call **`deposit(assets, receiver)`** on the **vault** at **`out_token`** (the vToken). The vault **pulls** underlying after approval.
+  - **Withdraw (shares → underlying):** call **`withdraw(assets, receiver, owner)`** on the **vault** at **`in_token`** (the vToken); underlying is paid out as **`out_token`** to the helper, which then becomes the output leg for the open note.
+
+So `in_token` and `out_token` are **not** symmetric labels—they swap meaning between deposit and withdraw, as in the Vesu vToken API.
+
+### What the helper returns
+
+After executing the lending call, the helper compares **output token balance before and after** to obtain **`out_amount`**, asserts it is non-zero, **approves the privacy pool** (the **caller**) to transfer that amount, and returns a span of **`OpenNoteDeposit { note_id, token: out_token, amount: out_amount }`** so the pool can **fill** the previously created open note.
+
+Typical **preconditions** (enforced with explicit errors) include: non-zero tokens and amount; `in_token != out_token`; on deposit, `out_token` must be a vToken; on withdraw, `in_token` must be a vToken; the helper must hold enough input balance for the requested `assets`.
+
+### Interface sketch (Cairo)
+
+The following is an abbreviated excerpt of the reference design—you can treat it as documentation of the **shape** of the integration, not as a substitute for the audited source when it is published:
+
+```cairo
+pub enum LendingOperation { Deposit, Withdraw }
+
+#[starknet::interface]
+pub trait IVToken<T> {
+    fn deposit(ref self: T, assets: u256, receiver: ContractAddress) -> u256;
+    fn withdraw(
+        ref self: T, assets: u256, receiver: ContractAddress, owner: ContractAddress,
+    ) -> u256;
+}
+
+#[starknet::interface]
+pub trait IVesuLendingHelper<T> {
+    /// Called by the privacy pool via the protocol invoke path.
+    fn privacy_invoke(
+        ref self: T,
+        operation: LendingOperation,
+        in_token: ContractAddress,
+        out_token: ContractAddress,
+        assets: u256,
+        note_id: felt252,
+    ) -> Span<OpenNoteDeposit>;
+}
+```
+
+The live contract also performs the approve / call / balance-delta / approve-pool sequence described above.
+
+## Swaps vs lending
+
+- **Swap flow:** withdraw to helper → invoke AMM (or router) → measure output → return open-note deposit(s).
+- **Lending flow (Vesu example):** same orchestration, but the external protocol is **mint/burn of vTokens** and movement of **underlying**, still ending in a measured **output amount** credited to an open note.
+
+## Reference implementation
+
+Concrete helper sources, tests, and deployment notes are part of the **reference implementation**, which is **not open sourced yet**. When the repository is public, this documentation should link directly to the Vesu lending helper package and any swap helpers maintained alongside it. Until then, rely on the paper for protocol rules and this page for how **helpers** fit **open notes** and **Invoke**.

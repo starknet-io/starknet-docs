@@ -16,6 +16,20 @@ A note encodes:
 
 Notes are **immutable**. To “transfer part” of a note, the owner **spends** the full note and **creates** new notes (change + outputs)—like Bitcoin UTXOs.
 
+## Open notes
+
+Most notes hide the **amount** (and use encryption keyed to the channel) so observers learn little from ciphertext alone. **Open notes** are a deliberate exception for flows where the **output amount is not fixed at proof time**—for example, an AMM swap where the execution price is determined on-chain **after** the privacy proof is built.
+
+Conceptually:
+
+- **Same note object** — still an owner, token, and amount slot in pool storage; still spent with a **nullifier** like any other note.
+- **Reserved encoding** — the protocol uses a fixed **salt** value (see paper §6.1.1) so the stored payload is **not** ciphertext in the usual sense. After the note is **filled**, the **amount** (and related fields the spec exposes for this mode, such as token and depositor where applicable) appear **in plaintext** on-chain—anyone can read them.
+- **Lifecycle** — you typically **create** an open note in an “empty” or partial state inside a transaction whose proof already authorizes the shape of the flow, then an **external contract** (for example via **Invoke**) completes the swap and **writes** the final amount into that note.
+
+**Privacy tradeoff:** open notes protect **who** is interacting with DeFi and how notes chain through the pool, but they **do not** hide the filled amount on that leg. Use them only where the protocol needs an on-chain fill after proving. For ordinary transfers, use confidential notes.
+
+See [Anonymous DeFi and open notes](/build/starknet-privacy/anonymous-defi) for the high-level swap pattern and [Encryption and viewing keys](/build/starknet-privacy/encryption-and-keys) for how encoding differs from standard note encryption.
+
 ## Note identifier and storage
 
 The **note id** determines where the encrypted note is stored. It is derived from a **channel key** (c), **token**, and a **sequential index** (i) inside that channel’s subchannel for that token. Only parties who know the channel layout can locate and decrypt notes efficiently.
