@@ -28,7 +28,10 @@ ALLOWED_NON_DOC_PATHS = {
     "/.well-known/llms-full.txt",
     "/sitemap.xml",
 }
-ITEM_RE = re.compile(r"^- \[([^\]]+)\]\((https://docs\.starknet\.io/[^\s)]+)\)(?:: .+)?$")
+ALLOWED_EXTERNAL_URLS = {
+    "https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json",
+}
+ITEM_RE = re.compile(r"^- \[([^\]]+)\]\((https://[^\s)]+)\)(?:: .+)?$")
 
 
 def fail(message: str) -> None:
@@ -142,23 +145,28 @@ def verify_urls(urls: list[str]) -> None:
 
     for url in urls:
         parsed = urlparse(url)
-        if parsed.scheme != "https" or parsed.netloc != "docs.starknet.io":
-            fail(f"invalid URL domain/scheme: {url}")
+        if parsed.scheme != "https":
+            fail(f"invalid URL scheme: {url}")
         if parsed.query or parsed.fragment:
             fail(f"URL must not include query parameters or fragments: {url}")
-        validate_canonical_path(parsed.path, url)
 
-        if parsed.path in ALLOWED_NON_DOC_PATHS:
+        if parsed.netloc == "docs.starknet.io":
+            validate_canonical_path(parsed.path, url)
+            if parsed.path in ALLOWED_NON_DOC_PATHS:
+                continue
+
+            if not parsed.path.endswith(".md"):
+                fail(
+                    f"non-curated link must end in .md (or be allowlisted optional artifact): {url}"
+                )
+
+            local_file = normalize_to_local_mdx(parsed.path)
+            if not local_file.is_file():
+                fail(f"URL does not map to a local .mdx file: {url} -> {local_file}")
             continue
 
-        if not parsed.path.endswith(".md"):
-            fail(
-                f"non-curated link must end in .md (or be allowlisted optional artifact): {url}"
-            )
-
-        local_file = normalize_to_local_mdx(parsed.path)
-        if not local_file.is_file():
-            fail(f"URL does not map to a local .mdx file: {url} -> {local_file}")
+        if url not in ALLOWED_EXTERNAL_URLS:
+            fail(f"external URL is not in allowlist: {url}")
 
 
 def main() -> None:
