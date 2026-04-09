@@ -61,6 +61,14 @@ Documentation is automatically deployed to production when changes are pushed to
 2. **Mintlify** automatically builds and deploys
 3. **Changes** are live at [docs.starknet.io](https://docs.starknet.io)
 
+## 🤖 LLM Discoverability
+
+- Curated file: `llms.txt` (high-signal entry points for AI assistants and answer engines)
+- Full context: `llms-full.txt` (Mintlify-generated exhaustive context)
+- Validation: `python scripts/validate_llms_txt.py`
+- CI check: `.github/workflows/llms-check.yml`
+- Strategy notes: `LLMS_STRATEGY_APR2026.md`
+
 ## 🤝 Contributing
 
 We welcome contributions from the community! Here's how you can help:

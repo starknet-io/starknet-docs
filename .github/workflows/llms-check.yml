@@ -1,0 +1,37 @@
+name: llms-check
+
+on:
+  pull_request:
+    paths:
+      - llms.txt
+      - scripts/validate_llms_txt.py
+      - .github/workflows/llms-check.yml
+  push:
+    branches:
+      - main
+    paths:
+      - llms.txt
+      - scripts/validate_llms_txt.py
+      - .github/workflows/llms-check.yml
+
+concurrency:
+  group: llms-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate llms.txt
+        run: python scripts/validate_llms_txt.py
