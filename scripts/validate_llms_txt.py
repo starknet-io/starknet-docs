@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -102,7 +103,7 @@ def main() -> None:
     if len(urls) < 20:
         fail(f"llms.txt should be curated but substantial (found {len(urls)} links, expected >= 20)")
 
-    duplicates = sorted({u for u in urls if urls.count(u) > 1})
+    duplicates = sorted([u for u, count in Counter(urls).items() if count > 1])
     if duplicates:
         fail(f"duplicate URLs found: {duplicates}")
 
