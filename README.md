@@ -67,7 +67,6 @@ Documentation is automatically deployed to production when changes are pushed to
 - Full context: `llms-full.txt` (Mintlify-generated exhaustive context)
 - Validation: `python scripts/validate_llms_txt.py`
 - CI check: `.github/workflows/llms-check.yml`
-- Strategy notes: `LLMS_STRATEGY_APR2026.md`
 
 ## 🤝 Contributing
 
