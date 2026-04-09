@@ -15,7 +15,7 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -34,6 +34,24 @@ ITEM_RE = re.compile(r"^- \[([^\]]+)\]\((https://docs\.starknet\.io/[^\s)]+)\)(?
 def fail(message: str) -> None:
     print(f"ERROR: {message}", file=sys.stderr)
     sys.exit(1)
+
+
+def validate_canonical_path(path: str, url: str) -> None:
+    if not path.startswith("/"):
+        fail(f"URL path must be absolute: {url}")
+    if "//" in path:
+        fail(f"URL path must be canonical (no duplicate slashes): {url}")
+
+    segments = path.split("/")
+    for segment in segments[1:]:
+        if segment in {"", ".", ".."}:
+            fail(f"URL path must be canonical (no dot-segments): {url}")
+
+        decoded_segment = unquote(segment)
+        if decoded_segment in {".", ".."}:
+            fail(f"URL path must be canonical (no encoded dot-segments): {url}")
+        if "/" in decoded_segment:
+            fail(f"URL path must be canonical (no encoded separators): {url}")
 
 
 def normalize_to_local_mdx(path: str) -> Path:
@@ -128,6 +146,7 @@ def verify_urls(urls: list[str]) -> None:
             fail(f"invalid URL domain/scheme: {url}")
         if parsed.query or parsed.fragment:
             fail(f"URL must not include query parameters or fragments: {url}")
+        validate_canonical_path(parsed.path, url)
 
         if parsed.path in ALLOWED_NON_DOC_PATHS:
             continue
