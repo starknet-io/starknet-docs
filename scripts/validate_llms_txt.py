@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT_RESOLVED = REPO_ROOT.resolve()
 LLMS_PATH = REPO_ROOT / "llms.txt"
 ALLOWED_NON_DOC_PATHS = {
     "/llms.txt",
@@ -44,10 +45,16 @@ def normalize_to_local_mdx(path: str) -> Path:
     """
     relative = path.lstrip("/")
     if relative == "index.md":
-        return REPO_ROOT / "index.mdx"
-    if relative.endswith(".md"):
-        return REPO_ROOT / f"{relative[:-3]}.mdx"
-    return REPO_ROOT / relative
+        candidate = REPO_ROOT / "index.mdx"
+    elif relative.endswith(".md"):
+        candidate = REPO_ROOT / f"{relative[:-3]}.mdx"
+    else:
+        candidate = REPO_ROOT / relative
+
+    resolved = candidate.resolve(strict=False)
+    if not resolved.is_relative_to(REPO_ROOT_RESOLVED):
+        fail(f"URL path escapes repository root: {path}")
+    return resolved
 
 
 def validate_headings(non_empty: list[tuple[int, str]]) -> int:
@@ -56,8 +63,12 @@ def validate_headings(non_empty: list[tuple[int, str]]) -> int:
     for line_no, line in non_empty:
         stripped = line.strip()
         if stripped.startswith("# "):
+            if not stripped[2:].strip():
+                fail(f"line {line_no}: H1 heading text cannot be empty")
             h1_count += 1
-        elif stripped.startswith("## ") and len(stripped) > 3:
+        elif stripped.startswith("## "):
+            if not stripped[3:].strip():
+                fail(f"line {line_no}: H2 heading text cannot be empty")
             saw_h2 = True
         elif stripped.startswith("#"):
             fail(f"line {line_no}: only H1/H2 headings are allowed, got: {stripped[:40]!r}")
@@ -115,6 +126,8 @@ def verify_urls(urls: list[str]) -> None:
         parsed = urlparse(url)
         if parsed.scheme != "https" or parsed.netloc != "docs.starknet.io":
             fail(f"invalid URL domain/scheme: {url}")
+        if parsed.query or parsed.fragment:
+            fail(f"URL must not include query parameters or fragments: {url}")
 
         if parsed.path in ALLOWED_NON_DOC_PATHS:
             continue
@@ -125,7 +138,7 @@ def verify_urls(urls: list[str]) -> None:
             )
 
         local_file = normalize_to_local_mdx(parsed.path)
-        if not local_file.exists():
+        if not local_file.is_file():
             fail(f"URL does not map to a local .mdx file: {url} -> {local_file}")
 
 
