@@ -1,6 +1,6 @@
 ---
-title: Network, RPC, Staking, and Bridging
-description: "Configure networks, RPC providers, staking, and bridging for the SDK"
+title: Network, RPC, Staking, Bridging, and Logging
+description: "Configure networks, RPC providers, staking, bridging, and logging for the SDK"
 icon: cog
 ---
 
@@ -140,6 +140,40 @@ The `StarkZap` accepts configuration through a single options object. You can us
       For the full deposit flow (`getBridgingTokens`, external wallet adapters, fee estimate, deposit), see the [Bridging Guide](/build/starkzap/bridging).
     </Info>
   </Accordion>
+
+  <Accordion title="Logging">
+    Configure optional SDK diagnostics when you need visibility into wallet, bridge, and transaction flows during development or debugging. Logging is opt-in and the SDK stays silent by default.
+
+    ```typescript
+    import { StarkZap } from "starkzap";
+
+    const sdk = new StarkZap({
+      network: "mainnet",
+      logging: {
+        logger: console,
+      },
+    });
+    ```
+
+    StarkZap accepts any console-compatible logger with `debug`, `info`, `warn`, and `error` methods. You can also filter logs inside the SDK with `logLevel`:
+
+    ```typescript
+    import { StarkZap } from "starkzap";
+    import pino from "pino";
+
+    const sdk = new StarkZap({
+      network: "mainnet",
+      logging: {
+        logger: pino(),
+        logLevel: "warn",
+      },
+    });
+    ```
+
+    - Omit `logging` to keep the SDK completely silent
+    - Omit `logLevel` to forward all log levels to your logger
+    - Supported levels are `trace`, `debug`, `info`, `warn`, `error`, `fatal`, and `silent`
+  </Accordion>
 </AccordionGroup>
 
 ## Complete Configuration Example
@@ -154,6 +188,12 @@ import { StarkZap, fromAddress } from "starkzap";
 const sdk = new StarkZap({
   // Network configuration
   network: "mainnet",
+
+  // Optional: SDK diagnostics
+  logging: {
+    logger: console,
+    logLevel: "info",
+  },
   
   // Optional: override staking contract preset
   staking: {
@@ -177,6 +217,11 @@ const sdk = new StarkZap({
   // Custom RPC configuration
   rpcUrl: "https://starknet-mainnet.infura.io/v3/YOUR_KEY",
   chainId: ChainId.MAINNET,
+
+  // Optional: SDK diagnostics
+  logging: {
+    logger: console,
+  },
   
   // Optional: override staking contract preset
   staking: {
@@ -208,6 +253,7 @@ interface SDKConfig {
   explorer?: ExplorerConfig;
   staking?: StakingConfig;
   bridging?: BridgingConfig;
+  logging?: LoggerConfig;
 }
 
 interface StakingConfig {
@@ -218,6 +264,16 @@ interface BridgingConfig {
   layerZeroApiKey?: string;
   ethereumRpcUrl?: string;
   solanaRpcUrl?: string;
+}
+
+interface LoggerConfig {
+  logger: {
+    debug(message: string, ...args: unknown[]): void;
+    info(message: string, ...args: unknown[]): void;
+    warn(message: string, ...args: unknown[]): void;
+    error(message: string, ...args: unknown[]): void;
+  };
+  logLevel?: "trace" | "debug" | "info" | "warn" | "error" | "fatal" | "silent";
 }
 ```
 
