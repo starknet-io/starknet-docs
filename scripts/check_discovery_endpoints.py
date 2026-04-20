@@ -129,6 +129,13 @@ def main() -> None:
     parsed_base_url = urlparse(base_url)
     if parsed_base_url.scheme not in {"http", "https"} or not parsed_base_url.netloc:
         fail("--base-url must be an absolute http:// or https:// URL")
+    if (
+        parsed_base_url.path
+        or parsed_base_url.params
+        or parsed_base_url.query
+        or parsed_base_url.fragment
+    ):
+        fail("--base-url must be an origin URL: scheme://host[:port]")
 
     checks = [
         ("/llms.txt", "# Starknet Documentation"),
