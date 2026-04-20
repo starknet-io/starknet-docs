@@ -25,8 +25,8 @@ from urllib.request import Request, urlopen
 
 DEFAULT_BASE_URL = "https://docs.starknet.io"
 USER_AGENT = "starknet-docs-metadata-health-check/1.0"
-TIMEOUT_SECONDS = 20
-MAX_ATTEMPTS = 3
+TIMEOUT_SECONDS = 8
+MAX_ATTEMPTS = 2
 RETRYABLE_HTTP_STATUSES = {408, 409, 425, 429, 500, 502, 503, 504}
 DESCRIPTION_MIN_LENGTH = 40
 DESCRIPTION_MAX_LENGTH = 320
