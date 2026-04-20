@@ -10,7 +10,9 @@ surface that agents and crawlers actually fetch.
 from __future__ import annotations
 
 import argparse
+import random
 import sys
+import time
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -19,13 +21,15 @@ from urllib.request import Request, urlopen
 DEFAULT_BASE_URL = "https://docs.starknet.io"
 TIMEOUT_SECONDS = 15
 USER_AGENT = "starknet-docs-discovery-check/1.0"
+MAX_ATTEMPTS = 4
+RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 
 
 @dataclass(frozen=True)
 class Response:
     url: str
     status: int
-    headers: dict[str, str]
+    headers: dict[str, list[str]]
     body: str
 
 
@@ -34,19 +38,42 @@ def fail(message: str) -> None:
     sys.exit(1)
 
 
+def collect_headers(headers: object) -> dict[str, list[str]]:
+    collected: dict[str, list[str]] = {}
+    for key, value in headers.items():
+        collected.setdefault(key.lower(), []).append(value)
+    return collected
+
+
+def retry_delay_seconds(attempt: int) -> float:
+    return min(2 ** (attempt - 1), 8) + random.uniform(0, 0.25)
+
+
 def fetch(url: str, *, method: str = "GET") -> Response:
     request = Request(url, method=method, headers={"User-Agent": USER_AGENT})
-    try:
-        with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-            body = response.read().decode("utf-8", errors="replace")
-            headers = {key.lower(): value for key, value in response.headers.items()}
-            return Response(url=url, status=response.status, headers=headers, body=body)
-    except HTTPError as error:
-        body = error.read().decode("utf-8", errors="replace")
-        headers = {key.lower(): value for key, value in error.headers.items()}
-        return Response(url=url, status=error.code, headers=headers, body=body)
-    except URLError as error:
-        fail(f"failed to fetch {url}: {error.reason}")
+    last_error: str | None = None
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+                body = response.read().decode("utf-8", errors="replace")
+                headers = collect_headers(response.headers)
+                return Response(url=url, status=response.status, headers=headers, body=body)
+        except HTTPError as error:
+            body = error.read().decode("utf-8", errors="replace")
+            headers = collect_headers(error.headers)
+            if error.code not in RETRYABLE_STATUSES or attempt == MAX_ATTEMPTS:
+                return Response(url=url, status=error.code, headers=headers, body=body)
+            last_error = f"HTTP {error.code}"
+        except URLError as error:
+            last_error = str(error.reason)
+            if attempt == MAX_ATTEMPTS:
+                fail(f"failed to fetch {url} after {MAX_ATTEMPTS} attempts: {last_error}")
+
+        print(f"retrying {url} after attempt {attempt}/{MAX_ATTEMPTS}: {last_error}")
+        time.sleep(retry_delay_seconds(attempt))
+
+    fail(f"failed to fetch {url}: {last_error}")
 
 
 def assert_status(response: Response, expected: int = 200) -> None:
@@ -55,7 +82,7 @@ def assert_status(response: Response, expected: int = 200) -> None:
 
 
 def assert_text_content(response: Response) -> None:
-    content_type = response.headers.get("content-type", "")
+    content_type = response.headers.get("content-type", [""])[0]
     if "text/" not in content_type and "xml" not in content_type:
         fail(f"{response.url} returned unexpected content-type: {content_type!r}")
 
@@ -77,8 +104,8 @@ def check_homepage_headers(base_url: str) -> None:
     response = fetch(f"{base_url}/", method="HEAD")
     assert_status(response)
 
-    link_header = response.headers.get("link", "")
-    llms_header = response.headers.get("x-llms-txt", "")
+    link_header = ", ".join(response.headers.get("link", []))
+    llms_header = response.headers.get("x-llms-txt", [""])[0]
     if 'rel="llms-txt"' not in link_header:
         fail(f"{base_url}/ is missing rel=\"llms-txt\" Link header")
     if 'rel="llms-full-txt"' not in link_header:
