@@ -15,6 +15,7 @@ import sys
 import time
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 
@@ -82,7 +83,8 @@ def assert_status(response: Response, expected: int = 200) -> None:
 
 
 def assert_text_content(response: Response) -> None:
-    content_type = response.headers.get("content-type", [""])[0]
+    content_type = str(response.headers.get("content-type", [""])[0])
+    content_type = content_type.split(";", 1)[0].strip().lower()
     if "text/" not in content_type and "xml" not in content_type:
         fail(f"{response.url} returned unexpected content-type: {content_type!r}")
 
@@ -121,6 +123,9 @@ def main() -> None:
     args = parser.parse_args()
 
     base_url = args.base_url.rstrip("/")
+    parsed_base_url = urlparse(base_url)
+    if parsed_base_url.scheme not in {"http", "https"} or not parsed_base_url.netloc:
+        fail("--base-url must be an absolute http:// or https:// URL")
 
     checks = [
         ("/llms.txt", "# Starknet Documentation"),
