@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import random
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -83,10 +84,12 @@ def assert_status(response: Response, expected: int = 200) -> None:
 
 
 def assert_text_content(response: Response) -> None:
-    content_type = str(response.headers.get("content-type", [""])[0])
-    content_type = content_type.split(";", 1)[0].strip().lower()
-    if "text/" not in content_type and "xml" not in content_type:
-        fail(f"{response.url} returned unexpected content-type: {content_type!r}")
+    content_types = response.headers.get("content-type", [""])
+    for raw_content_type in content_types:
+        content_type = str(raw_content_type).split(";", 1)[0].strip().lower()
+        if "text/" in content_type or "xml" in content_type:
+            return
+    fail(f"{response.url} returned unexpected content-type: {content_types!r}")
 
 
 def assert_body_contains(response: Response, needle: str) -> None:
@@ -108,9 +111,9 @@ def check_homepage_headers(base_url: str) -> None:
 
     link_header = ", ".join(response.headers.get("link", []))
     llms_header = response.headers.get("x-llms-txt", [""])[0]
-    if 'rel="llms-txt"' not in link_header:
+    if not re.search(r"""rel\s*=\s*["']llms-txt["']""", link_header, flags=re.I):
         fail(f"{base_url}/ is missing rel=\"llms-txt\" Link header")
-    if 'rel="llms-full-txt"' not in link_header:
+    if not re.search(r"""rel\s*=\s*["']llms-full-txt["']""", link_header, flags=re.I):
         fail(f"{base_url}/ is missing rel=\"llms-full-txt\" Link header")
     if llms_header != "/llms.txt":
         fail(f"{base_url}/ has unexpected x-llms-txt header: {llms_header!r}")
