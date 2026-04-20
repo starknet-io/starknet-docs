@@ -172,9 +172,14 @@ def expected_canonical(base_url: str, path: str) -> str:
 
 def validate_page(base_url: str, target: TargetPage) -> tuple[list[str], list[str]]:
     url = urljoin(base_url + "/", target.path.lstrip("/"))
-    status, headers, body = request_url(url)
     errors: list[str] = []
     warnings: list[str] = []
+
+    try:
+        status, headers, body = request_url(url)
+    except (TimeoutError, URLError) as exc:
+        errors.append(f"{target.path}: failed to fetch {url}: {exc}")
+        return errors, warnings
 
     if status != 200:
         return [f"{target.path}: expected HTTP 200, got {status}"], warnings
@@ -229,6 +234,7 @@ def validate_page(base_url: str, target: TargetPage) -> tuple[list[str], list[st
 
 
 def run(base_url: str, targets: Iterable[TargetPage]) -> int:
+    targets = tuple(targets)
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -248,7 +254,7 @@ def run(base_url: str, targets: Iterable[TargetPage]) -> int:
             print(f"- {error}")
         return 1
 
-    print(f"\nmetadata health check passed for {base_url} ({len(TARGET_PAGES)} pages, {len(warnings)} warnings)")
+    print(f"\nmetadata health check passed for {base_url} ({len(targets)} pages, {len(warnings)} warnings)")
     return 0
 
 
