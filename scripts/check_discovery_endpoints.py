@@ -107,6 +107,8 @@ def check_endpoint(base_url: str, path: str, expected_text: str) -> None:
 
 def check_homepage_headers(base_url: str) -> None:
     response = fetch(f"{base_url}/", method="HEAD")
+    if response.status in {405, 501}:
+        response = fetch(f"{base_url}/", method="GET")
     assert_status(response)
 
     link_header = ", ".join(response.headers.get("link", []))
