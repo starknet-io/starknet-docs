@@ -1,0 +1,258 @@
+---
+title: "Troves"
+description: "Discover Troves strategies, inspect positions, and deposit or withdraw through Starkzap"
+icon: layers
+---
+
+## Overview
+
+Starkzap supports [Troves](https://app.troves.fi) strategies through `wallet.troves()`.
+
+Troves combines off-chain strategy discovery with on-chain execution:
+
+- 📊 **Discover strategies** - Fetch the currently available Troves strategies and protocol-level stats
+- 🧾 **Inspect positions** - Read the wallet's share balance and the current underlying asset amounts for a strategy
+- 💸 **Deposit** - Build and execute the Troves deposit flow from typed `Amount` inputs
+- 📤 **Withdraw** - Build and execute the Troves withdraw flow with the same typed API
+- 📦 **Batch with other actions** - Compose Troves deposits or withdrawals inside `wallet.tx()`
+
+<Info>
+  Troves uses the Troves HTTP API to discover strategies and build the required calls, then executes those calls through the connected Starknet wallet.
+</Info>
+
+## Configuration
+
+Troves is available from the wallet:
+
+```typescript
+import { StarkZap } from "starkzap";
+
+const sdk = new StarkZap({ network: "mainnet" });
+const wallet = await sdk.connectWallet({
+  account: { signer, accountClass },
+});
+
+const troves = wallet.troves();
+```
+
+By default, Troves is **mainnet-only**. If the wallet is not on Starknet Mainnet, `wallet.troves()` throws unless you explicitly override the API base:
+
+```typescript
+const troves = wallet.troves({
+  apiBase: "https://your-custom-troves-backend.example.com",
+  timeoutMs: 15000,
+});
+```
+
+Use `apiBase` only when you intentionally want to point the SDK at a custom Troves-compatible backend.
+
+## Discovering strategies
+
+Fetch the current strategy catalog:
+
+```typescript
+const { strategies, lastUpdated } = await wallet.troves().getStrategies();
+
+console.log("Updated at:", lastUpdated);
+for (const strategy of strategies) {
+  console.log(strategy.id, strategy.name);
+  console.log("APY:", strategy.apy);
+  console.log("TVL (USD):", strategy.tvlUsd);
+  console.log(
+    "Deposit tokens:",
+    strategy.depositTokens.map((token) => token.symbol).join(", ")
+  );
+}
+```
+
+You can force a fresh fetch instead of using the default cached endpoint:
+
+```typescript
+const data = await wallet.troves().getStrategies({ noCache: true });
+```
+
+### Strategy shape
+
+```typescript
+interface TrovesStrategyAPIResult {
+  id: string;
+  name: string;
+  apy: number | string;
+  apySplit: {
+    baseApy: number;
+    rewardsApy: number;
+  };
+  depositTokens: TrovesDepositToken[];
+  leverage: number;
+  contracts: TrovesContract[];
+  tvlUsd: number;
+  status: { number: number; value: string };
+  liveStatus?: string;
+  isAudited: boolean;
+  isRetired: boolean;
+  assets: string[];
+  protocols: string[];
+}
+```
+
+### Protocol-level stats
+
+```typescript
+const stats = await wallet.troves().getStats();
+
+console.log(stats.tvl);
+console.log(stats.lastUpdated);
+```
+
+## Querying a position
+
+Read the wallet's position in a strategy by id:
+
+```typescript
+const position = await wallet.troves().getPosition("ekubo_cl_strketh");
+
+if (position) {
+  console.log("Shares:", position.shares);
+  position.amounts.forEach((amount) => {
+    console.log(amount.toFormatted());
+  });
+}
+```
+
+`getPosition()` returns `null` when the wallet holds no shares, or when the strategy does not expose a readable vault contract for this flow.
+
+### Position shape
+
+```typescript
+interface TrovesPosition {
+  strategyId: string;
+  vaultAddress: Address;
+  shares: bigint;
+  amounts: Amount[];
+}
+```
+
+For single-asset strategies, `amounts` contains one `Amount`. For dual-asset strategies, it contains two entries in the same order as the strategy's `depositTokens`.
+
+## Depositing
+
+Deposit into a Troves strategy with typed `Amount` inputs:
+
+```typescript
+const tx = await wallet.troves().deposit({
+  strategyId: "ekubo_cl_strketh",
+  amount: Amount.parse("10", STRK),
+});
+await tx.wait();
+```
+
+Dual-asset strategies can provide `amount2`:
+
+```typescript
+const tx = await wallet.troves().deposit({
+  strategyId: "some_dual_asset_strategy",
+  amount: Amount.parse("10", TOKEN_A),
+  amount2: Amount.parse("0.5", TOKEN_B),
+});
+await tx.wait();
+```
+
+With execution options:
+
+```typescript
+const tx = await wallet.troves().deposit(
+  {
+    strategyId: "ekubo_cl_strketh",
+    amount: Amount.parse("10", STRK),
+  },
+  { feeMode: { type: "paymaster" } }
+);
+await tx.wait();
+```
+
+## Withdrawing
+
+Withdraw from a Troves strategy using the same typed shape:
+
+```typescript
+const tx = await wallet.troves().withdraw({
+  strategyId: "ekubo_cl_strketh",
+  amount: Amount.parse("5", STRK),
+});
+await tx.wait();
+```
+
+For dual-asset strategies:
+
+```typescript
+const tx = await wallet.troves().withdraw({
+  strategyId: "some_dual_asset_strategy",
+  amount: Amount.parse("5", TOKEN_A),
+  amount2: Amount.parse("0.25", TOKEN_B),
+});
+await tx.wait();
+```
+
+## Using the transaction builder
+
+Troves can be composed into a larger atomic transaction through the tx builder:
+
+```typescript
+const tx = await wallet
+  .tx()
+  .trovesDeposit({
+    strategyId: "ekubo_cl_strketh",
+    amount: Amount.parse("10", STRK),
+  })
+  .transfer(STRK, [{ to: recipient, amount: Amount.parse("1", STRK) }])
+  .send();
+
+await tx.wait();
+```
+
+Withdraw through the builder:
+
+```typescript
+const tx = await wallet
+  .tx()
+  .trovesWithdraw({
+    strategyId: "ekubo_cl_strketh",
+    amount: Amount.parse("5", STRK),
+  })
+  .send();
+
+await tx.wait();
+```
+
+## Low-level call preparation
+
+If you need to inspect or batch Troves calls manually, use the populate helpers:
+
+```typescript
+const depositCalls = await wallet.troves().populateDeposit({
+  strategyId: "ekubo_cl_strketh",
+  amount: Amount.parse("10", STRK),
+});
+
+const withdrawCalls = await wallet.troves().populateWithdraw({
+  strategyId: "ekubo_cl_strketh",
+  amount: Amount.parse("5", STRK),
+});
+```
+
+These return Starknet `Call[]` values without executing them.
+
+## Best Practices
+
+1. Use `getStrategies()` to drive the strategy picker instead of hard-coding ids.
+2. Treat Troves as mainnet-only unless you are explicitly using a custom compatible backend.
+3. Use typed `Amount` values from the strategy's deposit tokens to avoid decimals mismatches.
+4. Prefer `wallet.tx().trovesDeposit(...)` and `wallet.tx().trovesWithdraw(...)` when Troves actions should be atomic with other wallet operations.
+5. Expect some strategies to return `apy` as a string label rather than a numeric yield; use `apySplit` when you need structured numeric values.
+
+## Next Steps
+
+- [Tx Builder](/build/starkzap/tx-builder) — Batch Troves actions with transfers, staking, swaps, and more
+- [Transactions](/build/starkzap/transactions) — Direct execution, fee modes, and preflight
+- [Bitcoin, Stablecoins, and Tokens](/build/starkzap/erc20) — Token presets and typed `Amount` handling
+- [API Reference](/build/starkzap/api-reference) — Full method and type signatures
