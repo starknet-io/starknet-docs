@@ -31,30 +31,24 @@ Helpers are meant to be **small and reviewable**: they should not hold user fund
 
 ## Example reference shape: Vesu lending helper
 
-[Vesu](https://vesu.xyz) is a permissionless lending protocol on Starknet built around **tokenized vaults** (ERC-4626 / SNIP-22 style): depositing **underlying** mints **share** tokens (vTokens); withdrawing **burns** shares and returns underlying. A **Vesu lending helper** illustrates the same **open-note + Invoke** pattern as a swap helper, but the external calls are **`deposit`** / **`withdraw`** on the vToken contract instead of a swap.
+A **Vesu lending helper** is deployed on mainnet as a reference invoke helper. It illustrates the same **open-note + Invoke** pattern as a swap helper, but the external calls are **`deposit`** / **`withdraw`** on Vesu vToken contracts instead of a swap router.
 
-Vesu documents the vToken entrypoints here: [vToken deposit & withdraw](https://docs.vesu.xyz/developers/core/vtoken#deposit--withdraw).
+The helper contract source is readable on [Voyager](https://voyager.online/contract/0x028b49bc7a48b92d06d436d90e889729d7161dfc2fef3f16b674029bf7abc336). For Vesu's own vToken interface, see [vToken deposit & withdraw](https://docs.vesu.xyz/developers/core/vtoken#deposit--withdraw).
 
-### Roles of the tokens in `privacy_invoke`
+### What the Vesu helper does
 
-The reference interface is parameterized roughly as follows (names match the conceptual design; exact paths ship with the open source implementation):
+To enable users to anonymously use Vesu directly from the privacy pool, the helper:
 
-- **`operation`** — `Deposit` or `Withdraw`.
-- **`in_token` / `out_token`** — addresses that identify which ERC-20 the helper spends vs which it receives **for that operation**:
-  - **Deposit (underlying → shares):** spend **`in_token`** (underlying), call **`deposit(assets, receiver)`** on the **vault** at **`out_token`** (the vToken). The vault **pulls** underlying after approval.
-  - **Withdraw (shares → underlying):** call **`withdraw(assets, receiver, owner)`** on the **vault** at **`in_token`** (the vToken); underlying is paid out as **`out_token`** to the helper, which then becomes the output leg for the open note.
+1. **Receives tokens** from the pool (e.g. USDC you want to lend).
+2. **Deposits them into Vesu** and receives vault shares (vTokens) in return — or the reverse for a withdrawal.
+3. **Measures how many output tokens** it actually received (a balance check before and after the Vesu call).
+4. **Approves the pool** to pull those output tokens and **tells it which open note to credit** with the result.
 
-So `in_token` and `out_token` are **not** symmetric labels—they swap meaning between deposit and withdraw, as in the Vesu vToken API.
-
-### What the helper returns
-
-After executing the lending call, the helper compares **output token balance before and after** to obtain **`out_amount`**, asserts it is non-zero, **approves the privacy pool** (the **caller**) to transfer that amount, and returns a span of **`OpenNoteDeposit { note_id, token: out_token, amount: out_amount }`** so the pool can **fill** the previously created open note.
-
-Typical **preconditions** (enforced with explicit errors) include: non-zero tokens and amount; `in_token != out_token`; on deposit, `out_token` must be a vToken; on withdraw, `in_token` must be a vToken; the helper must hold enough input balance for the requested `assets`.
+The helper is needed because the output amount is only known after the Vesu call executes on-chain — it cannot be fixed inside the ZK proof ahead of time. That is exactly what open notes are for: the proof creates a placeholder, and the helper fills it with the real amount.
 
 ### Interface sketch (Cairo)
 
-The following is an abbreviated excerpt of the reference design—you can treat it as documentation of the **shape** of the integration, not as a substitute for the audited source when it is published:
+The following excerpt shows the **shape** of an invoke helper for reference. **Most users will interact through existing deployed helpers** (like the Vesu lending helper above), not write their own. Teams building new DeFi integrations can use this as a starting point—a full guide will ship with the SDK:
 
 ```cairo
 pub enum LendingOperation { Deposit, Withdraw }
@@ -88,6 +82,3 @@ The live contract also performs the approve / call / balance-delta / approve-poo
 - **Swap flow:** withdraw to helper → invoke AMM (or router) → measure output → return open-note deposit(s).
 - **Lending flow (Vesu example):** same orchestration, but the external protocol is **mint/burn of vTokens** and movement of **underlying**, still ending in a measured **output amount** credited to an open note.
 
-## Reference implementation
-
-Concrete helper sources, tests, and deployment notes are part of the **reference implementation**, which is **not open sourced yet**. When the repository is public, this documentation should link directly to the Vesu lending helper package and any swap helpers maintained alongside it. Until then, rely on the paper for protocol rules and this page for how **helpers** fit **open notes** and **Invoke**.
