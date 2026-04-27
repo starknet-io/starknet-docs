@@ -1,0 +1,84 @@
+---
+title: Anonymous DeFi and open notes
+description: Helper contracts, Invoke, and open-note fills for swaps and lending
+icon: arrows-rotate
+---
+
+Standard AMMs and lending vaults expose **amounts** through reserves, share mint/burn, and transfers. Starknet Privacy still lets you route value **through** those protocols while targeting **anonymity** (who is interacting, how notes chain in the pool)—not full **amount** hiding on the leg that must be filled on-chain after the fact. **Open notes** carry that tradeoff by design; see [Notes and nullifiers — Open notes](/build/starknet-privacy/notes-and-nullifiers#open-notes).
+
+The paper is authoritative for semantics: [IACR 2026/474](https://eprint.iacr.org/2026/474.pdf) §10.
+
+## End-to-end pattern (swap or analogous DeFi)
+
+1. **Spend** the source-token notes you are using.
+2. **Create** an **open note** for the **output** token (the amount is not fixed in ciphertext until the external step completes).
+3. **Withdraw** from the pool into a **helper** contract address (so the helper holds the input tokens for the next step).
+4. **Invoke** the helper from the pool: the helper talks to the external protocol (AMM, lending vault, …), then returns instructions for the pool to **credit** the open note with the measured output.
+
+Steps 3–4 are why you need a small, auditable **adapter** contract: the core pool stays generic; the helper encodes “how to call Vesu / an AMM / …” and how to turn the **actual** token delta into an **open-note deposit**.
+
+## What a helper contract is responsible for
+
+In this model the **privacy pool** remains the authority that verifies proofs and updates note state. The **helper** is a separate contract that:
+
+- **Receives** tokens the pool withdrew for this leg (the pool is the orchestrator; the proof authorizes the overall flow).
+- **Performs** one or more calls into external DeFi (approve, deposit, swap, withdraw, …) according to that protocol’s interfaces.
+- **Measures** the **output** amount in a robust way (often a **balance delta** on the output token before vs after the operation), so the correct quantity is known **on-chain** even when it could not be fixed inside the ZK proof.
+- **Approves** the **privacy pool** to pull the output tokens it received, so the pool can complete the accounting and **fill** the open note.
+- **Returns** a structured description of **which open note** gets **which token** and **how much**—in the reference Cairo this is expressed as deposits such as `OpenNoteDeposit { note_id, token, amount }` for the pool to apply.
+
+Helpers are meant to be **small and reviewable**: they should not hold user funds long-term; they execute a single orchestrated step when invoked by the pool.
+
+## Example reference shape: Vesu lending helper
+
+A **Vesu lending helper** is deployed on mainnet as a reference invoke helper. It illustrates the same **open-note + Invoke** pattern as a swap helper, but the external calls are **`deposit`** / **`withdraw`** on Vesu vToken contracts instead of a swap router.
+
+The helper contract source is readable on [Voyager](https://voyager.online/contract/0x028b49bc7a48b92d06d436d90e889729d7161dfc2fef3f16b674029bf7abc336). For Vesu's own vToken interface, see [vToken deposit & withdraw](https://docs.vesu.xyz/developers/core/vtoken#deposit--withdraw).
+
+### What the Vesu helper does
+
+To enable users to anonymously use Vesu directly from the privacy pool, the helper:
+
+1. **Receives tokens** from the pool (e.g. USDC you want to lend).
+2. **Deposits them into Vesu** and receives vault shares (vTokens) in return — or the reverse for a withdrawal.
+3. **Measures how many output tokens** it actually received (a balance check before and after the Vesu call).
+4. **Approves the pool** to pull those output tokens and **tells it which open note to credit** with the result.
+
+The helper is needed because the output amount is only known after the Vesu call executes on-chain — it cannot be fixed inside the ZK proof ahead of time. That is exactly what open notes are for: the proof creates a placeholder, and the helper fills it with the real amount.
+
+### Interface sketch (Cairo)
+
+The following excerpt shows the **shape** of an invoke helper for reference. **Most users will interact through existing deployed helpers** (like the Vesu lending helper above), not write their own. Teams building new DeFi integrations can use this as a starting point—a full guide will ship with the SDK:
+
+```cairo
+pub enum LendingOperation { Deposit, Withdraw }
+
+#[starknet::interface]
+pub trait IVToken<T> {
+    fn deposit(ref self: T, assets: u256, receiver: ContractAddress) -> u256;
+    fn withdraw(
+        ref self: T, assets: u256, receiver: ContractAddress, owner: ContractAddress,
+    ) -> u256;
+}
+
+#[starknet::interface]
+pub trait IVesuLendingHelper<T> {
+    /// Called by the privacy pool via the protocol invoke path.
+    fn privacy_invoke(
+        ref self: T,
+        operation: LendingOperation,
+        in_token: ContractAddress,
+        out_token: ContractAddress,
+        assets: u256,
+        note_id: felt252,
+    ) -> Span<OpenNoteDeposit>;
+}
+```
+
+The live contract also performs the approve / call / balance-delta / approve-pool sequence described above.
+
+## Swaps vs lending
+
+- **Swap flow:** withdraw to helper → invoke AMM (or router) → measure output → return open-note deposit(s).
+- **Lending flow (Vesu example):** same orchestration, but the external protocol is **mint/burn of vTokens** and movement of **underlying**, still ending in a measured **output amount** credited to an open note.
+

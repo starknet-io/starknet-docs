@@ -1,0 +1,41 @@
+---
+title: Channels, subchannels, and note discovery
+description: Location-indexed discovery and directional channels
+icon: magnifying-glass
+---
+
+Starknet Privacy uses **location-indexed discovery**: recipients know where to read encrypted notes, instead of trial-decrypting all pool activity.
+
+## Channels are directional
+
+A channel is directional: **sender -> recipient**.
+
+- Channel key derivation uses sender private viewing key + recipient public viewing key.
+- This directionality is intentional.
+- If Alice and Bob both send privately to each other, there are two channels: Alice->Bob and Bob->Alice.
+
+## Subchannels
+
+Within each channel, notes are organized into **subchannels** by token type. A subchannel is opened the first time a sender sends a particular token to a particular recipient through that channel.
+
+- Subchannel ID: derived from the channel key and a sequential index.
+- Each subchannel holds an encrypted token identifier and a dense list of notes for that token.
+- This structure lets the recipient discover notes per-token without scanning unrelated assets.
+
+So the hierarchy is: **channel** (sender → recipient) → **subchannel** (one per token) → **notes** (sequential within subchannel).
+
+## Why this matters
+
+Directional channels simplify sender authorization and preserve deterministic recipient discovery.
+
+## Sequential indices
+
+Outgoing channels, subchannels, and notes are dense sequential lists. This prevents hidden gaps and enables complete scanning until first empty slot.
+
+## Discovery algorithm (recipient)
+
+1. Scan channel entries for recipient.
+2. For each channel, scan subchannels.
+3. For each (channel, token), scan notes and check spent status via nullifier set.
+
+Complexity is proportional to recipient activity, not global pool volume.

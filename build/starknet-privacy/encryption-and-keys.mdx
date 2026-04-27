@@ -1,0 +1,37 @@
+---
+title: Encryption and viewing keys
+description: Symmetric note encryption, ECDH channel encryption, and compliance key escrow
+icon: key
+---
+
+The protocol uses **domain-separated hashes** (H_0, H_1, …) for distinct purposes.
+
+## Viewing keys
+
+Each user has a **viewing key pair**:
+
+- **Private viewing key** (k) — decrypt notes and channel data; needed for nullifier computation when spending.
+- **Public viewing key** (K) — others encrypt to you (STARK curve; public key encoded from k·G).
+
+Viewing keys are **registered once** and treated as **immutable** for simplicity.
+
+## Symmetric encryption (notes, subchannels)
+
+- **Note amounts** — hash-and-add style: salt plus a masked value (H_9(c, token, i, salt) + v) mod 2^128 packed in a felt (see paper §6.1.1).
+- **Subchannel token** — similar masking with channel key and subchannel index.
+
+Without the **channel key**, ciphertexts are pseudorandom to outsiders.
+
+## Asymmetric encryption (channels, compliance)
+
+**Channel open** uses **ECDH** on the STARK curve: ephemeral r, shared secret from r·lift(K_recipient), then mask channel key and sender address with H_10, H_11 of the shared secret.
+
+**Compliance:** at registration, the user encrypts **private viewing key** (k) to the auditor’s public key (K_audit) (same ECDH pattern, Definition 8 in the paper).
+
+## Open notes (DeFi)
+
+**Open notes** fix the note salt to the protocol’s reserved value so the packed storage cell is **not** masked like a confidential note. In the paper’s packing, that corresponds to **plaintext amount** in the lower part of the felt (upper bits carry the reserved salt), which is why observers can read the filled amount on-chain.
+
+That design lets a proof commit to **creating** a note **before** an external step (for example an AMM) knows the exact output quantity; the helper fills the note afterward.
+
+More context: [Notes and nullifiers — Open notes](/build/starknet-privacy/notes-and-nullifiers#open-notes) · [Anonymous DeFi](/build/starknet-privacy/anonymous-defi) · paper [§6.1.1](https://eprint.iacr.org/2026/474.pdf).
