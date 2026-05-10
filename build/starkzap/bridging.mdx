@@ -1,0 +1,183 @@
+---
+title: Bridging
+description: "Bridge assets from Ethereum or Solana into Starknet using Starkzap bridge tokens, external wallet adapters, and deposit APIs"
+icon: link
+---
+
+## Overview
+
+Starkzap supports **deposit bridging into Starknet** from supported external chains:
+
+- **Ethereum** (Canonical, CCTP, OFT, OFT-migrated routes)
+- **Solana** (Hyperlane routes)
+
+The bridge flow is:
+1. Configure the SDK (including optional bridging config)
+2. Fetch bridgeable tokens with `sdk.getBridgingTokens(...)`
+3. Connect an external wallet (`ConnectedEthereumWallet` or `ConnectedSolanaWallet`)
+4. Inspect balance, allowance, and estimated fees
+5. Call `wallet.deposit(...)` to submit the source-chain transaction
+
+<Info>
+  Current wallet bridge APIs are for **external chain → Starknet deposits**. Outbound Starknet → external bridge flows are not exposed through this API surface.
+</Info>
+
+## Install Optional Dependencies
+
+Install only what you use.
+
+For Ethereum routes:
+```bash
+npm install ethers
+```
+
+For Solana routes:
+
+```bash
+npm install @solana/web3.js @hyperlane-xyz/sdk @hyperlane-xyz/registry @hyperlane-xyz/utils
+```
+
+## SDK Configuration
+
+Use `bridging` config when you need custom external RPCs or OFT support.
+The SDK uses external RPCs to read source-chain state (balances/allowances), estimate bridge fees, and submit source-chain transactions reliably. Without explicit RPC URLs, these operations can be rate-limited or unavailable depending on your environment:
+
+```typescript
+import { StarkZap } from "starkzap";
+
+const sdk = new StarkZap({
+  network: "mainnet",
+  bridging: {
+    ethereumRpcUrl: "https://eth-mainnet.g.alchemy.com/v2/<key>",
+    solanaRpcUrl: "https://solana-mainnet.g.alchemy.com/v2/<key>",
+    layerZeroApiKey: "<layerzero-key>", // required for OFT/OFT-migrated routes
+  },
+});
+```
+
+<Warning>
+  OFT bridging requires `bridging.layerZeroApiKey` and is supported on Starknet Mainnet routes only.
+</Warning>
+
+## Fetch Bridgeable Tokens
+
+```typescript
+import { ExternalChain } from "starkzap";
+
+// All bridgeable tokens for current Starknet environment
+const allTokens = await sdk.getBridgingTokens();
+
+// Filter by source chain
+const ethereumTokens = await sdk.getBridgingTokens(ExternalChain.ETHEREUM);
+const solanaTokens = await sdk.getBridgingTokens(ExternalChain.SOLANA);
+```
+
+## Connect External Wallets
+
+Take a look at the [Examples](/build/starkzap/examples). For WalletConnect setup details, see [WalletConnect Docs](https://docs.walletconnect.network/). In practice, you establish the external wallet session first (for example with WalletConnect), then pass its provider/account/chain into `ConnectedEthereumWallet.from(...)` or `ConnectedSolanaWallet.from(...)` for bridge calls.
+
+### Ethereum (EIP-1193)
+
+```typescript
+import { ConnectedEthereumWallet, ExternalChain } from "starkzap";
+
+const evmProvider = window.ethereum;
+const [evmAddress] = await evmProvider.request({ method: "eth_requestAccounts" });
+const evmChainId = await evmProvider.request({ method: "eth_chainId" }); // "0x1" or "0xaa36a7"
+
+const ethWallet = await ConnectedEthereumWallet.from(
+  {
+    chain: ExternalChain.ETHEREUM,
+    provider: evmProvider,
+    address: evmAddress,
+    chainId: evmChainId, // evm wallet's chain id
+  },
+  wallet.getChainId() // starknet wallet's chain id
+);
+```
+
+### Solana
+
+```typescript
+import { ConnectedSolanaWallet, ExternalChain } from "starkzap";
+
+const solWallet = await ConnectedSolanaWallet.from(
+  {
+    chain: ExternalChain.SOLANA,
+    provider: solanaProvider, // must implement signAndSendTransaction()
+    address: solanaAddress,
+    chainId: solanaChainId, // e.g. mainnet/testnet genesis hash from wallet adapter
+  },
+  wallet.getChainId()
+);
+```
+
+<Warning>
+  External wallet network and Starknet network must match by environment:
+  Ethereum Mainnet with Starknet Mainnet, Ethereum Sepolia with Starknet Sepolia, Solana Mainnet with Starknet Mainnet, and Solana Testnet with Starknet Sepolia.
+  
+  | External Network | Identifier | Starknet Network |
+  | --- | --- | --- |
+  | Ethereum Mainnet | `1` | Starknet Mainnet |
+  | Ethereum Sepolia | `11155111` | Starknet Sepolia |
+  | Solana Mainnet | `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | Starknet Mainnet |
+  | Solana Testnet | `4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z` | Starknet Sepolia |
+</Warning>
+
+## Estimate and Deposit
+
+```typescript
+import { Amount, fromAddress } from "starkzap";
+
+const token = ethereumTokens[0];
+if (!token) throw new Error("No bridge token available");
+
+// 1) Source-chain available balance
+const available = await wallet.getDepositBalance(token, ethWallet);
+
+// 2) ERC20 allowance (null for native/non-allowance routes)
+const allowance = await wallet.getAllowance(token, ethWallet);
+
+// 3) Fee estimation (fastTransfer only applies to CCTP)
+const fees = await wallet.getDepositFeeEstimate(token, ethWallet, {
+  fastTransfer: true,
+});
+
+// 4) Submit deposit tx on source chain
+const recipient = fromAddress(
+  "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+); // Starknet recipient
+
+const tx = await wallet.deposit(
+  recipient,
+  Amount.parse("25", token.decimals, token.symbol),
+  token,
+  ethWallet,
+  { fastTransfer: true }
+);
+
+console.log(tx.hash);
+```
+
+## Protocol Notes
+
+| Protocol | Chain | Notes |
+| --- | --- | --- |
+| `canonical` | Ethereum | Standard bridge flow; approval may be required for ERC20 tokens. |
+| `cctp` | Ethereum | Supports `fastTransfer`; fee estimate includes CCTP fast transfer bp fee. |
+| `oft` / `oft-migrated` | Ethereum | Requires `bridging.layerZeroApiKey`; mainnet-only route availability. |
+| `hyperlane` | Solana | Requires Solana + Hyperlane optional dependencies. |
+
+## Common Errors
+
+- **Chain mismatch**: token source chain and connected external wallet chain must match.
+- **Missing LayerZero key**: OFT routes require `bridging.layerZeroApiKey`.
+- **Unsupported chain pair**: Ethereum mainnet must pair with Starknet mainnet; testnet pairings must match.
+
+For additional issues, see [Troubleshooting](/build/starkzap/troubleshooting).
+
+## Next Steps
+
+- [Configuration](/build/starkzap/configuration) — full `SDKConfig` options
+- [API Reference](/build/starkzap/api-reference) — exact method signatures
+- [Examples](/build/starkzap/examples) — web example with bridge UI flow

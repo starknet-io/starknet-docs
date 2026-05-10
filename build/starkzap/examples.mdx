@@ -6,10 +6,10 @@ icon: "flask"
 
 ## Overview
 
-The repository includes example applications in the [examples/](https://github.com/0xsisyfos/x/tree/main/examples) directory:
+The repository includes example applications in the [examples/](https://github.com/keep-starknet-strange/starkzap/tree/main/examples) directory:
 
 1. **Flappy Bird (Web)** — Cartridge Controller, policies, and paymaster (gasless) on a game contract; contract assumed deployed, calls on-chain. [**<u>Live demo</u>**](https://flappybird-starkzap.vercel.app/).
-2. **Web Example** — Vanilla TypeScript + Vite with multiple wallet connection methods (Cartridge, Privy, WebAuthn, private key).
+2. **Web Example** — Vanilla TypeScript + Vite with multiple wallet connection methods (Cartridge, Privy, private key).
 3. **Mobile Example** — React Native + Expo with login, account creation, balances, transfers, staking.
 4. **Server Example** — Express.js backend for Privy wallet operations and paymaster proxy.
 
@@ -114,13 +114,13 @@ The repository includes example applications in the [examples/](https://github.c
     ### Features
 
     - ✅ Multiple wallet connection methods:
-      - Cartridge Controller (social login)
+      - Cartridge Controller (social login / passkey)
       - Privy (server-side key management)
-      - WebAuthn (Face ID / Touch ID)
       - Private Key (local signing)
     - ✅ Account deployment and status checking
     - ✅ Test transactions (regular and sponsored)
     - ✅ Support for multiple account presets (OpenZeppelin, Argent, Braavos, etc.)
+    - ✅ Bridge demo flow (Ethereum/Solana wallets, bridgeable tokens, fee estimate, deposit)
 
     ### Getting Started
 
@@ -142,6 +142,31 @@ The repository includes example applications in the [examples/](https://github.c
     ```
 
     Then update the `PRIVY_SERVER_URL` in `examples/web/main.ts` to point to your server.
+
+    ### Bridge Setup (Web Example)
+
+    The web example can also demonstrate bridge flows from Ethereum/Solana into Starknet.
+
+    Set optional environment variables in `examples/web/.env`:
+
+    ```bash
+    VITE_ALCHEMY_API_KEY=<key>   # external RPCs for Ethereum/Solana bridge operations
+    VITE_OFT_PUBLIC_KEY=<key>    # LayerZero API key for OFT routes
+    ```
+
+    SDK setup in `examples/web/main.ts`:
+
+    ```typescript
+    const sdk = new StarkZap({
+      rpcUrl: RPC_URL,
+      chainId: SDK_CHAIN_ID,
+      bridging: {
+        ethereumRpcUrl: `https://eth-mainnet.g.alchemy.com/v2/${VITE_ALCHEMY_API_KEY}`,
+        solanaRpcUrl: `https://solana-mainnet.g.alchemy.com/v2/${VITE_ALCHEMY_API_KEY}`,
+        layerZeroApiKey: VITE_OFT_PUBLIC_KEY,
+      },
+    });
+    ```
 
     ### Key Code Snippets
 
@@ -264,7 +289,7 @@ The repository includes example applications in the [examples/](https://github.c
 
     ```typescript
     const balance = await wallet.balanceOf(STRK);
-    console.log(balance.toFormatted()); // "150.25 STRK"
+    console.log(balance.toFormatted()); // "STRK 150.25"
     ```
 
     **Transferring Tokens:**
@@ -283,7 +308,7 @@ The repository includes example applications in the [examples/](https://github.c
     await wallet.claimPoolRewards(poolAddress);
     ```
 
-    **React Native:** The example includes the usual polyfills (`react-native-get-random-values`, `fast-text-encoding`) and uses the SDK's optional peer deps for React Native. See the [examples/mobile README](https://github.com/0xsisyfos/x/tree/main/examples/mobile) in the repo for full run instructions and env details.
+    **React Native:** The example includes the usual polyfills (`react-native-get-random-values`, `fast-text-encoding`) and uses the SDK's optional peer deps for React Native. See the [examples/mobile README](https://github.com/keep-starknet-strange/starkzap/tree/main/examples/mobile) in the repo for full run instructions and env details.
   </Tab>
   <Tab title="Server">
     Express.js backend for Privy wallet operations: wallet creation, signing, and paymaster integration.

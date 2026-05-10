@@ -6,9 +6,9 @@ icon: wrench
 
 ## Common Issues
 
-### "Staking contract address is wrong in the config."
+### "No staking contract configured for chain ..."
 
-**Problem:** You set a custom `staking.contract` that doesn't match the selected chain/pool.
+**Problem:** The SDK has no staking contract for the current chain, or you set a custom `staking.contract` that doesn't match.
 
 **Solution:** Remove the custom override to use chain-aware defaults, or set the correct contract for your network:
 
@@ -19,16 +19,16 @@ import { StarkZap } from "starkzap";
 const sdk = new StarkZap({ network: "mainnet" });
 ```
 
-### Transaction Submits but Explorer URL is Missing
+### Transaction Submits but Explorer URL Points to Wrong Explorer
 
-**Problem:** Transactions execute successfully but `tx.explorerUrl` is undefined.
+**Problem:** Transactions execute successfully but `tx.explorerUrl` points to the default explorer (Voyager) instead of your preferred one.
 
-**Solution:** Configure the `explorer` in your SDK config:
+**Solution:** Configure the `explorer` in your SDK config to use your preferred provider:
 
 ```typescript
 const sdk = new StarkZap({
   network: "mainnet",
-  explorer: { provider: "starkscan" }, // or "voyager"
+  explorer: { provider: "starkscan" }, // or "voyager" (default)
 });
 ```
 
@@ -36,17 +36,24 @@ const sdk = new StarkZap({
 
 **Problem:** Errors related to random value generation or text encoding in React Native.
 
-**Solution:** Install and import required polyfills in your app entrypoint:
+**Solution:** Use the React Native setup guide and Metro wrapper, which handles required polyfills and resolver compatibility.
+
+1. Follow [React Native Integration](/build/starkzap/react-native)
+2. Ensure your `metro.config.js` is wrapped with `withStarkzap(...)`
+3. Clear Metro cache after dependency changes (`npx expo start -c`)
+
+If you still need manual installation checks, make sure these packages are present:
 
 ```bash
-npm install react-native-get-random-values fast-text-encoding @ethersproject/shims
+npm install react-native-get-random-values fast-text-encoding buffer @ethersproject/shims
 ```
 
-Then in your entrypoint (e.g., `index.js` or `App.tsx`):
+If not using `withStarkzap`, import polyfills in your entrypoint (e.g. `index.js` or `App.tsx`):
 
 ```typescript
 import "react-native-get-random-values";
 import "fast-text-encoding";
+import "@ethersproject/shims";
 ```
 
 ### Account Not Deployed Error
@@ -104,6 +111,48 @@ app.post("/api/wallet/sign", async (req, res) => {
 2. Check that you're calling `connectCartridge` in a browser environment
 3. Verify network configuration matches Cartridge's supported networks
 4. Check browser console for Cartridge-specific errors
+
+### Bridge Token Loading Fails
+
+**Problem:** `sdk.getBridgingTokens()` throws an error or returns no tokens.
+
+**Solution:**
+1. Verify the SDK chain config is correct (`SN_MAIN` vs `SN_SEPOLIA`) and matches your intended environment
+2. Confirm network access to the token API endpoint used by the SDK
+3. Install required optional deps for the chains you use:
+   - Ethereum routes: `ethers`
+   - Solana routes: `@solana/web3.js` (and Hyperlane packages for Solana bridge operations)
+
+```bash
+npm install ethers @solana/web3.js @hyperlane-xyz/sdk @hyperlane-xyz/registry @hyperlane-xyz/utils
+```
+
+### OFT Bridge Fails with LayerZero API Key Error
+
+**Problem:** You see an error like:
+`OFT bridging requires a LayerZero API key. Set "bridging.layerZeroApiKey"...`
+
+**Solution:**
+1. Set `bridging.layerZeroApiKey` in `new StarkZap({ ... })`
+2. Use a mainnet route for OFT/OFT-migrated bridge flows
+
+```typescript
+const sdk = new StarkZap({
+  network: "mainnet",
+  bridging: {
+    layerZeroApiKey: "YOUR_LAYERZERO_API_KEY",
+  },
+});
+```
+
+### Bridge Deposit Fails with Chain Mismatch
+
+**Problem:** Deposit fails with errors indicating token chain and external wallet chain do not match.
+
+**Solution:**
+1. Ensure the selected `BridgeToken.chain` matches the connected external wallet type
+2. Ensure external wallet network and Starknet network pairing is valid (mainnet with mainnet, testnet with testnet)
+3. Recreate connected external wallets with `ConnectedEthereumWallet.from(...)` / `ConnectedSolanaWallet.from(...)` after network switch
 
 ### Amount Arithmetic Errors
 

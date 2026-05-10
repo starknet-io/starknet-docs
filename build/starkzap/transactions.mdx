@@ -107,7 +107,7 @@ const tx = await wallet.execute([call]); // sponsored automatically
 </Info>
 
 <Note>
-  **Cartridge Controller:** If you're using Cartridge Controller as your wallet strategy, transactions are automatically sponsored by Cartridge's built-in paymaster. You don't need to configure AVNU Paymaster separately or set `feeMode: "sponsored"`—Cartridge handles all gas fees automatically when users approve policies. See the [Cartridge Controller Integration](/build/starkzap/integrations/cartridge-controller) guide for more details.
+  **Cartridge:** On **web** Controller and **native** session flows, matching calls can be paymastered per Cartridge's session / SNIP-9 rules after users approve **policies**. You typically do **not** configure AVNU for those paths. Arbitrary calls outside approved policies are not guaranteed to be sponsored. On React Native, sponsored execution is commonly tied to **`feeMode: "sponsored"`** on the session wallet. See [Cartridge Controller](/build/starkzap/integrations/cartridge-controller) and [React Native Integration](/build/starkzap/react-native).
 </Note>
 
 ## Preflight Simulation
@@ -166,7 +166,7 @@ const tx = await wallet.execute(calls, { feeMode: "sponsored" });
 The paymaster covers transaction fees. Requires paymaster configuration in SDK.
 
 <Note>
-  **Cartridge Controller users:** If you're using Cartridge Controller as your wallet strategy, transactions are automatically sponsored by Cartridge's built-in paymaster. You don't need to configure AVNU Paymaster separately—Cartridge handles all gas fees automatically when users approve policies. See the [Cartridge Controller Integration](/build/starkzap/integrations/cartridge-controller) guide for more details.
+  **Cartridge:** Policy-matching calls can be paymastered per Cartridge session rules; arbitrary calls are not guaranteed sponsored. You typically do not configure AVNU for Cartridge paths. See [Cartridge Controller](/build/starkzap/integrations/cartridge-controller) and [React Native Integration](/build/starkzap/react-native).
 </Note>
 
 ## Transaction Status
@@ -197,11 +197,7 @@ try {
   await tx.wait();
   console.log("Transaction successful!");
 } catch (error) {
-  if (error instanceof TransactionRejectedError) {
-    console.error("Transaction rejected:", error.reason);
-  } else {
-    console.error("Unexpected error:", error);
-  }
+  console.error("Transaction failed:", error);
 }
 ```
 
