@@ -1,5 +1,7 @@
 # 🌟 The Starknet Docs Repository
 
+[![Tracked on web3-discover](https://web3-discover.vercel.app/badge/starknet-provisions-unlock.svg)](https://web3-discover.vercel.app/airdrops/starknet-provisions-unlock)
+
 <div align="center">
 
 [![Built with Mintlify](https://img.shields.io/badge/built%20with-mintlify-00D4AA?style=for-the-badge)](https://mintlify.com)
