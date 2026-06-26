@@ -8,8 +8,8 @@ icon: link
 
 Starkzap supports **bidirectional bridging** between Starknet and supported external chains:
 
-- **Ethereum** (Canonical, CCTP, OFT, OFT-migrated routes)
-- **Solana** (Hyperlane routes)
+- **Ethereum** (Canonical, CCTP, OFT, OFT-migrated, Layerswap routes)
+- **Solana** (Hyperlane, Layerswap routes)
 
 **Deposit flow (external chain → Starknet):**
 1. Configure the SDK (including optional bridging config)
@@ -33,7 +33,13 @@ For Ethereum routes:
 npm install ethers
 ```
 
-For Solana routes:
+For Solana **Layerswap** routes (the Layerswap client is inlined — no Hyperlane packages needed):
+
+```bash
+npm install @solana/web3.js
+```
+
+For Solana **Hyperlane** routes:
 
 ```bash
 npm install @solana/web3.js @hyperlane-xyz/sdk @hyperlane-xyz/registry @hyperlane-xyz/utils
@@ -53,12 +59,20 @@ const sdk = new StarkZap({
     ethereumRpcUrl: "https://eth-mainnet.g.alchemy.com/v2/<key>",
     solanaRpcUrl: "https://solana-mainnet.g.alchemy.com/v2/<key>",
     layerZeroApiKey: "<layerzero-key>", // required for OFT/OFT-migrated routes
+    layerswapApiKey: "<layerswap-key>", // required for Layerswap routes + token discovery
+    layerswapBaseUrl: "https://api.layerswap.io", // optional; this is the default
   },
 });
 ```
 
 <Warning>
   OFT bridging requires `bridging.layerZeroApiKey` and is supported on Starknet Mainnet routes only.
+</Warning>
+
+<Warning>
+  Layerswap routes **and** Layerswap token discovery require `bridging.layerswapApiKey`. Without it, `getBridgingTokens(...)` omits Layerswap-bridgeable tokens and Layerswap deposits/withdrawals fail.
+
+  Layerswap API keys are environment-scoped: use a **Mainnet** key with Starknet Mainnet and a **Testnet** key with Starknet Sepolia.
 </Warning>
 
 ## Fetch Bridgeable Tokens
@@ -73,6 +87,10 @@ const allTokens = await sdk.getBridgingTokens();
 const ethereumTokens = await sdk.getBridgingTokens(ExternalChain.ETHEREUM);
 const solanaTokens = await sdk.getBridgingTokens(ExternalChain.SOLANA);
 ```
+
+<Note>
+  Layerswap-bridgeable tokens are sourced from the Layerswap API and only appear when `bridging.layerswapApiKey` is configured. Without it, discovery silently omits Layerswap routes.
+</Note>
 
 ## Connect External Wallets
 
@@ -108,7 +126,7 @@ const solWallet = await ConnectedSolanaWallet.from(
     chain: ExternalChain.SOLANA,
     provider: solanaProvider, // must implement signAndSendTransaction()
     address: solanaAddress,
-    chainId: solanaChainId, // e.g. mainnet/testnet genesis hash from wallet adapter
+    chainId: solanaChainId, // mainnet / testnet / devnet genesis hash from wallet adapter
   },
   wallet.getChainId()
 );
@@ -116,7 +134,7 @@ const solWallet = await ConnectedSolanaWallet.from(
 
 <Warning>
   External wallet network and Starknet network must match by environment:
-  Ethereum Mainnet with Starknet Mainnet, Ethereum Sepolia with Starknet Sepolia, Solana Mainnet with Starknet Mainnet, and Solana Testnet with Starknet Sepolia.
+  Ethereum Mainnet with Starknet Mainnet, Ethereum Sepolia with Starknet Sepolia, and Solana Mainnet with Starknet Mainnet. On Starknet Sepolia, the connected Solana wallet may be on **either Solana Testnet or Solana Devnet** — the right cluster depends on the route (see note below).
   
   | External Network | Identifier | Starknet Network |
   | --- | --- | --- |
@@ -124,7 +142,12 @@ const solWallet = await ConnectedSolanaWallet.from(
   | Ethereum Sepolia | `11155111` | Starknet Sepolia |
   | Solana Mainnet | `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | Starknet Mainnet |
   | Solana Testnet | `4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z` | Starknet Sepolia |
+  | Solana Devnet | `EtWTRABZaYq6iMfeYKouRu166VU2xqa1` | Starknet Sepolia |
 </Warning>
+
+<Note>
+  On Starknet Sepolia the two Solana routes target different clusters: **Layerswap** uses **Solana Testnet** (`4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z`) and **Hyperlane** uses **Solana Devnet** (`EtWTRABZaYq6iMfeYKouRu166VU2xqa1`). Connect the Solana wallet to the cluster matching the route you intend to use. On Starknet Mainnet, both routes use Solana Mainnet.
+</Note>
 
 ## Estimate and Deposit
 
@@ -196,7 +219,7 @@ console.log(tx.hash);
 
 ### Complete (Canonical & CCTP only)
 
-OFT and Hyperlane are single-step — a relayer handles L1 delivery automatically. For Canonical and CCTP, a second L1 transaction is required once the state becomes `READY_TO_CLAIM`.
+OFT, Hyperlane, and Layerswap are single-step — delivery on the destination chain happens automatically. For Canonical and CCTP, a second L1 transaction is required once the state becomes `READY_TO_CLAIM`.
 
 ```typescript
 // Poll until the withdrawal is ready to claim
@@ -306,11 +329,13 @@ const depositState = await wallet.getDepositState(token, result);
 | `cctp` | Ethereum | Supports `fastTransfer`; fee estimate includes CCTP fast transfer bp fee. | Two-step: wait for Circle attestation, then call `completeWithdraw`. Expired attestations are re-requested automatically. |
 | `oft` / `oft-migrated` | Ethereum | Requires `bridging.layerZeroApiKey`; mainnet-only route availability. | Single-step: LayerZero relayer handles L1 delivery automatically. No `completeWithdraw` needed. |
 | `hyperlane` | Solana | Requires Solana + Hyperlane optional dependencies. | Single-step: Hyperlane relayer handles delivery automatically. |
+| `layerswap` | Ethereum & Solana | Requires `bridging.layerswapApiKey`; per-swap deposit address derived from the Layerswap API. Available on mainnet and testnet. | Single-step: Layerswap delivers on the destination chain automatically. No `completeWithdraw` needed. |
 
 ## Common Errors
 
 - **Chain mismatch**: token source chain and connected external wallet chain must match.
 - **Missing LayerZero key**: OFT routes require `bridging.layerZeroApiKey`.
+- **Missing Layerswap key**: Layerswap routes and Layerswap token discovery require `bridging.layerswapApiKey`; the key must match the environment (Mainnet key for Starknet Mainnet, Testnet key for Starknet Sepolia).
 - **Unsupported chain pair**: Ethereum mainnet must pair with Starknet mainnet; testnet pairings must match.
 - **CCTP options missing**: `completeWithdraw` requires `options` with attestation data for CCTP routes — the parameter is non-optional in practice.
 - **Attestation expired**: CCTP attestations have an expiration block; re-attestation is requested automatically during `completeWithdraw`.
