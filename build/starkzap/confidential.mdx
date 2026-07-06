@@ -41,16 +41,32 @@ Use the Tongo protocol [documentation](https://docs.tongo.cash/protocol/contract
 
 **Tongo address (for display or sharing):**
 
+The `address` is a single base58-encoded public key — the recommended value to
+share with others so they can send you confidential transfers:
+
 ```typescript
 const tongoAddress = confidential.address; // base58-encoded public key
 ```
 
 **Recipient identity (for receiving confidential transfers):**
 
-Share `recipientId` with others so they can send confidential transfers to this account. It is the public key `{ x, y }` used on-chain:
+`recipientId` is the same public key expressed as on-chain `{ x, y }`
+coordinates. Pass it (or a decoded shared address, see below) as `to` in a
+confidential transfer:
 
 ```typescript
 const recipientId = confidential.recipientId; // { x, y } — pass as `to` in confidentialTransfer
+```
+
+**Decode a shared address into a recipient:**
+
+When a sender has someone's shareable `address` (the single base58 public key),
+`recipientFromAddress` converts it into the `{ x, y }` recipient expected by
+`confidentialTransfer` — so users can exchange one public key instead of raw
+coordinates:
+
+```typescript
+const recipient = confidential.recipientFromAddress(theirTongoAddress); // { x, y }
 ```
 
 **Decrypted state (balance, pending, nonce):**
@@ -109,14 +125,17 @@ Optional: pay a fee to the sender (e.g. for relayed transactions):
 
 ## Confidential transfer
 
-Send from this confidential account to another confidential account. The recipient is identified by their `recipientId` (public key).
+Send from this confidential account to another confidential account. The recipient is identified by their public key — either their `recipientId` (`{ x, y }`) or a shared `address` decoded with `recipientFromAddress`.
 
 ```typescript
+// If you have the recipient's shared Tongo address (base58 public key):
+const to = confidential.recipientFromAddress(theirTongoAddress); // { x, y }
+
 const tx = await wallet
   .tx()
   .confidentialTransfer(confidential, {
     amount: Amount.parse("50", USDC),
-    to: recipientConfidential.recipientId,  // { x, y }
+    to,  // or recipientConfidential.recipientId
     sender: wallet.address,
   })
   .send();
@@ -204,7 +223,7 @@ The provider includes the approve call in `fund()`; if the token or spender is n
 
 ### Recipient format for confidential transfer
 
-`to` must be a `ConfidentialRecipient` — the object `{ x, y }` from the recipient's `confidential.recipientId`. Do not pass a Starknet address; use the recipient's Tongo public key.
+`to` must be a `ConfidentialRecipient` — the object `{ x, y }`. Get it from the recipient's `confidential.recipientId`, or decode their shared base58 Tongo address with `confidential.recipientFromAddress(address)`. Do not pass a Starknet address; use the recipient's Tongo public key.
 
 ## Next steps
 
