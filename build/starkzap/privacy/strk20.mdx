@@ -10,7 +10,9 @@ icon: user-secret
 The **STRK20 privacy pool** is a single contract that holds balances for every token. Your balance in it is not a number on your account but a set of private **notes**, and you spend them by proving you own them rather than by signing a call.
 
 <Warning>
-  STRK20 is in **private preview**. The proving and discovery services are internal StarkWare infrastructure and are not publicly available — contact StarkWare to obtain endpoints. The SDK is a prerelease (`0.14.x-rc`) published to GitHub Packages and requires Node 24 or later. Nothing on this page works without those endpoints.
+  **Deposits require access from StarkWare.** Every deposit is screened against sanctions lists through [Elliptic](https://www.elliptic.co/), and that screening path runs on credentials StarkWare administers — so the proving service behind it is not an open endpoint. Contact StarkWare to deposit.
+
+  Everything else is yours to run: transfers, withdrawals, and the discovery service can all be self-hosted from the open-source components — see [Running your own services](#running-your-own-services). The SDK is a prerelease (`0.14.x-rc`) published to GitHub Packages and requires Node 24 or later.
 </Warning>
 
 Three things make it different from every other Starkzap module:
@@ -86,8 +88,8 @@ const privacy = await wallet.privacy();
 | Field | Required | Purpose |
 | --- | --- | --- |
 | `poolContractAddress` | Yes | The pool contract. Bound into the viewing key, so it must byte-match the form other wallets use for the same pool. |
-| `prover` | Yes | Proving service base URL, or a `ProofProviderInterface` instance. |
-| `discovery` | Yes | Discovery service base URL, or a `DiscoveryProviderInterface` instance. |
+| `prover` | Yes | Proving service base URL, or a `ProofProviderInterface` instance. A prover you host yourself covers transfers and withdrawals; **deposits** additionally need the screening step, which only StarkWare's prover performs. |
+| `discovery` | Yes | Discovery service base URL, or a `DiscoveryProviderInterface` instance. You can host this yourself. |
 | `paymasterUrl` | In practice | Endpoint that submits private transactions. Point it at a proxy holding your API key, not at the paymaster directly. |
 | `fee` | In practice | How the pool fee is paid. Deliberately not defaulted — see below. |
 | `ohttp` | No | Envelope-encrypts requests to the two services. Defaults to on. |
@@ -95,6 +97,21 @@ const privacy = await wallet.privacy();
 | `viewingKeyDerivation` | No | Replace the default derivation scheme. |
 
 There are **no built-in per-network presets** for the pool or the services. Supply them per chain yourself.
+
+### Running your own services
+
+Both services are open source, so `prover` and `discovery` can point at infrastructure you operate.
+
+| Component | Where to get it |
+| --- | --- |
+| Discovery service | [`deploy/discovery-service/`](https://github.com/starkware-libs/starknet-privacy/tree/main/deploy/discovery-service) in the protocol repo — Dockerfile plus local and multi-platform build instructions. The service itself is [`crates/discovery-service/`](https://github.com/starkware-libs/starknet-privacy/tree/main/crates/discovery-service). |
+| Proving service | [`snip-36-prover-backend`](https://github.com/starknet-innovation/snip-36-prover-backend) — proves [SNIP-36](https://community.starknet.io/t/snip-36-in-protocol-proof-verification/116123) virtual-block execution with the stwo-cairo prover, which is the mechanism the pool's proofs use. |
+
+Deposits are the exception, and this is why. The prover does not screen deposits itself — it calls a [`proof-interceptor`](https://github.com/starkware-libs/starknet-privacy/tree/main/proof-interceptor) sidecar, which forwards each deposit address to an [`elliptic-proxy`](https://github.com/starkware-libs/starknet-privacy/tree/main/elliptic-proxy) holding Elliptic credentials. Screening is invisible from the client side: an allowed transaction returns a proof as usual, and a blocked one returns JSON-RPC error `10000`. Standing that path up requires Elliptic access, which is what StarkWare onboards you for.
+
+<Note>
+  The prover backend lives under a different organisation and describes itself as developer tooling, so treat it as a reference implementation rather than a supported production deployment. Check that its API matches the `prover` contract your SDK version expects before relying on it.
+</Note>
 
 ### Keep OHTTP on
 
