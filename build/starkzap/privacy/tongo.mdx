@@ -35,14 +35,20 @@ import { StarkZap, TongoConfidential } from "starkzap";
 const sdk = new StarkZap({ network: "mainnet" });
 const wallet = await sdk.connectWallet({ account: { signer, accountClass } });
 
-const confidential = new TongoConfidential({
+const confidential = await TongoConfidential.create({
   privateKey: tongoPrivateKey,       // BigNumberish or Uint8Array
   contractAddress: TONGO_CONTRACT,  // Address for mainnet or Sepolia
   provider: wallet.getProvider(),
 });
 ```
 
-Use the Tongo protocol [documentation](https://docs.tongo.cash/protocol/contracts.html) or deployment list for the correct `contractAddress` per chain. There is no wallet-level "register confidential"; you pass the `TongoConfidential` (or any `ConfidentialProvider`) into the tx builder methods.
+`create` is async because `@fatsolutions/tongo-sdk` is an optional peer dependency loaded on first use — if it is not installed, this rejects with an install hint instead of breaking the `starkzap` import.
+
+Use the Tongo protocol [documentation](https://docs.tongo.cash/protocol/contracts.html) or deployment list for the correct `contractAddress` per chain. There is no wallet-level "register confidential"; you pass the `TongoConfidential` into the tx builder methods.
+
+<Note>
+  Tongo and the [STRK20 privacy pool](/build/starkzap/privacy/strk20) are separate integrations with no shared interface. Tongo keeps an encrypted *balance* per account and proves locally; the pool spends *notes* and needs a remote prover whose output rides on the transaction rather than inside a call. Pick the one you are integrating — there is nothing to code against generically.
+</Note>
 
 ## TongoConfidential: address and state
 

@@ -63,7 +63,7 @@ A custom signer can opt in by declaring `deterministic = true`, or you can suppl
 
 ## Configuration
 
-Pass a `privacy` block to `StarkZap`. `poolContractAddress`, `prover`, and `discovery` are required; `paymasterUrl` and `fee` are required in practice, because `wallet.privacy()` throws without them.
+Pass a `privacy` block to `StarkZap`. `poolContractAddress`, `prover`, and `discovery` are required; `paymaster` is required in practice, because `wallet.privacy()` throws without it. The endpoint and the fee mode travel together in one object, so half a configuration does not compile.
 
 ```typescript
 import { StarkZap } from "starkzap";
@@ -74,8 +74,10 @@ const sdk = new StarkZap({
     poolContractAddress: POOL,
     prover: PROVER,
     discovery: DISCOVERY,
-    paymasterUrl: "https://my-app.example.com/api/paymaster",
-    fee: { mode: "sponsored" },
+    paymaster: {
+      url: "https://my-app.example.com/api/paymaster/mainnet",
+      fee: { mode: "sponsored" },
+    },
   },
 });
 
@@ -87,14 +89,22 @@ const privacy = await wallet.privacy();
 
 | Field | Required | Purpose |
 | --- | --- | --- |
-| `poolContractAddress` | Yes | The pool contract. Bound into the viewing key, so it must byte-match the form other wallets use for the same pool. |
+| `poolContractAddress` | Yes | The pool contract. Folded into the viewing key as a felt, so `0x040…` and `0x40…` are the same pool. |
 | `prover` | Yes | Proving service base URL, or a `ProofProviderInterface` instance. A prover you host yourself covers transfers and withdrawals; **deposits** additionally need the screening step, which only StarkWare's prover performs. |
 | `discovery` | Yes | Discovery service base URL, or a `DiscoveryProviderInterface` instance. You can host this yourself. |
-| `paymasterUrl` | In practice | Endpoint that submits private transactions. Point it at a proxy holding your API key, not at the paymaster directly. |
-| `fee` | In practice | How the pool fee is paid. Deliberately not defaulted — see below. |
+| `paymaster` | In practice | Where and how private transactions are submitted. See the table below. |
 | `ohttp` | No | Envelope-encrypts requests to the two services. Defaults to on. |
-| `tip` | No | Transaction priority passed to the paymaster: `"slow"`, `"normal"`, or `"fast"`. |
 | `viewingKeyDerivation` | No | Replace the default derivation scheme. |
+
+The `paymaster` block:
+
+| Field | Required | Purpose |
+| --- | --- | --- |
+| `url` | Yes | Endpoint that submits private transactions. Point it at a proxy holding your API key, not at the paymaster directly — and at a proxy that knows which network it is for, since each AVNU deployment whitelists only its own pool. |
+| `fee` | Yes | How the pool fee is paid. Deliberately not defaulted — see below. |
+| `tip` | No | Transaction priority: `"slow"`, `"normal"`, or `"fast"`. AVNU fills in `"normal"` when omitted. |
+| `maxFee` | No | Refuse a quote whose fee exceeds this, in base units of the fee token. The response decides how much of your shielded balance leaves the pool, so a ceiling is the only thing between a misconfigured endpoint and your balance. Unset by default: a guessed ceiling would break every deployment whose fee sits above the guess. |
+| `fetch` | No | Transport override, defaulting to the global `fetch`. Wrap it to add auth headers, `credentials: "include"`, retries, a timeout via `AbortSignal`, or tracing — the proxy holding your API key is worth gating, and this is where a credential goes. Reading the response stays with the SDK. |
 
 There are **no built-in per-network presets** for the pool or the services. Supply them per chain yourself.
 
@@ -133,13 +143,13 @@ Starkzap refuses to pick a fee mode for you. All three modes go through the rela
 | --- | --- | --- |
 | `{ mode: "sponsored" }` | Required | Relayer pays gas; pool fee in STRK. The sane default. |
 | `{ mode: "sponsored_private", poolFeeToken }` | Required | As sponsored, but you choose the pool-fee token. Private transactions only. |
-| `{ mode: "default", gasToken }` | None | No key needed, but the forwarder keeps the entire suggested-max gas withdrawal instead of refunding the unused part — measured at roughly 16× the sponsored pool fee. |
+| `{ mode: "default", gasToken }` | None | No key needed, but the withdrawal is sized at the paymaster's suggested *maximum* gas rather than its estimate, so it covers headroom that may go unused. How much more than a sponsored pool fee that is depends on the network and current gas — `quote()` reports both figures, so read them rather than assuming a ratio. |
 
-Sponsored modes need an API key, and an API key needs a proxy to hold it. If your proxy sits in front of the paymaster, raise its request body limit — proofs are megabytes of base64.
+Sponsored modes need an API key, and an API key needs a proxy to hold it. Raise that proxy's request body limit: a proof runs to a few hundred kilobytes, above the 100 kb that `express.json()` allows by default.
 
 ## Registering and your viewing key
 
-Your viewing key is derived by signing a canonical message — `Poseidon(version, chainId, account, pool, keyIndex)` — with your account's own signing key, then folding the signature into the pool's canonical range. It is **never stored**: it is reproducible from the signing key alone, so your notes survive a wallet reinstall with nothing to back up. It lives in the client's closure for exactly as long as the session that authorised it, and `wallet.disconnect()` discards it.
+Your viewing key is derived by signing a canonical message — `Poseidon(version, chainId, account, pool, keyIndex)` — with your account's own signing key, then folding the signature into the pool's canonical range. It is **never stored**: it is reproducible from the signing key alone, so your notes survive a wallet reinstall with nothing to back up. It lives in the client's closure for exactly as long as the session that authorised it. `wallet.disconnect()` **revokes** it rather than merely dropping a reference: the client refuses to decrypt afterwards, so a stale client someone is still holding cannot keep reading notes. `revokePrivacy(transfers)` does the same for a client built with `createPrivacy` directly. Neither scrubs memory — JavaScript strings cannot be overwritten in place — and neither un-decrypts notes already discovered.
 
 <Warning>
   The pool stores the **first** key an account registers and it cannot be replaced. Changing `viewingKeyDerivation` for an account that already registered orphans its notes, and the discovery service rejects a mismatched key outright.
@@ -169,7 +179,9 @@ export async function recipientReady(recipient: string, token: Token): Promise<b
 
 ## Deposit
 
-A deposit is **two transactions**. The ERC20 `approve` is public and cannot share the privacy transaction, because the proof owns that one.
+A deposit is **two transactions** in Starkzap. The ERC20 `approve` is public and goes separately.
+
+That is a limitation here rather than in the protocol: AVNU's paymaster has a second transaction type, `invoke_and_apply_action`, which wraps a user call in an outside-execution and relays it alongside the pool action — so the approve and the deposit could land together. Starkzap implements `apply_action` only.
 
 ```typescript
 import { Amount, fromAddress, waitForFundedBalance } from "starkzap";
@@ -284,8 +296,17 @@ The pool charges a fee that is withdrawn **inside the proof**, separately from g
 
 ```typescript
 const fee = await privacy.quote();
-console.log(fee.feeAction.amount); // bigint, base units
+console.log(fee.feeAction.amount); // bigint, base units of fee.feeAction.token
+
+// What the paymaster reckons the gas costs, when it reports it.
+if (fee.gas) {
+  console.log(fee.gas.estimatedInGasToken, fee.gas.suggestedMaxInGasToken);
+}
 ```
+
+`gas` is the paymaster's own gas figures, not your fee — the two coincide only in `default` mode, where the withdrawal is sized at `suggestedMaxInGasToken`. Under the sponsored modes the relayer pays the gas, so those numbers are its costs rather than the user's, and putting them in front of someone would misattribute the money.
+
+Where they do apply, the pair worth showing is the estimate against the suggested maximum: the difference is headroom the user pays for and may not use. It is optional because a deployment may omit the block, and it is never fatal — a figure this cannot read costs the display, not the transaction.
 
 <Warning>
   `simulate()` knows nothing about the pool fee. Show users `quote()`, not simulated gas, or they will be surprised by the difference.
@@ -307,9 +328,11 @@ Skipping the wait produces either a proof the sequencer rejects or one that read
 import type { ProvableAttempt } from "starkzap";
 
 const hash = await privacy.send(compose, {
-  onWait: ({ attempt, head, provingBlock, ready }: ProvableAttempt) => {
-    if (ready) return;
-    console.log(`#${attempt}: head ${head}, proving block ${provingBlock} — polling`);
+  wait: {
+    onAttempt: ({ attempt, head, provingBlock, ready }: ProvableAttempt) => {
+      if (ready) return;
+      console.log(`#${attempt}: head ${head}, proving block ${provingBlock} — polling`);
+    },
   },
 });
 ```
@@ -331,9 +354,9 @@ All three **throw on timeout** (default 300 seconds) rather than resolving — h
 1. **Leave OHTTP on.** Disabling it exposes your viewing key to the service operators.
 2. **Withdraw to a fresh address.** Reusing the deposit address links both ends of the pool and undoes the privacy you paid for.
 3. **Show `quote()` before the user commits**, and never present simulated gas as the total cost.
-4. **Surface `onWait`.** A silent multi-minute wait is indistinguishable from a hang.
-5. **Never persist the viewing key.** It is reproducible from the signing key; storing it only creates something to leak. Discard the client on disconnect.
-6. **Raise the body limit on any proxy** in front of the paymaster. Proofs are several megabytes.
+4. **Surface `wait.onAttempt`.** A silent multi-minute wait is indistinguishable from a hang. `wait` also carries `depth`, `pollIntervalMs` and `timeoutMs` for chains the two-second default does not suit.
+5. **Never persist the viewing key.** It is reproducible from the signing key; storing it only creates something to leak. `wallet.disconnect()` revokes it; call `revokePrivacy()` yourself if you built the client with `createPrivacy`.
+6. **Raise the body limit on any proxy** in front of the paymaster. A proof is a few hundred kilobytes — past the default in most HTTP stacks.
 7. **Keep prover and discovery URLs out of version control.** Configure them per environment.
 8. **Check `discoverRequirement` before offering a transfer** so users get a clear reason instead of a build failure.
 
@@ -374,11 +397,25 @@ Do not treat every failure as a screening verdict: the same error code is also e
 
 ### Paymaster rejected the transaction
 
-Codes `165` and `167` mean the proof and the quote disagreed about the fee — re-quote and retry. Codes `161` (pool not whitelisted) and `168` (`sponsored_private` used for a non-private transaction) are configuration mistakes that will fail identically forever.
+Starkzap reports the paymaster's own message and the reason it puts in `data`, so read that first — it names the problem more precisely than any table can. A few codes are worth knowing:
 
-### `non-JSON response` or HTTP 413
+| Code | Meaning |
+| --- | --- |
+| `151` | The fee token is not supported. |
+| `156` | Execution failure — **including a pool address the paymaster has not whitelisted**, with the reason in `data.execution_error`. |
+| `163` | An invalid API key, an unavailable service, or a blacklisted call. This is the generic catch-all, so `data` is what distinguishes them. |
+| `165` | The proof is missing the fee withdrawal. Append `feeAction` from `quote()` before proving. |
+| `167` | The withdrawn fee is below the quoted pool fee. Quote and prove again. |
+| `168` | On **build**, `sponsored_private` used for a non-private transaction. On **execute**, the proof is missing entirely — the same number means different things on the two calls, so branch on the pair. |
+| `169` | The transaction exceeds the maximum L2 gas. |
 
-Your proxy rejected the proof before any route ran. Raise its request body limit; the example server uses `32mb`. Starkzap translates a 413 into a message telling you to raise the limit.
+A retry has to mean *re-proving*. The paymaster remembers the calls it has seen, so re-submitting the same proof answers `156 :: execution error Tx already sent` rather than trying again.
+
+### `non-JSON response` or an HTTP status you did not expect
+
+Something below the paymaster failed — usually a proxy in front of it. Starkzap reports the real HTTP status as the error's `code` and keeps the response body in `data`, so a `413` from a proxy that caps request bodies is distinguishable from a paymaster rejection.
+
+A proof is around 300–320 kb for a simple transfer, and larger for transactions carrying more actions. That is above `express.json()`'s 100 kb default, so a proxy in front of the paymaster needs its limit raised; the example server uses `4mb`.
 
 ### Prover or discovery URL rejected
 
