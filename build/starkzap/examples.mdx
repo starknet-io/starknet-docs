@@ -171,7 +171,7 @@ The web and mobile examples cover the same ground and consume the SDK straight f
     | `EXPO_PUBLIC_PRIVY_APP_ID`        | Yes (for Privy) | From [Privy Dashboard](https://dashboard.privy.io) → your app → App ID               |
     | `EXPO_PUBLIC_PRIVY_CLIENT_ID`     | Optional        | From Privy Dashboard → Clients                                                       |
     | `EXPO_PUBLIC_PRIVY_SERVER_URL`    | Optional        | Your backend URL for server-side signing (e.g. `http://localhost:3001`)              |
-    | `EXPO_PUBLIC_PAYMASTER_PROXY_URL` | Optional        | Paymaster proxy; defaults to `{PRIVY_SERVER_URL}/api/paymaster` if server URL is set |
+    | `EXPO_PUBLIC_PAYMASTER_PROXY_URL_MAINNET` / `_SEPOLIA` | Optional        | Paymaster proxy per network, e.g. `http://localhost:3001/api/paymaster/mainnet`. Per network because each AVNU deployment whitelists only its own pool, and one build switches chains at runtime |
 
     Without `EXPO_PUBLIC_PRIVY_APP_ID`, the app still runs but **Privy login is disabled**; you can use the **private key** flow only.
 
@@ -274,7 +274,7 @@ The web and mobile examples cover the same ground and consume the SDK straight f
     - `PRIVY_APP_SECRET` - Your Privy application secret (required for Privy routes)
     - `ENABLE_PAYMASTER` - Enable the paymaster proxy route
     - `AVNU_API_KEY` - AVNU Paymaster API key (optional; set it for sponsored mode)
-    - `AVNU_PAYMASTER_URL` - Paymaster URL (defaults to Sepolia)
+    - `AVNU_PAYMASTER_URL_MAINNET` / `AVNU_PAYMASTER_URL_SEPOLIA` - Upstream paymaster per network (both default to AVNU's public endpoints)
 
     Wallet data is persisted to `wallets.json`, which is created on demand. It is a file store for development — use a real database in production.
 
@@ -289,7 +289,7 @@ The web and mobile examples cover the same ground and consume the SDK straight f
     | `/api/privy-wallet/register-account` | POST | Bearer token | Associates a computed account address with a preset. Body: `{ preset, address, deployed? }`. |
     | `/api/privy-wallet/set-deployed` | POST | Bearer token | Updates the deployment status of a registered account. Body: `{ preset, deployed }`. |
     | `/api/privy-wallet/sign` | POST | No | Signs a transaction hash. Body: `{ walletId, hash }`. Returns `{ signature }`. |
-    | `/api/paymaster` | POST | No | Proxies the body to the AVNU paymaster, attaching the API key header. Returns the response as-is. |
+    | `/api/paymaster/:network` | POST | No | Proxies the body to that network's AVNU paymaster, attaching the API key header. Returns the response as-is. The bare `/api/paymaster` returns 400 naming the two valid paths, rather than silently picking a network. |
 
     #### Sign Transaction Hash
 
@@ -308,7 +308,7 @@ The web and mobile examples cover the same ground and consume the SDK straight f
     #### Paymaster Proxy
 
     ```bash
-    POST /api/paymaster
+    POST /api/paymaster/mainnet     # or /api/paymaster/sepolia
     Content-Type: application/json
     
     {
@@ -317,10 +317,14 @@ The web and mobile examples cover the same ground and consume the SDK straight f
     }
     ```
 
-    Forwards requests to AVNU Paymaster with API key authentication.
+    Forwards requests to AVNU Paymaster with API key authentication. The network is part of the path because each AVNU deployment whitelists only its own privacy pool: send a mainnet pool to the Sepolia paymaster and it answers `156 :: privacy pool address is not whitelisted` from two layers away. One API key covers both.
 
     <Warning>
-      This route raises the JSON body limit to 32 MB, because [STRK20](/build/starkzap/privacy/strk20) privacy proofs are megabytes of base64 and Express's 100 KB default rejects them with an HTML 413 before any route runs — which surfaces to the caller as "non-JSON response" rather than a size problem. Any proxy you put in front of a paymaster needs the same allowance.
+      This route raises the JSON body limit to 4 MB. A [STRK20](/build/starkzap/privacy/strk20) proof runs to roughly 300–320 KB for a simple transfer and more for transactions carrying more actions, which is past Express's 100 KB default — and that default rejects them with an HTML 413 before any route runs, surfacing as "non-JSON response" rather than a size problem. Any proxy you put in front of a paymaster needs the same allowance.
+    </Warning>
+
+    <Warning>
+      The route is **unauthenticated**, which is only safe on localhost. The reason to run a proxy at all is that it holds the API key so the key never ships in a browser bundle — which makes the route a way to *spend* that key without ever seeing it. Reachable from the internet, it is an open relay for your sponsorship budget. Gate it before deploying anything shaped like this, and gate the paymaster route specifically. `privacy.paymaster.fetch` is where a client-side credential goes.
     </Warning>
 
     ### Key Code Snippets
@@ -342,8 +346,11 @@ The web and mobile examples cover the same ground and consume the SDK straight f
     **Paymaster Proxy:**
 
     ```typescript
-    app.post("/api/paymaster", async (req, res) => {
-      const response = await fetch(AVNU_PAYMASTER_URL, {
+    app.post("/api/paymaster/:network", async (req, res) => {
+      const upstream = UPSTREAMS[req.params.network];
+      if (!upstream) return res.status(400).json({ error: "Unknown network" });
+
+      const response = await fetch(upstream, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
