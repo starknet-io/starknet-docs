@@ -149,11 +149,38 @@ Sponsored modes need an API key, and an API key needs a proxy to hold it. Raise 
 
 ## Registering and your viewing key
 
-Your viewing key is derived by signing a canonical message — `Poseidon(version, chainId, account, pool, keyIndex)` — with your account's own signing key, then folding the signature into the pool's canonical range. It is **never stored**: it is reproducible from the signing key alone, so your notes survive a wallet reinstall with nothing to back up. It lives in the client's closure for exactly as long as the session that authorised it. `wallet.disconnect()` **revokes** it rather than merely dropping a reference: the client refuses to decrypt afterwards, so a stale client someone is still holding cannot keep reading notes. `revokePrivacy(transfers)` does the same for a client built with `createPrivacy` directly. Neither scrubs memory — JavaScript strings cannot be overwritten in place — and neither un-decrypts notes already discovered.
+By default your viewing key is derived by signing a canonical message — `Poseidon(version, chainId, account, pool, keyIndex)` — with your account's own signing key, then folding the signature into the pool's canonical range. It is **never stored**: it is reproducible from the signing key alone, so your notes survive a wallet reinstall with nothing to back up. It lives in the client's closure for exactly as long as the session that authorised it. `wallet.disconnect()` **revokes** it rather than merely dropping a reference: the client refuses to decrypt afterwards, so a stale client someone is still holding cannot keep reading notes. `revokePrivacy(transfers)` does the same for a client built with `createPrivacy` directly. Neither scrubs memory — JavaScript strings cannot be overwritten in place — and neither un-decrypts notes already discovered.
 
 <Warning>
   The pool stores the **first** key an account registers and it cannot be replaced. Changing `viewingKeyDerivation` for an account that already registered orphans its notes, and the discovery service rejects a mismatched key outright.
 </Warning>
+
+### Supplying your own derivation
+
+That scheme is Starkzap's default, not the protocol's. The pool only ever sees the key's public x-coordinate, so how you arrive at the key is yours to choose — pass `viewingKeyDerivation` in the `privacy` config to replace it entirely.
+
+The usual reasons to: a wallet with its own key-derivation function, a hardware device that answers a specific command, a key held somewhere outside the app, or a signer that cannot promise a deterministic nonce and so cannot use the default at all.
+
+```typescript
+import type { ViewingKeyDerivation } from "starkzap";
+
+const fromWalletKdf: ViewingKeyDerivation = async (context, signer) => {
+  // context: { chainId, accountAddress, poolAddress, keyIndex? }
+  // signer:  the account's own signer, for schemes that sign or expose a KDF
+  return myWallet.deriveViewingKey(context); // 0x-prefixed hex
+};
+```
+
+Two requirements, both enforced:
+
+- **Deterministic, forever, on every device.** The same context and signer must produce the same key for the lifetime of the account. The pool keeps the first key it is given, so a derivation that ever changes its output leaves every existing note encrypted to a key nobody holds.
+- **Inside the pool's canonical range,** `[1, n/2)`. Whatever you return is passed through `assertCanonicalViewingKey`, which rejects anything outside it — fold your output into the range rather than hoping it lands there.
+
+<Note>
+  The privacy SDK specifies no derivation scheme, so this default is Starkzap's own. A key is only reproducible by the scheme that produced it: notes shielded through the default are recoverable through the default, and notes shielded through yours need yours. Keep the scheme with the account.
+
+  [SNIP-44](https://github.com/starknet-io/SNIPs/pull/177) proposes a standard alternative, keying an HMAC with the raw account private key. It removes the dependency on a deterministic nonce, at the cost of excluding every signer that will not hand over its private scalar. Still a draft.
+</Note>
 
 Registration is **per account, not per token**, so any token answers the question. `discoverRequirement` returns `0` (`SetupRequirement.Register`) when the account has not registered yet:
 
