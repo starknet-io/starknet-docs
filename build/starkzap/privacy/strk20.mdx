@@ -206,15 +206,52 @@ export async function recipientReady(recipient: string, token: Token): Promise<b
 
 ## Deposit
 
-A deposit is **two transactions** in Starkzap. The ERC20 `approve` is public and goes separately.
+A deposit needs a public ERC20 `approve`: the pool pulls the funds, so that step names your account whichever way you send it. What you choose is whether it travels as its own transaction or inside the paymaster's.
 
-That is a limitation here rather than in the protocol: AVNU's paymaster has a second transaction type, `invoke_and_apply_action`, which wraps a user call in an outside-execution and relays it alongside the pool action — so the approve and the deposit could land together. Starkzap implements `apply_action` only.
+### In one transaction
+
+`send({ invoke })` hands the approve to the paymaster, which relays it through your account's `execute_from_outside` in the same transaction as the pool action. The wrapped call runs first, so the allowance is in place by the time the pool reads it.
 
 ```typescript
 import { Amount, fromAddress, waitForFundedBalance } from "starkzap";
 
 const amount = Amount.parse("100", token);
 
+const hash = await privacy.send(
+  (b) =>
+    b
+      .with(token.address, (t) => t.deposit({ amount: amount.toBase() }))
+      .surplusTo(wallet.address),
+  {
+    // Relayed alongside the pool action. `calls()` resolves the builder without
+    // sending, so every ERC20 and protocol helper is available here.
+    invoke: await wallet.tx().approve(token, fromAddress(POOL), amount).calls(),
+    autoRegister: true,
+    autoSetup: true,
+    autoDiscover: { notes: "refresh", channels: "refresh" },
+    provingBlockId: await waitForFundedBalance(
+      wallet.getProvider(),
+      token,
+      fromAddress(wallet.address),
+      amount.toBase()
+    ),
+  }
+);
+```
+
+You sign the paymaster's SNIP-12 typed data rather than a transaction, and Starkzap asks for that signature *before* proving. The signature does not depend on the proof, so declining costs you nothing.
+
+<Warning>
+  Wrapped calls are **not** private. They are executed by your account and name it on-chain. Use this for work that is already public, which the approve is — not to hide anything.
+</Warning>
+
+This needs an account that supports SNIP-9 outside execution. The OpenZeppelin, Argent and Braavos presets all do. When an account does not, the paymaster refuses at build time with code `156` and the reason `invalid version`; Starkzap replaces that with a message naming the account and pointing at the two-transaction form, because the raw error reads like a version-negotiation bug rather than a fact about the wallet.
+
+### In two transactions
+
+Send the approve yourself when the account cannot do outside execution, or when you would rather keep the steps apart.
+
+```typescript
 // 1. Public approve so the pool can pull the funds.
 const approve = await wallet
   .tx()
@@ -222,7 +259,7 @@ const approve = await wallet
   .send();
 await approve.wait();
 
-// 2. The private deposit.
+// 2. The private deposit — the same call as above, without `invoke`.
 const hash = await privacy.send(
   (b) =>
     b
@@ -242,14 +279,16 @@ const hash = await privacy.send(
 );
 ```
 
-Two details worth understanding:
+### The proving block and registration, either way
 
-The approve does **not** have to age — it is checked when the deposit executes, not when it is proven — so the deposit can follow straight after it. What must be visible at the proving block is the **balance**, which is why `provingBlockId` overrides the client's own sequencing here: this proof reads the depositor's ERC20 balance, and the client has no way to know about it. `waitForFundedBalance` checks that balance directly, which also covers funds that arrived from a faucet or another wallet.
+The approve does **not** have to age — it is checked when the deposit executes, not when it is proven — so a separate approve can be followed straight away. What must be visible at the proving block is the **balance**, which is why `provingBlockId` overrides the client's own sequencing here: this proof reads the depositor's ERC20 balance, and the client has no way to know about it. `waitForFundedBalance` checks that balance directly, which also covers funds that arrived in a transaction you did not send.
+
+Bundling changes neither half of that. It saves a transaction, not the settling, so `provingBlockId` is needed either way.
 
 This is also where registration happens, via `autoRegister`.
 
 <Note>
-  This differs from Tongo's `fund()`, which bundles its own approve. Here the approve is yours to send.
+  Tongo's `fund()` bundles its own approve, so there is no choice to make there.
 </Note>
 
 ## Transfer
@@ -372,7 +411,7 @@ For preconditions the client cannot know about, wait explicitly and pass the res
 | `waitForDeployedAccount(provider, address)` | The account is deployed |
 | `waitForProvableState(provider, isVisible)` | Your own predicate holds at the proving block |
 
-These exist because counting blocks from a receipt only works for transactions your process saw. An account funded by a faucet, a bridge, or another wallet has no receipt locally, so the precondition has to be read off chain state instead.
+These exist because counting blocks from a receipt only works for transactions your process saw. An account funded by a transaction you did not send has no receipt locally, so the precondition has to be read off chain state instead.
 
 All three **throw on timeout** (default 300 seconds) rather than resolving — handle that.
 
@@ -386,6 +425,7 @@ All three **throw on timeout** (default 300 seconds) rather than resolving — h
 6. **Raise the body limit on any proxy** in front of the paymaster. A proof is a few hundred kilobytes — past the default in most HTTP stacks.
 7. **Keep prover and discovery URLs out of version control.** Configure them per environment.
 8. **Check `discoverRequirement` before offering a transfer** so users get a clear reason instead of a build failure.
+9. **Keep `invoke` for calls that are already public.** It is there to save a transaction, not to shield one: the calls are executed by the account and name it on-chain.
 
 ## Troubleshooting
 
@@ -429,7 +469,7 @@ Starkzap reports the paymaster's own message and the reason it puts in `data`, s
 | Code | Meaning |
 | --- | --- |
 | `151` | The fee token is not supported. |
-| `156` | Execution failure — **including a pool address the paymaster has not whitelisted**, with the reason in `data.execution_error`. |
+| `156` | Execution failure — **including a pool address the paymaster has not whitelisted**, with the reason in `data.execution_error`. With `invoke`, the reason `invalid version` instead means the account does not support SNIP-9 outside execution; Starkzap rewrites that one, since the raw text describes neither the account nor the fix. |
 | `163` | An invalid API key, an unavailable service, or a blacklisted call. This is the generic catch-all, so `data` is what distinguishes them. |
 | `165` | The proof is missing the fee withdrawal. Append `feeAction` from `quote()` before proving. |
 | `167` | The withdrawn fee is below the quoted pool fee. Quote and prove again. |
