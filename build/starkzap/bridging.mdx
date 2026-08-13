@@ -1,26 +1,28 @@
 ---
 title: Bridging
-description: "Bridge assets from Ethereum or Solana into Starknet using Starkzap bridge tokens, external wallet adapters, and deposit APIs"
+description: "Bridge assets between Ethereum or Solana and Starknet using Starkzap bridge tokens, external wallet adapters, deposit and withdrawal APIs"
 icon: link
 ---
 
 ## Overview
 
-Starkzap supports **deposit bridging into Starknet** from supported external chains:
+Starkzap supports **bidirectional bridging** between Starknet and supported external chains:
 
 - **Ethereum** (Canonical, CCTP, OFT, OFT-migrated routes)
 - **Solana** (Hyperlane routes)
 
-The bridge flow is:
+**Deposit flow (external chain → Starknet):**
 1. Configure the SDK (including optional bridging config)
 2. Fetch bridgeable tokens with `sdk.getBridgingTokens(...)`
 3. Connect an external wallet (`ConnectedEthereumWallet` or `ConnectedSolanaWallet`)
 4. Inspect balance, allowance, and estimated fees
 5. Call `wallet.deposit(...)` to submit the source-chain transaction
 
-<Info>
-  Current wallet bridge APIs are for **external chain → Starknet deposits**. Outbound Starknet → external bridge flows are not exposed through this API surface.
-</Info>
+**Withdraw flow (Starknet → external chain):**
+1. Inspect L2 balance and estimated fees with `wallet.getWithdrawBalance(...)` and `wallet.getInitiateWithdrawFeeEstimate(...)`
+2. Call `wallet.initiateWithdraw(...)` to burn/lock tokens on Starknet
+3. Monitor status with `wallet.getWithdrawalState(...)` or `wallet.monitorWithdrawal(...)`
+4. For Canonical and CCTP: call `wallet.completeWithdraw(...)` when state is `READY_TO_CLAIM`
 
 ## Install Optional Dependencies
 
@@ -159,20 +161,159 @@ const tx = await wallet.deposit(
 console.log(tx.hash);
 ```
 
+## Withdraw from Starknet
+
+### Initiate (all protocols)
+
+```typescript
+import { Amount, fromAddress } from "starkzap";
+
+const token = ethereumTokens[0];
+if (!token) throw new Error("No bridge token available");
+
+const recipient = "0xYourEthereumAddress"; // L1 recipient
+
+// 1) L2 balance available to withdraw
+const balance = await wallet.getWithdrawBalance(token, ethWallet);
+
+// 2) Estimate L2 fee for initiating the withdrawal
+const fees = await wallet.getInitiateWithdrawFeeEstimate(token, ethWallet, {
+  protocol: "cctp",
+  fastTransfer: true,
+});
+
+// 3) Submit the Starknet burn/initiate transaction
+const tx = await wallet.initiateWithdraw(
+  recipient,
+  Amount.parse("25", token.decimals, token.symbol),
+  token,
+  ethWallet,
+  { protocol: "cctp", fastTransfer: true }
+);
+
+console.log(tx.hash);
+```
+
+### Complete (Canonical & CCTP only)
+
+OFT and Hyperlane are single-step — a relayer handles L1 delivery automatically. For Canonical and CCTP, a second L1 transaction is required once the state becomes `READY_TO_CLAIM`.
+
+```typescript
+// Poll until the withdrawal is ready to claim
+const result = await wallet.monitorWithdrawal(token, tx.hash);
+
+if (result.protocol === "cctp" && result.attestation && result.message) {
+  // Estimate the L1 gas cost before submitting
+  const l1Fee = await wallet.getCompleteWithdrawFeeEstimate(
+    Amount.parse("25", token.decimals, token.symbol),
+    recipient,
+    token,
+    ethWallet,
+    {
+      protocol: "cctp",
+      attestation: result.attestation,
+      message: result.message,
+      nonce: result.nonce,
+      expirationBlock: result.expirationBlock,
+    }
+  );
+
+  // Submit the L1 completion transaction
+  const l1Tx = await wallet.completeWithdraw(
+    recipient,
+    Amount.parse("25", token.decimals, token.symbol),
+    token,
+    ethWallet,
+    {
+      protocol: "cctp",
+      attestation: result.attestation,
+      message: result.message,
+      nonce: result.nonce,
+      expirationBlock: result.expirationBlock,
+    }
+  );
+
+  console.log(l1Tx.hash);
+}
+```
+
+### Auto-withdraw (Canonical only)
+
+Canonical supports an `autoWithdraw` option where a relayer handles L1 completion — no `completeWithdraw` call needed.
+
+```typescript
+const fees = await wallet.getInitiateWithdrawFeeEstimate(token, ethWallet, {
+  protocol: "canonical",
+  autoWithdraw: true,
+});
+
+await wallet.initiateWithdraw(
+  recipient,
+  Amount.parse("25", token.decimals, token.symbol),
+  token,
+  ethWallet,
+  {
+    protocol: "canonical",
+    autoWithdraw: true,
+    preferredFeeToken: fees.autoWithdrawFee?.token,
+  }
+);
+```
+
+## Monitor Bridge Transfers
+
+### Simplified state (recommended for UI)
+
+```typescript
+// Withdrawal state: "PENDING" | "READY_TO_CLAIM" | "COMPLETED" | "ERROR"
+const state = await wallet.getWithdrawalState(token, { starknetTxHash: tx.hash });
+
+// Deposit state: "PENDING" | "COMPLETED" | "ERROR"
+const depositState = await wallet.getDepositState(token, { externalTxHash: ethTxHash });
+```
+
+`WithdrawalState` values:
+- `PENDING` — bridging in progress, no user action needed
+- `READY_TO_CLAIM` — ready to finalize on L1; call `completeWithdraw` (CCTP/Canonical)
+- `COMPLETED` — bridge flow fully complete
+- `ERROR` — unrecoverable error
+
+### Detailed status (advanced use)
+
+Use `monitorWithdrawal` to get the full status snapshot including CCTP attestation data needed for `completeWithdraw`:
+
+```typescript
+const result = await wallet.monitorWithdrawal(token, tx.hash);
+// result.status: BridgeTransferStatus
+// For CCTP when READY_TO_CLAIM: result.attestation, result.message, result.nonce
+
+// You can pass a previously-fetched result back to avoid redundant network calls
+const state = await wallet.getWithdrawalState(token, result);
+```
+
+Similarly for deposits:
+
+```typescript
+const result = await wallet.monitorDeposit(token, ethTxHash);
+const depositState = await wallet.getDepositState(token, result);
+```
+
 ## Protocol Notes
 
-| Protocol | Chain | Notes |
-| --- | --- | --- |
-| `canonical` | Ethereum | Standard bridge flow; approval may be required for ERC20 tokens. |
-| `cctp` | Ethereum | Supports `fastTransfer`; fee estimate includes CCTP fast transfer bp fee. |
-| `oft` / `oft-migrated` | Ethereum | Requires `bridging.layerZeroApiKey`; mainnet-only route availability. |
-| `hyperlane` | Solana | Requires Solana + Hyperlane optional dependencies. |
+| Protocol | Chain | Deposit | Withdrawal |
+| --- | --- | --- | --- |
+| `canonical` | Ethereum | Standard flow; approval may be required for ERC20 tokens. | Two-step: initiate on L2, complete on L1. Supports `autoWithdraw` to skip the L1 step via relayer. |
+| `cctp` | Ethereum | Supports `fastTransfer`; fee estimate includes CCTP fast transfer bp fee. | Two-step: wait for Circle attestation, then call `completeWithdraw`. Expired attestations are re-requested automatically. |
+| `oft` / `oft-migrated` | Ethereum | Requires `bridging.layerZeroApiKey`; mainnet-only route availability. | Single-step: LayerZero relayer handles L1 delivery automatically. No `completeWithdraw` needed. |
+| `hyperlane` | Solana | Requires Solana + Hyperlane optional dependencies. | Single-step: Hyperlane relayer handles delivery automatically. |
 
 ## Common Errors
 
 - **Chain mismatch**: token source chain and connected external wallet chain must match.
 - **Missing LayerZero key**: OFT routes require `bridging.layerZeroApiKey`.
 - **Unsupported chain pair**: Ethereum mainnet must pair with Starknet mainnet; testnet pairings must match.
+- **CCTP options missing**: `completeWithdraw` requires `options` with attestation data for CCTP routes — the parameter is non-optional in practice.
+- **Attestation expired**: CCTP attestations have an expiration block; re-attestation is requested automatically during `completeWithdraw`.
 
 For additional issues, see [Troubleshooting](/build/starkzap/troubleshooting).
 

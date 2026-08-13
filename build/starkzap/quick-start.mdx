@@ -33,23 +33,24 @@ console.log("Your account address:", address.toString());
 // Copy this address and use it to request tokens from the faucet:
 // https://starknet-faucet.vercel.app/
 
-// 4. Ensure the account is deployed
-// This will create the wallet on the blockchain if it doesn't exist yet
-// Note: Deployment requires tokens to pay for the transaction (unless using a paymaster)
-// If you don't have tokens yet, request them from the faucet first
-await wallet.ensureReady({ deploy: "if_needed" });
+// 4. Fund the account first if this is a brand-new wallet (Sepolia testnet only):
+// - Visit https://starknet-faucet.vercel.app/ (only works for Sepolia testnet)
+// - Paste your account address
+// - Request 100 STRK (or 800 STRK if signed in with GitHub)
+// - Wait a few moments for the tokens to arrive
+// Note: On mainnet, you'll need to purchase or transfer real tokens
 
 // 5. Check a token balance
 const STRK = getPresets(wallet.getChainId()).STRK;
 const balance = await wallet.balanceOf(STRK);
 console.log(balance.toFormatted()); // "STRK 100" or "STRK 0" if empty
 
-// 6. If balance is zero, fund the account first (Sepolia testnet only):
-// - Visit https://starknet-faucet.vercel.app/ (only works for Sepolia testnet)
-// - Paste your account address
-// - Request 100 STRK (or 800 STRK if signed in with GitHub)
-// - Wait a few moments for the tokens to arrive
-// Note: On mainnet, you'll need to purchase or transfer real tokens
+// 6. Ensure the account is deployed before executing user-paid transactions
+// This will create the wallet on the blockchain if it doesn't exist yet
+// Note: Deployment requires tokens to pay for the transaction (unless using a paymaster)
+if (!balance.isZero()) {
+  await wallet.ensureReady({ deploy: "if_needed" });
+}
 
 // 7. Transfer tokens (only if balance is sufficient)
 if (!balance.isZero() && balance.gte(Amount.parse("10", STRK))) {
@@ -107,7 +108,7 @@ const { wallet } = await sdk.onboard({
       }).then((r) => r.json()), // { walletId, publicKey, serverUrl }
   },
   accountPreset: accountPresets.argentXV050,
-  feeMode: "sponsored",
+  feeMode: { type: "paymaster" },
   deploy: "if_needed",
 });
 
@@ -186,7 +187,7 @@ The `sdk.onboard()` method automatically handles everything needed to get a wall
 - ✅ Connects and initializes the wallet
 - ✅ Creates the wallet on the blockchain if it doesn't exist yet
 - ✅ Configures network settings
-- ✅ Sets up fee payment options (user pays or sponsored)
+- ✅ Sets up fee payment options (user pays or paymaster)
 
 ## Next Steps
 

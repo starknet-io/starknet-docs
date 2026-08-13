@@ -84,18 +84,18 @@ const unsubscribe = tx.watch(({ finality, execution }) => {
 unsubscribe();
 ```
 
-## Sponsored (Gasless) Transactions
+## Paymaster Transactions (Sponsored / Gasless)
 
-If the SDK is configured with a paymaster, pass `feeMode: "sponsored"`:
+If the SDK is configured with a paymaster, use `feeMode: { type: "paymaster" }`:
 
 ```typescript
 // Per-transaction sponsorship
-const tx = await wallet.execute([call], { feeMode: "sponsored" });
+const tx = await wallet.execute([call], { feeMode: { type: "paymaster" } });
 
 // Or set as default when connecting
 const wallet = await sdk.connectWallet({
   account: { signer },
-  feeMode: "sponsored",
+  feeMode: { type: "paymaster" },
 });
 
 // Now all transactions are sponsored by default
@@ -107,7 +107,11 @@ const tx = await wallet.execute([call]); // sponsored automatically
 </Info>
 
 <Note>
-  **Cartridge:** On **web** Controller and **native** session flows, matching calls can be paymastered per Cartridge's session / SNIP-9 rules after users approve **policies**. You typically do **not** configure AVNU for those paths. Arbitrary calls outside approved policies are not guaranteed to be sponsored. On React Native, sponsored execution is commonly tied to **`feeMode: "sponsored"`** on the session wallet. See [Cartridge Controller](/build/starkzap/integrations/cartridge-controller) and [React Native Integration](/build/starkzap/react-native).
+  **Cartridge:** On **web** Controller and **native** session flows, matching calls can be paymastered per Cartridge's session / SNIP-9 rules after users approve **policies**. You typically do **not** configure AVNU for those paths. Arbitrary calls outside approved policies are not guaranteed to be sponsored. On React Native, sponsored execution is commonly tied to **`feeMode: { type: "paymaster" }`** on the session wallet. See [Cartridge Controller](/build/starkzap/integrations/cartridge-controller) and [React Native Integration](/build/starkzap/react-native).
+</Note>
+
+<Note>
+  `feeMode: "sponsored"` is still supported as a deprecated alias for backward compatibility.
 </Note>
 
 ## Preflight Simulation
@@ -157,13 +161,24 @@ const tx = await wallet.execute(calls, { feeMode: "user_pays" });
 
 The user's account pays for transaction fees.
 
-### Sponsored
+### Paymaster (Sponsored / Gasless)
 
 ```typescript
-const tx = await wallet.execute(calls, { feeMode: "sponsored" });
+const tx = await wallet.execute(calls, { feeMode: { type: "paymaster" } });
 ```
 
-The paymaster covers transaction fees. Requires paymaster configuration in SDK.
+The paymaster path covers transaction fees (sponsored) or lets users pay with a supported gas token.
+
+```typescript
+import { fromAddress } from "starkzap";
+
+const tx = await wallet.execute(calls, {
+  feeMode: {
+    type: "paymaster",
+    gasToken: fromAddress("0x053c91253bc96bfed3be381a97265e250ed0a2e2cbf1a54898ad0d2f7982f78f"),
+  },
+});
+```
 
 <Note>
   **Cartridge:** Policy-matching calls can be paymastered per Cartridge session rules; arbitrary calls are not guaranteed sponsored. You typically do not configure AVNU for Cartridge paths. See [Cartridge Controller](/build/starkzap/integrations/cartridge-controller) and [React Native Integration](/build/starkzap/react-native).
@@ -206,7 +221,7 @@ try {
 1. **Always preflight** non-trivial batches before submitting
 2. **Use the transaction builder** for complex operations to save gas
 3. **Handle errors gracefully** and provide user feedback
-4. **Standardize fee behavior** (`user_pays` vs `sponsored`) per flow
+4. **Standardize fee behavior** (`user_pays` vs `paymaster`) per flow
 5. **Wait for appropriate confirmation** based on your use case
 
 ## Next Steps
