@@ -32,6 +32,9 @@ npm install @solana/web3.js
 
 # Additionally, only if you use the Hyperlane Solana routes
 npm install @hyperlane-xyz/sdk @hyperlane-xyz/registry @hyperlane-xyz/utils
+
+# STRK20 privacy pool with OHTTP left on — supplies the `crypto.subtle` Hermes lacks
+npm install react-native-quick-crypto react-native-nitro-modules react-native-quick-base64
 ```
 
 ## 2) Configure Metro
@@ -65,6 +68,7 @@ Each polyfill exists for a specific reason, so import only what your app actuall
 | `react-native-get-random-values` | `crypto.getRandomValues` | **Cartridge** sessions, **paymaster / outside-execution** (SNIP-9) nonces, and random key generation. Deterministic signing and read calls do **not** need it |
 | `buffer` (+ set the global) | `Buffer` | **Bridge only** — `ethers` and the Solana bridge code |
 | `@ethersproject/shims` | ethers crypto/random shims | **Bridge only** — `ethers` (v6) used by the Ethereum bridge. The shims package is itself v5-era, but it is what supplies the missing React Native crypto globals |
+| `react-native-quick-crypto` | `crypto.subtle` | **STRK20 privacy with OHTTP only** — the privacy SDK's OHTTP transport encrypts through HPKE, which needs WebCrypto. Hermes has none, and `react-native-get-random-values` supplies only `getRandomValues` |
 
 Required for every app:
 
@@ -87,6 +91,27 @@ import "@ethersproject/shims";
 
 if (!globalThis.Buffer) globalThis.Buffer = Buffer;
 ```
+
+Add if you use the [STRK20 privacy pool](/build/starkzap/privacy/strk20) with OHTTP left on. Take only `subtle` — `react-native-quick-crypto`'s own `install()` replaces the whole `crypto` global, including the `getRandomValues` the line above installed for `starknet`:
+
+```typescript
+if (!globalThis.crypto.subtle) {
+  const { subtle } = require("react-native-quick-crypto");
+  Object.defineProperty(globalThis.crypto, "subtle", {
+    value: subtle,
+    configurable: true,
+  });
+}
+```
+
+<Note>
+  `require` inside the guard, not a top-level `import`: the package builds native
+  objects in static class fields evaluated at import time, so importing it
+  unconditionally crashes the app where those native modules are absent — Expo Go,
+  for instance. It needs a dev build (`npx expo run:android`), and adding it to an
+  existing native project means a fresh `npx expo prebuild` so the C++ module is
+  linked.
+</Note>
 
 Then import that file as the very first line of your entry:
 
