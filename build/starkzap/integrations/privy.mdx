@@ -33,10 +33,10 @@ Privy supports two ways to use wallets. Choosing the wrong one can lead to JWT o
 | **Server-managed** | No                 | Backend signing, custodial flows   |
 | **User-owned**     | Yes                | End-user auth, user-linked wallets |
 
-- **Server-managed**: Create wallets without linking to a Privy user (omit `user_id` / owner). Your backend signs with `PrivyClient` (app credentials). No end-user JWT is required for signing. This is the model used in the examples below and fits Starkzap’s server-signing flow.
-- **User-owned**: Create wallets with `user_id` (or owner) so the wallet is tied to a Privy user. Access and signing then require that user’s JWT. Use this when the end user must prove identity and own the wallet in Privy’s sense.
+- **Server-managed**: Create wallets without an owner (omit `owner`). Your backend signs with `PrivyClient` (app credentials) and no end-user JWT is required. Create with just `{ chain_type: "starknet" }`. Best for custodial / backend-only flows.
+- **User-owned**: Create wallets with `owner: { user_id }` (the user's DID) so the wallet is tied to a Privy user; access and signing then require that user's JWT. **This is the model the examples below use** — the client authenticates with a Privy client SDK, and the backend verifies the token before creating/using the wallet.
 
-If Privy’s docs suggest using an owner/user and you only need backend signing, prefer the server-managed approach above to avoid JWT requirements and extra auth layers.
+Note: `owner: { user_id }` takes the user's DID (`did:privy:...`). The separate `owner_id` field expects a **cuid2 key-quorum id**, not a user DID — passing a DID there fails with an `Invalid cuid2` error.
 
 ## Setup
 
@@ -60,11 +60,16 @@ const privy = new PrivyClient({
 ### 3. Create a Starknet Wallet
 
 ```typescript
-// Create a wallet for a user
-const wallet = await privy.wallets().create({
-  chain_type: "starknet",
-  user_id: "user-123", // Optional: associate with a Privy user
-});
+// Server-managed wallet (app-owned) — no end-user JWT required to sign.
+const wallet = await privy.wallets().create({ chain_type: "starknet" });
+
+// Or tie the wallet to a Privy user (user-owned). Note: it's `owner: { user_id }`
+// with the user's DID — not a top-level `user_id`, and not `owner_id` (that field
+// is a cuid2 key-quorum id, not a user DID). Signing then requires the user's JWT.
+// const wallet = await privy.wallets().create({
+//   chain_type: "starknet",
+//   owner: { user_id: "did:privy:..." },
+// });
 
 console.log("Wallet ID:", wallet.id);
 console.log("Wallet Address:", wallet.address);
@@ -101,12 +106,19 @@ app.post("/api/wallet/sign", async (req, res) => {
 
 ### Client-Side Integration
 
+> The access token comes from a Privy **client** SDK — `@privy-io/js-sdk-core`
+> (vanilla JS/Svelte/Vue), `@privy-io/react-auth` (React), or `@privy-io/expo`
+> (React Native) — after the user logs in. The `@privy-io/node` `PrivyClient`
+> shown above is **server-only** and has no `getAccessToken()`. Below, `privy`
+> refers to the initialized client SDK instance.
+
 Use Privy with Starkzap:
 
 ```typescript
 import { StarkZap, PrivySigner, OnboardStrategy, accountPresets } from "starkzap";
 
 const sdk = new StarkZap({ network: "sepolia" });
+// `privy` here is your Privy client SDK instance (see note above).
 const accessToken = await privy.getAccessToken();
 
 // Option 1: Using onboard API (recommended)
@@ -176,16 +188,29 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Create or get Starknet wallet
-app.post("/api/wallet/starknet", async (req, res) => {
-  const { userId } = req.body;
-  
+// Verify the Privy access token → the authenticated user's DID.
+async function auth(req, res, next) {
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return res.status(401).json({ error: "Missing token" });
+  try {
+    const claims = await privy.utils().auth().verifyAccessToken(token);
+    req.userId = claims.user_id; // e.g. "did:privy:..."
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid token" });
+  }
+}
+
+// Create or get the user's Starknet wallet.
+// In production, cache the wallet per user (e.g. in a database) so you don't
+// create a new one on every call.
+app.post("/api/wallet/starknet", auth, async (req, res) => {
   try {
     const wallet = await privy.wallets().create({
       chain_type: "starknet",
-      user_id: userId,
+      owner: { user_id: req.userId }, // user's DID from the verified token
     });
-    
+
     res.json({
       wallet: {
         id: wallet.id,
@@ -222,6 +247,8 @@ app.listen(3001);
 import { StarkZap, OnboardStrategy, accountPresets } from "starkzap";
 
 const sdk = new StarkZap({ network: "sepolia" });
+// `privy` is your Privy client SDK instance (js-sdk-core / react-auth / expo),
+// not the server-only @privy-io/node PrivyClient.
 const accessToken = await privy.getAccessToken();
 
 // Connect with SDK
@@ -264,8 +291,8 @@ For React Native applications, use `@privy-io/expo`:
 import { PrivyProvider } from "@privy-io/expo";
 import { StarkZap, OnboardStrategy } from "starkzap";
 
-// Wrap your app with PrivyProvider
-<PrivyProvider appId={PRIVY_APP_ID}>
+// Wrap your app with PrivyProvider (expo needs both appId and clientId)
+<PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID}>
   <App />
 </PrivyProvider>
 

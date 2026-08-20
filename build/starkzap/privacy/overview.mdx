@@ -1,0 +1,62 @@
+---
+title: Choosing a privacy protocol
+sidebarTitle: Overview
+description: "Starkzap supports two independent privacy protocols—the STRK20 privacy pool and Tongo. Compare what each hides and pick the right one for your integration."
+icon: shield-halved
+---
+
+## Overview
+
+Starkzap supports two privacy protocols. They are **independent implementations, not two backends behind one interface** — they have different state models, different proving setups, and different submission paths. You pick one per integration and code against it directly.
+
+- **[STRK20 privacy pool](/build/starkzap/privacy/strk20)** — one pool for every token. Your balance is a set of private **notes**. A remote proving service builds a proof, and a relayer submits it, so your account never appears on-chain.
+- **[Tongo](/build/starkzap/privacy/tongo)** — one contract per token. Your balance is a single **encrypted number** on your own account. Proofs are generated locally, and you submit the transaction yourself.
+
+The names matter more than the words "privacy" and "confidential", which are near-synonyms in English but point at different protocols here. Say **STRK20** or **Tongo**.
+
+## Comparison
+
+|                   | STRK20 privacy pool                                     | Tongo                                          |
+| ----------------- | ------------------------------------------------------- | ---------------------------------------------- |
+| **Hides**         | Amounts, sender, and recipient                           | Amounts                                        |
+| **State model**   | Private notes you spend                                  | One encrypted balance per account              |
+| **Contracts**     | One pool, all tokens                                     | One contract per token                         |
+| **Proving**       | Remote proving service                                   | Local, in your process                         |
+| **Submission**    | The paymaster's relayer — your account stays off-chain    | Your own account                               |
+| **Batching**      | Never — the proof belongs to the transaction              | Yes, through `wallet.tx()`                     |
+| **You get back**  | `send()` executes and returns a transaction hash          | `Call[]` that you batch and send               |
+| **Keys**          | Viewing key derived from your signing key                 | A separate Tongo private key you hold          |
+| **Wallets**       | Private-key login only                                    | Any wallet                                     |
+| **Install**       | GitHub Packages, auth required, Node 24+                  | npm, no auth                                   |
+| **Status**        | Prerelease. Deposits need StarkWare access; the rest is self-hostable | Available                                      |
+
+## Which one to use
+
+**Choose STRK20** when you need to hide *who* transacts, not just how much. Because a relayer submits the transaction, the sender's address, nonce, and gas payment stay off-chain. That is the property Tongo does not offer.
+
+**Choose Tongo** when hiding amounts is enough, and you want an integration you can ship today: it installs from npm with no access request, works with any wallet, proves locally with no external service, and batches with your other calls in a single transaction.
+
+<Info>
+  Starkzap does not offer a shared abstraction over the two. Quoting the SDK itself: Tongo keeps an encrypted *balance* per account and proves locally, while the privacy pool spends *notes* and needs a remote prover whose output rides on the transaction rather than inside a call. There is no shared interface to code against.
+</Info>
+
+## What neither protocol hides
+
+Both protocols privatize what happens *between* entering and leaving. Entering and leaving are public in both.
+
+<Warning>
+  Deposits and withdrawals are public. Withdrawing to the address you deposited from puts both ends of the pool on one address, which is enough to link them — so a fresh address is what preserves the gap.
+</Warning>
+
+Neither protocol hides that you interacted with it at all, and neither hides the timing or the token. Treat them as tools for unlinking a source from a destination, not as cloaks over your whole on-chain history.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="STRK20 privacy pool" icon="user-secret" href="/build/starkzap/privacy/strk20">
+    Hide amounts, sender, and recipient. Notes, a remote prover, and relayer submission.
+  </Card>
+  <Card title="Tongo" icon="lock" href="/build/starkzap/privacy/tongo">
+    Hide amounts. Encrypted balances, local proving, batches with your other calls.
+  </Card>
+</CardGroup>

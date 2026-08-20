@@ -1,0 +1,565 @@
+---
+title: STRK20 privacy pool
+sidebarTitle: STRK20
+description: "Deposit, transfer, and withdraw privately through the STRK20 privacy pool—private notes, a remote proving service, and relayer submission that keeps your account off-chain"
+icon: user-secret
+---
+
+## Overview
+
+The **STRK20 privacy pool** is a single contract that holds balances for every token. Your balance in it is not a number on your account but a set of private **notes**, and you spend them by proving you own them rather than by signing a call.
+
+<Warning>
+  **Deposits require access from StarkWare.** Every deposit is screened against sanctions lists through [Elliptic](https://www.elliptic.co/), and that screening path runs on credentials StarkWare administers — so the proving service behind it is not an open endpoint. Contact StarkWare to deposit.
+
+  Everything else is yours to run: transfers, withdrawals, and the discovery service can all be self-hosted from the open-source components — see [Running your own services](#running-your-own-services). The SDK is a prerelease (`0.14.x-rc`) published to GitHub Packages and requires Node 24 or later.
+</Warning>
+
+Three things make it different from every other Starkzap module:
+
+- **A remote proving service** builds a validity proof for each private transaction. The proof travels as transaction-level fields, not inside a call, so a privacy operation can **never** be batched with other calls and cannot go through the [transaction builder](/build/starkzap/tx-builder).
+- **A relayer submits it.** No user signature is involved — the pool authorises the transaction from the proof alone. Your address, nonce, and gas payment stay off-chain, which is the property the pool exists to provide.
+- **A viewing key**, derived from your signing key, lets you find your own notes and lets others send to you.
+
+Because the client owns the fee, the proving block, and submission, `send()` executes for you and returns a transaction hash — it does not hand back calls.
+
+For how this compares to Tongo, see [Choosing a privacy protocol](/build/starkzap/privacy/overview).
+
+## Prerequisites and installation
+
+The privacy SDK is an optional peer dependency published to **GitHub Packages**, not npm. Point the `@starkware-libs` scope at that registry in your project's `.npmrc`:
+
+```txt
+@starkware-libs:registry=https://npm.pkg.github.com
+```
+
+Reads require authentication even though the package is public. Put a token with `read:packages` in your **`~/.npmrc`** — never in the committed project file:
+
+```txt
+//npm.pkg.github.com/:_authToken=YOUR_TOKEN
+```
+
+Then install:
+
+```bash
+npm install @starkware-libs/starknet-privacy-sdk
+```
+
+<Note>
+  The OHTTP transport needs WebCrypto. On Node that means **Node 24 or later** — not enforced by the installer, so an older Node fails at runtime rather than at install time. On **React Native**, Hermes provides no `crypto.subtle` at all, so OHTTP needs a library that supplies one; see [React Native](/build/starkzap/react-native).
+</Note>
+
+### Supported wallets
+
+Privacy needs a **private-key login**. `connectPrivacy` takes a `Wallet` rather than a `WalletInterface`, because a Cartridge wallet cannot derive a viewing key at all.
+
+The viewing key is derived from the account key **inside the signer**, so the signer has to implement `deriveViewingKey`. `StarkSigner` does. A signer that can only sign — the Privy and Cartridge ones — cannot produce the key at all, because signing is not the operation the derivation performs.
+
+Starkzap refuses those signers **before any network call**. The user-facing reason, as the example app phrases it:
+
+> The privacy pool needs a private-key login: the viewing key is derived from the account key inside the signer, which the Privy and Cartridge signers cannot do.
+
+A custom signer opts in by implementing `deriveViewingKey`. `deriveAccountLeafViewingKey` implements the profile for you, and comes from the **root** entry rather than `starkzap/privacy` — a signer is part of the core API, so it must be writable without pulling in privacy types:
+
+```typescript
+import { deriveAccountLeafViewingKey, type ViewingKeyContext } from "starkzap";
+
+class MySigner implements SignerInterface {
+  async deriveViewingKey(context: ViewingKeyContext): Promise<string> {
+    return deriveAccountLeafViewingKey(this.privateKey, context);
+  }
+}
+```
+
+Failing that, supply your own `viewingKeyDerivation`.
+
+## Configuration
+
+Privacy lives at its own entry point, **`starkzap/privacy`**, and its config is passed to `connectPrivacy` rather than to `StarkZap`. `poolContractAddress`, `prover`, and `discovery` are required; `paymaster` is required in practice, because `connectPrivacy` throws without it. The endpoint and the fee mode travel together in one object, so half a configuration does not compile.
+
+<Note>
+  The subpath is not cosmetic. These types name the privacy SDK, which is an optional peer — carrying them on the root entry would make that peer mandatory for every consumer of `starkzap`, including those who never touch privacy. Importing from `starkzap/privacy` is what keeps it optional.
+</Note>
+
+```typescript
+import { StarkZap } from "starkzap";
+import { connectPrivacy } from "starkzap/privacy";
+
+const sdk = new StarkZap({ network: "mainnet" });
+const wallet = await sdk.connectWallet({ account: { signer } });
+
+const privacy = await connectPrivacy(wallet, {
+  poolContractAddress: POOL,
+  prover: PROVER,
+  discovery: DISCOVERY,
+  paymaster: {
+    url: "https://my-app.example.com/api/paymaster/mainnet",
+    fee: { mode: "sponsored" },
+  },
+});
+```
+
+`connectPrivacy` caches one client per wallet, so repeated calls are cheap and the user is asked to sign once. A failure is not cached — a missing dependency or an unreachable service is retryable once fixed. Later calls return the cached client and ignore the config you pass them.
+
+| Field | Required | Purpose |
+| --- | --- | --- |
+| `poolContractAddress` | Yes | The pool contract. Folded into the viewing key as a felt, so `0x040…` and `0x40…` are the same pool. |
+| `prover` | Yes | Proving service base URL, or a `ProofProviderInterface` instance. A prover you host yourself covers transfers and withdrawals; **deposits** additionally need the screening step, which only StarkWare's prover performs. |
+| `discovery` | Yes | Discovery service base URL, or a `DiscoveryProviderInterface` instance. You can host this yourself. |
+| `paymaster` | In practice | Where and how private transactions are submitted. See the table below. |
+| `ohttp` | No | Envelope-encrypts requests to the two services. Defaults to on. |
+| `viewingKeyDerivation` | No | Replace the default derivation scheme. |
+
+The `paymaster` block:
+
+| Field | Required | Purpose |
+| --- | --- | --- |
+| `url` | Yes | Endpoint that submits private transactions. Point it at a proxy holding your API key, not at the paymaster directly — and at a proxy that knows which network it is for, since each AVNU deployment whitelists only its own pool. |
+| `fee` | Yes | How the pool fee is paid. Deliberately not defaulted — see below. |
+| `tip` | No | Transaction priority: `"slow"`, `"normal"`, or `"fast"`. AVNU fills in `"normal"` when omitted. |
+| `maxFee` | No | Refuse a quote whose fee exceeds this, in base units of the fee token. The response decides how much of your shielded balance leaves the pool, so a ceiling is the only thing between a misconfigured endpoint and your balance. Unset by default: a guessed ceiling would break every deployment whose fee sits above the guess. |
+| `fetch` | No | Transport override, defaulting to the global `fetch`. Wrap it to add auth headers, `credentials: "include"`, retries, a timeout via `AbortSignal`, or tracing — the proxy holding your API key is worth gating, and this is where a credential goes. Reading the response stays with the SDK. |
+
+There are **no built-in per-network presets** for the pool or the services. Supply them per chain yourself.
+
+### Running your own services
+
+Both services are open source, so `prover` and `discovery` can point at infrastructure you operate.
+
+| Component | Where to get it |
+| --- | --- |
+| Discovery service | [`deploy/discovery-service/`](https://github.com/starkware-libs/starknet-privacy/tree/main/deploy/discovery-service) in the protocol repo — Dockerfile plus local and multi-platform build instructions. The service itself is [`crates/discovery-service/`](https://github.com/starkware-libs/starknet-privacy/tree/main/crates/discovery-service). |
+| Proving service | [`snip-36-prover-backend`](https://github.com/starknet-innovation/snip-36-prover-backend) — proves [SNIP-36](https://community.starknet.io/t/snip-36-in-protocol-proof-verification/116123) virtual-block execution with the stwo-cairo prover, which is the mechanism the pool's proofs use. |
+
+Deposits are the exception, and this is why. The prover does not screen deposits itself — it calls a [`proof-interceptor`](https://github.com/starkware-libs/starknet-privacy/tree/main/proof-interceptor) sidecar, which forwards each deposit address to an [`elliptic-proxy`](https://github.com/starkware-libs/starknet-privacy/tree/main/elliptic-proxy) holding Elliptic credentials. Screening is invisible from the client side: an allowed transaction returns a proof as usual, and a blocked one returns JSON-RPC error `10000`. Standing that path up requires Elliptic access, which is what StarkWare onboards you for.
+
+<Note>
+  The prover backend lives under a different organisation and describes itself as developer tooling, so treat it as a reference implementation rather than a supported production deployment. Check that its API matches the `prover` contract your SDK version expects before relying on it.
+</Note>
+
+### Keep OHTTP on
+
+<Warning>
+  With `ohttp` disabled, your viewing key reaches the proving and discovery services in plaintext — inside TLS, but readable by whoever operates them. Turn it off only if the server does not support OHTTP.
+</Warning>
+
+Pass `true` for defaults, or an object to route through a relay that also hides your IP from the discovery service:
+
+```typescript
+ohttp: { relayUrl: OHTTP_RELAY }
+```
+
+### Fee modes
+
+Starkzap refuses to pick a fee mode for you. All three modes go through the relayer and withdraw the fee from your private balance, so **the choice is about cost, not privacy**.
+
+| Mode | API key | Cost |
+| --- | --- | --- |
+| `{ mode: "sponsored" }` | Required | Relayer pays gas; pool fee in STRK. The sane default. |
+| `{ mode: "sponsored_private", poolFeeToken }` | Required | As sponsored, but you choose the pool-fee token. Private transactions only. |
+| `{ mode: "default", gasToken }` | None | No key needed, but the withdrawal is sized at the paymaster's suggested *maximum* gas rather than its estimate, so it covers headroom that may go unused. How much more than a sponsored pool fee that is depends on the network and current gas — `quote()` reports both figures, so read them rather than assuming a ratio. |
+
+Sponsored modes need an API key, and an API key needs a proxy to hold it. Raise that proxy's request body limit: a proof runs to a few hundred kilobytes, above the 100 kb that `express.json()` allows by default.
+
+### Two ways in: `connectPrivacy` and `createPrivacy`
+
+Both derive the same viewing key from the same signer. They differ in what you get back and who cleans up.
+
+| | `connectPrivacy` | `createPrivacy` |
+| --- | --- | --- |
+| Returns | this wrapper — pool fee, proving block, relayed submission | the privacy SDK's own `PrivateTransfersInterface`, unwrapped |
+| Submission | through the paymaster's relayer | yours to arrange |
+| Cached per wallet | Yes | No — each call derives again, and asks the signer again |
+| Revoked by `wallet.disconnect()` | **Yes, automatically** | **No — call `revokePrivacy(transfers)` yourself** |
+
+Reach for `createPrivacy` when you need the SDK's own surface for a flow this wrapper does not model — a private swap, say. Everything else wants `connectPrivacy`.
+
+The revocation row is the one to get right. A viewing key must not outlive the session that authorised it: if account A disconnects and account B logs in while a client built from A is still reachable, that client can still read A's notes, and deposits made by B can end up proven as A's notes — spendable only with A's key.
+
+## Registering and your viewing key
+
+By default your viewing key is derived by the signer from your account's own private key, following [SNIP-44](https://github.com/starknet-io/SNIPs/pull/177)'s `account-leaf-v1` profile: an HMAC-SHA256 keyed with that key over a fixed domain separator and a context of chain, account, pool and key slot, folded into the pool's canonical range. Two pools, two chains or two accounts therefore never share a key. It is **never stored**: it is reproducible from the account key alone, so your notes survive a wallet reinstall with nothing to back up. It lives in the client's closure for exactly as long as the session that authorised it. `wallet.disconnect()` **revokes** it rather than merely dropping a reference: the client refuses to decrypt afterwards, so a stale client someone is still holding cannot keep reading notes. `revokePrivacy(transfers)` does the same for a client built with `createPrivacy` directly — see [the comparison above](#two-ways-in-connectprivacy-and-createprivacy). Neither scrubs memory — JavaScript strings cannot be overwritten in place — and neither un-decrypts notes already discovered.
+
+<Warning>
+  The pool stores the **first** key an account registers and it cannot be replaced. Changing `viewingKeyDerivation` for an account that already registered orphans its notes, and the discovery service rejects a mismatched key outright.
+</Warning>
+
+### Supplying your own derivation
+
+The pool only ever sees the key's public x-coordinate, so how you arrive at the key is yours to choose — pass `viewingKeyDerivation` in the config you hand `connectPrivacy` to replace the default entirely.
+
+The usual reasons to: a wallet with its own key-derivation function, a hardware device that answers a specific command, a key held somewhere outside the app, or a signer that cannot run the default derivation and so cannot be used without one.
+
+```typescript
+import type { ViewingKeyDerivation } from "starkzap/privacy";
+
+const fromWalletKdf: ViewingKeyDerivation = async (context, signer) => {
+  // context: { chainId, accountAddress, poolAddress, keyIndex? }
+  // signer:  the account's own signer, for schemes that reach key material
+  //          through it or delegate to a device
+  return myWallet.deriveViewingKey(context); // 0x-prefixed hex
+};
+```
+
+Two requirements, both enforced:
+
+- **Deterministic, forever, on every device.** The same context and signer must produce the same key for the lifetime of the account. The pool keeps the first key it is given, so a derivation that ever changes its output leaves every existing note encrypted to a key nobody holds.
+- **Inside the pool's canonical range,** `[1, n/2)`. Whatever you return is passed through `assertCanonicalViewingKey`, which rejects anything outside it — fold your output into the range rather than hoping it lands there.
+
+<Note>
+  A key is only reproducible by the scheme that produced it: notes shielded through the default are recoverable through the default, and notes shielded through yours need yours. Keep the scheme with the account.
+
+  SNIP-44 is still a draft, so its profile may change before it is final. `deriveAccountLeafViewingKey` implements it and is exported, which is what you want when writing a signer's `deriveViewingKey` rather than replacing the scheme wholesale.
+</Note>
+
+Registration is **per account, not per token**, so any token answers the question. `discoverRequirement` returns `0` (`SetupRequirement.Register`) when the account has not registered yet:
+
+```typescript
+const requirement = await privacy.discoverRequirement(wallet.address, token.address);
+const registered = requirement !== 0; // SetupRequirement.Register === 0
+```
+
+You cannot register on its own. The pool fee is withdrawn from your private balance, and before your first deposit that balance is empty — a standalone `register()` fails with `Insufficient balance`. Fold it into the first deposit with `autoRegister: true` instead.
+
+Checking whether a **recipient** can receive yet is a different question, and needs a different call. A transfer to an account with no registered viewing key cannot be built, so check before offering the action — by asking for the recipient's channel:
+
+```typescript
+export async function recipientReady(recipient: string): Promise<boolean> {
+  const address = recipient.trim();
+  try {
+    const { channels } = await privacy.discoverChannels([address]);
+    return Boolean(channels?.get(address)?.publicKey);
+  } catch {
+    return false;
+  }
+}
+```
+
+<Warning>
+  Do not use `discoverRequirement` for the recipient. Against the indexer discovery service its `Register` verdict reports whether the **sender** is registered, so once you have deposited it answers "ready" for any address at all — and the transfer then fails inside the compiler with `Missing channel context for recipient`. The channel's `publicKey` is what the compiler itself needs, so asking for it is the check that cannot disagree with the build.
+</Warning>
+
+A recipient who is registered but has no channel with you yet passes, as it should: opening that channel is what `autoSetup` does.
+
+## Deposit
+
+A deposit needs a public ERC20 `approve`: the pool pulls the funds, so that step names your account whichever way you send it. What you choose is whether it travels as its own transaction or inside the paymaster's.
+
+### In one transaction
+
+`send({ invoke })` hands the approve to the paymaster, which relays it through your account's `execute_from_outside` in the same transaction as the pool action. The wrapped call runs first, so the allowance is in place by the time the pool reads it.
+
+```typescript
+import { Amount, fromAddress } from "starkzap";
+import { waitForFundedBalance } from "starkzap/privacy";
+
+const amount = Amount.parse("100", token);
+
+const hash = await privacy.send(
+  (b) =>
+    b
+      .with(token.address, (t) => t.deposit({ amount: amount.toBase() }))
+      .surplusTo(wallet.address),
+  {
+    // Relayed alongside the pool action. `calls()` resolves the builder without
+    // sending, so every ERC20 and protocol helper is available here.
+    invoke: await wallet.tx().approve(token, fromAddress(POOL), amount).calls(),
+    autoRegister: true,
+    autoSetup: true,
+    autoDiscover: { notes: "refresh", channels: "refresh" },
+    provingBlockId: await waitForFundedBalance(
+      wallet.getProvider(),
+      token,
+      fromAddress(wallet.address),
+      amount.toBase()
+    ),
+  }
+);
+```
+
+You sign the paymaster's SNIP-12 typed data rather than a transaction, and Starkzap asks for that signature *before* proving. The signature does not depend on the proof, so declining costs you nothing.
+
+<Warning>
+  Wrapped calls are **not** private. They are executed by your account and name it on-chain. Use this for work that is already public, which the approve is — not to hide anything.
+</Warning>
+
+This needs an account that supports SNIP-9 outside execution. The OpenZeppelin, Argent and Braavos presets all do. When an account does not, the paymaster refuses at build time with code `156` and the reason `invalid version`; Starkzap replaces that with a message naming the account and pointing at the two-transaction form, because the raw error reads like a version-negotiation bug rather than a fact about the wallet.
+
+### In two transactions
+
+Send the approve yourself when the account cannot do outside execution, or when you would rather keep the steps apart.
+
+```typescript
+// 1. Public approve so the pool can pull the funds.
+const approve = await wallet
+  .tx()
+  .approve(token, fromAddress(POOL), amount)
+  .send();
+await approve.wait();
+
+// 2. The private deposit — the same call as above, without `invoke`.
+const hash = await privacy.send(
+  (b) =>
+    b
+      .with(token.address, (t) => t.deposit({ amount: amount.toBase() }))
+      .surplusTo(wallet.address),
+  {
+    autoRegister: true,
+    autoSetup: true,
+    autoDiscover: { notes: "refresh", channels: "refresh" },
+    provingBlockId: await waitForFundedBalance(
+      wallet.getProvider(),
+      token,
+      fromAddress(wallet.address),
+      amount.toBase()
+    ),
+  }
+);
+```
+
+### The proving block and registration, either way
+
+The approve does **not** have to age — it is checked when the deposit executes, not when it is proven — so a separate approve can be followed straight away. What must be visible at the proving block is the **balance**, which is why `provingBlockId` overrides the client's own sequencing here: this proof reads the depositor's ERC20 balance, and the client has no way to know about it. `waitForFundedBalance` checks that balance directly, which also covers funds that arrived in a transaction you did not send.
+
+Bundling changes neither half of that. It saves a transaction, not the settling, so `provingBlockId` is needed either way.
+
+This is also where registration happens, via `autoRegister`.
+
+<Note>
+  Tongo's `fund()` bundles its own approve, so there is no choice to make there.
+</Note>
+
+## Transfer
+
+```typescript
+const hash = await privacy.send(
+  (b) =>
+    b
+      .with(token.address, (t) =>
+        t.transfer({ recipient: recipient.trim(), amount: amount.toBase() })
+      )
+      .surplusTo(wallet.address),
+  {
+    autoSetup: true,
+    autoSelectNotes: "naive",
+    autoDiscover: { notes: "refresh", channels: "refresh" },
+  }
+);
+```
+
+`autoSelectNotes: "naive"` lets the SDK pick which of your notes to spend. `surplusTo(wallet.address)` sends the change back to you as a **private** note, so it stays in the pool.
+
+## Withdraw
+
+```typescript
+const hash = await privacy.send(
+  (b) =>
+    b
+      .with(token.address, (t) =>
+        t.withdraw({ recipient: recipient.trim(), amount: amount.toBase() })
+      )
+      .surplusTo(wallet.address),
+  {
+    autoSelectNotes: "naive",
+    autoDiscover: { notes: "refresh", channels: "refresh" },
+  }
+);
+```
+
+Make the recipient an explicit choice in your UI rather than defaulting to the connected wallet.
+
+<Warning>
+  Deposits and withdrawals are public; only what happens between them is private. Withdrawing to the address you deposited from puts both ends on the same address, which is enough to link them — so a fresh address is what preserves the gap.
+</Warning>
+
+Withdrawing to yourself is legitimate. It just has to be a choice, not a default.
+
+## Reading private balances
+
+There is no `balanceOf`. **One** `discoverNotes()` call covers every token, returning a map keyed by token address as a `bigint`; a balance is a grouping of it:
+
+```typescript
+const { notes } = await privacy.discoverNotes();
+
+const balances = tokens.map((token) => {
+  const owned = notes.get(BigInt(token.address)) ?? [];
+  const total = owned.reduce((sum, note) => sum + note.amount, 0n);
+  return {
+    token,
+    private: Amount.fromRaw(total, token),
+    notes: owned.length,
+  };
+});
+```
+
+Note counts are worth surfacing: a balance split across many small notes behaves differently from the same amount in one note.
+
+## Previewing a transaction
+
+`simulate()` runs what `send()` would run, without proving it. Same callback, same options: it quotes the same fee, appends the same fee withdrawal and resolves the same proving block, then runs against a mock prover.
+
+```typescript
+const { warnings, feeAction } = await privacy.simulate((b) =>
+  b
+    .with(token, (t) => t.withdraw({ recipient, amount }))
+    .surplusTo(wallet.address)
+);
+
+if (warnings.length > 0) {
+  // Ask the user. `USER_LINKAGE` is the one to expect on a withdrawal.
+}
+```
+
+The point is *when* you learn things. `send()`'s `onWarnings` callback reports the same list, but only after the proof exists and has been paid for, so declining there wastes the proving. `simulate()` costs a quote, a chain-head read and a view call.
+
+It waits for no block and writes no private state, so it is safe to run while a send is in flight. The trade-off is that in that window it reads a slightly older block than the send will prove against, because waiting for the previous transaction to age is exactly what a preview must not do.
+
+<Note>
+  Resolving the proving block is what makes the answer trustworthy: channels and notes are discovered **at** that block, so a preview taken against the chain head would answer for a different transaction than the one submitted. A recipient who registered in the last few blocks is the case that catches you.
+</Note>
+
+No proof comes back. A mock proof has the shape of a proof and none of the substance, and handing one out invites submitting it.
+
+## Fees: pool fee and gas
+
+The pool charges a fee that is withdrawn **inside the proof**, separately from gas. `quote()` returns it:
+
+```typescript
+const fee = await privacy.quote();
+console.log(fee.feeAction.amount); // bigint, base units of fee.feeAction.token
+
+// What the paymaster reckons the gas costs, when it reports it.
+if (fee.gas) {
+  console.log(fee.gas.estimatedInGasToken, fee.gas.suggestedMaxInGasToken);
+}
+```
+
+`gas` is the paymaster's own gas figures, not your fee — the two coincide only in `default` mode, where the withdrawal is sized at `suggestedMaxInGasToken`. Under the sponsored modes the relayer pays the gas, so those numbers are its costs rather than the user's, and putting them in front of someone would misattribute the money.
+
+Where they do apply, the pair worth showing is the estimate against the suggested maximum: the difference is headroom the user pays for and may not use. It is optional because a deployment may omit the block, and it is never fatal — a figure this cannot read costs the display, not the transaction.
+
+<Warning>
+  Show users `quote()`, not simulated gas. Gas is not the cost that leaves their shielded balance.
+</Warning>
+
+An amount of `0n` means the deployment charges nothing, and the withdrawal is omitted rather than sent as a no-op. A proof that omits a non-zero fee withdrawal is rejected by the paymaster.
+
+Re-quote after each operation — the amount can change.
+
+## Waiting for a provable block
+
+Any on-chain state a pool proof reads — your viewing key, your token balance, the spent-note set — must have been written at least **10 blocks** before the proof's base block (`PROOF_BASE_BLOCK_DEPTH`). This is a prerequisite, not a nicety. It applies after a previous private transaction, after deploying the account and before `register()`, and after funding the account and before `deposit()`.
+
+Skipping the wait produces either a proof the sequencer rejects or one that reads a balance the chain does not have yet — both surface as opaque failures well after the call that caused them.
+
+`send()` tracks this for you. What you must do is **surface it**, because the wait is silent and is seconds on Sepolia but minutes on mainnet — long enough that a spinner looks like a hang:
+
+```typescript
+import type { ProvableAttempt } from "starkzap/privacy";
+
+const hash = await privacy.send(compose, {
+  wait: {
+    onAttempt: ({ attempt, head, provingBlock, ready }: ProvableAttempt) => {
+      if (ready) return;
+      console.log(`#${attempt}: head ${head}, proving block ${provingBlock} — polling`);
+    },
+  },
+});
+```
+
+For preconditions the client cannot know about, wait explicitly and pass the result as `provingBlockId`:
+
+| Helper | Waits until |
+| --- | --- |
+| `waitForFundedBalance(provider, token, owner, amount)` | The owner's ERC20 balance covers `amount` at the proving block |
+| `waitForDeployedAccount(provider, address)` | The account is deployed |
+| `waitForProvableState(provider, isVisible)` | Your own predicate holds at the proving block |
+
+These exist because counting blocks from a receipt only works for transactions your process saw. An account funded by a transaction you did not send has no receipt locally, so the precondition has to be read off chain state instead.
+
+All three **throw on timeout** (default 300 seconds) rather than resolving — handle that.
+
+## Best practices
+
+1. **Leave OHTTP on.** Disabling it exposes your viewing key to the service operators.
+2. **Withdraw to a fresh address.** Reusing the deposit address links both ends of the pool and undoes the privacy you paid for.
+3. **Show `quote()` before the user commits**, and never present simulated gas as the total cost.
+4. **Surface `wait.onAttempt`.** A silent multi-minute wait is indistinguishable from a hang. `wait` also carries `depth`, `pollIntervalMs` and `timeoutMs` for chains the two-second default does not suit.
+5. **Never persist the viewing key.** It is reproducible from the signing key; storing it only creates something to leak. `wallet.disconnect()` revokes it; call `revokePrivacy()` yourself if you built the client with `createPrivacy`.
+6. **Raise the body limit on any proxy** in front of the paymaster. A proof is a few hundred kilobytes — past the default in most HTTP stacks.
+7. **Keep prover and discovery URLs out of version control.** Configure them per environment.
+8. **Check the recipient's channel before offering a transfer** so users get a clear reason instead of a build failure. `discoverChannels`, not `discoverRequirement` — see [above](#registering-and-your-viewing-key).
+9. **Keep `invoke` for calls that are already public.** It is there to save a transaction, not to shield one: the calls are executed by the account and name it on-chain.
+
+## Troubleshooting
+
+### Missing optional peer dependency
+
+The error names the registry and the required permission, and mentions `read:packages` and `Node >= 24`. Confirm your project `.npmrc` maps the `@starkware-libs` scope to `https://npm.pkg.github.com`, that `~/.npmrc` holds a token with `read:packages`, and that you are on Node 24 or later.
+
+### Signer refused before any network call
+
+The signer does not implement `deriveViewingKey`. Use a private-key login backed by `StarkSigner`; Privy and Cartridge signers cannot derive a viewing key. A custom signer can implement the method — `deriveAccountLeafViewingKey` is exported for exactly that — or you can pass your own `viewingKeyDerivation`.
+
+### `Insufficient balance` on register
+
+Registration cannot stand alone — the pool fee comes from a private balance you do not have yet. Deposit with `autoRegister: true` instead. This also appears when the quoted pool fee exceeds the amount you are depositing.
+
+### Screening rejected the deposit
+
+Deposits are screened server-side before a proof is produced. Classify the failure rather than showing a raw error:
+
+```typescript
+import { screeningVerdict } from "starkzap/privacy";
+
+switch (screeningVerdict(err)) {
+  case "rejected":
+    // The source address is blocked. Retrying will not help.
+    break;
+  case "unavailable":
+    // Screening is down and deposits fail closed. Retry later.
+    break;
+  default:
+    // Not a screening failure — surface the underlying error.
+}
+```
+
+Do not treat every failure as a screening verdict: the same error code is also emitted for non-pool transactions and for internal faults, and telling a user never to retry a transient failure is worse than saying nothing.
+
+### Paymaster rejected the transaction
+
+Starkzap reports the paymaster's own message and the reason it puts in `data`, so read that first — it names the problem more precisely than any table can. A few codes are worth knowing:
+
+| Code | Meaning |
+| --- | --- |
+| `151` | The fee token is not supported. |
+| `156` | Execution failure — **including a pool address the paymaster has not whitelisted**, with the reason in `data.execution_error`. With `invoke`, the reason `invalid version` instead means the account does not support SNIP-9 outside execution; Starkzap rewrites that one, since the raw text describes neither the account nor the fix. |
+| `163` | An invalid API key, an unavailable service, or a blacklisted call. This is the generic catch-all, so `data` is what distinguishes them. |
+| `165` | The proof is missing the fee withdrawal. Append `feeAction` from `quote()` before proving. |
+| `167` | The withdrawn fee is below the quoted pool fee. Quote and prove again. |
+| `168` | On **build**, `sponsored_private` used for a non-private transaction. On **execute**, the proof is missing entirely — the same number means different things on the two calls, so branch on the pair. |
+| `169` | The transaction exceeds the maximum L2 gas. |
+
+A retry has to mean *re-proving*. The paymaster remembers the calls it has seen, so re-submitting the same proof answers `156 :: execution error Tx already sent` rather than trying again.
+
+### `non-JSON response` or an HTTP status you did not expect
+
+Something below the paymaster failed — usually a proxy in front of it. Starkzap reports the real HTTP status as the error's `code` and keeps the response body in `data`, so a `413` from a proxy that caps request bodies is distinguishable from a paymaster rejection.
+
+A proof is around 300–320 kb for a simple transfer, and larger for transactions carrying more actions. That is above `express.json()`'s 100 kb default, so a proxy in front of the paymaster needs its limit raised; the example server uses `4mb`.
+
+### Prover or discovery URL rejected
+
+Both must be `http://` or `https://` and must parse as URLs. Starkzap validates them when the client is created.
+
+### Web bundler reloads the page on first use
+
+The SDK reaches its optional peers through `await import(...)`, which Vite's scanner does not see. Add `@starkware-libs/starknet-privacy-sdk` to `optimizeDeps.include` so it lands in the first pre-bundle pass.
+
+## Next steps
+
+- [Choosing a privacy protocol](/build/starkzap/privacy/overview) — STRK20 compared with Tongo
+- [Tongo confidential transfers](/build/starkzap/privacy/tongo) — the other privacy protocol
+- [Paymasters](/build/starkzap/paymasters) — how relayed submission works
+- [Transactions](/build/starkzap/transactions) — execution options
+- [API Reference](/build/starkzap/api-reference) — full method signatures
