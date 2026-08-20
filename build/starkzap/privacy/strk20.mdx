@@ -46,20 +46,32 @@ npm install @starkware-libs/starknet-privacy-sdk
 ```
 
 <Note>
-  Node 24 or later is required for the WebCrypto APIs the OHTTP transport relies on. This is not enforced by the installer, so an older Node fails at runtime rather than at install time.
+  The OHTTP transport needs WebCrypto. On Node that means **Node 24 or later** — not enforced by the installer, so an older Node fails at runtime rather than at install time. On **React Native**, Hermes provides no `crypto.subtle` at all, so OHTTP needs a library that supplies one; see [React Native](/build/starkzap/react-native).
 </Note>
 
 ### Supported wallets
 
 Privacy needs a **private-key login**. `connectPrivacy` takes a `Wallet` rather than a `WalletInterface`, because a Cartridge wallet cannot derive a viewing key at all.
 
-The viewing key is folded out of an ECDSA signature, so the signer must use a deterministic nonce (RFC 6979). `StarkSigner` declares that it does; Privy and Cartridge signers do not, because their nonce policy is not Starkzap's to verify. A signer that drew a fresh nonce per signature would derive a different key on every login and orphan every note already encrypted to the first one.
+The viewing key is derived from the account key **inside the signer**, so the signer has to implement `deriveViewingKey`. `StarkSigner` does. A signer that can only sign — the Privy and Cartridge ones — cannot produce the key at all, because signing is not the operation the derivation performs.
 
 Starkzap refuses those signers **before any network call**. The user-facing reason, as the example app phrases it:
 
-> The privacy pool needs a private-key login: the viewing key is derived from a deterministic signature, which Privy and Cartridge signers do not provide.
+> The privacy pool needs a private-key login: the viewing key is derived from the account key inside the signer, which the Privy and Cartridge signers cannot do.
 
-A custom signer can opt in by declaring `deterministic = true`, or you can supply your own `viewingKeyDerivation`.
+A custom signer opts in by implementing `deriveViewingKey`. `deriveAccountLeafViewingKey` implements the profile for you, and comes from the **root** entry rather than `starkzap/privacy` — a signer is part of the core API, so it must be writable without pulling in privacy types:
+
+```typescript
+import { deriveAccountLeafViewingKey, type ViewingKeyContext } from "starkzap";
+
+class MySigner implements SignerInterface {
+  async deriveViewingKey(context: ViewingKeyContext): Promise<string> {
+    return deriveAccountLeafViewingKey(this.privateKey, context);
+  }
+}
+```
+
+Failing that, supply your own `viewingKeyDerivation`.
 
 ## Configuration
 
@@ -166,7 +178,7 @@ The revocation row is the one to get right. A viewing key must not outlive the s
 
 ## Registering and your viewing key
 
-By default your viewing key is derived by signing a canonical message — `Poseidon(version, chainId, account, pool, keyIndex)` — with your account's own signing key, then folding the signature into the pool's canonical range. It is **never stored**: it is reproducible from the signing key alone, so your notes survive a wallet reinstall with nothing to back up. It lives in the client's closure for exactly as long as the session that authorised it. `wallet.disconnect()` **revokes** it rather than merely dropping a reference: the client refuses to decrypt afterwards, so a stale client someone is still holding cannot keep reading notes. `revokePrivacy(transfers)` does the same for a client built with `createPrivacy` directly — see [the comparison above](#two-ways-in-connectprivacy-and-createprivacy). Neither scrubs memory — JavaScript strings cannot be overwritten in place — and neither un-decrypts notes already discovered.
+By default your viewing key is derived by the signer from your account's own private key, following [SNIP-44](https://github.com/starknet-io/SNIPs/pull/177)'s `account-leaf-v1` profile: an HMAC-SHA256 keyed with that key over a fixed domain separator and a context of chain, account, pool and key slot, folded into the pool's canonical range. Two pools, two chains or two accounts therefore never share a key. It is **never stored**: it is reproducible from the account key alone, so your notes survive a wallet reinstall with nothing to back up. It lives in the client's closure for exactly as long as the session that authorised it. `wallet.disconnect()` **revokes** it rather than merely dropping a reference: the client refuses to decrypt afterwards, so a stale client someone is still holding cannot keep reading notes. `revokePrivacy(transfers)` does the same for a client built with `createPrivacy` directly — see [the comparison above](#two-ways-in-connectprivacy-and-createprivacy). Neither scrubs memory — JavaScript strings cannot be overwritten in place — and neither un-decrypts notes already discovered.
 
 <Warning>
   The pool stores the **first** key an account registers and it cannot be replaced. Changing `viewingKeyDerivation` for an account that already registered orphans its notes, and the discovery service rejects a mismatched key outright.
@@ -174,16 +186,17 @@ By default your viewing key is derived by signing a canonical message — `Posei
 
 ### Supplying your own derivation
 
-That scheme is Starkzap's default, not the protocol's. The pool only ever sees the key's public x-coordinate, so how you arrive at the key is yours to choose — pass `viewingKeyDerivation` in the config you hand `connectPrivacy` to replace it entirely.
+The pool only ever sees the key's public x-coordinate, so how you arrive at the key is yours to choose — pass `viewingKeyDerivation` in the config you hand `connectPrivacy` to replace the default entirely.
 
-The usual reasons to: a wallet with its own key-derivation function, a hardware device that answers a specific command, a key held somewhere outside the app, or a signer that cannot promise a deterministic nonce and so cannot use the default at all.
+The usual reasons to: a wallet with its own key-derivation function, a hardware device that answers a specific command, a key held somewhere outside the app, or a signer that cannot run the default derivation and so cannot be used without one.
 
 ```typescript
 import type { ViewingKeyDerivation } from "starkzap/privacy";
 
 const fromWalletKdf: ViewingKeyDerivation = async (context, signer) => {
   // context: { chainId, accountAddress, poolAddress, keyIndex? }
-  // signer:  the account's own signer, for schemes that sign or expose a KDF
+  // signer:  the account's own signer, for schemes that reach key material
+  //          through it or delegate to a device
   return myWallet.deriveViewingKey(context); // 0x-prefixed hex
 };
 ```
@@ -194,9 +207,9 @@ Two requirements, both enforced:
 - **Inside the pool's canonical range,** `[1, n/2)`. Whatever you return is passed through `assertCanonicalViewingKey`, which rejects anything outside it — fold your output into the range rather than hoping it lands there.
 
 <Note>
-  The privacy SDK specifies no derivation scheme, so this default is Starkzap's own. A key is only reproducible by the scheme that produced it: notes shielded through the default are recoverable through the default, and notes shielded through yours need yours. Keep the scheme with the account.
+  A key is only reproducible by the scheme that produced it: notes shielded through the default are recoverable through the default, and notes shielded through yours need yours. Keep the scheme with the account.
 
-  [SNIP-44](https://github.com/starknet-io/SNIPs/pull/177) proposes a standard alternative, keying an HMAC with the raw account private key. It removes the dependency on a deterministic nonce, at the cost of excluding every signer that will not hand over its private scalar. Still a draft.
+  SNIP-44 is still a draft, so its profile may change before it is final. `deriveAccountLeafViewingKey` implements it and is exported, which is what you want when writing a signer's `deriveViewingKey` rather than replacing the scheme wholesale.
 </Note>
 
 Registration is **per account, not per token**, so any token answers the question. `discoverRequirement` returns `0` (`SetupRequirement.Register`) when the account has not registered yet:
@@ -208,18 +221,25 @@ const registered = requirement !== 0; // SetupRequirement.Register === 0
 
 You cannot register on its own. The pool fee is withdrawn from your private balance, and before your first deposit that balance is empty — a standalone `register()` fails with `Insufficient balance`. Fold it into the first deposit with `autoRegister: true` instead.
 
-Use the same call to check whether a **recipient** can receive yet. A transfer to an account with no registered viewing key cannot be built, so check before offering the action:
+Checking whether a **recipient** can receive yet is a different question, and needs a different call. A transfer to an account with no registered viewing key cannot be built, so check before offering the action — by asking for the recipient's channel:
 
 ```typescript
-export async function recipientReady(recipient: string, token: Token): Promise<boolean> {
+export async function recipientReady(recipient: string): Promise<boolean> {
+  const address = recipient.trim();
   try {
-    const requirement = await privacy.discoverRequirement(recipient.trim(), token.address);
-    return requirement !== 0;
+    const { channels } = await privacy.discoverChannels([address]);
+    return Boolean(channels?.get(address)?.publicKey);
   } catch {
     return false;
   }
 }
 ```
+
+<Warning>
+  Do not use `discoverRequirement` for the recipient. Against the indexer discovery service its `Register` verdict reports whether the **sender** is registered, so once you have deposited it answers "ready" for any address at all — and the transfer then fails inside the compiler with `Missing channel context for recipient`. The channel's `publicKey` is what the compiler itself needs, so asking for it is the check that cannot disagree with the build.
+</Warning>
+
+A recipient who is registered but has no channel with you yet passes, as it should: opening that channel is what `autoSetup` does.
 
 ## Deposit
 
@@ -374,6 +394,32 @@ const balances = tokens.map((token) => {
 
 Note counts are worth surfacing: a balance split across many small notes behaves differently from the same amount in one note.
 
+## Previewing a transaction
+
+`simulate()` runs what `send()` would run, without proving it. Same callback, same options: it quotes the same fee, appends the same fee withdrawal and resolves the same proving block, then runs against a mock prover.
+
+```typescript
+const { warnings, feeAction } = await privacy.simulate((b) =>
+  b
+    .with(token, (t) => t.withdraw({ recipient, amount }))
+    .surplusTo(wallet.address)
+);
+
+if (warnings.length > 0) {
+  // Ask the user. `USER_LINKAGE` is the one to expect on a withdrawal.
+}
+```
+
+The point is *when* you learn things. `send()`'s `onWarnings` callback reports the same list, but only after the proof exists and has been paid for, so declining there wastes the proving. `simulate()` costs a quote, a chain-head read and a view call.
+
+It waits for no block and writes no private state, so it is safe to run while a send is in flight. The trade-off is that in that window it reads a slightly older block than the send will prove against, because waiting for the previous transaction to age is exactly what a preview must not do.
+
+<Note>
+  Resolving the proving block is what makes the answer trustworthy: channels and notes are discovered **at** that block, so a preview taken against the chain head would answer for a different transaction than the one submitted. A recipient who registered in the last few blocks is the case that catches you.
+</Note>
+
+No proof comes back. A mock proof has the shape of a proof and none of the substance, and handing one out invites submitting it.
+
 ## Fees: pool fee and gas
 
 The pool charges a fee that is withdrawn **inside the proof**, separately from gas. `quote()` returns it:
@@ -393,7 +439,7 @@ if (fee.gas) {
 Where they do apply, the pair worth showing is the estimate against the suggested maximum: the difference is headroom the user pays for and may not use. It is optional because a deployment may omit the block, and it is never fatal — a figure this cannot read costs the display, not the transaction.
 
 <Warning>
-  `simulate()` knows nothing about the pool fee. Show users `quote()`, not simulated gas, or they will be surprised by the difference.
+  Show users `quote()`, not simulated gas. Gas is not the cost that leaves their shielded balance.
 </Warning>
 
 An amount of `0n` means the deployment charges nothing, and the withdrawal is omitted rather than sent as a no-op. A proof that omits a non-zero fee withdrawal is rejected by the paymaster.
@@ -442,7 +488,7 @@ All three **throw on timeout** (default 300 seconds) rather than resolving — h
 5. **Never persist the viewing key.** It is reproducible from the signing key; storing it only creates something to leak. `wallet.disconnect()` revokes it; call `revokePrivacy()` yourself if you built the client with `createPrivacy`.
 6. **Raise the body limit on any proxy** in front of the paymaster. A proof is a few hundred kilobytes — past the default in most HTTP stacks.
 7. **Keep prover and discovery URLs out of version control.** Configure them per environment.
-8. **Check `discoverRequirement` before offering a transfer** so users get a clear reason instead of a build failure.
+8. **Check the recipient's channel before offering a transfer** so users get a clear reason instead of a build failure. `discoverChannels`, not `discoverRequirement` — see [above](#registering-and-your-viewing-key).
 9. **Keep `invoke` for calls that are already public.** It is there to save a transaction, not to shield one: the calls are executed by the account and name it on-chain.
 
 ## Troubleshooting
@@ -453,7 +499,7 @@ The error names the registry and the required permission, and mentions `read:pac
 
 ### Signer refused before any network call
 
-The signer does not declare a deterministic nonce. Use a private-key login backed by `StarkSigner`; Privy and Cartridge signers cannot derive a viewing key. A custom signer may declare `deterministic = true`, or you can pass your own `viewingKeyDerivation`.
+The signer does not implement `deriveViewingKey`. Use a private-key login backed by `StarkSigner`; Privy and Cartridge signers cannot derive a viewing key. A custom signer can implement the method — `deriveAccountLeafViewingKey` is exported for exactly that — or you can pass your own `viewingKeyDerivation`.
 
 ### `Insufficient balance` on register
 
