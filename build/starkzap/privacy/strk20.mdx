@@ -51,7 +51,7 @@ npm install @starkware-libs/starknet-privacy-sdk
 
 ### Supported wallets
 
-Privacy needs a **private-key login**. `wallet.privacy()` exists on `Wallet` but not on `WalletInterface`, because a Cartridge wallet cannot derive a viewing key at all.
+Privacy needs a **private-key login**. `connectPrivacy` takes a `Wallet` rather than a `WalletInterface`, because a Cartridge wallet cannot derive a viewing key at all.
 
 The viewing key is folded out of an ECDSA signature, so the signer must use a deterministic nonce (RFC 6979). `StarkSigner` declares that it does; Privy and Cartridge signers do not, because their nonce policy is not Starkzap's to verify. A signer that drew a fresh nonce per signature would derive a different key on every login and orphan every note already encrypted to the first one.
 
@@ -63,29 +63,31 @@ A custom signer can opt in by declaring `deterministic = true`, or you can suppl
 
 ## Configuration
 
-Pass a `privacy` block to `StarkZap`. `poolContractAddress`, `prover`, and `discovery` are required; `paymaster` is required in practice, because `wallet.privacy()` throws without it. The endpoint and the fee mode travel together in one object, so half a configuration does not compile.
+Privacy lives at its own entry point, **`starkzap/privacy`**, and its config is passed to `connectPrivacy` rather than to `StarkZap`. `poolContractAddress`, `prover`, and `discovery` are required; `paymaster` is required in practice, because `connectPrivacy` throws without it. The endpoint and the fee mode travel together in one object, so half a configuration does not compile.
+
+<Note>
+  The subpath is not cosmetic. These types name the privacy SDK, which is an optional peer — carrying them on the root entry would make that peer mandatory for every consumer of `starkzap`, including those who never touch privacy. Importing from `starkzap/privacy` is what keeps it optional.
+</Note>
 
 ```typescript
 import { StarkZap } from "starkzap";
+import { connectPrivacy } from "starkzap/privacy";
 
-const sdk = new StarkZap({
-  network: "mainnet",
-  privacy: {
-    poolContractAddress: POOL,
-    prover: PROVER,
-    discovery: DISCOVERY,
-    paymaster: {
-      url: "https://my-app.example.com/api/paymaster/mainnet",
-      fee: { mode: "sponsored" },
-    },
+const sdk = new StarkZap({ network: "mainnet" });
+const wallet = await sdk.connectWallet({ account: { signer } });
+
+const privacy = await connectPrivacy(wallet, {
+  poolContractAddress: POOL,
+  prover: PROVER,
+  discovery: DISCOVERY,
+  paymaster: {
+    url: "https://my-app.example.com/api/paymaster/mainnet",
+    fee: { mode: "sponsored" },
   },
 });
-
-const wallet = await sdk.connectWallet({ account: { signer } });
-const privacy = await wallet.privacy();
 ```
 
-`wallet.privacy()` caches the client, so repeated calls are cheap. A failure is not cached — a missing dependency or an unreachable service is retryable once fixed.
+`connectPrivacy` caches one client per wallet, so repeated calls are cheap and the user is asked to sign once. A failure is not cached — a missing dependency or an unreachable service is retryable once fixed. Later calls return the cached client and ignore the config you pass them.
 
 | Field | Required | Purpose |
 | --- | --- | --- |
@@ -147,9 +149,24 @@ Starkzap refuses to pick a fee mode for you. All three modes go through the rela
 
 Sponsored modes need an API key, and an API key needs a proxy to hold it. Raise that proxy's request body limit: a proof runs to a few hundred kilobytes, above the 100 kb that `express.json()` allows by default.
 
+### Two ways in: `connectPrivacy` and `createPrivacy`
+
+Both derive the same viewing key from the same signer. They differ in what you get back and who cleans up.
+
+| | `connectPrivacy` | `createPrivacy` |
+| --- | --- | --- |
+| Returns | this wrapper — pool fee, proving block, relayed submission | the privacy SDK's own `PrivateTransfersInterface`, unwrapped |
+| Submission | through the paymaster's relayer | yours to arrange |
+| Cached per wallet | Yes | No — each call derives again, and asks the signer again |
+| Revoked by `wallet.disconnect()` | **Yes, automatically** | **No — call `revokePrivacy(transfers)` yourself** |
+
+Reach for `createPrivacy` when you need the SDK's own surface for a flow this wrapper does not model — a private swap, say. Everything else wants `connectPrivacy`.
+
+The revocation row is the one to get right. A viewing key must not outlive the session that authorised it: if account A disconnects and account B logs in while a client built from A is still reachable, that client can still read A's notes, and deposits made by B can end up proven as A's notes — spendable only with A's key.
+
 ## Registering and your viewing key
 
-By default your viewing key is derived by signing a canonical message — `Poseidon(version, chainId, account, pool, keyIndex)` — with your account's own signing key, then folding the signature into the pool's canonical range. It is **never stored**: it is reproducible from the signing key alone, so your notes survive a wallet reinstall with nothing to back up. It lives in the client's closure for exactly as long as the session that authorised it. `wallet.disconnect()` **revokes** it rather than merely dropping a reference: the client refuses to decrypt afterwards, so a stale client someone is still holding cannot keep reading notes. `revokePrivacy(transfers)` does the same for a client built with `createPrivacy` directly. Neither scrubs memory — JavaScript strings cannot be overwritten in place — and neither un-decrypts notes already discovered.
+By default your viewing key is derived by signing a canonical message — `Poseidon(version, chainId, account, pool, keyIndex)` — with your account's own signing key, then folding the signature into the pool's canonical range. It is **never stored**: it is reproducible from the signing key alone, so your notes survive a wallet reinstall with nothing to back up. It lives in the client's closure for exactly as long as the session that authorised it. `wallet.disconnect()` **revokes** it rather than merely dropping a reference: the client refuses to decrypt afterwards, so a stale client someone is still holding cannot keep reading notes. `revokePrivacy(transfers)` does the same for a client built with `createPrivacy` directly — see [the comparison above](#two-ways-in-connectprivacy-and-createprivacy). Neither scrubs memory — JavaScript strings cannot be overwritten in place — and neither un-decrypts notes already discovered.
 
 <Warning>
   The pool stores the **first** key an account registers and it cannot be replaced. Changing `viewingKeyDerivation` for an account that already registered orphans its notes, and the discovery service rejects a mismatched key outright.
@@ -157,12 +174,12 @@ By default your viewing key is derived by signing a canonical message — `Posei
 
 ### Supplying your own derivation
 
-That scheme is Starkzap's default, not the protocol's. The pool only ever sees the key's public x-coordinate, so how you arrive at the key is yours to choose — pass `viewingKeyDerivation` in the `privacy` config to replace it entirely.
+That scheme is Starkzap's default, not the protocol's. The pool only ever sees the key's public x-coordinate, so how you arrive at the key is yours to choose — pass `viewingKeyDerivation` in the config you hand `connectPrivacy` to replace it entirely.
 
 The usual reasons to: a wallet with its own key-derivation function, a hardware device that answers a specific command, a key held somewhere outside the app, or a signer that cannot promise a deterministic nonce and so cannot use the default at all.
 
 ```typescript
-import type { ViewingKeyDerivation } from "starkzap";
+import type { ViewingKeyDerivation } from "starkzap/privacy";
 
 const fromWalletKdf: ViewingKeyDerivation = async (context, signer) => {
   // context: { chainId, accountAddress, poolAddress, keyIndex? }
@@ -213,7 +230,8 @@ A deposit needs a public ERC20 `approve`: the pool pulls the funds, so that step
 `send({ invoke })` hands the approve to the paymaster, which relays it through your account's `execute_from_outside` in the same transaction as the pool action. The wrapped call runs first, so the allowance is in place by the time the pool reads it.
 
 ```typescript
-import { Amount, fromAddress, waitForFundedBalance } from "starkzap";
+import { Amount, fromAddress } from "starkzap";
+import { waitForFundedBalance } from "starkzap/privacy";
 
 const amount = Amount.parse("100", token);
 
@@ -391,7 +409,7 @@ Skipping the wait produces either a proof the sequencer rejects or one that read
 `send()` tracks this for you. What you must do is **surface it**, because the wait is silent and is seconds on Sepolia but minutes on mainnet — long enough that a spinner looks like a hang:
 
 ```typescript
-import type { ProvableAttempt } from "starkzap";
+import type { ProvableAttempt } from "starkzap/privacy";
 
 const hash = await privacy.send(compose, {
   wait: {
@@ -446,7 +464,7 @@ Registration cannot stand alone — the pool fee comes from a private balance yo
 Deposits are screened server-side before a proof is produced. Classify the failure rather than showing a raw error:
 
 ```typescript
-import { screeningVerdict } from "starkzap";
+import { screeningVerdict } from "starkzap/privacy";
 
 switch (screeningVerdict(err)) {
   case "rejected":

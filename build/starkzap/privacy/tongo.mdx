@@ -208,6 +208,10 @@ const tx = await wallet
 await tx.wait();
 ```
 
+<Warning>
+  Use at most **one** confidential operation per transaction for a given account. Each one is proved against the balance and nonce read when it was built, so a second is already stale once the first applies, and the whole transaction reverts. Combining one confidential operation with ordinary calls, as above, is fine — send two confidential operations one after another.
+</Warning>
+
 **Builder methods for confidential:**
 
 | Method | Description |
@@ -217,6 +221,23 @@ await tx.wait();
 | `.confidentialWithdraw(confidential, details)` | Withdraw to a public Starknet address |
 
 Ragequit and rollover are not on the builder; use `confidential.ragequit(...)` / `confidential.rollover(...)` and add the returned calls with `.add(...calls)`.
+
+## Reaching the rest of the Tongo SDK
+
+`TongoConfidential` wraps the operations that produce calls, plus balance reads and unit conversion. Tongo's own `Account` does more than that: transaction history and per-event reads, audit and ex-post proofs, raw encrypted state, and manual decryption.
+
+For any of those, construct the SDK's `Account` yourself with the same values you passed to `create`:
+
+```typescript
+import { Account } from "@fatsolutions/tongo-sdk";
+
+const tongo = new Account(tongoPrivateKey, TONGO_CONTRACT, wallet.getProvider());
+
+const history = await tongo.getTxHistory(fromBlock);
+const incoming = await tongo.getEventsTransferIn(fromBlock);
+```
+
+You already hold all three arguments, and the SDK is already installed — it has to be, for confidential transfers to work at all. A second instance is equivalent to the one inside `TongoConfidential` rather than a rival to it: `Account` holds no chain state and reads its nonce and balance fresh on every call, so the two cannot disagree.
 
 ## Best practices
 
