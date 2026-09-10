@@ -112,12 +112,23 @@ The wallet interface provides access to account operations, transactions, and to
 | `lending()`                                | `LendingClient`               | Get lending client           |
 | `staking(poolAddress)`                     | `Promise<Staking>`             | Get staking helper for a pool |
 | `stakingInStaker(stakerAddress, token)`    | `Promise<Staking>`             | Get staking helper from a staker |
+| `lstStaking(asset, options?)`             | `EndurStaking`                 | Get Endur liquid staking helper for an asset |
+| `troves(options?)`                        | `Troves`                       | Get Troves strategy client   |
 | `callContract(call)`                       | `Promise<CallContractResponse>` | Read-only contract call      |
 | `disconnect()`                             | `Promise<void>`                | Disconnect wallet            |
 | `deposit(recipient, amount, token, externalWallet, options?)` | `Promise<{ hash: string }>` | Bridge deposit from external chain |
 | `getDepositBalance(token, externalWallet)` | `Promise<Amount>`              | Get source-chain available balance |
 | `getAllowance(token, externalWallet)`      | `Promise<Amount \| null>`      | Get source-chain allowance (if applicable) |
 | `getDepositFeeEstimate(token, externalWallet, options?)` | `Promise<BridgeDepositFeeEstimation>` | Estimate bridge route fees |
+| `initiateWithdraw(recipient, amount, token, externalWallet, options?)` | `Promise<Tx>` | Initiate withdrawal from Starknet to external chain |
+| `completeWithdraw(recipient, amount, token, externalWallet, options?)` | `Promise<{ hash: string }>` | Complete withdrawal on external chain (Canonical & CCTP only) |
+| `getWithdrawBalance(token, externalWallet)` | `Promise<Amount>` | Get L2 balance available to withdraw |
+| `getInitiateWithdrawFeeEstimate(token, externalWallet, options?)` | `Promise<BridgeInitiateWithdrawFeeEstimation>` | Estimate L2 fee for initiating withdrawal |
+| `getCompleteWithdrawFeeEstimate(amount, recipient, token, externalWallet, options?)` | `Promise<BridgeCompleteWithdrawFeeEstimation>` | Estimate L1 gas for completing withdrawal |
+| `monitorDeposit(token, externalTxHash, starknetTxHash?)` | `Promise<DepositMonitorResult>` | Get full deposit status snapshot |
+| `monitorWithdrawal(token, snTxHash, externalTxHash?)` | `Promise<WithdrawMonitorResult>` | Get full withdrawal status snapshot (includes CCTP attestation data) |
+| `getDepositState(token, param)` | `Promise<DepositState>` | Simplified deposit state for UI |
+| `getWithdrawalState(token, param)` | `Promise<WithdrawalState>` | Simplified withdrawal state for UI |
 
 ## Tx
 
@@ -169,6 +180,8 @@ Fluent API for building and executing batched transactions.
 | `.lendWithdrawMax(request)`        | `TxBuilder`                | Lending max withdraw                           |
 | `.lendBorrow(request)`             | `TxBuilder`                | Lending borrow                                 |
 | `.lendRepay(request)`              | `TxBuilder`                | Lending repay                                  |
+| `.trovesDeposit(params)`           | `TxBuilder`                | Troves strategy deposit                        |
+| `.trovesWithdraw(params)`          | `TxBuilder`                | Troves strategy withdraw                       |
 | `.dcaCreate(request)`              | `TxBuilder`                | Create a DCA (recurring buy) order             |
 | `.dcaCancel(request)`              | `TxBuilder`                | Cancel a DCA order                             |
 | `.confidentialFund(confidential, details)` | `TxBuilder`        | Fund confidential account                      |
@@ -282,7 +295,10 @@ class ChainId {
 Transaction fee payment mode.
 
 ```typescript
-type FeeMode = "sponsored" | "user_pays";
+type FeeMode =
+  | "user_pays"
+  | { type: "paymaster"; gasToken?: Address }
+  | "sponsored"; // deprecated alias for { type: "paymaster" }
 ```
 
 ### DeployMode
@@ -356,6 +372,89 @@ abstract class BridgeToken {
   starknetBridge: Address;       // destination bridge contract
 }
 // Concrete subclasses: EthereumBridgeToken, SolanaBridgeToken
+```
+
+### WithdrawalState
+
+Simplified withdrawal state for use in UI polling.
+
+```typescript
+type WithdrawalState = "PENDING" | "READY_TO_CLAIM" | "COMPLETED" | "ERROR";
+```
+
+| Value | Meaning |
+| --- | --- |
+| `PENDING` | Bridging in progress — no user action needed |
+| `READY_TO_CLAIM` | Ready to finalize on L1 — call `completeWithdraw` (CCTP/Canonical) |
+| `COMPLETED` | Bridge flow fully complete |
+| `ERROR` | Unrecoverable error |
+
+### DepositState
+
+Simplified deposit state for use in UI polling.
+
+```typescript
+type DepositState = "PENDING" | "COMPLETED" | "ERROR";
+```
+
+### InitiateBridgeWithdrawOptions
+
+Discriminated union by `protocol`:
+
+```typescript
+type InitiateBridgeWithdrawOptions =
+  | {
+      protocol: "canonical";
+      autoWithdraw?: boolean;       // let a relayer handle L1 completion
+      preferredFeeToken?: Token;    // fee token for the auto-withdraw relayer
+    }
+  | {
+      protocol: "cctp";
+      fastTransfer?: boolean;       // use CCTP fast transfer path
+    }
+  | {
+      protocol: "oft" | "oft-migrated";
+    }
+  | {
+      protocol: "hyperlane";
+    };
+```
+
+### CompleteBridgeWithdrawOptions
+
+Options required for the L1 completion step (CCTP only). The attestation data is returned by `monitorWithdrawal`.
+
+```typescript
+type CompleteBridgeWithdrawOptions = {
+  protocol: "cctp";
+  attestation: string;       // Circle-issued attestation
+  message: string;           // encoded CCTP message
+  nonce?: string;
+  expirationBlock?: number;  // attestation expiry — re-attestation is automatic
+};
+```
+
+### BridgeInitiateWithdrawFeeEstimation
+
+```typescript
+interface BridgeInitiateWithdrawFeeEstimation {
+  l2Fee: Amount;
+  l2FeeError?: FeeErrorCause;
+  // Canonical with autoWithdraw only:
+  autoWithdrawFee?: { amount: Amount; token: Token };
+  autoWithdrawFeeError?: FeeErrorCause;
+  // CCTP only:
+  fastTransferBpFee?: number; // basis points, e.g. 14 = 0.14%
+}
+```
+
+### BridgeCompleteWithdrawFeeEstimation
+
+```typescript
+interface BridgeCompleteWithdrawFeeEstimation {
+  l1Fee: Amount;
+  l1FeeError?: FeeErrorCause;
+}
 ```
 
 ### Connected External Wallets

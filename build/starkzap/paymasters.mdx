@@ -50,12 +50,14 @@ Paymasters allow you to sponsor (pay for) transaction fees so users don't have t
 
         ```typescript
         // Execute with sponsored fees
-        const tx = await wallet.execute([call], { feeMode: "sponsored" });
+        const tx = await wallet.execute([call], {
+          feeMode: { type: "paymaster" },
+        });
 
         // Or set as default when connecting
         const wallet = await sdk.connectWallet({
           account: { signer },
-          feeMode: "sponsored",
+          feeMode: { type: "paymaster" },
         });
         ```
 
@@ -124,8 +126,15 @@ Paymasters allow you to sponsor (pay for) transaction fees so users don't have t
         The SDK automatically handles gasless transactions when a paymaster is configured. Users can pay in any supported token:
 
         ```typescript
-        // Transactions automatically use gasless mode
-        const tx = await wallet.execute([call]);
+        import { fromAddress } from "starkzap";
+
+        // Let users pay gas in a supported token (for example, USDC)
+        const tx = await wallet.execute([call], {
+          feeMode: {
+            type: "paymaster",
+            gasToken: fromAddress("0x053c91253bc96bfed3be381a97265e250ed0a2e2cbf1a54898ad0d2f7982f78f"),
+          },
+        });
         await tx.wait();
         ```
 
@@ -176,7 +185,7 @@ Paymasters allow you to sponsor (pay for) transaction fees so users don't have t
        - Sends the signed payload to Cartridge's paymaster service
        - The paymaster may submit the transaction on-chain and pay gas fees
 
-    **React Native:** use [React Native Integration](/build/starkzap/react-native): Metro `withStarkzap` and **register** the native Cartridge adapter before connecting. Sponsored execution on native is often tied to **`feeMode: "sponsored"`** on the session wallet.
+    **React Native:** use [React Native Integration](/build/starkzap/react-native): Metro `withStarkzap` and **register** the native Cartridge adapter before connecting. Sponsored execution on native is often tied to **`feeMode: { type: "paymaster" }`** on the session wallet. Native Cartridge does not support `gasToken`.
 
     ### Policies for Paymaster
 
@@ -212,7 +221,7 @@ Paymasters allow you to sponsor (pay for) transaction fees so users don't have t
 
     ## Integration
 
-    Connect with Cartridge and define policies. **Matching** calls can be sponsored per Cartridge rules; on **native**, you may pass **`feeMode: "sponsored"`** where your wallet/session supports it.
+    Connect with Cartridge and define policies. **Matching** calls can be sponsored per Cartridge rules; on **native**, you may pass **`feeMode: { type: "paymaster" }`** where your wallet/session supports it.
 
     ```typescript
     import { StarkZap, OnboardStrategy } from "starkzap";

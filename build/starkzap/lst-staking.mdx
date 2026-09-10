@@ -1,0 +1,149 @@
+---
+title: "LST Staking"
+description: "Use Endur liquid staking through Starkzap with a staking-like API and asset-based vaults"
+icon: "droplet"
+---
+
+## Overview
+
+Starkzap supports Endur liquid staking (LST) through `wallet.lstStaking(asset)`.
+
+LST staking is different from native delegation pools:
+
+- You stake into an asset vault (for example `STRK`, `WBTC`) instead of a validator pool.
+- Yield is reflected in LST share value over time.
+- There is no separate claim transaction for rewards.
+- Exits redeem shares; there is no native two-step cooldown flow.
+
+<Info>
+  Looking for native delegation pools with `enterPool`, `addToPool`, and reward claims? See [Staking & Delegation](/build/starkzap/staking).
+</Info>
+
+## Quick Start
+
+```typescript
+import { StarkZap, StarkSigner } from "starkzap";
+
+const sdk = new StarkZap({ network: "mainnet" });
+const wallet = await sdk.connectWallet({
+  account: { signer: new StarkSigner(privateKey) },
+});
+
+const lst = wallet.lstStaking("STRK");
+```
+
+## Supported Assets
+
+Supported assets come from chain-aware presets.
+
+- **Mainnet:** `STRK`, `WBTC`, `tBTC`, `LBTC`, `solvBTC`
+- **Sepolia:** `STRK`, `TBTC1`, `TBTC2`
+
+Use `wallet.lstStaking(asset)` with one of the supported asset symbols on the connected chain.
+
+## Core Actions
+
+### Enter LST Position
+
+`enter`, `stake`, and `add` all perform the same LST deposit operation.
+
+```typescript
+import { Amount } from "starkzap";
+
+const tx = await lst.enter(wallet, Amount.parse("100", 18));
+await tx.wait();
+```
+
+### Enter with Referral
+
+```typescript
+const tx = await lst.enterWithReferral(
+  wallet,
+  Amount.parse("100", 18),
+  "ABC123"
+);
+await tx.wait();
+```
+
+### Enter to Validator
+
+```typescript
+const tx = await lst.enterToValidator(
+  wallet,
+  Amount.parse("100", 18),
+  "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+);
+await tx.wait();
+```
+
+### Exit LST Position
+
+Redeem a specific amount with `exitIntent`:
+
+```typescript
+const tx = await lst.exitIntent(wallet, Amount.parse("25", 18));
+await tx.wait();
+```
+
+Redeem full share balance with `exit`:
+
+```typescript
+const tx = await lst.exit(wallet);
+await tx.wait();
+```
+
+## Read Operations
+
+### Position
+
+```typescript
+const position = await lst.getPosition(wallet);
+if (position) {
+  console.log(`Shares: ${position.staked.toFormatted()}`);
+  console.log(`Total: ${position.total.toFormatted()}`);
+}
+```
+
+### APY and TVL
+
+```typescript
+const apy = await lst.getAPY();
+const tvl = await lst.getTVL();
+
+console.log(apy);
+console.log(tvl);
+```
+
+### Commission and Rewards
+
+```typescript
+const commission = await lst.getCommission(); // 0
+console.log(commission);
+```
+
+`claimRewards` is not applicable for LST staking because yield is embedded in share price.
+
+## Configuration
+
+You can pass fetch options when creating the LST client:
+
+```typescript
+const lst = wallet.lstStaking("STRK", {
+  timeoutMs: 15000,
+});
+```
+
+Use this when you need custom HTTP timeout behavior for APY/TVL reads.
+
+## Best Practices
+
+1. Always use the correct `Amount` decimals for the selected asset.
+2. Treat LST and native delegation as separate UX flows in your app.
+3. Show users that yield is reflected in share value rather than claimed rewards.
+4. Validate supported assets per connected chain before rendering actions.
+
+## Next Steps
+
+- Learn about [Staking & Delegation](/build/starkzap/staking) for native pool staking
+- Explore [Transaction Builder](/build/starkzap/transactions#transaction-builder) for batching operations
+- Check the [API Reference](/build/starkzap/api-reference) for detailed method signatures
