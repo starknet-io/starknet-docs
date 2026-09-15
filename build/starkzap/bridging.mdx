@@ -61,6 +61,7 @@ const sdk = new StarkZap({
     layerZeroApiKey: "<layerzero-key>", // required for OFT/OFT-migrated routes
     layerswapApiKey: "<layerswap-key>", // required for Layerswap routes + token discovery
     layerswapBaseUrl: "https://api.layerswap.io", // optional; this is the default
+    layerswapAllowedContracts: [], // Starknet contracts Layerswap may call besides the token; see below
   },
 });
 ```
@@ -73,6 +74,12 @@ const sdk = new StarkZap({
   Layerswap routes **and** Layerswap token discovery require `bridging.layerswapApiKey`. Without it, `getBridgingTokens(...)` omits Layerswap-bridgeable tokens and Layerswap deposits/withdrawals fail.
 
   Layerswap API keys are environment-scoped: use a **Mainnet** key with Starknet Mainnet and a **Testnet** key with Starknet Sepolia.
+</Warning>
+
+<Warning>
+  **Layerswap withdrawals sign calls that come from the Layerswap API.** Starkzap checks every one of them before the wallet signs: a call on the bridge token must be a `transfer`, and any other call must target a contract listed in `bridging.layerswapAllowedContracts`. With that list unset or empty, only the transfer is accepted, and a deposit action carrying any other call fails before signing with an error naming the address.
+
+  Before enabling a Layerswap route, run one withdrawal on Sepolia and inspect the deposit action Layerswap returns. If it includes a helper call, confirm with Layerswap which contract it is and why, then list that address. Do not list an address you have not verified — listing the bridge token itself changes nothing, since calls on it must be `transfer` regardless.
 </Warning>
 
 ## Fetch Bridgeable Tokens
@@ -183,6 +190,10 @@ const tx = await wallet.deposit(
 
 console.log(tx.hash);
 ```
+
+<Note>
+  On Ethereum a deposit can be two transactions: an ERC20 `approve` sized to the amount, then the deposit. Do not start a second deposit of the same token before the first has resolved. Both would read the same allowance and both would send an `approve`, and since `approve` sets rather than adds, the second deposit lands short and reverts. Serialize deposits per token, or set an allowance that covers them all before starting.
+</Note>
 
 ## Withdraw from Starknet
 
@@ -336,6 +347,7 @@ const depositState = await wallet.getDepositState(token, result);
 - **Chain mismatch**: token source chain and connected external wallet chain must match.
 - **Missing LayerZero key**: OFT routes require `bridging.layerZeroApiKey`.
 - **Missing Layerswap key**: Layerswap routes and Layerswap token discovery require `bridging.layerswapApiKey`; the key must match the environment (Mainnet key for Starknet Mainnet, Testnet key for Starknet Sepolia).
+- **Layerswap call not in `bridging.layerswapAllowedContracts`**: the deposit action carried a call to a contract other than the bridge token. Nothing was signed. Inspect the call, and list the contract only if it is a Layerswap helper you have verified.
 - **Unsupported chain pair**: Ethereum mainnet must pair with Starknet mainnet; testnet pairings must match.
 - **CCTP options missing**: `completeWithdraw` requires `options` with attestation data for CCTP routes — the parameter is non-optional in practice.
 - **Attestation expired**: CCTP attestations have an expiration block; re-attestation is requested automatically during `completeWithdraw`.
