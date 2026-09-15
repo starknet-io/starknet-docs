@@ -95,6 +95,11 @@ const privacy = await connectPrivacy(wallet, {
   paymaster: {
     url: "https://my-app.example.com/api/paymaster/mainnet",
     fee: { mode: "sponsored" },
+    // Ceiling on what one quote may withdraw for its fee, in base units of the
+    // fee token, and the forwarder addresses allowed to receive it. Both come
+    // from your paymaster operator.
+    maxFee: 10n ** 19n,
+    allowedFeeRecipients: [FORWARDER],
   },
 });
 ```
@@ -117,7 +122,8 @@ The `paymaster` block:
 | `url` | Yes | Endpoint that submits private transactions. Point it at a proxy holding your API key, not at the paymaster directly — and at a proxy that knows which network it is for, since each AVNU deployment whitelists only its own pool. |
 | `fee` | Yes | How the pool fee is paid. Deliberately not defaulted — see below. |
 | `tip` | No | Transaction priority: `"slow"`, `"normal"`, or `"fast"`. AVNU fills in `"normal"` when omitted. |
-| `maxFee` | No | Refuse a quote whose fee exceeds this, in base units of the fee token. The response decides how much of your shielded balance leaves the pool, so a ceiling is the only thing between a misconfigured endpoint and your balance. Unset by default: a guessed ceiling would break every deployment whose fee sits above the guess. |
+| `maxFee` | Yes | Refuse a quote whose fee exceeds this, in base units of the fee token. The response decides how much of your shielded balance leaves the pool, so this ceiling is the only thing between a misconfigured or compromised endpoint and your balance. No default: no single figure fits every deployment. Size it for your fee mode — see [Fee modes](#fee-modes). |
+| `allowedFeeRecipients` | Yes | Forwarder addresses allowed to receive the fee. A quote naming any other is refused, and an empty list refuses every quote. Nothing on chain says which recipient is legitimate, so this is the only anchor; it also gives the signature's `Caller` check something to compare against. Get the address from your paymaster operator, per network, and expect to update it when they rotate the forwarder. Compared by value, so padding does not matter. |
 | `fetch` | No | Transport override, defaulting to the global `fetch`. Wrap it to add auth headers, `credentials: "include"`, retries, a timeout via `AbortSignal`, or tracing — the proxy holding your API key is worth gating, and this is where a credential goes. Reading the response stays with the SDK. |
 
 There are **no built-in per-network presets** for the pool or the services. Supply them per chain yourself.
@@ -160,6 +166,8 @@ Starkzap refuses to pick a fee mode for you. All three modes go through the rela
 | `{ mode: "default", gasToken }` | None | No key needed, but the withdrawal is sized at the paymaster's suggested *maximum* gas rather than its estimate, so it covers headroom that may go unused. How much more than a sponsored pool fee that is depends on the network and current gas — `quote()` reports both figures, so read them rather than assuming a ratio. |
 
 Sponsored modes need an API key, and an API key needs a proxy to hold it. Raise that proxy's request body limit: a proof runs to a few hundred kilobytes, above the 100 kb that `express.json()` allows by default.
+
+**Sizing `maxFee`.** The ceiling bounds the whole withdrawal, and what that covers depends on the mode. Under `sponsored` and `sponsored_private` the relayer pays the gas and the withdrawal is the deployment's flat pool fee, so a ceiling a little above that fee is tight and safe. Under `default` the withdrawal is the pool fee **plus gas at the suggested maximum**, not the estimate, so the ceiling has to leave room for that headroom at the gas prices you expect. `quote()` reports both figures; size against the maximum, and expect to revisit the value when the deployment or the network changes.
 
 ### Two ways in: `connectPrivacy` and `createPrivacy`
 
@@ -550,7 +558,7 @@ A proof is around 300–320 kb for a simple transfer, and larger for transaction
 
 ### Prover or discovery URL rejected
 
-Both must be `http://` or `https://` and must parse as URLs. Starkzap validates them when the client is created.
+Both must parse as URLs and use `https://`, or `http://` on a loopback host (`localhost`, `127.0.0.1`, `[::1]`). Plain `http://` to any other host is refused, because both services receive the viewing key. The same rule applies to `paymaster.url` and the OHTTP relay. For a trusted network such as a LAN devnet reached from a device or emulator, set `allowInsecureHttp: true` in the privacy config; a warning is still printed for any plain-http service URL.
 
 ### Web bundler reloads the page on first use
 

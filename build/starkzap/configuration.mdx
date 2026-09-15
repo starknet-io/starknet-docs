@@ -71,6 +71,10 @@ The `StarkZap` accepts configuration through a single options object. You can us
     <Note>
       `rpcUrl` and `chainId` override values from `network` if both are provided.
     </Note>
+
+    <Note>
+      Plain `http://` is accepted only for loopback hosts (`localhost`, `127.0.0.1`, `[::1]`), which is what the `devnet` preset uses. Any other plain-http host is refused. If a device or emulator reaches a devnet or proxy over your LAN, set `allowInsecureHttp: true` on the SDK config. It applies to `rpcUrl`, the Cartridge URLs and the Privy `serverUrl`; the privacy module has its own flag. Never set it in a production build.
+    </Note>
   </Accordion>
 
   <Accordion title="Staking">
@@ -134,6 +138,7 @@ The `StarkZap` accepts configuration through a single options object. You can us
     - `layerZeroApiKey`: Required for OFT/OFT-migrated routes
     - `layerswapApiKey`: Required for Layerswap routes and Layerswap token discovery
     - `layerswapBaseUrl`: Optional Layerswap API base URL (defaults to `https://api.layerswap.io`)
+    - `layerswapAllowedContracts`: Starknet contracts Layerswap may call in a withdrawal besides the bridge token. Unset, only the token transfer is signed. See [Bridging](/build/starkzap/bridging) before listing anything.
 
     <Warning>
       OFT routes require `bridging.layerZeroApiKey` and are supported on mainnet bridge routes only.
@@ -254,7 +259,8 @@ interface SDKConfig {
   network?: NetworkName | NetworkPreset;
   rpcUrl?: string;
   chainId?: ChainId;
-  
+  allowInsecureHttp?: boolean; // accept plain http:// off loopback; dev only
+
   // Optional features
   paymaster?: PaymasterOptions; // { nodeUrl?: string; default?: boolean; headers?: object }
   explorer?: ExplorerConfig;
@@ -271,6 +277,7 @@ interface BridgingConfig {
   layerZeroApiKey?: string; // OFT/OFT-migrated routes
   layerswapApiKey?: string; // Layerswap routes + token discovery
   layerswapBaseUrl?: string; // defaults to https://api.layerswap.io
+  layerswapAllowedContracts?: readonly Address[]; // extra contracts Layerswap may call; unset = transfer only
   ethereumRpcUrl?: string;
   solanaRpcUrl?: string;
 }
