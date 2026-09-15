@@ -1,5 +1,6 @@
 ---
-title: Confidential Transfers
+title: Tongo confidential transfers
+sidebarTitle: Tongo
 description: "Fund, transfer, and withdraw using Tongo—privacy-preserving balances and transfers with the Tongo SDK"
 icon: lock
 ---
@@ -7,6 +8,12 @@ icon: lock
 ## Overview
 
 Starkzap supports **confidential** (privacy-preserving) transfers through the **[Tongo](https://www.tongo.cash/)** protocol. Using the Tongo SDK, users can perform confidential transfers (amount is obfuscated) on Starknet.
+
+Tongo hides **amounts**. It keeps one encrypted balance per account, proves locally, and returns plain calls that you batch and send from your own account.
+
+<Note>
+  Tongo is one of two independent privacy protocols in Starkzap. It is not interchangeable with the [STRK20 privacy pool](/build/starkzap/privacy/strk20) — the two share no interface, so you pick one per integration. If you are still deciding, start with [Choosing a privacy protocol](/build/starkzap/privacy/overview).
+</Note>
 
 **What users can do with confidential:**
 - 🔐 **Transfer confidentially** - Send to another confidential account by recipient public key; amounts are hidden on-chain
@@ -28,18 +35,27 @@ import { StarkZap, TongoConfidential } from "starkzap";
 const sdk = new StarkZap({ network: "mainnet" });
 const wallet = await sdk.connectWallet({ account: { signer, accountClass } });
 
-const confidential = new TongoConfidential({
+const confidential = await TongoConfidential.create({
   privateKey: tongoPrivateKey,       // BigNumberish or Uint8Array
   contractAddress: TONGO_CONTRACT,  // Address for mainnet or Sepolia
   provider: wallet.getProvider(),
 });
 ```
 
-Use the Tongo protocol [documentation](https://docs.tongo.cash/protocol/contracts.html) or deployment list for the correct `contractAddress` per chain. There is no wallet-level "register confidential"; you pass the `TongoConfidential` (or any `ConfidentialProvider`) into the tx builder methods.
+`create` is async because `@fatsolutions/tongo-sdk` is an optional peer dependency loaded on first use — if it is not installed, this rejects with an install hint instead of breaking the `starkzap` import.
+
+Use the Tongo protocol [documentation](https://docs.tongo.cash/protocol/contracts.html) or deployment list for the correct `contractAddress` per chain. There is no wallet-level "register confidential"; you pass the `TongoConfidential` into the tx builder methods.
+
+<Note>
+  Tongo and the [STRK20 privacy pool](/build/starkzap/privacy/strk20) are separate integrations with no shared interface. Tongo keeps an encrypted *balance* per account and proves locally; the pool spends *notes* and needs a remote prover whose output rides on the transaction rather than inside a call. Pick the one you are integrating — there is nothing to code against generically.
+</Note>
 
 ## TongoConfidential: address and state
 
 **Tongo address (for display or sharing):**
+
+The `address` is a single base58-encoded public key — the recommended value to
+share with others so they can send you confidential transfers:
 
 ```typescript
 const tongoAddress = confidential.address; // base58-encoded public key
@@ -47,10 +63,23 @@ const tongoAddress = confidential.address; // base58-encoded public key
 
 **Recipient identity (for receiving confidential transfers):**
 
-Share `recipientId` with others so they can send confidential transfers to this account. It is the public key `{ x, y }` used on-chain:
+`recipientId` is the same public key expressed as on-chain `{ x, y }`
+coordinates. Pass it (or a decoded shared address, see below) as `to` in a
+confidential transfer:
 
 ```typescript
 const recipientId = confidential.recipientId; // { x, y } — pass as `to` in confidentialTransfer
+```
+
+**Decode a shared address into a recipient:**
+
+When a sender has someone's shareable `address` (the single base58 public key),
+`recipientFromAddress` converts it into the `{ x, y }` recipient expected by
+`confidentialTransfer` — so users can exchange one public key instead of raw
+coordinates:
+
+```typescript
+const recipient = confidential.recipientFromAddress(theirTongoAddress); // { x, y }
 ```
 
 **Decrypted state (balance, pending, nonce):**
@@ -109,14 +138,17 @@ Optional: pay a fee to the sender (e.g. for relayed transactions):
 
 ## Confidential transfer
 
-Send from this confidential account to another confidential account. The recipient is identified by their `recipientId` (public key).
+Send from this confidential account to another confidential account. The recipient is identified by their public key — either their `recipientId` (`{ x, y }`) or a shared `address` decoded with `recipientFromAddress`.
 
 ```typescript
+// If you have the recipient's shared Tongo address (base58 public key):
+const to = confidential.recipientFromAddress(theirTongoAddress); // { x, y }
+
 const tx = await wallet
   .tx()
   .confidentialTransfer(confidential, {
     amount: Amount.parse("50", USDC),
-    to: recipientConfidential.recipientId,  // { x, y }
+    to,  // or recipientConfidential.recipientId
     sender: wallet.address,
   })
   .send();
@@ -176,6 +208,10 @@ const tx = await wallet
 await tx.wait();
 ```
 
+<Warning>
+  Use at most **one** confidential operation per transaction for a given account. Each one is proved against the balance and nonce read when it was built, so a second is already stale once the first applies, and the whole transaction reverts. Combining one confidential operation with ordinary calls, as above, is fine — send two confidential operations one after another.
+</Warning>
+
 **Builder methods for confidential:**
 
 | Method | Description |
@@ -185,6 +221,23 @@ await tx.wait();
 | `.confidentialWithdraw(confidential, details)` | Withdraw to a public Starknet address |
 
 Ragequit and rollover are not on the builder; use `confidential.ragequit(...)` / `confidential.rollover(...)` and add the returned calls with `.add(...calls)`.
+
+## Reaching the rest of the Tongo SDK
+
+`TongoConfidential` wraps the operations that produce calls, plus balance reads and unit conversion. Tongo's own `Account` does more than that: transaction history and per-event reads, audit and ex-post proofs, raw encrypted state, and manual decryption.
+
+For any of those, construct the SDK's `Account` yourself with the same values you passed to `create`:
+
+```typescript
+import { Account } from "@fatsolutions/tongo-sdk";
+
+const tongo = new Account(tongoPrivateKey, TONGO_CONTRACT, wallet.getProvider());
+
+const history = await tongo.getTxHistory(fromBlock);
+const incoming = await tongo.getEventsTransferIn(fromBlock);
+```
+
+You already hold all three arguments, and the SDK is already installed — it has to be, for confidential transfers to work at all. A second instance is equivalent to the one inside `TongoConfidential` rather than a rival to it: `Account` holds no chain state and reads its nonce and balance fresh on every call, so the two cannot disagree.
 
 ## Best practices
 
@@ -204,7 +257,7 @@ The provider includes the approve call in `fund()`; if the token or spender is n
 
 ### Recipient format for confidential transfer
 
-`to` must be a `ConfidentialRecipient` — the object `{ x, y }` from the recipient's `confidential.recipientId`. Do not pass a Starknet address; use the recipient's Tongo public key.
+`to` must be a `ConfidentialRecipient` — the object `{ x, y }`. Get it from the recipient's `confidential.recipientId`, or decode their shared base58 Tongo address with `confidential.recipientFromAddress(address)`. Do not pass a Starknet address; use the recipient's Tongo public key.
 
 ## Next steps
 

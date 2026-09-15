@@ -7,25 +7,34 @@ icon: mobile-screen-button
 ## Overview
 
 Use `starkzap-native` when integrating StarkZap in React Native/Expo apps.
-It re-exports the SDK API and adds a Metro helper (`starkzap-native/metro`) for runtime polyfills and resolver compatibility.
+It re-exports the SDK API and adds a Metro helper (`starkzap-native/metro`) that handles ESM/CJS resolver compatibility for `starknet` and its dependencies, and hoists your polyfills to run before the app entry.
 
 ## 1) Install Packages
 
-Install the React Native package and required runtime peers:
+Install the React Native package and the one polyfill every StarkZap flow needs:
 
 ```bash
 npm install starkzap-native
-npm install react-native-get-random-values fast-text-encoding buffer @ethersproject/shims
+npm install fast-text-encoding
 ```
 
-Optional dependencies by feature:
+Install the rest **only for the features you actually use** — each is reached by a specific code path, not by every flow:
 
 ```bash
-# Ethereum bridge routes
-npm install ethers
+# Cartridge sessions, paymaster / outside-execution (SNIP-9), random key generation
+npm install react-native-get-random-values
 
-# Solana bridge routes
-npm install @solana/web3.js @hyperlane-xyz/sdk @hyperlane-xyz/registry @hyperlane-xyz/utils
+# Ethereum bridge routes — pulls in ethers, which needs Buffer + crypto shims
+npm install ethers buffer @ethersproject/shims
+
+# Solana bridging — required for any Solana route
+npm install @solana/web3.js
+
+# Additionally, only if you use the Hyperlane Solana routes
+npm install @hyperlane-xyz/sdk @hyperlane-xyz/registry @hyperlane-xyz/utils
+
+# STRK20 privacy pool with OHTTP left on — supplies the `crypto.subtle` Hermes lacks
+npm install react-native-quick-crypto react-native-nitro-modules react-native-quick-base64
 ```
 
 ## 2) Configure Metro
@@ -44,10 +53,76 @@ module.exports = withStarkzap(config);
 ```
 
 <Info>
-  `withStarkzap` injects required polyfills and resolver handling for StarkZap dependencies.
+  `withStarkzap` handles resolver compatibility for StarkZap dependencies and hoists your polyfills to run first. It does **not** import the polyfills for you — do that at your app entry (next step).
 </Info>
 
-## 3) Initialize the SDK
+## 3) Load polyfills at your app entry
+
+`withStarkzap` can only run polyfills that are in Metro's module graph — it reorders them so they run first, but it cannot import them for you. Import the ones your app needs **once**, at your entry point (e.g. `index.js` or your root layout), before any StarkZap code runs.
+
+Each polyfill exists for a specific reason, so import only what your app actually uses:
+
+| Polyfill | Provides | Needed by |
+| --- | --- | --- |
+| `fast-text-encoding` | `TextEncoder` / `TextDecoder` | **Every flow** — `starknet` hashes an entrypoint selector via `TextEncoder` on every contract read/write (`getSelectorFromName`), and decodes returned strings/byte-arrays |
+| `react-native-get-random-values` | `crypto.getRandomValues` | **Cartridge** sessions, **paymaster / outside-execution** (SNIP-9) nonces, and random key generation. Deterministic signing and read calls do **not** need it |
+| `buffer` (+ set the global) | `Buffer` | **Bridge only** — `ethers` and the Solana bridge code |
+| `@ethersproject/shims` | ethers crypto/random shims | **Bridge only** — `ethers` (v6) used by the Ethereum bridge. The shims package is itself v5-era, but it is what supplies the missing React Native crypto globals |
+| `react-native-quick-crypto` | `crypto.subtle` | **STRK20 privacy with OHTTP only** — the privacy SDK's OHTTP transport encrypts through HPKE, which needs WebCrypto. Hermes has none, and `react-native-get-random-values` supplies only `getRandomValues` |
+
+Required for every app:
+
+```typescript
+// polyfills.ts — imported first at your app entry
+import "fast-text-encoding";
+```
+
+Add if you use Cartridge, the paymaster, or generate keys:
+
+```typescript
+import "react-native-get-random-values";
+```
+
+Add if you use the bridge features:
+
+```typescript
+import { Buffer } from "buffer";
+import "@ethersproject/shims";
+
+if (!globalThis.Buffer) globalThis.Buffer = Buffer;
+```
+
+Add if you use the [STRK20 privacy pool](/build/starkzap/privacy/strk20) with OHTTP left on. Take only `subtle` — `react-native-quick-crypto`'s own `install()` replaces the whole `crypto` global, including the `getRandomValues` the line above installed for `starknet`:
+
+```typescript
+if (!globalThis.crypto.subtle) {
+  const { subtle } = require("react-native-quick-crypto");
+  Object.defineProperty(globalThis.crypto, "subtle", {
+    value: subtle,
+    configurable: true,
+  });
+}
+```
+
+<Note>
+  `require` inside the guard, not a top-level `import`: the package builds native
+  objects in static class fields evaluated at import time, so importing it
+  unconditionally crashes the app where those native modules are absent — Expo Go,
+  for instance. It needs a dev build (`npx expo run:android`), and adding it to an
+  existing native project means a fresh `npx expo prebuild` so the C++ module is
+  linked.
+</Note>
+
+Then import that file as the very first line of your entry:
+
+```typescript
+// app entry (e.g. app/_layout.tsx)
+import "./polyfills";
+```
+
+If you skip `fast-text-encoding`, `starknet` crashes on the first contract call (`TextEncoder is not defined`) — `starkzap-native` warns in the console when it's absent. Skipping `react-native-get-random-values` surfaces a clear `crypto.getRandomValues must be defined` only when a Cartridge/paymaster/keygen path runs.
+
+## 4) Initialize the SDK
 
 Import from `starkzap-native` and use the same onboarding APIs as web:
 
@@ -65,7 +140,7 @@ const { wallet } = await sdk.onboard({
 
 For Privy-based onboarding, see [Privy Integration](/build/starkzap/integrations/privy).
 
-## 4) Cartridge (native session)
+## 5) Cartridge (native session)
 
 When your `starkzap-native` version supports it, you can onboard with **Cartridge** using an in-app browser / deep-link **session** flow (not the web `@cartridge/controller` popup).
 
@@ -77,7 +152,7 @@ When your `starkzap-native` version supports it, you can onboard with **Cartridg
 
 See [Cartridge Controller](/build/starkzap/integrations/cartridge-controller) for policy and paymaster behavior, and the `examples/tic-tac-toe` app in the [Starkzap repository](https://github.com/keep-starknet-strange/starkzap) when available for a full Expo reference.
 
-## 5) External Wallet Providers (Optional)
+## 6) External Wallet Providers (Optional)
 
 If your app uses WalletConnect/Reown for external wallets, initialize its RN compatibility layer at app startup:
 
