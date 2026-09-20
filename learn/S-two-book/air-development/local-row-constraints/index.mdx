@@ -44,7 +44,7 @@ We will implement this in three iterations, fixing a different issue in each ite
 
 The logic for creating the trace and LogUp columns is basically the same as in the previous section (except that one of the columns is now sorted), so we omit them for brevity.
 
-Another change is in the `evaluate` function, where we call `eval.next_interaction_mask(ORIGINAL_TRACE_IDX, [-1, 0])` instead of `eval.next_trace_mask()`. The function `next_trace_mask()` is a wrapper for `next_interaction_mask(ORIGINAL_TRACE_IDX, [0])`, where the first parameter specifies which part of the trace to retrieve values from (see [this figure](./static-lookups/#figure-1) for an example of the different parts of a trace). Since we want to retrieve values from the original trace, we set the value of the first parameter to `ORIGINAL_TRACE_IDX`. Next, the second parameter indicates the row offset of the value we want to retrieve. Since we want to retrieve both the previous and current row values for the sorted column, we set the value of the second parameter to `[-1, 0]`.
+Another change is in the `evaluate` function, where we call `eval.next_interaction_mask(ORIGINAL_TRACE_IDX, [-1, 0])` instead of `eval.next_trace_mask()`. The function `next_trace_mask()` is a wrapper for `next_interaction_mask(ORIGINAL_TRACE_IDX, [0])`, where the first parameter specifies which part of the trace to retrieve values from (see [this figure](../static-lookups/index#figure-1) for an example of the different parts of a trace). Since we want to retrieve values from the original trace, we set the value of the first parameter to `ORIGINAL_TRACE_IDX`. Next, the second parameter indicates the row offset of the value we want to retrieve. Since we want to retrieve both the previous and current row values for the sorted column, we set the value of the second parameter to `[-1, 0]`.
 
 Once we have these values, we can now assert that the difference between the current and previous row is always one with the constraint: `E::F::one() - (sorted_col_curr_row.clone() - sorted_col_prev_row.clone())`.
 
@@ -58,7 +58,7 @@ The issue was that when calling `evaluate` on the first row of our trace, the pr
 
 This means that in our example, we are expecting the `0 - 15 = 1` constraint to hold, which is clearly not true.
 
-To fix this, we can use the `IsFirstColumn` preprocessed column that we created in the [Preprocessed Trace](./preprocessed-trace/) section. So we will copy over the same code for creating the preprocessed column and modify our new constraint as follows:
+To fix this, we can use the `IsFirstColumn` preprocessed column that we created in the [Preprocessed Trace](../preprocessed-trace/index) section. So we will copy over the same code for creating the preprocessed column and modify our new constraint as follows:
 
 ```rust
         let is_first_col = eval.get_preprocessed_column(self.is_first_id.clone());
