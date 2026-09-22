@@ -18,7 +18,7 @@ The **STRK20 privacy pool** is a single contract that holds balances for every t
 Three things make it different from every other Starkzap module:
 
 - **A remote proving service** builds a validity proof for each private transaction. The proof travels as transaction-level fields, not inside a call, so a privacy operation can **never** be batched with other calls and cannot go through the [transaction builder](/build/starkzap/tx-builder).
-- **A relayer submits it.** No user signature is involved. The pool authorises the transaction from the proof alone. Your address, nonce, and gas payment stay off-chain.
+- **A relayer submits it.** No user signature is involved. The pool authorises the transaction from the proof alone. Your address, nonce, and gas payment stay off-chain, unless you wrap public calls with `invoke`.
 - **A viewing key**, derived from your signing key, lets you find your own notes and lets others send to you.
 
 The client handles the fee, the proving block and the submission. So `send()` executes for you and returns a transaction hash. It does not return calls.
@@ -460,7 +460,7 @@ Re-quote after each operation — the amount can change.
 
 ## Waiting for a provable block
 
-Any on-chain state a proof reads must be at least **10 blocks** older than the proof's base block (`PROOF_BASE_BLOCK_DEPTH`). This includes your viewing key, your token balance and the spent-note set. So you must wait after a previous private transaction, after deploying the account before `register()`, and after funding the account before `deposit()`.
+The proving block is **10 blocks** behind the chain head (`PROOF_BASE_BLOCK_DEPTH`). Any on-chain state a proof reads must be in a block before the proving block. This includes your viewing key, your token balance and the spent-note set. So you must wait after a previous private transaction, after deploying the account before `register()`, and after funding the account before `deposit()`.
 
 Without the wait, the sequencer rejects the proof, or the proof reads a balance the chain does not have yet. Both fail late, with unclear errors.
 
