@@ -1,0 +1,99 @@
+---
+title: Shadow accounts
+description: Per-user, per-dApp accounts that let the privacy pool call any dApp anonymously, built on compute-and-invoke
+icon: user-secret
+---
+
+**Shadow accounts** let any Starknet account control **unlinkable** accounts. A shadow account can make the same contract calls as a regular Starknet transaction (approve, swap, lend, stake, and so on), and nothing on-chain links it to the main account that controls it.
+
+**Example: private lending.** Alice wants to lend USDC on a lending protocol such as Vesu without revealing that the position is hers. She moves USDC from her balance in the privacy pool to her shadow account for that protocol, and the shadow account deposits it. The protocol and outside observers see the shadow account supply liquidity and hold the vault shares, but they cannot link it to Alice's main Starknet account. Later, the shadow account withdraws and the proceeds go back into Alice's notes in the pool.
+
+An [anonymizing helper](/build/starknet-privacy/anonymous-defi) is written for one protocol and holds nothing between calls. A shadow account instead runs **arbitrary calls** and can **hold positions** across transactions (vault shares, LP tokens, open orders, …). Each user gets a separate shadow account per dApp, and can open more as needed.
+
+Shadow accounts are built on the pool's **compute-and-invoke** action.
+
+## Invoke and compute-and-invoke
+
+A privacy transaction can end with one call to an external contract, made by the pool after all note operations. There are two variants, and a transaction can include **at most one** of them:
+
+| Client action | What the pool calls | Typical target |
+| --- | --- | --- |
+| `InvokeExternal` | `privacy_invoke(calldata)` | Stateless helpers, such as a swap or lending anonymizer |
+| `ComputeAndInvoke` | `privacy_compute(identity_key, …)`, then `privacy_invoke_with_computation(compute_result, …)` | Contracts that need a stable, user-specific identity, such as the shadow account anonymizer |
+
+In both cases the target returns the **open-note deposits** to fill, and the pool pulls the tokens from the target into the [open notes](/build/starknet-privacy/notes-and-nullifiers#open-notes) created earlier in the same transaction.
+
+### How compute-and-invoke works
+
+1. **Derive an identity key.** Inside the proof, the pool computes `identity_key = H(tag, user address, private viewing key, target address)`. Only the user can reproduce it, and it is different for every target contract.
+2. **Compute.** The pool calls the target's `privacy_compute` with `[identity_key, ...compute_additional_data]`. The target turns the key into a value it can act on—for shadow accounts, a commitment. The result must be non-empty.
+3. **Invoke.** The pool calls the target's `privacy_invoke_with_computation` with `[...compute_result, ...invoke_additional_data]`.
+
+The compute step runs during [proof generation](/build/starknet-privacy/proving), so the identity key never appears on-chain; only the compute result does. Because that result is public once used, `privacy_invoke_with_computation` **must accept calls only from the privacy pool**—otherwise anyone could replay it and act as that user.
+
+## How shadow accounts work
+
+The **shadow account anonymizer** contract implements compute-and-invoke. On mainnet it is deployed at [`0x04f3…88a7`](https://voyager.online/contract/0x04f33230dc57855c6e7eabe66dfa0fde82c5458fd0e54827cdb7cb4c474888a7).
+
+- **Commitment** — `privacy_compute(identity_key, dapp_name, nonce)` returns `H(H(identity_key, dapp_name), nonce)`. `dapp_name` scopes accounts to one dApp; `nonce` lets a user hold several independent accounts for the same dApp.
+- **Deterministic address** — the commitment is the deployment salt, so each commitment maps to one address that is known before the account exists.
+- **Deployed on first use** — the first `privacy_invoke_with_computation` for a commitment deploys its shadow account; later calls reuse it.
+- **Runs the calls** — the anonymizer executes the transaction's dApp calls through the shadow account, so the dApp sees the shadow account as the caller.
+- **Settles into open notes** — for each open note, the anonymizer collects tokens from the shadow account according to a **collect policy**, then approves the pool to pull them into the note.
+
+| Collect policy | Amount moved into the open note |
+| --- | --- |
+| `All` | The shadow account's entire balance of the token |
+| `Diff` | Only the balance gained during this interaction |
+| `Exact` | A fixed amount |
+
+Each open note must receive a non-zero amount, and each token can appear in at most one open note per invoke.
+
+### Who controls a shadow account
+
+Control passes through a chain of single-caller checks:
+
+- A shadow account has no keys and cannot sign; it executes calls only for its **owner**, the anonymizer.
+- The anonymizer accepts `privacy_invoke_with_computation` only from the **privacy pool**.
+- The pool reaches a shadow account only through a proven transaction, which requires the user's **account signature** and the **private viewing key** the identity key is derived from.
+
+Only the user who owns a shadow account can move what it holds. The [auditor](/build/starknet-privacy/compliance) can decrypt viewing keys but cannot sign, so it cannot drive a shadow account.
+
+## End-to-end flow
+
+A typical shadow-account transaction, in the pool's [fixed action order](/build/starknet-privacy/transaction-flow):
+
+1. **Spend** the notes that fund the interaction.
+2. **Create** an open note for each token you expect back.
+3. **Withdraw** the input tokens to the shadow account's address. Skip this step when the account already holds what it needs—for example, when closing a position.
+4. **Compute-and-invoke** the anonymizer with the `dapp_name`, the `nonce`, the dApp calls, and the open notes to settle.
+5. The anonymizer deploys the shadow account if needed, runs the calls, and returns the collected amounts; the pool fills the open notes.
+
+Positions the dApp issues to the shadow account (shares, receipts, LP tokens) stay there until a later transaction moves them.
+
+To look up a user's accounts, the anonymizer's `get_shadow_accounts` view takes the partial commitment `H(identity_key, dapp_name)` and a nonce range (up to 1,024 per call), and returns each account's address and whether it is deployed.
+
+## Privacy properties
+
+| Topic | What's visible |
+| --- | --- |
+| **User** | Hidden. Observers see the shadow account address and its commitment; neither reveals the user's address or notes. |
+| **Linkability** | Interactions through the **same** shadow account (same dApp and nonce) are linkable to each other. Use a new nonce for an unlinkable account. |
+| **Amounts** | Public on this leg: withdrawals into the shadow account, the dApp calls, and filled open notes. |
+| **Calls** | dApp call targets and calldata appear in the transaction trace. |
+| **Screening** | Funds settled from a shadow account are screened against the shadow account's address, not the anonymizer's. |
+
+## Build with shadow accounts
+
+<CardGroup cols={2}>
+  <Card title="Shadow accounts with the Privacy SDK" icon="cube" href="https://strk20-by-example.org/sdk/shadow-accounts">
+    Derive commitments and addresses, then run `shadowAccounts(dappName).invoke(nonce, { calls, collectPolicy })`
+  </Card>
+  <Card title="Shadow accounts with the Wallet API" icon="wallet" href="https://strk20-by-example.org/starknet-wallet-api/shadow-accounts">
+    Drive shadow accounts from a dApp through a privacy-enabled wallet and starknet.js
+  </Card>
+</CardGroup>
+
+For the lower-level action model, see [Actions, phases, and proofs](https://strk20-by-example.org/actions-and-proofs). The anonymizer source is in the [starknet-privacy repo](https://github.com/starkware-libs/starknet-privacy/tree/main/packages/shadow_account_anonymizer).
+
+See also: [Anonymous DeFi and open notes](/build/starknet-privacy/anonymous-defi), [Transaction flow](/build/starknet-privacy/transaction-flow), [Security](/build/starknet-privacy/security).
