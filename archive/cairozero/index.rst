@@ -9,7 +9,7 @@ can be used to provide scalability to blockchains.
 StarkNet uses the **Cairo** programming language both for its infrastructure
 and for writing StarkNet contracts.
 If you are looking for StarkNet specific documentation then
-please see `here <https://docs.starknet.io/documentation/>`__.
+please see `here <https://docs.starknet.io/>`__.
 
 Here we provide two tutorials:
 
@@ -30,7 +30,7 @@ for those who want to get a better understanding of those topics.
 If you want to write Cairo programs, independent of StarkNet, start with "Hello, Cairo".
 
 If you are looking for an introduction to StarkNet specifically,
-then you can visit the StarkNet documentation `here <https://docs.starknet.io/documentation/>`__.
+then you can visit the StarkNet documentation `here <https://docs.starknet.io/>`__.
 
 Finally, if you want to understand Cairo's internals from the ground up,
 start with "How Cairo Works" and then follow with "Hello, Cairo".
